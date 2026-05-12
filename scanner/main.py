@@ -9,7 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from scanner import __version__
-from scanner.finding import create_port_exposure_findings, findings_to_dicts
+from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
 from scanner.http_audit import audit_http_services
 from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
@@ -94,12 +94,16 @@ def scan(
         if http_audit:
             http_findings = audit_http_services(scan_result["open_ports"])
             findings.extend(http_findings)
-            scan_result["http_findings"] = findings_to_dicts(http_findings)
         if tls_audit:
             tls_findings = audit_tls_services(scan_result["open_ports"])
             findings.extend(tls_findings)
-            scan_result["tls_findings"] = findings_to_dicts(tls_findings)
-        scan_result["findings"] = findings_to_dicts(findings)
+        scan_result["findings"] = assign_sequential_finding_ids(findings)
+        scan_result["http_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "http_audit"
+        ]
+        scan_result["tls_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "tls_audit"
+        ]
         scan_end_time = datetime.now().astimezone()
     except PortScanError as exc:
         console.print(f"[red]Scan error:[/red] {exc}")

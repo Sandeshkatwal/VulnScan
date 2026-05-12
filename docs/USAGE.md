@@ -32,7 +32,7 @@ Only open ports are shown by default. Each open result includes the host, resolv
 
 ## Findings
 
-VulScan reports include a standard top-level `findings` section. Findings include stable IDs, severity, category, affected host/port/URL, service, evidence, confidence, impact, recommendation, verification, limitation, source, and creation time.
+VulScan reports include a standard top-level `findings` section. Findings include sequential IDs, severity, category, affected host/port/URL, service, evidence, confidence, impact, recommendation, verification, limitation, source, and creation time.
 
 Open ports remain in `open_ports` for asset inventory. Open services also create informational service exposure findings.
 

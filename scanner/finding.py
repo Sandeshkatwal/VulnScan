@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Literal
@@ -46,27 +45,9 @@ class Finding:
     created_at: str = field(default_factory=_created_at)
 
 
-def make_finding_id(
-    source: str,
-    title: str,
-    affected_host: str | None = None,
-    affected_port: int | None = None,
-    affected_url: str | None = None,
-    service: str | None = None,
-) -> str:
-    """Create a stable finding ID from identifying finding fields."""
-    raw_id = "|".join(
-        [
-            source,
-            title,
-            affected_host or "",
-            str(affected_port or ""),
-            affected_url or "",
-            service or "",
-        ]
-    )
-    digest = hashlib.sha256(raw_id.encode("utf-8")).hexdigest()[:12]
-    return f"VULSCAN-{digest}"
+def make_finding_id(sequence_number: int) -> str:
+    """Create a sequential finding ID such as FINDING-0001."""
+    return f"FINDING-{sequence_number:04d}"
 
 
 def finding_to_dict(finding: Finding | dict[str, Any]) -> dict[str, Any]:
@@ -82,6 +63,14 @@ def findings_to_dicts(findings: list[Finding | dict[str, Any]]) -> list[dict[str
         [finding_to_dict(finding) for finding in findings],
         key=lambda item: (SEVERITY_ORDER.get(str(item["severity"]), 99), str(item["title"])),
     )
+
+
+def assign_sequential_finding_ids(findings: list[Finding | dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert findings to dictionaries and assign sequential IDs after sorting."""
+    numbered_findings = findings_to_dicts(findings)
+    for index, finding in enumerate(numbered_findings, start=1):
+        finding["id"] = make_finding_id(index)
+    return numbered_findings
 
 
 def create_finding(
@@ -100,16 +89,10 @@ def create_finding(
     affected_url: str | None = None,
     service: str | None = None,
 ) -> Finding:
-    """Create a standard finding with a stable ID."""
+    """Create a standard finding with a temporary ID before scan-level numbering."""
+    temporary_id = make_finding_id(0)
     return Finding(
-        id=make_finding_id(
-            source=source,
-            title=title,
-            affected_host=affected_host,
-            affected_port=affected_port,
-            affected_url=affected_url,
-            service=service,
-        ),
+        id=temporary_id,
         title=title,
         severity=severity,
         category=category,
