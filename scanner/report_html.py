@@ -39,6 +39,7 @@ def save_html_report(
         "duration_seconds": scan_result["duration_seconds"],
         "open_ports": scan_result["open_ports"],
         "http_findings": scan_result.get("http_findings", []),
+        "tls_findings": scan_result.get("tls_findings", []),
         "summary": build_summary(scan_result),
     }
 

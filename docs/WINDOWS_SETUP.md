@@ -61,6 +61,18 @@ To run HTTP auditing and save both report formats:
 python -m scanner.main scan --target example.com --http-audit --json --html
 ```
 
+To run the optional TLS certificate audit:
+
+```powershell
+python -m scanner.main scan --target example.com --tls-audit
+```
+
+To run TLS auditing and save both report formats:
+
+```powershell
+python -m scanner.main scan --target example.com --tls-audit --json --html
+```
+
 You can also run the included helper script:
 
 ```powershell
@@ -77,4 +89,4 @@ python -m pytest
 
 ## Safety
 
-Use VulScan only for authorised defensive assessment. Do not use it for exploitation, brute force, credential attacks, payload attacks, destructive checks, stealth scanning, crawling, fuzzing, or firewall bypassing.
+Use VulScan only for authorised defensive assessment. Do not use it for exploitation, brute force, credential attacks, payload attacks, destructive checks, stealth scanning, crawling, fuzzing, firewall bypassing, cipher probing, or protocol downgrade testing.
