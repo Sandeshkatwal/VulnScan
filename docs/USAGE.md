@@ -22,13 +22,29 @@ Or use the included helper script:
 .\run_scan.ps1
 ```
 
-The Version 5 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
+The Version 6 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
 
 ```text
 21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 3306, 3389, 5432, 6379, 8080, 8443
 ```
 
 Only open ports are shown by default. Each open result includes the host, resolved IP address, TCP port, protocol, service, status, confidence, evidence, and a defensive recommendation. For example, an open `445/tcp` result is identified as `smb`.
+
+## HTTP Security Header Audit
+
+HTTP auditing is optional and runs only when `--http-audit` is provided. It only targets detected web services on `80`, `443`, `8080`, and `8443`, and sends a normal HTTP GET request to `/`.
+
+```powershell
+python -m scanner.main scan --target example.com --http-audit
+```
+
+To include HTTP findings in both JSON and HTML reports:
+
+```powershell
+python -m scanner.main scan --target example.com --http-audit --json --html
+```
+
+The HTTP audit checks for common missing security headers, basic information disclosure headers, and basic cookie flags when `Set-Cookie` is present.
 
 ## Windows Example
 
@@ -52,6 +68,12 @@ To save both JSON and HTML reports:
 
 ```powershell
 python -m scanner.main scan --target 127.0.0.1 --json --html
+```
+
+To run HTTP auditing and save reports:
+
+```powershell
+python -m scanner.main scan --target example.com --http-audit --json --html
 ```
 
 Example output includes a table with:
@@ -90,4 +112,4 @@ python -m pytest
 
 ## Safety Boundaries
 
-Do not use VulScan against systems you do not own or do not have explicit permission to test. VulScan does not perform SYN scanning, UDP scanning, stealth scanning, brute forcing, credential attacks, exploitation, payload attacks, firewall bypassing, or destructive actions.
+Do not use VulScan against systems you do not own or do not have explicit permission to test. VulScan does not perform SYN scanning, UDP scanning, stealth scanning, crawling, fuzzing, brute forcing, credential attacks, exploitation, payload attacks, firewall bypassing, or destructive actions.

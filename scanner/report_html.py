@@ -38,6 +38,7 @@ def save_html_report(
         "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
         "duration_seconds": scan_result["duration_seconds"],
         "open_ports": scan_result["open_ports"],
+        "http_findings": scan_result.get("http_findings", []),
         "summary": build_summary(scan_result),
     }
 

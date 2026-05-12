@@ -34,6 +34,7 @@ def save_json_report(
         "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
         "duration_seconds": scan_result["duration_seconds"],
         "open_ports": scan_result["open_ports"],
+        "http_findings": scan_result.get("http_findings", []),
         "summary": build_summary(scan_result),
     }
 
@@ -56,6 +57,7 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
     return {
         "total_open_ports": len(open_ports),
         "services_detected": services_detected,
+        "total_http_findings": len(scan_result.get("http_findings", [])),
         "highest_risk_level": "informational",
         "notes": "TCP connect scan of common ports only. Review exposed services for business need and network access controls.",
     }

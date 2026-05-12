@@ -207,6 +207,7 @@
       <h2>Executive Summary</h2>
       <p>{{ report.summary.notes }}</p>
       <p><strong>Total open ports:</strong> {{ report.summary.total_open_ports }}</p>
+      <p><strong>HTTP audit findings:</strong> {{ report.summary.total_http_findings }}</p>
       <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
       <p><strong>Scan start:</strong> {{ report.scan_start_time }}</p>
       <p><strong>Scan end:</strong> {{ report.scan_end_time }}</p>
@@ -257,6 +258,44 @@
     </section>
 
     <section>
+      <h2>HTTP Security Findings</h2>
+      {% if report.http_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Affected URL</th>
+            <th>Evidence</th>
+            <th>Confidence</th>
+            <th>Recommendation</th>
+            <th>Verification</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in report.http_findings %}
+          <tr>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.category }}</td>
+            <td>{{ finding.affected_url }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.confidence }}</td>
+            <td>{{ finding.recommendation }}</td>
+            <td>{{ finding.verification }}</td>
+            <td>{{ finding.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No HTTP audit findings were recorded. Run with --http-audit to perform safe HTTP header checks against detected web services.</p>
+      {% endif %}
+    </section>
+
+    <section>
       <h2>Future Findings</h2>
       <div class="future">
         Findings, severity, CVEs, EPSS, and risk scores can be added here as VulScan expands beyond port and service reporting.
@@ -270,7 +309,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. It does not perform SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, payload attacks, destructive checks, firewall bypassing, CVE validation, or authenticated auditing.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, payload attacks, destructive checks, firewall bypassing, CVE validation, or authenticated auditing.</p>
     </section>
   </main>
 </body>

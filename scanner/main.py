@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from scanner import __version__
+from scanner.http_audit import audit_http_services
 from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
 from scanner.report_json import save_json_report
@@ -58,6 +59,13 @@ def scan(
             help="Save scan results to an HTML report in the reports folder.",
         ),
     ] = False,
+    http_audit: Annotated[
+        bool,
+        typer.Option(
+            "--http-audit",
+            help="Run safe HTTP security header checks against detected web services.",
+        ),
+    ] = False,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
@@ -71,6 +79,9 @@ def scan(
         scan_start_time = datetime.now().astimezone()
         scan_result = scan_tcp_ports(target)
         scan_result["scan_mode"] = mode
+        scan_result["http_findings"] = []
+        if http_audit:
+            scan_result["http_findings"] = audit_http_services(scan_result["open_ports"])
         scan_end_time = datetime.now().astimezone()
     except PortScanError as exc:
         console.print(f"[red]Scan error:[/red] {exc}")
@@ -104,6 +115,9 @@ def scan(
 
     console.print(f"[bold]Total scan time:[/bold] {scan_result['duration_seconds']} seconds")
 
+    if http_audit:
+        _print_http_findings(scan_result["http_findings"])
+
     if json_report:
         report_path = save_json_report(
             scan_result=scan_result,
@@ -123,6 +137,30 @@ def scan(
             scan_end_time=scan_end_time,
         )
         console.print(f"HTML report saved: {report_path}")
+
+
+def _print_http_findings(findings: list[dict[str, str]]) -> None:
+    if not findings:
+        console.print("[green]HTTP audit findings:[/green] None found.")
+        return
+
+    table = Table(title="HTTP Audit Findings")
+    table.add_column("Severity")
+    table.add_column("Title")
+    table.add_column("URL")
+    table.add_column("Evidence")
+    table.add_column("Recommendation")
+
+    for finding in findings:
+        table.add_row(
+            finding["severity"],
+            finding["title"],
+            finding["affected_url"],
+            finding["evidence"],
+            finding["recommendation"],
+        )
+
+    console.print(table)
 
 
 if __name__ == "__main__":

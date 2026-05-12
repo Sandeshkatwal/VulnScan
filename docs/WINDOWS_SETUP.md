@@ -49,6 +49,18 @@ To save both report formats:
 python -m scanner.main scan --target 127.0.0.1 --json --html
 ```
 
+To run the optional HTTP security header audit:
+
+```powershell
+python -m scanner.main scan --target example.com --http-audit
+```
+
+To run HTTP auditing and save both report formats:
+
+```powershell
+python -m scanner.main scan --target example.com --http-audit --json --html
+```
+
 You can also run the included helper script:
 
 ```powershell
@@ -65,4 +77,4 @@ python -m pytest
 
 ## Safety
 
-Use VulScan only for authorised defensive assessment. Do not use it for exploitation, brute force, credential attacks, payload attacks, destructive checks, stealth scanning, or firewall bypassing.
+Use VulScan only for authorised defensive assessment. Do not use it for exploitation, brute force, credential attacks, payload attacks, destructive checks, stealth scanning, crawling, fuzzing, or firewall bypassing.
