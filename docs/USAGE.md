@@ -22,7 +22,7 @@ Or use the included helper script:
 .\run_scan.ps1
 ```
 
-The Version 8 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
+The Version 10 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
 
 ```text
 21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 3306, 3389, 5432, 6379, 8080, 8443
@@ -32,9 +32,31 @@ Only open ports are shown by default. Each open result includes the host, resolv
 
 ## Findings
 
-VulScan reports include a standard top-level `findings` section. Findings include sequential IDs, severity, category, affected host/port/URL, service, evidence, confidence, impact, recommendation, verification, limitation, source, and creation time.
+VulScan reports include a standard top-level `findings` section. Findings include sequential IDs, severity, category, affected host/port/URL, service, evidence, confidence, impact, recommendation, verification, limitation, source, risk score, risk label, fix priority, and creation time.
 
 Open ports remain in `open_ports` for asset inventory. Open services also create informational service exposure findings.
+
+## Risk Scoring
+
+Risk scores are heuristic and range from 0 to 100. They combine severity, confidence, finding source, and exposure context such as sensitive ports or clear-text services.
+
+Risk scores help with triage, but they are not a final statement of business risk. A human reviewer should validate context, asset criticality, exposure, compensating controls, and operational impact before prioritising remediation.
+
+## Scan History
+
+Use `--save-db` to store scan results in the local SQLite database at `data\vulscan.db`:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+```
+
+View previous scans for a target:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
+```
+
+The database is local to your workstation and should not be committed to Git. It supports future scan diffing, remediation tracking, and trend reporting.
 
 ## HTTP Security Header Audit
 
@@ -98,6 +120,8 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 ```
 
 To run HTTP auditing and save reports:

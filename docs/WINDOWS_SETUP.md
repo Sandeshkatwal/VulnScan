@@ -49,12 +49,28 @@ To save both report formats:
 python -m scanner.main scan --target 127.0.0.1 --json --html
 ```
 
+To save scan history to the local SQLite database:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+```
+
+To view previous scans for a target:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
+```
+
+The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git.
+
 You can also call the virtual environment Python directly:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 ```
 
 To run the optional HTTP security header audit:

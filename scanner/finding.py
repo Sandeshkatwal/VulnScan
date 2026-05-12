@@ -42,6 +42,9 @@ class Finding:
     affected_port: int | None = None
     affected_url: str | None = None
     service: str | None = None
+    risk_score: int = 0
+    risk_label: str = "Informational"
+    fix_priority: str = "Document and monitor"
     created_at: str = field(default_factory=_created_at)
 
 
@@ -58,16 +61,22 @@ def finding_to_dict(finding: Finding | dict[str, Any]) -> dict[str, Any]:
 
 
 def findings_to_dicts(findings: list[Finding | dict[str, Any]]) -> list[dict[str, Any]]:
-    """Convert a list of findings to dictionaries sorted by severity."""
+    """Convert a list of findings to dictionaries sorted by risk score."""
     return sorted(
         [finding_to_dict(finding) for finding in findings],
-        key=lambda item: (SEVERITY_ORDER.get(str(item["severity"]), 99), str(item["title"])),
+        key=lambda item: (
+            -int(item.get("risk_score", 0)),
+            SEVERITY_ORDER.get(str(item["severity"]), 99),
+            str(item["title"]),
+        ),
     )
 
 
 def assign_sequential_finding_ids(findings: list[Finding | dict[str, Any]]) -> list[dict[str, Any]]:
     """Convert findings to dictionaries and assign sequential IDs after sorting."""
-    numbered_findings = findings_to_dicts(findings)
+    from scanner.risk_score import apply_risk_scores
+
+    numbered_findings = findings_to_dicts(apply_risk_scores(findings))
     for index, finding in enumerate(numbered_findings, start=1):
         finding["id"] = make_finding_id(index)
     return numbered_findings

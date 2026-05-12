@@ -74,11 +74,11 @@ def _highest_risk_level(findings: list[dict[str, Any]]) -> str:
     if not findings:
         return "informational"
 
-    highest = min(
-        (str(finding["severity"]) for finding in findings),
-        key=lambda severity: SEVERITY_ORDER.get(severity, 99),
+    highest = max(
+        findings,
+        key=lambda finding: int(finding.get("risk_score", 0)),
     )
-    return highest.lower()
+    return str(highest.get("risk_label", "Informational")).lower()
 
 
 def _build_report_filename(target: str, scan_start_time: datetime) -> str:

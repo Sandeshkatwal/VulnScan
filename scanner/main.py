@@ -10,6 +10,7 @@ from rich.table import Table
 
 from scanner import __version__
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
+from scanner.history import get_scan_history, save_scan_result
 from scanner.http_audit import audit_http_services
 from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
@@ -75,6 +76,13 @@ def scan(
             help="Run passive TLS certificate checks against detected HTTPS services.",
         ),
     ] = False,
+    save_db: Annotated[
+        bool,
+        typer.Option(
+            "--save-db",
+            help="Save scan results to the local SQLite history database.",
+        ),
+    ] = False,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
@@ -105,6 +113,8 @@ def scan(
             finding for finding in scan_result["findings"] if finding["source"] == "tls_audit"
         ]
         scan_end_time = datetime.now().astimezone()
+        scan_result["scan_start_time"] = scan_start_time.isoformat(timespec="seconds")
+        scan_result["scan_end_time"] = scan_end_time.isoformat(timespec="seconds")
     except PortScanError as exc:
         console.print(f"[red]Scan error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -159,6 +169,52 @@ def scan(
         )
         console.print(f"HTML report saved: {report_path}")
 
+    if save_db:
+        scan_id = save_scan_result(scan_result)
+        console.print(f"[bold]Scan saved to database:[/bold] data\\vulscan.db ({scan_id})")
+
+
+@app.command()
+def history(
+    target: Annotated[
+        str,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Target to show scan history for.",
+        ),
+    ],
+) -> None:
+    """Show saved scan history for a target."""
+    rows = get_scan_history(target)
+    if not rows:
+        console.print(f"[yellow]No scan history found for target:[/yellow] {target}")
+        return
+
+    table = Table(title=f"Scan History: {target}")
+    table.add_column("Scan Date/Time")
+    table.add_column("Target")
+    table.add_column("Resolved IP")
+    table.add_column("Duration", justify="right")
+    table.add_column("Open Ports", justify="right")
+    table.add_column("Findings", justify="right")
+    table.add_column("Highest Risk", justify="right")
+    table.add_column("Risk Label")
+
+    for row in rows:
+        table.add_row(
+            str(row["scan_start_time"]),
+            str(row["target"]),
+            str(row["resolved_ip"]),
+            str(row["duration_seconds"]),
+            str(row["total_open_ports"]),
+            str(row["total_findings"]),
+            str(row["highest_risk_score"]),
+            str(row["highest_risk_label"]),
+        )
+
+    console.print(table)
+
 
 def _print_findings(findings: list[dict[str, Any]]) -> None:
     if not findings:
@@ -166,6 +222,8 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         return
 
     table = Table(title="Findings")
+    table.add_column("Risk", justify="right")
+    table.add_column("Risk Label")
     table.add_column("Severity")
     table.add_column("Title")
     table.add_column("Source")
@@ -175,6 +233,8 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
 
     for finding in findings:
         table.add_row(
+            str(finding["risk_score"]),
+            finding["risk_label"],
             finding["severity"],
             finding["title"],
             finding["source"],

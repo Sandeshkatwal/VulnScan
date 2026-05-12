@@ -199,7 +199,7 @@
       </div>
       <div class="metric">
         <div class="label">Risk</div>
-        <div class="value">Informational</div>
+        <div class="value">{{ report.summary.highest_risk_level }}</div>
       </div>
     </div>
 
@@ -266,6 +266,9 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Risk</th>
+            <th>Risk Label</th>
+            <th>Fix Priority</th>
             <th>Severity</th>
             <th>Title</th>
             <th>Category</th>
@@ -285,6 +288,9 @@
           {% for finding in report.findings %}
           <tr>
             <td>{{ finding.id }}</td>
+            <td>{{ finding.risk_score }}</td>
+            <td>{{ finding.risk_label }}</td>
+            <td>{{ finding.fix_priority }}</td>
             <td>{{ finding.severity }}</td>
             <td>{{ finding.title }}</td>
             <td>{{ finding.category }}</td>
@@ -388,7 +394,7 @@
     <section>
       <h2>Future Findings</h2>
       <div class="future">
-        Findings, severity, CVEs, EPSS, and risk scores can be added here as VulScan expands beyond port and service reporting.
+        CVEs, EPSS, asset criticality, and richer risk scoring can be added here as VulScan expands beyond port and service reporting.
       </div>
     </section>
 
