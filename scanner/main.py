@@ -10,6 +10,7 @@ from rich.table import Table
 
 from scanner import __version__
 from scanner.port_scan import PortScanError, scan_tcp_ports
+from scanner.report_html import save_html_report
 from scanner.report_json import save_json_report
 
 
@@ -48,6 +49,13 @@ def scan(
         typer.Option(
             "--json",
             help="Save scan results to a JSON report in the reports folder.",
+        ),
+    ] = False,
+    html_report: Annotated[
+        bool,
+        typer.Option(
+            "--html",
+            help="Save scan results to an HTML report in the reports folder.",
         ),
     ] = False,
 ) -> None:
@@ -105,6 +113,16 @@ def scan(
             scan_end_time=scan_end_time,
         )
         console.print(f"[bold]JSON report saved:[/bold] {report_path}")
+
+    if html_report:
+        report_path = save_html_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+        )
+        console.print(f"HTML report saved: {report_path}")
 
 
 if __name__ == "__main__":

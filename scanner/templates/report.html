@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ report.scanner_name }} Report - {{ report.target }}</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --text: #1f2937;
+      --muted: #5f6b7a;
+      --line: #d8dee8;
+      --brand: #174ea6;
+      --info-bg: #e8f1ff;
+      --info-text: #17457c;
+      --warn-bg: #fff7e6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    header {
+      border-bottom: 3px solid var(--brand);
+      margin-bottom: 24px;
+      padding-bottom: 18px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    h1 {
+      font-size: 30px;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .metric,
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    }
+
+    .metric {
+      padding: 14px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .value {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 4px;
+      overflow-wrap: anywhere;
+    }
+
+    section {
+      margin-top: 18px;
+      padding: 20px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--info-bg);
+      color: var(--info-text);
+      border: 1px solid #b8d4ff;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 10px;
+    }
+
+    .services {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    th {
+      color: #344054;
+      font-size: 13px;
+      background: #f8fafc;
+    }
+
+    .empty {
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .notice {
+      background: var(--warn-bg);
+    }
+
+    .future {
+      color: var(--muted);
+      border: 1px dashed #bac3d0;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 20px 14px 32px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        display: block;
+        overflow-x: auto;
+        table-layout: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>{{ report.scanner_name }} Vulnerability Scan Report</h1>
+      <div class="subtitle">Version {{ report.scanner_version }} | TCP-connect scan for authorised defensive assessment</div>
+    </header>
+
+    <div class="grid">
+      <div class="metric">
+        <div class="label">Target</div>
+        <div class="value">{{ report.target }}</div>
+      </div>
+      <div class="metric">
+        <div class="label">Resolved IP</div>
+        <div class="value">{{ report.resolved_ip }}</div>
+      </div>
+      <div class="metric">
+        <div class="label">Scan Mode</div>
+        <div class="value">{{ report.scan_mode }}</div>
+      </div>
+      <div class="metric">
+        <div class="label">Risk</div>
+        <div class="value">Informational</div>
+      </div>
+    </div>
+
+    <section>
+      <h2>Executive Summary</h2>
+      <p>{{ report.summary.notes }}</p>
+      <p><strong>Total open ports:</strong> {{ report.summary.total_open_ports }}</p>
+      <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
+      <p><strong>Scan start:</strong> {{ report.scan_start_time }}</p>
+      <p><strong>Scan end:</strong> {{ report.scan_end_time }}</p>
+      <h3>Detected Services</h3>
+      {% if report.summary.services_detected %}
+      <div class="services">
+        {% for service in report.summary.services_detected %}
+        <span class="badge">{{ service }}</span>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="empty">No services were detected in the default common TCP port list.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Open Ports</h2>
+      {% if report.open_ports %}
+      <table>
+        <thead>
+          <tr>
+            <th>Port</th>
+            <th>Protocol</th>
+            <th>Service</th>
+            <th>Status</th>
+            <th>Confidence</th>
+            <th>Evidence</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for port in report.open_ports %}
+          <tr>
+            <td>{{ port.port }}</td>
+            <td>{{ port.protocol }}</td>
+            <td>{{ port.service }}</td>
+            <td>{{ port.status }}</td>
+            <td>{{ port.confidence }}</td>
+            <td>{{ port.evidence }}</td>
+            <td>{{ port.recommendation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No open TCP ports were found in the default common port list.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Future Findings</h2>
+      <div class="future">
+        Findings, severity, CVEs, EPSS, and risk scores can be added here as VulScan expands beyond port and service reporting.
+      </div>
+    </section>
+
+    <section class="notice">
+      <h2>Safe Usage Disclaimer</h2>
+      <p>Use VulScan only on systems you own or have explicit permission to assess. This report is intended for authorised defensive security review.</p>
+    </section>
+
+    <section>
+      <h2>Limitations</h2>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. It does not perform SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, payload attacks, destructive checks, firewall bypassing, CVE validation, or authenticated auditing.</p>
+    </section>
+  </main>
+</body>
+</html>

@@ -37,6 +37,18 @@ To save a JSON report in the `reports` folder:
 python -m scanner.main scan --target 127.0.0.1 --json
 ```
 
+To save an HTML report in the `reports` folder:
+
+```powershell
+python -m scanner.main scan --target 127.0.0.1 --html
+```
+
+To save both report formats:
+
+```powershell
+python -m scanner.main scan --target 127.0.0.1 --json --html
+```
+
 You can also run the included helper script:
 
 ```powershell
