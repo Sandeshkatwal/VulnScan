@@ -49,6 +49,14 @@ To save both report formats:
 python -m scanner.main scan --target 127.0.0.1 --json --html
 ```
 
+You can also call the virtual environment Python directly:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
+```
+
 To run the optional HTTP security header audit:
 
 ```powershell

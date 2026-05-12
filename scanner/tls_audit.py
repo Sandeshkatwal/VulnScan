@@ -7,6 +7,8 @@ import ssl
 from datetime import datetime, timezone
 from typing import Any
 
+from scanner.finding import Finding, create_finding
+
 
 HTTPS_PORTS = {443, 8443}
 CERT_DATE_FORMAT = "%b %d %H:%M:%S %Y %Z"
@@ -15,9 +17,9 @@ CERT_DATE_FORMAT = "%b %d %H:%M:%S %Y %Z"
 def audit_tls_services(
     open_ports: list[dict[str, Any]],
     timeout: float = 5.0,
-) -> list[dict[str, Any]]:
+) -> list[Finding]:
     """Run passive TLS certificate checks against detected HTTPS services."""
-    findings: list[dict[str, Any]] = []
+    findings: list[Finding] = []
 
     for port_result in open_ports:
         port = int(port_result["port"])
@@ -41,7 +43,7 @@ def _audit_tls_certificate(
     resolved_ip: str,
     port: int,
     timeout: float,
-) -> list[dict[str, Any]]:
+) -> list[Finding]:
     context = ssl.create_default_context()
 
     try:
@@ -52,30 +54,36 @@ def _audit_tls_certificate(
         return [_certificate_validation_error(host, port, exc)]
     except ssl.SSLError as exc:
         return [
-            _finding(
+            create_finding(
                 title="Unable to validate certificate",
                 severity="Medium",
                 category="TLS certificate",
                 affected_host=host,
                 affected_port=port,
                 evidence=f"TLS error: {exc.__class__.__name__}",
+                confidence="Medium",
+                impact="TLS certificate validation could not be completed.",
                 recommendation="Review the TLS certificate chain and server TLS configuration.",
                 verification="VulScan attempted a normal TLS handshake using Python ssl default validation.",
                 limitation="Certificate details may be unavailable when the TLS handshake fails.",
+                source="tls_audit",
             )
         ]
     except (TimeoutError, OSError, socket.timeout) as exc:
         return [
-            _finding(
+            create_finding(
                 title="Unable to validate certificate",
                 severity="Medium",
                 category="TLS certificate",
                 affected_host=host,
                 affected_port=port,
                 evidence=f"Connection error: {exc.__class__.__name__}",
+                confidence="Medium",
+                impact="TLS certificate validation could not be completed.",
                 recommendation="Confirm the HTTPS service is reachable and presenting a valid certificate.",
                 verification="VulScan attempted a TCP connection followed by a normal TLS handshake.",
                 limitation="Certificate details are unavailable because the TLS connection could not be completed.",
+                source="tls_audit",
             )
         ]
 
@@ -86,8 +94,8 @@ def _certificate_findings(
     host: str,
     port: int,
     certificate: dict[str, Any],
-) -> list[dict[str, Any]]:
-    findings: list[dict[str, Any]] = []
+) -> list[Finding]:
+    findings: list[Finding] = []
     valid_until = str(certificate.get("notAfter", ""))
     valid_from = str(certificate.get("notBefore", ""))
     subject = _name_tuple_to_string(certificate.get("subject", ()))
@@ -104,16 +112,19 @@ def _certificate_findings(
         evidence_parts.append(f"Days remaining: {days_remaining}")
 
     findings.append(
-        _finding(
+        create_finding(
             title="Certificate information retrieved successfully",
             severity="Informational",
             category="TLS certificate",
             affected_host=host,
             affected_port=port,
             evidence="; ".join(evidence_parts),
+            confidence="High",
+            impact="Certificate metadata is available for review.",
             recommendation="Review certificate subject, issuer, validity dates, and renewal process.",
             verification="VulScan completed a normal TLS handshake and retrieved peer certificate information.",
             limitation="This check does not test weak ciphers, protocol downgrade behavior, or full PKI policy compliance.",
+            source="tls_audit",
         )
     )
 
@@ -122,30 +133,36 @@ def _certificate_findings(
 
     if days_remaining < 0:
         findings.append(
-            _finding(
+            create_finding(
                 title="Expired certificate",
                 severity="High",
                 category="TLS certificate",
                 affected_host=host,
                 affected_port=port,
                 evidence=f"Certificate expired on {valid_until}.",
+                confidence="High",
+                impact="Clients may reject the service or users may be trained to bypass browser warnings.",
                 recommendation="Renew and deploy a valid TLS certificate immediately.",
                 verification="VulScan parsed the certificate notAfter value from the TLS peer certificate.",
                 limitation="System clock accuracy affects expiry calculations.",
+                source="tls_audit",
             )
         )
     elif days_remaining <= 30:
         findings.append(
-            _finding(
+            create_finding(
                 title="Certificate expires within 30 days",
                 severity="Medium",
                 category="TLS certificate",
                 affected_host=host,
                 affected_port=port,
                 evidence=f"Certificate expires on {valid_until}; days remaining: {days_remaining}.",
+                confidence="High",
+                impact="The service may soon present an expired certificate if renewal is missed.",
                 recommendation="Plan certificate renewal before expiry.",
                 verification="VulScan parsed the certificate notAfter value from the TLS peer certificate.",
                 limitation="System clock accuracy affects expiry calculations.",
+                source="tls_audit",
             )
         )
 
@@ -156,46 +173,55 @@ def _certificate_validation_error(
     host: str,
     port: int,
     exc: ssl.SSLCertVerificationError,
-) -> dict[str, Any]:
+) -> Finding:
     message = str(exc)
     lower_message = message.lower()
 
     if "hostname" in lower_message or "not match" in lower_message:
-        return _finding(
+        return create_finding(
             title="Hostname mismatch",
             severity="High",
             category="TLS certificate",
             affected_host=host,
             affected_port=port,
             evidence=f"Certificate validation failed: {message}",
+            confidence="High",
+            impact="Clients may reject the certificate because it does not match the requested hostname.",
             recommendation="Deploy a certificate whose subject alternative names match the scanned hostname.",
             verification="Python ssl default certificate validation rejected the certificate during a normal TLS handshake.",
             limitation="Certificate details may be unavailable when validation fails before certificate retrieval.",
+            source="tls_audit",
         )
 
     if "expired" in lower_message:
-        return _finding(
+        return create_finding(
             title="Expired certificate",
             severity="High",
             category="TLS certificate",
             affected_host=host,
             affected_port=port,
             evidence=f"Certificate validation failed: {message}",
+            confidence="High",
+            impact="Clients may reject the service or users may be trained to bypass browser warnings.",
             recommendation="Renew and deploy a valid TLS certificate immediately.",
             verification="Python ssl default certificate validation rejected the certificate during a normal TLS handshake.",
             limitation="Certificate details may be unavailable when validation fails before certificate retrieval.",
+            source="tls_audit",
         )
 
-    return _finding(
+    return create_finding(
         title="Unable to validate certificate",
         severity="Medium",
         category="TLS certificate",
         affected_host=host,
         affected_port=port,
         evidence=f"Certificate validation failed: {message}",
+        confidence="Medium",
+        impact="Clients may be unable to establish trusted TLS connections to the service.",
         recommendation="Review certificate trust chain, hostname coverage, and validity dates.",
         verification="Python ssl default certificate validation rejected the certificate during a normal TLS handshake.",
         limitation="Certificate details may be unavailable when validation fails before certificate retrieval.",
+        source="tls_audit",
     )
 
 
@@ -225,27 +251,3 @@ def _name_tuple_to_string(name: object) -> str:
 
     return ", ".join(parts)
 
-
-def _finding(
-    title: str,
-    severity: str,
-    category: str,
-    affected_host: str,
-    affected_port: int,
-    evidence: str,
-    recommendation: str,
-    verification: str,
-    limitation: str,
-) -> dict[str, Any]:
-    return {
-        "title": title,
-        "severity": severity,
-        "category": category,
-        "affected_host": affected_host,
-        "affected_port": affected_port,
-        "evidence": evidence,
-        "confidence": "medium",
-        "recommendation": recommendation,
-        "verification": verification,
-        "limitation": limitation,
-    }

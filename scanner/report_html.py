@@ -9,6 +9,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from scanner.finding import findings_to_dicts
 from scanner.report_json import build_summary
 
 
@@ -38,6 +39,7 @@ def save_html_report(
         "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
         "duration_seconds": scan_result["duration_seconds"],
         "open_ports": scan_result["open_ports"],
+        "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),
         "tls_findings": scan_result.get("tls_findings", []),
         "summary": build_summary(scan_result),

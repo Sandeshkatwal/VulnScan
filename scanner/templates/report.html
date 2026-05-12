@@ -207,6 +207,7 @@
       <h2>Executive Summary</h2>
       <p>{{ report.summary.notes }}</p>
       <p><strong>Total open ports:</strong> {{ report.summary.total_open_ports }}</p>
+      <p><strong>Total findings:</strong> {{ report.summary.total_findings }}</p>
       <p><strong>HTTP audit findings:</strong> {{ report.summary.total_http_findings }}</p>
       <p><strong>TLS audit findings:</strong> {{ report.summary.total_tls_findings }}</p>
       <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
@@ -255,6 +256,54 @@
       </table>
       {% else %}
       <p class="empty">No open TCP ports were found in the default common port list.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Findings</h2>
+      {% if report.findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Source</th>
+            <th>Host</th>
+            <th>Port</th>
+            <th>URL</th>
+            <th>Service</th>
+            <th>Evidence</th>
+            <th>Impact</th>
+            <th>Recommendation</th>
+            <th>Verification</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in report.findings %}
+          <tr>
+            <td>{{ finding.id }}</td>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.category }}</td>
+            <td>{{ finding.source }}</td>
+            <td>{{ finding.affected_host or "" }}</td>
+            <td>{{ finding.affected_port or "" }}</td>
+            <td>{{ finding.affected_url or "" }}</td>
+            <td>{{ finding.service or "" }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.impact }}</td>
+            <td>{{ finding.recommendation }}</td>
+            <td>{{ finding.verification }}</td>
+            <td>{{ finding.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No findings were recorded.</p>
       {% endif %}
     </section>
 

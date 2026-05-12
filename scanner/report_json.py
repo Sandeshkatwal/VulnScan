@@ -8,6 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from scanner.finding import SEVERITY_ORDER, findings_to_dicts
+
 
 REPORTS_DIR = Path("reports")
 
@@ -34,6 +36,7 @@ def save_json_report(
         "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
         "duration_seconds": scan_result["duration_seconds"],
         "open_ports": scan_result["open_ports"],
+        "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),
         "tls_findings": scan_result.get("tls_findings", []),
         "summary": build_summary(scan_result),
@@ -47,6 +50,7 @@ def save_json_report(
 def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
     """Build a short defensive summary from a scan result."""
     open_ports = scan_result["open_ports"]
+    findings = findings_to_dicts(scan_result.get("findings", []))
     services_detected = sorted(
         {
             str(port_result["service"])
@@ -58,11 +62,23 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
     return {
         "total_open_ports": len(open_ports),
         "services_detected": services_detected,
+        "total_findings": len(findings),
         "total_http_findings": len(scan_result.get("http_findings", [])),
         "total_tls_findings": len(scan_result.get("tls_findings", [])),
-        "highest_risk_level": "informational",
+        "highest_risk_level": _highest_risk_level(findings),
         "notes": "TCP connect scan of common ports only. Review exposed services for business need and network access controls.",
     }
+
+
+def _highest_risk_level(findings: list[dict[str, Any]]) -> str:
+    if not findings:
+        return "informational"
+
+    highest = min(
+        (str(finding["severity"]) for finding in findings),
+        key=lambda severity: SEVERITY_ORDER.get(severity, 99),
+    )
+    return highest.lower()
 
 
 def _build_report_filename(target: str, scan_start_time: datetime) -> str:

@@ -22,13 +22,19 @@ Or use the included helper script:
 .\run_scan.ps1
 ```
 
-The Version 7 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
+The Version 8 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
 
 ```text
 21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 3306, 3389, 5432, 6379, 8080, 8443
 ```
 
 Only open ports are shown by default. Each open result includes the host, resolved IP address, TCP port, protocol, service, status, confidence, evidence, and a defensive recommendation. For example, an open `445/tcp` result is identified as `smb`.
+
+## Findings
+
+VulScan reports include a standard top-level `findings` section. Findings include stable IDs, severity, category, affected host/port/URL, service, evidence, confidence, impact, recommendation, verification, limitation, source, and creation time.
+
+Open ports remain in `open_ports` for asset inventory. Open services also create informational service exposure findings.
 
 ## HTTP Security Header Audit
 
@@ -84,6 +90,14 @@ To save both JSON and HTML reports:
 
 ```powershell
 python -m scanner.main scan --target 127.0.0.1 --json --html
+```
+
+Equivalent explicit virtual environment commands:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
 ```
 
 To run HTTP auditing and save reports:

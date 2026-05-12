@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from scanner import __version__
+from scanner.finding import create_port_exposure_findings, findings_to_dicts
 from scanner.http_audit import audit_http_services
 from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
@@ -89,10 +90,16 @@ def scan(
         scan_result["scan_mode"] = mode
         scan_result["http_findings"] = []
         scan_result["tls_findings"] = []
+        findings = create_port_exposure_findings(scan_result["open_ports"])
         if http_audit:
-            scan_result["http_findings"] = audit_http_services(scan_result["open_ports"])
+            http_findings = audit_http_services(scan_result["open_ports"])
+            findings.extend(http_findings)
+            scan_result["http_findings"] = findings_to_dicts(http_findings)
         if tls_audit:
-            scan_result["tls_findings"] = audit_tls_services(scan_result["open_ports"])
+            tls_findings = audit_tls_services(scan_result["open_ports"])
+            findings.extend(tls_findings)
+            scan_result["tls_findings"] = findings_to_dicts(tls_findings)
+        scan_result["findings"] = findings_to_dicts(findings)
         scan_end_time = datetime.now().astimezone()
     except PortScanError as exc:
         console.print(f"[red]Scan error:[/red] {exc}")
@@ -126,11 +133,7 @@ def scan(
 
     console.print(f"[bold]Total scan time:[/bold] {scan_result['duration_seconds']} seconds")
 
-    if http_audit:
-        _print_http_findings(scan_result["http_findings"])
-
-    if tls_audit:
-        _print_tls_findings(scan_result["tls_findings"])
+    _print_findings(scan_result["findings"])
 
     if json_report:
         report_path = save_json_report(
@@ -153,15 +156,16 @@ def scan(
         console.print(f"HTML report saved: {report_path}")
 
 
-def _print_http_findings(findings: list[dict[str, Any]]) -> None:
+def _print_findings(findings: list[dict[str, Any]]) -> None:
     if not findings:
-        console.print("[green]HTTP audit findings:[/green] None found.")
+        console.print("[green]Findings:[/green] None found.")
         return
 
-    table = Table(title="HTTP Audit Findings")
+    table = Table(title="Findings")
     table.add_column("Severity")
     table.add_column("Title")
-    table.add_column("URL")
+    table.add_column("Source")
+    table.add_column("Affected")
     table.add_column("Evidence")
     table.add_column("Recommendation")
 
@@ -169,7 +173,8 @@ def _print_http_findings(findings: list[dict[str, Any]]) -> None:
         table.add_row(
             finding["severity"],
             finding["title"],
-            finding["affected_url"],
+            finding["source"],
+            _affected_summary(finding),
             finding["evidence"],
             finding["recommendation"],
         )
@@ -177,30 +182,18 @@ def _print_http_findings(findings: list[dict[str, Any]]) -> None:
     console.print(table)
 
 
-def _print_tls_findings(findings: list[dict[str, Any]]) -> None:
-    if not findings:
-        console.print("[green]TLS audit findings:[/green] None found.")
-        return
-
-    table = Table(title="TLS Certificate Findings")
-    table.add_column("Severity")
-    table.add_column("Title")
-    table.add_column("Host")
-    table.add_column("Port", justify="right")
-    table.add_column("Evidence")
-    table.add_column("Recommendation")
-
-    for finding in findings:
-        table.add_row(
-            finding["severity"],
-            finding["title"],
-            finding["affected_host"],
-            str(finding["affected_port"]),
-            finding["evidence"],
-            finding["recommendation"],
-        )
-
-    console.print(table)
+def _affected_summary(finding: dict[str, Any]) -> str:
+    if finding.get("affected_url"):
+        return str(finding["affected_url"])
+    host = finding.get("affected_host")
+    port = finding.get("affected_port")
+    if host and port:
+        return f"{host}:{port}"
+    if host:
+        return str(host)
+    if port:
+        return f"port {port}"
+    return "n/a"
 
 
 if __name__ == "__main__":
