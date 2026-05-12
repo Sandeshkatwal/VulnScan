@@ -1,0 +1,29 @@
+# Python virtual environments
+.venv/
+.venv311/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files
+.env
+
+# Reports and local data
+reports/*
+!reports/.gitkeep
+data/*
+!data/.gitkeep
+data/*.db
+data/*cache*.json
+
+# VS Code local settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,45 @@
+Vulnerability Scanner
+│
+├── Discovery Engine
+│   ├── Host discovery
+│   ├── Port scanning
+│   └── Service detection
+│
+├── Credentialed Scan Engine
+│   ├── SSH scanner
+│   ├── SMB/Windows scanner
+│   └── Package/configuration checks
+│
+├── Web DAST Engine
+│   ├── Crawler
+│   ├── Header checker
+│   ├── Injection tester
+│   └── Cookie checker
+│
+├── Vulnerability Intelligence Engine
+│   ├── CVE database
+│   ├── CVSS score
+│   ├── EPSS score
+│   └── Exploit availability
+│
+├── Prioritisation Engine
+│   ├── Risk scoring
+│   ├── Asset criticality
+│   └── Fix-first ranking
+│
+├── Storage
+│   ├── Assets
+│   ├── Findings
+│   ├── Scan history
+│   └── Reports
+│
+├── API
+│   ├── Start scan
+│   ├── Get results
+│   └── Export data
+│
+└── Dashboard
+    ├── Risk overview
+    ├── Vulnerability list
+    ├── Trends
+    └── Reports
