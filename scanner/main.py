@@ -1,5 +1,6 @@
 """Command-line entry point for VulScan."""
 
+from datetime import datetime
 from typing import Annotated
 
 import typer
@@ -9,6 +10,7 @@ from rich.table import Table
 
 from scanner import __version__
 from scanner.port_scan import PortScanError, scan_tcp_ports
+from scanner.report_json import save_json_report
 
 
 app = typer.Typer(
@@ -41,6 +43,13 @@ def scan(
             help="Defensive scan mode.",
         ),
     ] = "safe",
+    json_report: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Save scan results to a JSON report in the reports folder.",
+        ),
+    ] = False,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
@@ -51,7 +60,10 @@ def scan(
     )
 
     try:
+        scan_start_time = datetime.now().astimezone()
         scan_result = scan_tcp_ports(target)
+        scan_result["scan_mode"] = mode
+        scan_end_time = datetime.now().astimezone()
     except PortScanError as exc:
         console.print(f"[red]Scan error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
@@ -83,6 +95,16 @@ def scan(
         console.print("[green]Open TCP ports:[/green] None found in the default safe port list.")
 
     console.print(f"[bold]Total scan time:[/bold] {scan_result['duration_seconds']} seconds")
+
+    if json_report:
+        report_path = save_json_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+        )
+        console.print(f"[bold]JSON report saved:[/bold] {report_path}")
 
 
 if __name__ == "__main__":

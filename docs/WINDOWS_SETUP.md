@@ -31,6 +31,12 @@ python -m pip install -r requirements.txt
 python -m scanner.main scan --target 127.0.0.1
 ```
 
+To save a JSON report in the `reports` folder:
+
+```powershell
+python -m scanner.main scan --target 127.0.0.1 --json
+```
+
 You can also run the included helper script:
 
 ```powershell

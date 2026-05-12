@@ -22,7 +22,7 @@ Or use the included helper script:
 .\run_scan.ps1
 ```
 
-The Version 3 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
+The Version 4 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
 
 ```text
 21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 3306, 3389, 5432, 6379, 8080, 8443
@@ -36,10 +36,22 @@ Only open ports are shown by default. Each open result includes the host, resolv
 python -m scanner.main scan --target 127.0.0.1
 ```
 
+To save a JSON report in the `reports` folder:
+
+```powershell
+python -m scanner.main scan --target 127.0.0.1 --json
+```
+
 Example output includes a table with:
 
 ```text
 Port  Protocol  Service  Status  Evidence  Recommendation
+```
+
+When `--json` is used, VulScan also prints the saved report path:
+
+```text
+JSON report saved: reports\127.0.0.1_2026-05-12_231500.json
 ```
 
 ## Installing Dependencies
