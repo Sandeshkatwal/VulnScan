@@ -56,6 +56,14 @@ View previous scans for a target:
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 ```
 
+Limit the number of history rows shown:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
+```
+
+The history command shows the database path, target, number of scans shown, scan summaries, and latest-scan severity and risk-label counts. If the database does not exist or a target has no saved scans, VulScan prints a friendly message.
+
 The database is local to your workstation and should not be committed to Git. It supports future scan diffing, remediation tracking, and trend reporting.
 
 ## HTTP Security Header Audit
@@ -122,6 +130,7 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 ```
 
 To run HTTP auditing and save reports:

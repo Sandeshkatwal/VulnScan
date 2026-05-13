@@ -10,7 +10,13 @@ from rich.table import Table
 
 from scanner import __version__
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
-from scanner.history import get_scan_history, save_scan_result
+from scanner.database import database_exists
+from scanner.history import (
+    get_database_path,
+    get_latest_scan_finding_summaries,
+    get_scan_history,
+    save_scan_result,
+)
 from scanner.http_audit import audit_http_services
 from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
@@ -184,12 +190,33 @@ def history(
             help="Target to show scan history for.",
         ),
     ],
+    limit: Annotated[
+        int,
+        typer.Option(
+            "--limit",
+            "-l",
+            min=1,
+            help="Maximum number of history rows to display.",
+        ),
+    ] = 10,
 ) -> None:
     """Show saved scan history for a target."""
-    rows = get_scan_history(target)
+    database_path = get_database_path()
+    console.print(f"[bold]Database path:[/bold] {database_path}")
+    console.print(f"[bold]Target:[/bold] {target}")
+
+    if not database_exists():
+        console.print(
+            "[yellow]No scan history database exists yet. Run a scan with --save-db to create data\\vulscan.db.[/yellow]"
+        )
+        return
+
+    rows = get_scan_history(target, limit=limit)
     if not rows:
         console.print(f"[yellow]No scan history found for target:[/yellow] {target}")
         return
+
+    console.print(f"[bold]Scans shown:[/bold] {len(rows)}")
 
     table = Table(title=f"Scan History: {target}")
     table.add_column("Scan Date/Time")
@@ -214,6 +241,16 @@ def history(
         )
 
     console.print(table)
+    summaries = get_latest_scan_finding_summaries(target)
+    if summaries is None:
+        return
+
+    if sum(summaries["severity"].values()) == 0:
+        console.print("[yellow]Latest scan has no findings.[/yellow]")
+        return
+
+    _print_count_summary("Latest Scan Severity Summary", summaries["severity"])
+    _print_count_summary("Latest Scan Risk Label Summary", summaries["risk_label"])
 
 
 def _print_findings(findings: list[dict[str, Any]]) -> None:
@@ -258,6 +295,15 @@ def _affected_summary(finding: dict[str, Any]) -> str:
     if port:
         return f"port {port}"
     return "n/a"
+
+
+def _print_count_summary(title: str, counts: dict[str, int]) -> None:
+    table = Table(title=title)
+    table.add_column("Label")
+    table.add_column("Count", justify="right")
+    for label, count in counts.items():
+        table.add_row(label, str(count))
+    console.print(table)
 
 
 if __name__ == "__main__":

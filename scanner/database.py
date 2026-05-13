@@ -9,6 +9,11 @@ from pathlib import Path
 DB_PATH = Path("data") / "vulscan.db"
 
 
+def database_exists(db_path: Path = DB_PATH) -> bool:
+    """Return whether the local scan history database exists."""
+    return db_path.exists()
+
+
 def get_connection(db_path: Path = DB_PATH) -> sqlite3.Connection:
     """Return a SQLite connection and ensure the data directory exists."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
