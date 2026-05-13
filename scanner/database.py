@@ -7,11 +7,35 @@ from pathlib import Path
 
 
 DB_PATH = Path("data") / "vulscan.db"
+REQUIRED_TABLES = {"scans", "open_ports", "findings"}
 
 
 def database_exists(db_path: Path = DB_PATH) -> bool:
     """Return whether the local scan history database exists."""
     return db_path.exists()
+
+
+def get_missing_required_tables(db_path: Path = DB_PATH) -> set[str]:
+    """Return required VulScan tables missing from an existing database."""
+    if not database_exists(db_path):
+        return REQUIRED_TABLES.copy()
+
+    with get_connection(db_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table'
+            """
+        ).fetchall()
+
+    existing_tables = {str(row["name"]) for row in rows}
+    return REQUIRED_TABLES - existing_tables
+
+
+def database_has_required_tables(db_path: Path = DB_PATH) -> bool:
+    """Return whether all required VulScan tables exist."""
+    return not get_missing_required_tables(db_path)
 
 
 def get_connection(db_path: Path = DB_PATH) -> sqlite3.Connection:

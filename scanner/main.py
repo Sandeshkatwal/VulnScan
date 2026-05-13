@@ -10,7 +10,7 @@ from rich.table import Table
 
 from scanner import __version__
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
-from scanner.database import database_exists
+from scanner.database import database_exists, get_missing_required_tables
 from scanner.history import (
     get_database_path,
     get_latest_scan_finding_summaries,
@@ -208,6 +208,14 @@ def history(
     if not database_exists():
         console.print(
             "[yellow]No scan history database exists yet. Run a scan with --save-db to create data\\vulscan.db.[/yellow]"
+        )
+        return
+
+    missing_tables = get_missing_required_tables()
+    if missing_tables:
+        missing = ", ".join(sorted(missing_tables))
+        console.print(
+            f"[yellow]Scan history database is missing required tables ({missing}). Run a scan with --save-db to initialise data\\vulscan.db.[/yellow]"
         )
         return
 

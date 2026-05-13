@@ -73,6 +73,6 @@ Sequential finding IDs make reports easier to reference during remediation. Stru
 
 Version 10 adds local SQLite storage. Saving scan summaries, open ports, and findings in `data\vulscan.db` creates the foundation for future diffing between scans, remediation status tracking, trend charts, and dashboard history views.
 
-Version 10.1 improves history validation and summaries. The CLI can limit returned history rows, clearly report missing databases or missing target history, and summarize latest-scan severity and risk-label counts without changing the database schema.
+Version 10.1 improves history validation and summaries. The CLI can limit returned history rows, clearly report missing databases, missing required tables, or missing target history, and summarize latest-scan severity and risk-label counts without changing the database schema.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

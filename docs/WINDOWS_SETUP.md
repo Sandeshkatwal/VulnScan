@@ -67,7 +67,7 @@ To limit displayed history rows:
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 ```
 
-The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. The history command also shows latest-scan severity and risk-label summaries.
+The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. The history command also shows latest-scan severity and risk-label summaries, and it validates that the required SQLite tables exist.
 
 You can also call the virtual environment Python directly:
 

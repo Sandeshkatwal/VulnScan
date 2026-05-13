@@ -62,7 +62,7 @@ Limit the number of history rows shown:
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 ```
 
-The history command shows the database path, target, number of scans shown, scan summaries, and latest-scan severity and risk-label counts. If the database does not exist or a target has no saved scans, VulScan prints a friendly message.
+The history command shows the database path, target, number of scans shown, scan summaries, and latest-scan severity and risk-label counts. If the database does not exist, required tables are missing, or a target has no saved scans, VulScan prints a friendly message.
 
 The database is local to your workstation and should not be committed to Git. It supports future scan diffing, remediation tracking, and trend reporting.
 

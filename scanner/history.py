@@ -7,7 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from scanner import __version__
-from scanner.database import DB_PATH, database_exists, get_connection, init_db
+from scanner.database import DB_PATH, database_exists, database_has_required_tables, get_connection, init_db
 
 
 SEVERITY_VALUES = ("Critical", "High", "Medium", "Low", "Informational")
@@ -123,7 +123,7 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
 
 def get_scan_history(target: str, limit: int | None = None) -> list[dict[str, Any]]:
     """Return scan history rows for a target."""
-    if not database_exists():
+    if not database_exists() or not database_has_required_tables():
         return []
 
     limit_clause = ""
@@ -150,7 +150,7 @@ def get_scan_history(target: str, limit: int | None = None) -> list[dict[str, An
 
 def get_latest_scan(target: str) -> dict[str, Any] | None:
     """Return the latest scan row for a target, if present."""
-    if not database_exists():
+    if not database_exists() or not database_has_required_tables():
         return None
 
     with get_connection() as connection:
@@ -222,7 +222,7 @@ def _highest_risk_label(findings: list[dict[str, Any]]) -> str:
 
 
 def _get_latest_scan_id(target: str) -> str | None:
-    if not database_exists():
+    if not database_exists() or not database_has_required_tables():
         return None
 
     with get_connection() as connection:
