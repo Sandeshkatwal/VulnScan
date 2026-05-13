@@ -67,7 +67,15 @@ To limit displayed history rows:
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 ```
 
-The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. The history command also shows latest-scan severity and risk-label summaries, and it validates that the required SQLite tables exist.
+To compare the latest two saved scans for a target:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+.\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
+```
+
+The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. The history command also shows latest-scan severity and risk-label summaries, and it validates that the required SQLite tables exist. The diff command uses the latest two saved scans to show new, fixed, unchanged, and changed-risk findings.
 
 You can also call the virtual environment Python directly:
 
@@ -78,6 +86,7 @@ You can also call the virtual environment Python directly:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
+.\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
 ```
 
 To run the optional HTTP security header audit:

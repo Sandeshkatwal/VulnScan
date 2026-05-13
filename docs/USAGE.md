@@ -66,6 +66,27 @@ The history command shows the database path, target, number of scans shown, scan
 
 The database is local to your workstation and should not be committed to Git. It supports future scan diffing, remediation tracking, and trend reporting.
 
+## Scan Diffing
+
+Version 10.2 can compare the latest two saved scans for the same target using the local SQLite database.
+
+Save at least two scans:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+```
+
+Then compare them:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
+```
+
+The diff command shows the database path, previous and latest scan times, finding totals, total risk score trend, and counts for new, fixed, unchanged, and changed-risk findings. It uses stable finding fingerprints based on title, affected host, affected port, affected URL, service, category, and source.
+
+If the database does not exist, a target has no saved scans, only one saved scan exists, or no findings are available to compare, VulScan prints a friendly message.
+
 ## HTTP Security Header Audit
 
 HTTP auditing is optional and runs only when `--http-audit` is provided. It only targets detected web services on `80`, `443`, `8080`, and `8443`, and sends a normal HTTP GET request to `/`.
@@ -131,6 +152,7 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
+.\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
 ```
 
 To run HTTP auditing and save reports:
