@@ -58,6 +58,7 @@ Vulnerability Scanner
 - Scan diffing between the latest two saved scans for a target, including new, fixed, unchanged, and changed-risk finding categories.
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
 - Storage / Assets inventory for saved targets and detected services, implemented in Version 10.4.
+- CSV and JSON export of saved assets, scan history, findings, and remediation records, implemented in Version 10.5.
 
 ## Planned Later
 
@@ -83,5 +84,7 @@ Version 10.2 adds scan diffing without changing the database schema. It compares
 Version 10.3 adds remediation status tracking in SQLite. Findings are matched using the same stable fingerprint model as scan diffing, so status can persist across scan runs even when sequential finding IDs change. This supports future dashboard remediation queues, API update endpoints, reporting filters, remediation SLAs, and fix verification workflows.
 
 Version 10.4 adds asset inventory in SQLite. Saved scans create or update asset records, track first seen and last seen timestamps, count scans, record latest open-port and finding counts, and maintain a service inventory for exposed TCP services. This marks Storage / Assets as implemented and provides the foundation for future dashboard asset pages, exposure management, asset criticality, and API inventory endpoints.
+
+Version 10.5 adds CSV and JSON exports from the local SQLite database. CSV supports Excel and spreadsheet workflows, while JSON supports future APIs, dashboards, integrations, and backup workflows. Export files are written to `exports`, which is ignored by Git.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

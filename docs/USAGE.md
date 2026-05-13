@@ -141,6 +141,40 @@ Show one target with detected services:
 
 Asset inventory tracks target, resolved IP, first seen, last seen, scan count, latest open-port count, latest finding count, highest risk label, exposure summary, and detected services. It supports future dashboard views, exposure management, trend reporting, and asset criticality workflows.
 
+## Exports
+
+Version 10.5 exports saved SQLite data to CSV or JSON files in the `exports` folder. Exports are generated from local data in `data\vulscan.db`; run scans with `--save-db` first. The `exports` folder is ignored by Git.
+
+CSV exports are useful for Excel and spreadsheet review. JSON exports are useful for APIs, dashboards, and automation.
+
+Export assets:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main export assets --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export assets --format json
+```
+
+Export scan history for one target, or omit `--target` to export all history:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main export history --target 127.0.0.1 --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export history --target 127.0.0.1 --format json
+```
+
+Export findings:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main export findings --target 127.0.0.1 --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export findings --format json
+```
+
+Export remediation records:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main export remediation --target 127.0.0.1 --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export remediation --format json
+```
+
 ## HTTP Security Header Audit
 
 HTTP auditing is optional and runs only when `--http-audit` is provided. It only targets detected web services on `80`, `443`, `8080`, and `8443`, and sends a normal HTTP GET request to `/`.
@@ -212,6 +246,10 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main remediation list --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main remediation summary --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main remediation update --fingerprint ABC123 --status "In Progress" --owner "Sandesh" --note "Reviewing exposure"
+.\.venv311\Scripts\python.exe -m scanner.main export assets --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export history --target 127.0.0.1 --format json
+.\.venv311\Scripts\python.exe -m scanner.main export findings --target 127.0.0.1 --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export remediation --format json
 ```
 
 To run HTTP auditing and save reports:

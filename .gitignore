@@ -16,6 +16,7 @@ __pycache__/
 # Reports and local data
 reports/*
 !reports/.gitkeep
+exports/
 data/*
 !data/.gitkeep
 data/*.db

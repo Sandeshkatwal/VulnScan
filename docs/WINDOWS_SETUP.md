@@ -68,6 +68,15 @@ To view saved asset inventory:
 .\.venv311\Scripts\python.exe -m scanner.main assets --target 127.0.0.1
 ```
 
+To export saved local data:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main export assets --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export history --target 127.0.0.1 --format json
+.\.venv311\Scripts\python.exe -m scanner.main export findings --target 127.0.0.1 --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export remediation --format json
+```
+
 To limit displayed history rows:
 
 ```powershell
@@ -90,7 +99,7 @@ To track remediation status for saved findings:
 .\.venv311\Scripts\python.exe -m scanner.main remediation update --fingerprint ABC123 --status "In Progress" --owner "Sandesh" --note "Reviewing exposure"
 ```
 
-The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. Asset records are created only when `--save-db` is used. The history command also shows latest-scan severity, risk-label, and remediation summaries, and it validates that the required SQLite tables exist. The diff command uses the latest two saved scans to show new, fixed, unchanged, and changed-risk findings. Remediation tracking stores status, owner, note, first seen, and last seen for saved findings. Asset inventory tracks discovered hosts, open services, and exposure summaries for future dashboard and exposure management features.
+The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. Asset records are created only when `--save-db` is used. Exports are generated from this local SQLite data and saved under `exports`, which is ignored by Git. CSV is useful for Excel, and JSON is useful for APIs, dashboards, and automation. The history command also shows latest-scan severity, risk-label, and remediation summaries, and it validates that the required SQLite tables exist. The diff command uses the latest two saved scans to show new, fixed, unchanged, and changed-risk findings. Remediation tracking stores status, owner, note, first seen, and last seen for saved findings. Asset inventory tracks discovered hosts, open services, and exposure summaries for future dashboard and exposure management features.
 
 You can also call the virtual environment Python directly:
 
@@ -106,6 +115,10 @@ You can also call the virtual environment Python directly:
 .\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main remediation list --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main remediation summary --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main export assets --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export history --target 127.0.0.1 --format json
+.\.venv311\Scripts\python.exe -m scanner.main export findings --target 127.0.0.1 --format csv
+.\.venv311\Scripts\python.exe -m scanner.main export remediation --format json
 ```
 
 To run the optional HTTP security header audit:

@@ -13,6 +13,12 @@ from scanner.assets import get_asset_services, get_assets
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
 from scanner.database import database_exists, get_missing_required_tables
 from scanner.diff import compare_latest_two_scans
+from scanner.exporter import (
+    export_assets,
+    export_findings,
+    export_history,
+    export_remediation,
+)
 from scanner.history import (
     get_database_path,
     get_latest_scan_finding_summaries,
@@ -37,7 +43,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 remediation_app = typer.Typer(help="Track remediation status for saved findings.")
+export_app = typer.Typer(help="Export saved VulScan data.")
 app.add_typer(remediation_app, name="remediation")
+app.add_typer(export_app, name="export")
 console = Console()
 
 
@@ -532,6 +540,90 @@ def remediation_summary(
     _print_count_summary("Remediation Summary", counts)
 
 
+@export_app.command("assets")
+def export_assets_command(
+    format_name: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Export format: csv or json.",
+        ),
+    ] = "csv",
+) -> None:
+    """Export saved asset inventory."""
+    _print_export_result(export_assets(format_name))
+
+
+@export_app.command("history")
+def export_history_command(
+    target: Annotated[
+        str | None,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Optional target to export history for.",
+        ),
+    ] = None,
+    format_name: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Export format: csv or json.",
+        ),
+    ] = "csv",
+) -> None:
+    """Export saved scan history."""
+    _print_export_result(export_history(format_name=format_name, target=target))
+
+
+@export_app.command("findings")
+def export_findings_command(
+    target: Annotated[
+        str | None,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Optional target to export findings for.",
+        ),
+    ] = None,
+    format_name: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Export format: csv or json.",
+        ),
+    ] = "csv",
+) -> None:
+    """Export saved findings."""
+    _print_export_result(export_findings(format_name=format_name, target=target))
+
+
+@export_app.command("remediation")
+def export_remediation_command(
+    target: Annotated[
+        str | None,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Optional target to export remediation records for.",
+        ),
+    ] = None,
+    format_name: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Export format: csv or json.",
+        ),
+    ] = "csv",
+) -> None:
+    """Export saved remediation status records."""
+    _print_export_result(export_remediation(format_name=format_name, target=target))
+
+
 def _print_findings(findings: list[dict[str, Any]]) -> None:
     if not findings:
         console.print("[green]Findings:[/green] None found.")
@@ -666,6 +758,21 @@ def _print_asset_services_table(services: list[dict[str, Any]]) -> None:
             str(service.get("last_recommendation") or ""),
         )
     console.print(table)
+
+
+def _print_export_result(result: dict[str, Any]) -> None:
+    if result["status"] == "exported":
+        console.print(f"[bold]Export type:[/bold] {result['export_type']}")
+        console.print(f"[bold]Format:[/bold] {result['format']}")
+        console.print(f"[bold]Records exported:[/bold] {result['record_count']}")
+        console.print(f"[bold]Saved file:[/bold] {result['path']}")
+        return
+
+    if result["status"] == "unsupported_format":
+        console.print(f"[red]{result['message']}[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[yellow]{result['message']}[/yellow]")
 
 
 if __name__ == "__main__":
