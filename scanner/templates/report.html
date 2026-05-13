@@ -269,6 +269,7 @@
             <th>Risk</th>
             <th>Risk Label</th>
             <th>Fix Priority</th>
+            <th>Remediation Status</th>
             <th>Severity</th>
             <th>Title</th>
             <th>Category</th>
@@ -291,6 +292,7 @@
             <td>{{ finding.risk_score }}</td>
             <td>{{ finding.risk_label }}</td>
             <td>{{ finding.fix_priority }}</td>
+            <td>{{ finding.remediation_status or "" }}</td>
             <td>{{ finding.severity }}</td>
             <td>{{ finding.title }}</td>
             <td>{{ finding.category }}</td>

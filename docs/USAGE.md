@@ -87,6 +87,36 @@ The diff command shows the database path, previous and latest scan times, findin
 
 If the database does not exist, a target has no saved scans, only one saved scan exists, or no findings are available to compare, VulScan prints a friendly message.
 
+## Remediation Status Tracking
+
+Version 10.3 adds remediation status tracking for saved findings. When a scan is saved with `--save-db`, VulScan creates remediation records for new findings with status `Open` and updates `last_seen` for existing findings. Existing status, owner, and note values are preserved. If a finding marked `Fixed` appears again, VulScan reopens it as `Open`.
+
+Save scan results first:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+```
+
+List remediation records for a target:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main remediation list --target 127.0.0.1
+```
+
+Show remediation status counts:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main remediation summary --target 127.0.0.1
+```
+
+Update a finding by full or unique short fingerprint:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main remediation update --fingerprint ABC123 --status "In Progress" --owner "Sandesh" --note "Reviewing exposure"
+```
+
+Allowed remediation status values are `Open`, `In Progress`, `Fixed`, `Accepted Risk`, and `False Positive`.
+
 ## HTTP Security Header Audit
 
 HTTP auditing is optional and runs only when `--http-audit` is provided. It only targets detected web services on `80`, `443`, `8080`, and `8443`, and sends a normal HTTP GET request to `/`.
@@ -153,6 +183,9 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 .\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main remediation list --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main remediation summary --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main remediation update --fingerprint ABC123 --status "In Progress" --owner "Sandesh" --note "Reviewing exposure"
 ```
 
 To run HTTP auditing and save reports:

@@ -56,6 +56,7 @@ Vulnerability Scanner
 - Prioritisation Engine risk scoring with heuristic risk score, risk label, and fix priority.
 - Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
 - Scan diffing between the latest two saved scans for a target, including new, fixed, unchanged, and changed-risk finding categories.
+- Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
 
 ## Planned Later
 
@@ -64,7 +65,7 @@ Vulnerability Scanner
 - Package and configuration auditing.
 - Web DAST features only when explicitly designed with strict safety controls.
 - CVE, CVSS, EPSS, and exploit-availability enrichment.
-- Asset criticality, API access, dashboard views, richer fix-first ranking, and remediation workflow tracking.
+- Asset criticality, API access, dashboard views, richer fix-first ranking, and expanded remediation workflow tracking.
 
 ## How Version 8 and 9 Help
 
@@ -77,5 +78,7 @@ Version 10 adds local SQLite storage. Saving scan summaries, open ports, and fin
 Version 10.1 improves history validation and summaries. The CLI can limit returned history rows, clearly report missing databases, missing required tables, or missing target history, and summarize latest-scan severity and risk-label counts without changing the database schema.
 
 Version 10.2 adds scan diffing without changing the database schema. It compares findings from the latest two saved scans for the same target using stable fingerprints, reports new and fixed findings, highlights risk or severity changes, and calculates whether the total risk score is improving, worsening, or unchanged. This supports future remediation tracking, trend reporting, dashboard change views, and API endpoints for scan comparison.
+
+Version 10.3 adds remediation status tracking in SQLite. Findings are matched using the same stable fingerprint model as scan diffing, so status can persist across scan runs even when sequential finding IDs change. This supports future dashboard remediation queues, API update endpoints, reporting filters, remediation SLAs, and fix verification workflows.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

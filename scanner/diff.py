@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from hashlib import sha256
 from typing import Any
 
 from scanner.database import (
@@ -12,6 +11,7 @@ from scanner.database import (
     get_connection,
     get_missing_required_tables,
 )
+from scanner.remediation import finding_fingerprint
 
 
 def compare_latest_two_scans(target: str) -> dict[str, Any]:
@@ -66,8 +66,8 @@ def compare_latest_two_scans(target: str) -> dict[str, Any]:
             "message": "The latest two saved scans have no findings to compare.",
         }
 
-    latest_by_fingerprint = {_finding_fingerprint(finding): finding for finding in latest_findings}
-    previous_by_fingerprint = {_finding_fingerprint(finding): finding for finding in previous_findings}
+    latest_by_fingerprint = {finding_fingerprint(finding): finding for finding in latest_findings}
+    previous_by_fingerprint = {finding_fingerprint(finding): finding for finding in previous_findings}
 
     latest_keys = set(latest_by_fingerprint)
     previous_keys = set(previous_by_fingerprint)
@@ -80,7 +80,7 @@ def compare_latest_two_scans(target: str) -> dict[str, Any]:
         for key in sorted(common_keys)
         if _risk_or_severity_changed(previous_by_fingerprint[key], latest_by_fingerprint[key])
     ]
-    changed_keys = {_finding_fingerprint(finding) for finding in changed_risk_findings}
+    changed_keys = {finding_fingerprint(finding) for finding in changed_risk_findings}
     unchanged_findings = [
         latest_by_fingerprint[key]
         for key in sorted(common_keys)
@@ -139,26 +139,6 @@ def _get_findings_for_scan(scan_id: str) -> list[dict[str, Any]]:
             (scan_id,),
         ).fetchall()
     return [dict(row) for row in rows]
-
-
-def _finding_fingerprint(finding: dict[str, Any]) -> str:
-    parts = [
-        finding.get("title"),
-        finding.get("affected_host"),
-        finding.get("affected_port"),
-        finding.get("affected_url"),
-        finding.get("service"),
-        finding.get("category"),
-        finding.get("source"),
-    ]
-    normalized = "|".join(_normalize_part(part) for part in parts)
-    return sha256(normalized.encode("utf-8")).hexdigest()
-
-
-def _normalize_part(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip().lower()
 
 
 def _risk_or_severity_changed(previous: dict[str, Any], latest: dict[str, Any]) -> bool:

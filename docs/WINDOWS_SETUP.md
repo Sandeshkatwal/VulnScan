@@ -75,7 +75,15 @@ To compare the latest two saved scans for a target:
 .\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
 ```
 
-The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. The history command also shows latest-scan severity and risk-label summaries, and it validates that the required SQLite tables exist. The diff command uses the latest two saved scans to show new, fixed, unchanged, and changed-risk findings.
+To track remediation status for saved findings:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main remediation list --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main remediation summary --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main remediation update --fingerprint ABC123 --status "In Progress" --owner "Sandesh" --note "Reviewing exposure"
+```
+
+The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. The history command also shows latest-scan severity, risk-label, and remediation summaries, and it validates that the required SQLite tables exist. The diff command uses the latest two saved scans to show new, fixed, unchanged, and changed-risk findings. Remediation tracking stores status, owner, note, first seen, and last seen for saved findings.
 
 You can also call the virtual environment Python directly:
 
@@ -87,6 +95,8 @@ You can also call the virtual environment Python directly:
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 .\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main remediation list --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main remediation summary --target 127.0.0.1
 ```
 
 To run the optional HTTP security header audit:

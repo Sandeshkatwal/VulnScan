@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from scanner import __version__
 from scanner.database import DB_PATH, database_exists, database_has_required_tables, get_connection, init_db
+from scanner.remediation import ensure_remediation_records_for_scan
 
 
 SEVERITY_VALUES = ("Critical", "High", "Medium", "Low", "Informational")
@@ -118,6 +119,7 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
             ],
         )
 
+    ensure_remediation_records_for_scan(scan_result)
     return scan_id
 
 

@@ -113,3 +113,26 @@ def init_db(db_path: Path = DB_PATH) -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS remediation_status (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                finding_fingerprint TEXT NOT NULL,
+                finding_id TEXT NULL,
+                target TEXT NULL,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL,
+                owner TEXT NULL,
+                note TEXT NULL,
+                first_seen TEXT NULL,
+                last_seen TEXT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_remediation_status_fingerprint
+            ON remediation_status (finding_fingerprint)
+            """
+        )

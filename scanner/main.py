@@ -22,6 +22,12 @@ from scanner.http_audit import audit_http_services
 from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
 from scanner.report_json import save_json_report
+from scanner.remediation import (
+    enrich_findings_with_remediation,
+    get_remediation_list,
+    get_remediation_summary,
+    update_remediation_status,
+)
 from scanner.tls_audit import audit_tls_services
 
 
@@ -29,6 +35,8 @@ app = typer.Typer(
     help="VulScan defensive vulnerability scanner.",
     no_args_is_help=True,
 )
+remediation_app = typer.Typer(help="Track remediation status for saved findings.")
+app.add_typer(remediation_app, name="remediation")
 console = Console()
 
 
@@ -156,6 +164,12 @@ def scan(
 
     _print_findings(scan_result["findings"])
 
+    if save_db:
+        scan_id = save_scan_result(scan_result)
+        console.print(f"[bold]Scan saved to database:[/bold] data\\vulscan.db ({scan_id})")
+    elif json_report or html_report:
+        enrich_findings_with_remediation(scan_result["findings"])
+
     if json_report:
         report_path = save_json_report(
             scan_result=scan_result,
@@ -175,10 +189,6 @@ def scan(
             scan_end_time=scan_end_time,
         )
         console.print(f"HTML report saved: {report_path}")
-
-    if save_db:
-        scan_id = save_scan_result(scan_result)
-        console.print(f"[bold]Scan saved to database:[/bold] data\\vulscan.db ({scan_id})")
 
 
 @app.command()
@@ -260,6 +270,9 @@ def history(
 
     _print_count_summary("Latest Scan Severity Summary", summaries["severity"])
     _print_count_summary("Latest Scan Risk Label Summary", summaries["risk_label"])
+    remediation_counts = get_remediation_summary(target)
+    if sum(remediation_counts.values()) > 0:
+        _print_count_summary("Latest Target Remediation Summary", remediation_counts)
 
 
 @app.command()
@@ -316,6 +329,159 @@ def diff(
     _print_diff_findings("New Findings", result["new_findings"])
     _print_diff_findings("Fixed Findings", result["fixed_findings"])
     _print_diff_findings("Changed Risk Findings", result["changed_risk_findings"])
+
+
+@remediation_app.command("list")
+def remediation_list(
+    target: Annotated[
+        str,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Target to list remediation status for.",
+        ),
+    ],
+) -> None:
+    """List remediation status records for a target."""
+    console.print(f"[bold]Database path:[/bold] {get_database_path()}")
+    console.print(f"[bold]Target:[/bold] {target}")
+
+    if not database_exists():
+        console.print(
+            "[yellow]No scan history database exists yet. Run a scan with --save-db first.[/yellow]"
+        )
+        return
+
+    missing_tables = get_missing_required_tables()
+    if missing_tables:
+        missing = ", ".join(sorted(missing_tables))
+        console.print(
+            f"[yellow]Scan history database is missing required tables ({missing}). Run a scan with --save-db first.[/yellow]"
+        )
+        return
+
+    rows = get_remediation_list(target)
+    if not rows:
+        console.print(f"[yellow]No remediation records found for target:[/yellow] {target}")
+        return
+
+    table = Table(title=f"Remediation Status: {target}")
+    table.add_column("Fingerprint")
+    table.add_column("Finding ID")
+    table.add_column("Title")
+    table.add_column("Status")
+    table.add_column("Owner")
+    table.add_column("Last Seen")
+    table.add_column("Risk Label")
+    table.add_column("Host")
+    table.add_column("Port", justify="right")
+    table.add_column("Service")
+
+    for row in rows:
+        table.add_row(
+            str(row.get("fingerprint_short") or ""),
+            str(row.get("finding_id") or ""),
+            str(row.get("title") or ""),
+            str(row.get("status") or ""),
+            str(row.get("owner") or ""),
+            str(row.get("last_seen") or ""),
+            str(row.get("risk_label") or ""),
+            str(row.get("affected_host") or ""),
+            str(row.get("affected_port") or ""),
+            str(row.get("service") or ""),
+        )
+    console.print(table)
+
+
+@remediation_app.command("update")
+def remediation_update(
+    fingerprint: Annotated[
+        str,
+        typer.Option(
+            "--fingerprint",
+            "-f",
+            help="Full or unique short remediation fingerprint.",
+        ),
+    ],
+    status: Annotated[
+        str,
+        typer.Option(
+            "--status",
+            "-s",
+            help="New remediation status.",
+        ),
+    ],
+    owner: Annotated[
+        str | None,
+        typer.Option(
+            "--owner",
+            "-o",
+            help="Optional remediation owner.",
+        ),
+    ] = None,
+    note: Annotated[
+        str | None,
+        typer.Option(
+            "--note",
+            "-n",
+            help="Optional remediation note.",
+        ),
+    ] = None,
+) -> None:
+    """Update a remediation status record."""
+    result = update_remediation_status(
+        fingerprint=fingerprint,
+        status=status,
+        owner=owner,
+        note=note,
+    )
+
+    if result["status"] == "updated":
+        console.print(f"[green]{result['message']}[/green]")
+        return
+
+    if result["status"] == "invalid_status":
+        console.print(f"[red]{result['message']}[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[yellow]{result['message']}[/yellow]")
+
+
+@remediation_app.command("summary")
+def remediation_summary(
+    target: Annotated[
+        str,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Target to summarize remediation status for.",
+        ),
+    ],
+) -> None:
+    """Show remediation status counts for a target."""
+    console.print(f"[bold]Database path:[/bold] {get_database_path()}")
+    console.print(f"[bold]Target:[/bold] {target}")
+
+    if not database_exists():
+        console.print(
+            "[yellow]No scan history database exists yet. Run a scan with --save-db first.[/yellow]"
+        )
+        return
+
+    missing_tables = get_missing_required_tables()
+    if missing_tables:
+        missing = ", ".join(sorted(missing_tables))
+        console.print(
+            f"[yellow]Scan history database is missing required tables ({missing}). Run a scan with --save-db first.[/yellow]"
+        )
+        return
+
+    counts = get_remediation_summary(target)
+    if sum(counts.values()) == 0:
+        console.print(f"[yellow]No remediation records found for target:[/yellow] {target}")
+        return
+
+    _print_count_summary("Remediation Summary", counts)
 
 
 def _print_findings(findings: list[dict[str, Any]]) -> None:
