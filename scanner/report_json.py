@@ -39,6 +39,8 @@ def save_json_report(
         "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),
         "tls_findings": scan_result.get("tls_findings", []),
+        "ssh_audit": scan_result.get("ssh_audit", {"enabled": False, "status": "not_run"}),
+        "ssh_findings": scan_result.get("ssh_findings", []),
         "summary": build_summary(scan_result),
     }
 
@@ -65,6 +67,7 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "total_findings": len(findings),
         "total_http_findings": len(scan_result.get("http_findings", [])),
         "total_tls_findings": len(scan_result.get("tls_findings", [])),
+        "total_ssh_findings": len(scan_result.get("ssh_findings", [])),
         "highest_risk_level": _highest_risk_level(findings),
         "notes": "TCP connect scan of common ports only. Review exposed services for business need and network access controls.",
     }

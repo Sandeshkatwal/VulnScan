@@ -145,6 +145,16 @@ To run TLS auditing and save both report formats:
 python -m scanner.main scan --target example.com --tls-audit --json --html
 ```
 
+To run the optional authenticated SSH audit against an authorised Linux system:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-password PASSWORD
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
+```
+
+SSH audit is for authorised Linux systems only. Use least-privilege credentials. VulScan attempts one SSH login, runs read-only inspection commands only, and does not run `sudo`, modify files, install packages, restart services, exploit, brute force, guess passwords, or attempt privilege escalation. SSH passwords and private key paths are not stored in reports, the SQLite database, logs, or terminal output. Windows SMB/WinRM auditing is planned for a future version.
+
 You can also run the included helper script:
 
 ```powershell
@@ -161,4 +171,4 @@ python -m pytest
 
 ## Safety
 
-Use VulScan only for authorised defensive assessment. Do not use it for exploitation, brute force, credential attacks, payload attacks, destructive checks, stealth scanning, crawling, fuzzing, firewall bypassing, cipher probing, or protocol downgrade testing.
+Use VulScan only for authorised defensive assessment. Do not use it for exploitation, brute force, credential attacks, password guessing, payload attacks, destructive checks, stealth scanning, crawling, fuzzing, firewall bypassing, cipher probing, privilege escalation, or protocol downgrade testing.

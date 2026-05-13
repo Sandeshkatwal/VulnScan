@@ -210,6 +210,7 @@
       <p><strong>Total findings:</strong> {{ report.summary.total_findings }}</p>
       <p><strong>HTTP audit findings:</strong> {{ report.summary.total_http_findings }}</p>
       <p><strong>TLS audit findings:</strong> {{ report.summary.total_tls_findings }}</p>
+      <p><strong>SSH audit findings:</strong> {{ report.summary.total_ssh_findings }}</p>
       <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
       <p><strong>Scan start:</strong> {{ report.scan_start_time }}</p>
       <p><strong>Scan end:</strong> {{ report.scan_end_time }}</p>
@@ -394,6 +395,56 @@
     </section>
 
     <section>
+      <h2>SSH Audit</h2>
+      {% if report.ssh_audit.enabled %}
+      <p><strong>Status:</strong> {{ report.ssh_audit.status }}</p>
+      <p><strong>Port:</strong> {{ report.ssh_audit.port }}</p>
+      <p><strong>Authenticated:</strong> {{ report.ssh_audit.authenticated }}</p>
+      {% if report.ssh_audit.notes %}
+      <p><strong>Notes:</strong> {{ report.ssh_audit.notes | join(" ") }}</p>
+      {% endif %}
+      {% if report.ssh_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Affected Host</th>
+            <th>Port</th>
+            <th>Evidence</th>
+            <th>Confidence</th>
+            <th>Recommendation</th>
+            <th>Verification</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in report.ssh_findings %}
+          <tr>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.category }}</td>
+            <td>{{ finding.affected_host }}</td>
+            <td>{{ finding.affected_port }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.confidence }}</td>
+            <td>{{ finding.recommendation }}</td>
+            <td>{{ finding.verification }}</td>
+            <td>{{ finding.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No SSH audit findings were recorded.</p>
+      {% endif %}
+      {% else %}
+      <p class="empty">No SSH audit was requested. Run with --ssh-audit and explicitly provided SSH credentials to perform read-only Linux checks.</p>
+      {% endif %}
+    </section>
+
+    <section>
       <h2>Future Findings</h2>
       <div class="future">
         CVEs, EPSS, asset criticality, and richer risk scoring can be added here as VulScan expands beyond port and service reporting.
@@ -407,7 +458,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, payload attacks, destructive checks, firewall bypassing, cipher probing, protocol downgrade testing, CVE validation, or authenticated auditing.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall bypassing, cipher probing, protocol downgrade testing, or CVE validation.</p>
     </section>
   </main>
 </body>

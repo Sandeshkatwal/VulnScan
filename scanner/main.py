@@ -1,6 +1,7 @@
 """Command-line entry point for VulScan."""
 
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated, Any
 
 import typer
@@ -34,6 +35,11 @@ from scanner.remediation import (
     get_remediation_list,
     get_remediation_summary,
     update_remediation_status,
+)
+from scanner.ssh_audit import (
+    SshAuditConfigurationError,
+    audit_ssh_host,
+    validate_ssh_audit_options,
 )
 from scanner.tls_audit import audit_tls_services
 
@@ -100,6 +106,43 @@ def scan(
             help="Run passive TLS certificate checks against detected HTTPS services.",
         ),
     ] = False,
+    ssh_audit: Annotated[
+        bool,
+        typer.Option(
+            "--ssh-audit",
+            help="Run authenticated read-only SSH checks against an authorised Linux target.",
+        ),
+    ] = False,
+    ssh_user: Annotated[
+        str | None,
+        typer.Option(
+            "--ssh-user",
+            help="Username for SSH audit. Use a least-privilege account.",
+        ),
+    ] = None,
+    ssh_password: Annotated[
+        str | None,
+        typer.Option(
+            "--ssh-password",
+            help="Password for SSH audit. Not stored or printed.",
+        ),
+    ] = None,
+    ssh_key: Annotated[
+        Path | None,
+        typer.Option(
+            "--ssh-key",
+            help="Private key for SSH audit. Path is not stored or printed in reports.",
+        ),
+    ] = None,
+    ssh_port: Annotated[
+        int,
+        typer.Option(
+            "--ssh-port",
+            min=1,
+            max=65535,
+            help="SSH port for authenticated audit.",
+        ),
+    ] = 22,
     save_db: Annotated[
         bool,
         typer.Option(
@@ -109,6 +152,17 @@ def scan(
     ] = False,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
+    try:
+        validate_ssh_audit_options(
+            ssh_audit=ssh_audit,
+            ssh_user=ssh_user,
+            ssh_password=ssh_password,
+            ssh_key=ssh_key,
+        )
+    except SshAuditConfigurationError as exc:
+        console.print(f"[red]SSH audit configuration error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
     console.print(f"[bold]Target:[/bold] {target}")
     console.print(f"[bold]Scan mode:[/bold] {mode}")
@@ -122,6 +176,8 @@ def scan(
         scan_result["scan_mode"] = mode
         scan_result["http_findings"] = []
         scan_result["tls_findings"] = []
+        scan_result["ssh_audit"] = {"enabled": False, "status": "not_run", "findings": []}
+        scan_result["ssh_findings"] = []
         findings = create_port_exposure_findings(scan_result["open_ports"])
         if http_audit:
             http_findings = audit_http_services(scan_result["open_ports"])
@@ -129,6 +185,17 @@ def scan(
         if tls_audit:
             tls_findings = audit_tls_services(scan_result["open_ports"])
             findings.extend(tls_findings)
+        if ssh_audit:
+            ssh_result = audit_ssh_host(
+                host=scan_result["host"],
+                resolved_ip=scan_result["resolved_ip"],
+                username=str(ssh_user),
+                password=ssh_password,
+                key_path=ssh_key,
+                port=ssh_port,
+            )
+            scan_result["ssh_audit"] = ssh_result
+            findings.extend(ssh_result.get("findings", []))
         scan_result["findings"] = assign_sequential_finding_ids(findings)
         scan_result["http_findings"] = [
             finding for finding in scan_result["findings"] if finding["source"] == "http_audit"
@@ -136,6 +203,11 @@ def scan(
         scan_result["tls_findings"] = [
             finding for finding in scan_result["findings"] if finding["source"] == "tls_audit"
         ]
+        scan_result["ssh_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "ssh_audit"
+        ]
+        if ssh_audit:
+            scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
         scan_end_time = datetime.now().astimezone()
         scan_result["scan_start_time"] = scan_start_time.isoformat(timespec="seconds")
         scan_result["scan_end_time"] = scan_end_time.isoformat(timespec="seconds")
@@ -170,6 +242,7 @@ def scan(
         console.print("[green]Open TCP ports:[/green] None found in the default safe port list.")
 
     console.print(f"[bold]Total scan time:[/bold] {scan_result['duration_seconds']} seconds")
+    _print_ssh_audit_status(scan_result.get("ssh_audit", {}))
 
     _print_findings(scan_result["findings"])
 
@@ -652,6 +725,20 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         )
 
     console.print(table)
+
+
+def _print_ssh_audit_status(ssh_audit: dict[str, Any]) -> None:
+    if not ssh_audit.get("enabled"):
+        return
+
+    status = str(ssh_audit.get("status") or "unknown")
+    if status == "completed":
+        console.print("[green]SSH audit:[/green] Completed authenticated read-only checks.")
+        return
+
+    notes = ssh_audit.get("notes") or []
+    note_text = f" {' '.join(str(note) for note in notes)}" if notes else ""
+    console.print(f"[yellow]SSH audit:[/yellow] {status}.{note_text}")
 
 
 def _affected_summary(finding: dict[str, Any]) -> str:

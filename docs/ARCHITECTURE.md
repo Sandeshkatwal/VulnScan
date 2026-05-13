@@ -52,6 +52,7 @@ Vulnerability Scanner
 - JSON and HTML report output.
 - Optional HTTP security header audit using one normal GET request to `/`.
 - Optional passive TLS certificate audit for detected HTTPS services.
+- Optional authenticated SSH audit for authorised Linux systems using one login attempt and read-only inspection commands.
 - Standard finding model with sequential IDs, severity, confidence, evidence, impact, recommendation, verification, limitation, source, and timestamps.
 - Prioritisation Engine risk scoring with heuristic risk score, risk label, and fix priority.
 - Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
@@ -63,8 +64,8 @@ Vulnerability Scanner
 ## Planned Later
 
 - Host discovery for authorised internal ranges.
-- Credentialed SSH and Windows/SMB configuration checks.
-- Package and configuration auditing.
+- Windows SMB/WinRM configuration checks.
+- Broader package and configuration auditing.
 - Web DAST features only when explicitly designed with strict safety controls.
 - CVE, CVSS, EPSS, and exploit-availability enrichment.
 - Asset criticality, API access, dashboard views, richer fix-first ranking, and expanded remediation workflow tracking.
@@ -86,5 +87,7 @@ Version 10.3 adds remediation status tracking in SQLite. Findings are matched us
 Version 10.4 adds asset inventory in SQLite. Saved scans create or update asset records, track first seen and last seen timestamps, count scans, record latest open-port and finding counts, and maintain a service inventory for exposed TCP services. This marks Storage / Assets as implemented and provides the foundation for future dashboard asset pages, exposure management, asset criticality, and API inventory endpoints.
 
 Version 10.5 adds CSV and JSON exports from the local SQLite database. CSV supports Excel and spreadsheet workflows, while JSON supports future APIs, dashboards, integrations, and backup workflows. Export files are written to `exports`, which is ignored by Git.
+
+Version 11.0 adds authenticated SSH auditing for authorised Linux systems. The SSH audit uses Paramiko, requires explicit credentials, attempts only one login, and never stores SSH passwords or private key paths in reports, the database, logs, or terminal output. After authentication it runs read-only commands only, including OS inspection, effective `sshd -T` configuration where available, host firewall status where available, package-manager discovery, and package update checks. Findings are emitted through the standard finding model, then flow through risk scoring, terminal output, JSON and HTML reports, SQLite history, scan diffing, remediation tracking, asset inventory, and exports.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

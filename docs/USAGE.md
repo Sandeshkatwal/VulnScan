@@ -22,7 +22,7 @@ Or use the included helper script:
 .\run_scan.ps1
 ```
 
-The Version 10 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
+The Version 11 scanner performs TCP connect checks against a fixed default list of common ports and identifies likely services from a safe static port mapping:
 
 ```text
 21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 3306, 3389, 5432, 6379, 8080, 8443
@@ -207,6 +207,26 @@ python -m scanner.main scan --target example.com --tls-audit --json --html
 
 The TLS audit checks certificate validation status, hostname mismatch where possible, certificate expiry, certificates expiring within 30 days, subject, issuer, and validity dates. It does not test weak ciphers, perform downgrade testing, or run aggressive TLS probing.
 
+## Authenticated SSH Audit
+
+Version 11.0 adds optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords in Version 11.0.
+
+Use least-privilege read-only credentials:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-password PASSWORD
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
+```
+
+Use `--ssh-port` if SSH is listening on a non-standard port. The default is `22`.
+
+The SSH audit attempts one login using the credentials explicitly provided for that scan. Passwords and private key paths are not stored in reports, the SQLite database, logs, or terminal output. SSH audit results are stored as sanitized audit status, command results, and standard findings.
+
+After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, and package update checks for detected `apt`, `dnf`, or `yum`. It does not run `sudo`, change files, install packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.
+
+SSH audit can reduce false positives by checking system configuration directly. Unsupported or non-Linux systems are handled safely by stopping Linux-specific checks when Linux OS details are not available. Windows SMB/WinRM auditing is planned for a future version.
+
 ## Windows Example
 
 ```powershell
@@ -237,6 +257,7 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main assets
 .\.venv311\Scripts\python.exe -m scanner.main assets --target 127.0.0.1
@@ -300,4 +321,4 @@ python -m pytest
 
 ## Safety Boundaries
 
-Do not use VulScan against systems you do not own or do not have explicit permission to test. VulScan does not perform SYN scanning, UDP scanning, stealth scanning, crawling, fuzzing, brute forcing, credential attacks, exploitation, payload attacks, firewall bypassing, cipher probing, protocol downgrade testing, or destructive actions.
+Do not use VulScan against systems you do not own or do not have explicit permission to test. VulScan does not perform SYN scanning, UDP scanning, stealth scanning, crawling, fuzzing, brute forcing, credential attacks, password guessing, exploitation, payload attacks, firewall bypassing, cipher probing, protocol downgrade testing, privilege escalation, or destructive actions.

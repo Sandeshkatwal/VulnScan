@@ -1,8 +1,8 @@
 # VulScan
 
-VulScan is an intermediate-level defensive vulnerability scanner for authorised use.
+VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Version 2 provides a Typer-based CLI with Rich terminal output and a defensive TCP connect scanner for a fixed list of common ports.
+Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems.
 
 ## Requirements
 
@@ -37,6 +37,15 @@ From the project root with `.venv311` activated:
 python -m scanner.main scan --target 127.0.0.1
 ```
 
+Optional authenticated SSH audit for an authorised Linux system:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-password PASSWORD
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa
+```
+
+SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords or private key paths. Use least-privilege credentials. Windows SMB/WinRM auditing is planned for a future version.
+
 You can also use the helper script:
 
 ```powershell
@@ -55,4 +64,4 @@ python -m pytest
 
 ## Safety
 
-Use VulScan only on systems you own or have explicit written permission to assess. This project must remain defensive and must not include exploitation, brute forcing, credential attacks, payload attacks, or destructive functionality.
+Use VulScan only on systems you own or have explicit written permission to assess. This project must remain defensive and must not include exploitation, brute forcing, credential attacks, password guessing, payload attacks, privilege escalation, or destructive functionality.
