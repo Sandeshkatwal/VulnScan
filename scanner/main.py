@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from scanner import __version__
+from scanner.assets import get_asset_services, get_assets
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
 from scanner.database import database_exists, get_missing_required_tables
 from scanner.diff import compare_latest_two_scans
@@ -331,6 +332,53 @@ def diff(
     _print_diff_findings("Changed Risk Findings", result["changed_risk_findings"])
 
 
+@app.command()
+def assets(
+    target: Annotated[
+        str | None,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Optional target to show asset details for.",
+        ),
+    ] = None,
+) -> None:
+    """Show saved asset inventory."""
+    console.print(f"[bold]Database path:[/bold] {get_database_path()}")
+    if target:
+        console.print(f"[bold]Target:[/bold] {target}")
+
+    if not database_exists():
+        console.print(
+            "[yellow]No asset inventory database exists yet. Run a scan with --save-db first.[/yellow]"
+        )
+        return
+
+    missing_tables = get_missing_required_tables()
+    if missing_tables:
+        missing = ", ".join(sorted(missing_tables))
+        console.print(
+            f"[yellow]Scan history database is missing required tables ({missing}). Run a scan with --save-db first.[/yellow]"
+        )
+        return
+
+    rows = get_assets(target=target)
+    if not rows and target:
+        console.print(f"[yellow]No asset record exists for target:[/yellow] {target}")
+        return
+    if not rows:
+        console.print("[yellow]No saved assets are available. Run a scan with --save-db first.[/yellow]")
+        return
+
+    _print_assets_table(rows)
+    if target:
+        services = get_asset_services(str(rows[0]["asset_id"]))
+        if services:
+            _print_asset_services_table(services)
+        else:
+            console.print("[green]Detected services:[/green] None recorded for this asset.")
+
+
 @remediation_app.command("list")
 def remediation_list(
     target: Annotated[
@@ -565,6 +613,58 @@ def _print_diff_findings(title: str, findings: list[dict[str, Any]]) -> None:
             str(finding.get("source") or ""),
         )
 
+    console.print(table)
+
+
+def _print_assets_table(assets: list[dict[str, Any]]) -> None:
+    table = Table(title="Assets")
+    table.add_column("Asset ID")
+    table.add_column("Target")
+    table.add_column("Resolved IP")
+    table.add_column("First Seen")
+    table.add_column("Last Seen")
+    table.add_column("Scans", justify="right")
+    table.add_column("Open Ports", justify="right")
+    table.add_column("Findings", justify="right")
+    table.add_column("Highest Risk")
+    table.add_column("Exposure Summary")
+
+    for asset in assets:
+        table.add_row(
+            str(asset.get("asset_id_short") or ""),
+            str(asset.get("target") or ""),
+            str(asset.get("resolved_ip") or ""),
+            str(asset.get("first_seen") or ""),
+            str(asset.get("last_seen") or ""),
+            str(asset.get("total_scans") or 0),
+            str(asset.get("last_open_port_count") or 0),
+            str(asset.get("last_finding_count") or 0),
+            str(asset.get("highest_risk_label") or ""),
+            str(asset.get("exposure_summary") or ""),
+        )
+    console.print(table)
+
+
+def _print_asset_services_table(services: list[dict[str, Any]]) -> None:
+    table = Table(title="Detected Services")
+    table.add_column("Port", justify="right")
+    table.add_column("Protocol")
+    table.add_column("Service")
+    table.add_column("Status")
+    table.add_column("First Seen")
+    table.add_column("Last Seen")
+    table.add_column("Last Recommendation")
+
+    for service in services:
+        table.add_row(
+            str(service.get("port") or ""),
+            str(service.get("protocol") or ""),
+            str(service.get("service") or ""),
+            str(service.get("status") or ""),
+            str(service.get("first_seen") or ""),
+            str(service.get("last_seen") or ""),
+            str(service.get("last_recommendation") or ""),
+        )
     console.print(table)
 
 

@@ -61,6 +61,13 @@ To view previous scans for a target:
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 ```
 
+To view saved asset inventory:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main assets
+.\.venv311\Scripts\python.exe -m scanner.main assets --target 127.0.0.1
+```
+
 To limit displayed history rows:
 
 ```powershell
@@ -83,7 +90,7 @@ To track remediation status for saved findings:
 .\.venv311\Scripts\python.exe -m scanner.main remediation update --fingerprint ABC123 --status "In Progress" --owner "Sandesh" --note "Reviewing exposure"
 ```
 
-The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. The history command also shows latest-scan severity, risk-label, and remediation summaries, and it validates that the required SQLite tables exist. The diff command uses the latest two saved scans to show new, fixed, unchanged, and changed-risk findings. Remediation tracking stores status, owner, note, first seen, and last seen for saved findings.
+The database is stored at `data\vulscan.db`. It is local scan history and should not be committed to Git. Asset records are created only when `--save-db` is used. The history command also shows latest-scan severity, risk-label, and remediation summaries, and it validates that the required SQLite tables exist. The diff command uses the latest two saved scans to show new, fixed, unchanged, and changed-risk findings. Remediation tracking stores status, owner, note, first seen, and last seen for saved findings. Asset inventory tracks discovered hosts, open services, and exposure summaries for future dashboard and exposure management features.
 
 You can also call the virtual environment Python directly:
 
@@ -92,6 +99,8 @@ You can also call the virtual environment Python directly:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main assets
+.\.venv311\Scripts\python.exe -m scanner.main assets --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 .\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1

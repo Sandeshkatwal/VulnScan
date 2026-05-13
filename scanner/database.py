@@ -136,3 +136,45 @@ def init_db(db_path: Path = DB_PATH) -> None:
             ON remediation_status (finding_fingerprint)
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS assets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                asset_id TEXT UNIQUE,
+                target TEXT NOT NULL,
+                resolved_ip TEXT NULL,
+                hostname TEXT NULL,
+                first_seen TEXT NOT NULL,
+                last_seen TEXT NOT NULL,
+                total_scans INTEGER DEFAULT 0,
+                last_open_port_count INTEGER DEFAULT 0,
+                last_finding_count INTEGER DEFAULT 0,
+                highest_risk_score INTEGER DEFAULT 0,
+                highest_risk_label TEXT NULL,
+                exposure_summary TEXT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_assets_target
+            ON assets (target)
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS asset_services (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                asset_id TEXT NOT NULL,
+                port INTEGER NOT NULL,
+                protocol TEXT NOT NULL,
+                service TEXT NULL,
+                status TEXT,
+                first_seen TEXT NOT NULL,
+                last_seen TEXT NOT NULL,
+                last_evidence TEXT NULL,
+                last_recommendation TEXT NULL,
+                UNIQUE(asset_id, port, protocol)
+            )
+            """
+        )

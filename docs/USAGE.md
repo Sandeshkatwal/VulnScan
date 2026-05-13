@@ -117,6 +117,30 @@ Update a finding by full or unique short fingerprint:
 
 Allowed remediation status values are `Open`, `In Progress`, `Fixed`, `Accepted Risk`, and `False Positive`.
 
+## Asset Inventory
+
+Version 10.4 tracks discovered assets and services in the local SQLite database at `data\vulscan.db`. Asset records are created or updated only when a scan is saved with `--save-db`.
+
+Save a scan first:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --save-db
+```
+
+List all saved assets:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main assets
+```
+
+Show one target with detected services:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main assets --target 127.0.0.1
+```
+
+Asset inventory tracks target, resolved IP, first seen, last seen, scan count, latest open-port count, latest finding count, highest risk label, exposure summary, and detected services. It supports future dashboard views, exposure management, trend reporting, and asset criticality workflows.
+
 ## HTTP Security Header Audit
 
 HTTP auditing is optional and runs only when `--http-audit` is provided. It only targets detected web services on `80`, `443`, `8080`, and `8443`, and sends a normal HTTP GET request to `/`.
@@ -180,6 +204,8 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main assets
+.\.venv311\Scripts\python.exe -m scanner.main assets --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main history --target 127.0.0.1 --limit 5
 .\.venv311\Scripts\python.exe -m scanner.main diff --target 127.0.0.1

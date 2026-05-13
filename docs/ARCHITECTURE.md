@@ -57,6 +57,7 @@ Vulnerability Scanner
 - Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
 - Scan diffing between the latest two saved scans for a target, including new, fixed, unchanged, and changed-risk finding categories.
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
+- Storage / Assets inventory for saved targets and detected services, implemented in Version 10.4.
 
 ## Planned Later
 
@@ -80,5 +81,7 @@ Version 10.1 improves history validation and summaries. The CLI can limit return
 Version 10.2 adds scan diffing without changing the database schema. It compares findings from the latest two saved scans for the same target using stable fingerprints, reports new and fixed findings, highlights risk or severity changes, and calculates whether the total risk score is improving, worsening, or unchanged. This supports future remediation tracking, trend reporting, dashboard change views, and API endpoints for scan comparison.
 
 Version 10.3 adds remediation status tracking in SQLite. Findings are matched using the same stable fingerprint model as scan diffing, so status can persist across scan runs even when sequential finding IDs change. This supports future dashboard remediation queues, API update endpoints, reporting filters, remediation SLAs, and fix verification workflows.
+
+Version 10.4 adds asset inventory in SQLite. Saved scans create or update asset records, track first seen and last seen timestamps, count scans, record latest open-port and finding counts, and maintain a service inventory for exposed TCP services. This marks Storage / Assets as implemented and provides the foundation for future dashboard asset pages, exposure management, asset criticality, and API inventory endpoints.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.
