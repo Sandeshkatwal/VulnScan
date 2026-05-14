@@ -153,7 +153,9 @@ To run the optional authenticated SSH audit against an authorised Linux system:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
 ```
 
-SSH audit is for authorised Linux systems only. Use least-privilege credentials. VulScan attempts one SSH login, runs read-only inspection commands only, and does not run `sudo`, modify files, install packages, restart services, exploit, brute force, guess passwords, or attempt privilege escalation. SSH passwords and private key paths are not stored in reports, the SQLite database, logs, or terminal output. Windows SMB/WinRM auditing is planned for a future version.
+SSH audit is for authorised Linux systems only. Use least-privilege credentials. VulScan attempts one SSH login, runs read-only inspection commands only, and does not run `sudo`, modify files, install packages, update packages, restart services, exploit, brute force, guess passwords, or attempt privilege escalation. SSH passwords and private key paths are not stored in reports, the SQLite database, logs, or terminal output. Windows SMB/WinRM auditing is planned for a future version.
+
+Package checks over SSH are read-only. VulScan detects package managers with `command -v` for `apt`, `apt-get`, `dnf`, `yum`, `pacman`, and `zypper`, then runs the appropriate read-only update check such as `apt list --upgradable`, `dnf check-update`, `yum check-update`, `pacman -Qu`, or `zypper list-updates`. It does not run `apt update`, upgrade packages, or install anything. On apt-based systems, results may depend on existing package metadata on the host. Package findings support patch management review but do not replace full vulnerability intelligence or vendor advisory review.
 
 You can also run the included helper script:
 

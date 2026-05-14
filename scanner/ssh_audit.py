@@ -12,6 +12,12 @@ except ImportError:  # pragma: no cover - exercised only when dependency is abse
     paramiko = None  # type: ignore[assignment]
 
 from scanner.finding import Finding, create_finding
+from scanner.package_audit import (
+    PACKAGE_MANAGER_COMMANDS,
+    build_package_audit_summary,
+    build_package_findings,
+    detect_os_family,
+)
 
 
 SOURCE = "ssh_audit"
@@ -41,7 +47,7 @@ def validate_ssh_audit_options(
 
     if not ssh_password and ssh_key is None:
         raise SshAuditConfigurationError(
-            "SSH audit requires either --ssh-password or --ssh-key. Interactive password prompts are not supported in Version 11.0."
+            "SSH audit requires either --ssh-password or --ssh-key. Interactive password prompts are not supported."
         )
 
     if ssh_key is not None and not ssh_key.expanduser().is_file():
@@ -67,6 +73,11 @@ def audit_ssh_host(
         "commands": [],
         "findings": [],
         "notes": [],
+        "os_family": "Unknown Linux",
+        "package_manager": None,
+        "package_update_count": None,
+        "package_update_sample": [],
+        "package_check_status": "not_run",
     }
 
     if paramiko is None:
@@ -98,12 +109,27 @@ def audit_ssh_host(
         result["status"] = "completed"
         commands = _collect_linux_audit_data(client)
         result["commands"] = [_command_report(command) for command in commands]
+        package_summary = build_package_audit_summary(commands)
+        result.update(
+            {
+                "os_family": package_summary["os_family"],
+                "package_manager": package_summary["package_manager"],
+                "package_update_count": package_summary["package_update_count"],
+                "package_update_sample": package_summary["package_update_sample"],
+                "package_check_status": package_summary["package_check_status"],
+            }
+        )
         if not _linux_details_available(commands):
             result["status"] = "unsupported_non_linux"
             result["notes"].append(
                 "Authenticated SSH succeeded, but Linux OS details were not available. Linux-specific checks were skipped."
             )
-        result["findings"] = _build_findings(host=host, port=port, commands=commands)
+        result["findings"] = _build_findings(
+            host=host,
+            port=port,
+            commands=commands,
+            package_summary=package_summary,
+        )
         return result
     except paramiko.AuthenticationException:
         result["status"] = "authentication_failed"
@@ -141,16 +167,20 @@ def _collect_linux_audit_data(client: Any) -> list[dict[str, Any]]:
     if _command_exists(client, "ufw", commands):
         commands.append(_run_command(client, "ufw status"))
 
-    apt_exists = _command_exists(client, "apt", commands)
-    dnf_exists = _command_exists(client, "dnf", commands)
-    yum_exists = _command_exists(client, "yum", commands)
-
-    if apt_exists:
-        commands.append(_run_command(client, "apt list --upgradable"))
-    if dnf_exists:
-        commands.append(_run_command(client, "dnf check-update"))
-    if yum_exists:
-        commands.append(_run_command(client, "yum check-update"))
+    manager_availability = {
+        "apt": _command_exists(client, "apt", commands),
+        "apt-get": _command_exists(client, "apt-get", commands),
+        "dnf": _command_exists(client, "dnf", commands),
+        "yum": _command_exists(client, "yum", commands),
+        "pacman": _command_exists(client, "pacman", commands),
+        "zypper": _command_exists(client, "zypper", commands),
+    }
+    package_manager = _select_package_manager_for_commands(
+        os_release_output=os_release["stdout"],
+        manager_availability=manager_availability,
+    )
+    if package_manager is not None:
+        commands.append(_run_command(client, PACKAGE_MANAGER_COMMANDS[package_manager]))
 
     return commands
 
@@ -174,6 +204,8 @@ def _run_command(client: Any, command: str) -> dict[str, Any]:
             "exit_status": exit_status,
             "stdout": _truncate(stdout_text.strip()),
             "stderr": _truncate(stderr_text.strip()),
+            "raw_stdout": stdout_text.strip(),
+            "raw_stderr": stderr_text.strip(),
             "timed_out": False,
         }
     except socket.timeout:
@@ -182,11 +214,18 @@ def _run_command(client: Any, command: str) -> dict[str, Any]:
             "exit_status": None,
             "stdout": "",
             "stderr": "Command timed out.",
+            "raw_stdout": "",
+            "raw_stderr": "Command timed out.",
             "timed_out": True,
         }
 
 
-def _build_findings(host: str, port: int, commands: list[dict[str, Any]]) -> list[Finding]:
+def _build_findings(
+    host: str,
+    port: int,
+    commands: list[dict[str, Any]],
+    package_summary: dict[str, Any],
+) -> list[Finding]:
     findings = [
         create_finding(
             title="SSH Login Successful",
@@ -237,9 +276,8 @@ def _build_findings(host: str, port: int, commands: list[dict[str, Any]]) -> lis
     if firewall_finding is not None:
         findings.append(firewall_finding)
 
-    updates_finding = _package_updates_finding(host, port, command_by_name)
-    if updates_finding is not None:
-        findings.append(updates_finding)
+    if _linux_details_available(commands):
+        findings.extend(build_package_findings(host, port, package_summary))
 
     return findings
 
@@ -251,9 +289,36 @@ def _linux_details_available(commands: list[dict[str, Any]]) -> bool:
     return "linux" in uname or bool(os_release.strip())
 
 
+def _select_package_manager_for_commands(
+    os_release_output: str,
+    manager_availability: dict[str, bool],
+) -> str | None:
+    os_family = detect_os_family(os_release_output)
+
+    if os_family == "Debian/Kali/Parrot/Ubuntu":
+        if manager_availability.get("apt"):
+            return "apt"
+        if manager_availability.get("apt-get"):
+            return "apt-get"
+    if os_family == "Fedora/RHEL/Rocky/Alma":
+        if manager_availability.get("dnf"):
+            return "dnf"
+        if manager_availability.get("yum"):
+            return "yum"
+    if os_family == "Arch" and manager_availability.get("pacman"):
+        return "pacman"
+    if os_family == "openSUSE/SUSE" and manager_availability.get("zypper"):
+        return "zypper"
+
+    for manager in ("apt", "dnf", "yum", "pacman", "zypper", "apt-get"):
+        if manager_availability.get(manager):
+            return manager
+    return None
+
+
 def _sshd_findings(host: str, port: int, sshd_config: dict[str, Any]) -> list[Finding]:
     findings: list[Finding] = []
-    config = _parse_sshd_t(sshd_config["stdout"])
+    config = _parse_sshd_t(str(sshd_config.get("raw_stdout") or sshd_config.get("stdout") or ""))
 
     if config.get("passwordauthentication") == "yes":
         findings.append(
@@ -339,61 +404,6 @@ def _firewall_finding(
         )
 
     return None
-
-
-def _package_updates_finding(
-    host: str,
-    port: int,
-    command_by_name: dict[str, dict[str, Any]],
-) -> Finding | None:
-    package_commands = (
-        "apt list --upgradable",
-        "dnf check-update",
-        "yum check-update",
-    )
-    evidence_parts: list[str] = []
-
-    for command in package_commands:
-        result = command_by_name.get(command)
-        if not result:
-            continue
-        if _updates_available(command, result):
-            evidence_parts.append(f"{command} reports available updates.")
-
-    if not evidence_parts:
-        return None
-
-    return create_finding(
-        title="Package Updates Available",
-        severity="Medium",
-        category="Patch Management",
-        affected_host=host,
-        affected_port=port,
-        service="ssh",
-        evidence=" ".join(evidence_parts),
-        confidence="Medium",
-        impact="Missing package updates can leave known defects or vulnerabilities unpatched.",
-        recommendation="Review and apply security updates according to change management.",
-        verification="Run the available package manager update-check command and review pending updates.",
-        limitation="This check does not distinguish security updates from general package updates.",
-        source=SOURCE,
-    )
-
-
-def _updates_available(command: str, result: dict[str, Any]) -> bool:
-    stdout = result["stdout"].strip()
-    if command == "apt list --upgradable":
-        lines = [
-            line
-            for line in stdout.splitlines()
-            if line.strip() and not line.lower().startswith("listing...")
-        ]
-        return bool(lines)
-
-    if command in {"dnf check-update", "yum check-update"}:
-        return result["exit_status"] == 100
-
-    return False
 
 
 def _parse_sshd_t(output: str) -> dict[str, str]:
