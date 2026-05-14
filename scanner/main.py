@@ -193,6 +193,7 @@ def scan(
                 password=ssh_password,
                 key_path=ssh_key,
                 port=ssh_port,
+                open_ports=scan_result["open_ports"],
             )
             scan_result["ssh_audit"] = ssh_result
             findings.extend(ssh_result.get("findings", []))
@@ -204,7 +205,9 @@ def scan(
             finding for finding in scan_result["findings"] if finding["source"] == "tls_audit"
         ]
         scan_result["ssh_findings"] = [
-            finding for finding in scan_result["findings"] if finding["source"] == "ssh_audit"
+            finding
+            for finding in scan_result["findings"]
+            if finding["source"] in {"ssh_audit", "linux_config_audit"}
         ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]

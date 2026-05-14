@@ -12,6 +12,10 @@ except ImportError:  # pragma: no cover - exercised only when dependency is abse
     paramiko = None  # type: ignore[assignment]
 
 from scanner.finding import Finding, create_finding
+from scanner.linux_config_audit import (
+    build_linux_config_audit_summary,
+    build_linux_config_findings,
+)
 from scanner.package_audit import (
     PACKAGE_MANAGER_COMMANDS,
     build_package_audit_summary,
@@ -62,6 +66,7 @@ def audit_ssh_host(
     key_path: Path | None = None,
     port: int = 22,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    open_ports: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Run one authenticated SSH login and read-only Linux configuration checks."""
     result: dict[str, Any] = {
@@ -78,6 +83,12 @@ def audit_ssh_host(
         "package_update_count": None,
         "package_update_sample": [],
         "package_check_status": "not_run",
+        "linux_config_audit_checked": False,
+        "linux_config_audit_findings_count": 0,
+        "firewall_status": {},
+        "logging_status": {},
+        "password_policy_indicators": {},
+        "temp_directory_permissions": {},
     }
 
     if paramiko is None:
@@ -110,6 +121,11 @@ def audit_ssh_host(
         commands = _collect_linux_audit_data(client)
         result["commands"] = [_command_report(command) for command in commands]
         package_summary = build_package_audit_summary(commands)
+        linux_config_summary = build_linux_config_audit_summary(
+            commands=commands,
+            os_family=str(package_summary["os_family"]),
+            open_ports=open_ports or [],
+        )
         result.update(
             {
                 "os_family": package_summary["os_family"],
@@ -117,6 +133,11 @@ def audit_ssh_host(
                 "package_update_count": package_summary["package_update_count"],
                 "package_update_sample": package_summary["package_update_sample"],
                 "package_check_status": package_summary["package_check_status"],
+                "linux_config_audit_checked": linux_config_summary["linux_config_audit_checked"],
+                "firewall_status": linux_config_summary["firewall_status"],
+                "logging_status": linux_config_summary["logging_status"],
+                "password_policy_indicators": linux_config_summary["password_policy_indicators"],
+                "temp_directory_permissions": linux_config_summary["temp_directory_permissions"],
             }
         )
         if not _linux_details_available(commands):
@@ -129,6 +150,10 @@ def audit_ssh_host(
             port=port,
             commands=commands,
             package_summary=package_summary,
+            linux_config_summary=linux_config_summary,
+        )
+        result["linux_config_audit_findings_count"] = sum(
+            1 for finding in result["findings"] if finding.source == "linux_config_audit"
         )
         return result
     except paramiko.AuthenticationException:
@@ -162,10 +187,24 @@ def _collect_linux_audit_data(client: Any) -> list[dict[str, Any]]:
         commands.append(_run_command(client, "sshd -T"))
 
     if _command_exists(client, "systemctl", commands):
+        commands.append(_run_command(client, "systemctl is-active ufw"))
         commands.append(_run_command(client, "systemctl is-active firewalld"))
+        commands.append(_run_command(client, "systemctl is-active auditd"))
+        commands.append(_run_command(client, "systemctl is-active rsyslog"))
+        commands.append(_run_command(client, "systemctl is-active systemd-journald"))
 
     if _command_exists(client, "ufw", commands):
         commands.append(_run_command(client, "ufw status"))
+    if _command_exists(client, "firewall-cmd", commands):
+        commands.append(_run_command(client, "firewall-cmd --state"))
+
+    commands.append(_run_command(client, "hostname"))
+    commands.append(_run_command(client, "cat /etc/login.defs"))
+    commands.append(_run_command(client, "cat /etc/security/pwquality.conf"))
+    commands.append(_run_command(client, "test -d /tmp"))
+    commands.append(_run_command(client, "test -d /var/tmp"))
+    commands.append(_run_command(client, "ls -ld /tmp"))
+    commands.append(_run_command(client, "ls -ld /var/tmp"))
 
     manager_availability = {
         "apt": _command_exists(client, "apt", commands),
@@ -225,6 +264,7 @@ def _build_findings(
     port: int,
     commands: list[dict[str, Any]],
     package_summary: dict[str, Any],
+    linux_config_summary: dict[str, Any],
 ) -> list[Finding]:
     findings = [
         create_finding(
@@ -272,12 +312,9 @@ def _build_findings(
     if sshd_config:
         findings.extend(_sshd_findings(host, port, sshd_config))
 
-    firewall_finding = _firewall_finding(host, port, command_by_name)
-    if firewall_finding is not None:
-        findings.append(firewall_finding)
-
     if _linux_details_available(commands):
         findings.extend(build_package_findings(host, port, package_summary))
+        findings.extend(build_linux_config_findings(host, port, linux_config_summary))
 
     return findings
 
@@ -359,51 +396,6 @@ def _sshd_findings(host: str, port: int, sshd_config: dict[str, Any]) -> list[Fi
         )
 
     return findings
-
-
-def _firewall_finding(
-    host: str,
-    port: int,
-    command_by_name: dict[str, dict[str, Any]],
-) -> Finding | None:
-    firewalld = command_by_name.get("systemctl is-active firewalld")
-    if firewalld and firewalld["stdout"].strip().lower() in {"inactive", "failed", "unknown"}:
-        return create_finding(
-            title="Firewall Appears Inactive",
-            severity="Medium",
-            category="Host Configuration",
-            affected_host=host,
-            affected_port=port,
-            service="ssh",
-            evidence=f"firewalld status indicates {firewalld['stdout'].strip().lower()}.",
-            confidence="Medium",
-            impact="A disabled host firewall can increase exposure if network controls are incomplete.",
-            recommendation="Enable and configure a host firewall if appropriate.",
-            verification="Run systemctl is-active firewalld and review host firewall policy.",
-            limitation="This check does not evaluate external network firewalls or host-specific policy exceptions.",
-            source=SOURCE,
-        )
-
-    ufw = command_by_name.get("ufw status")
-    ufw_output = ufw["stdout"].lower() if ufw else ""
-    if ufw and ("status: inactive" in ufw_output or ufw_output.strip() == "inactive"):
-        return create_finding(
-            title="Firewall Appears Inactive",
-            severity="Medium",
-            category="Host Configuration",
-            affected_host=host,
-            affected_port=port,
-            service="ssh",
-            evidence="ufw status indicates inactive.",
-            confidence="Medium",
-            impact="A disabled host firewall can increase exposure if network controls are incomplete.",
-            recommendation="Enable and configure a host firewall if appropriate.",
-            verification="Run ufw status and review host firewall policy.",
-            limitation="This check does not evaluate external network firewalls or host-specific policy exceptions.",
-            source=SOURCE,
-        )
-
-    return None
 
 
 def _parse_sshd_t(output: str) -> dict[str, str]:

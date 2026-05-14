@@ -404,6 +404,14 @@
       <p><strong>Package manager:</strong> {{ report.ssh_audit.package_manager or "" }}</p>
       <p><strong>Package check status:</strong> {{ report.ssh_audit.package_check_status or "" }}</p>
       <p><strong>Available package updates:</strong> {{ report.ssh_audit.package_update_count if report.ssh_audit.package_update_count is not none else "" }}</p>
+      <p><strong>Linux config audit:</strong> {{ "checked" if report.ssh_audit.linux_config_audit_checked else "not checked" }}</p>
+      <p><strong>Linux config findings:</strong> {{ report.ssh_audit.linux_config_audit_findings_count or 0 }}</p>
+      {% if report.ssh_audit.firewall_status %}
+      <p><strong>Firewall status:</strong> {{ report.ssh_audit.firewall_status.state }} - {{ report.ssh_audit.firewall_status.evidence }}</p>
+      {% endif %}
+      {% if report.ssh_audit.logging_status %}
+      <p><strong>Logging status:</strong> {{ report.ssh_audit.logging_status.state }} - {{ report.ssh_audit.logging_status.evidence }}</p>
+      {% endif %}
       {% if report.ssh_audit.package_update_sample %}
       <p><strong>Package update sample:</strong> {{ report.ssh_audit.package_update_sample | join(", ") }}</p>
       {% endif %}
@@ -465,7 +473,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager checks where available. It does not install, update, or modify packages. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall bypassing, cipher probing, protocol downgrade testing, or CVE validation.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall bypassing, cipher probing, protocol downgrade testing, or CVE validation.</p>
     </section>
   </main>
 </body>

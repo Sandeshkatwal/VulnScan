@@ -209,7 +209,7 @@ The TLS audit checks certificate validation status, hostname mismatch where poss
 
 ## Authenticated SSH Audit
 
-Version 11.1 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.
+Version 11.3 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.
 
 Use least-privilege read-only credentials:
 
@@ -223,7 +223,7 @@ Use `--ssh-port` if SSH is listening on a non-standard port. The default is `22`
 
 The SSH audit attempts one login using the credentials explicitly provided for that scan. Passwords and private key paths are not stored in reports, the SQLite database, logs, or terminal output. SSH audit results are stored as sanitized audit status, command results, and standard findings.
 
-After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, and package update checks. It does not run `sudo`, change files, install packages, update packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.
+After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, package update checks, and Linux configuration indicator checks. It does not run `sudo`, change files, install packages, update packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.
 
 Package manager detection checks `apt`, `apt-get`, `dnf`, `yum`, `pacman`, and `zypper` with `command -v`. VulScan derives the Linux family from `/etc/os-release` and reports Debian/Kali/Parrot/Ubuntu, Fedora/RHEL/Rocky/Alma, Arch, openSUSE/SUSE, or Unknown Linux.
 
@@ -238,6 +238,10 @@ zypper list-updates
 ```
 
 For apt-based systems, VulScan does not run `apt update`; `apt list --upgradable` depends on the package metadata already available on the host. Package findings support patch management review by reporting detected package manager details, update counts, and a sample of up to 20 package names. This does not replace full vulnerability intelligence, CVE enrichment, vendor advisories, asset criticality, or change-management review.
+
+Linux configuration audit templates are also read-only. VulScan reviews available firewall indicators, audit/logging service status, local password policy indicators from `/etc/login.defs` and `/etc/security/pwquality.conf`, sticky-bit indicators for `/tmp` and `/var/tmp`, cleartext service exposure indicators from existing service detection, and basic hostname/OS information.
+
+These checks are indicators and should be reviewed in operational context. They may not reflect all PAM settings, central identity provider policy, central logging agents, cloud firewall controls, or enterprise hardening exceptions. This is not a full CIS benchmark implementation yet, but it prepares the framework for CIS-style audit templates.
 
 SSH audit can reduce false positives by checking system configuration directly. Unsupported or non-Linux systems are handled safely by stopping Linux-specific checks when Linux OS details are not available. Windows SMB/WinRM auditing is planned for a future version.
 
