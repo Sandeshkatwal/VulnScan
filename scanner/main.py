@@ -177,6 +177,7 @@ def scan(
         scan_result["http_findings"] = []
         scan_result["tls_findings"] = []
         scan_result["ssh_audit"] = {"enabled": False, "status": "not_run", "findings": []}
+        scan_result["ssh_audit_summary"] = {"enabled": False, "status": "skipped"}
         scan_result["ssh_findings"] = []
         findings = create_port_exposure_findings(scan_result["open_ports"])
         if http_audit:
@@ -207,10 +208,16 @@ def scan(
         scan_result["ssh_findings"] = [
             finding
             for finding in scan_result["findings"]
-            if finding["source"] in {"ssh_audit", "linux_config_audit"}
+            if _is_ssh_related_finding(finding)
         ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
+            scan_result["ssh_audit_summary"] = _build_ssh_audit_summary(
+                scan_result=scan_result,
+                username=str(ssh_user),
+                auth_method="key" if ssh_key is not None else "password",
+                ssh_port=ssh_port,
+            )
         scan_end_time = datetime.now().astimezone()
         scan_result["scan_start_time"] = scan_start_time.isoformat(timespec="seconds")
         scan_result["scan_end_time"] = scan_end_time.isoformat(timespec="seconds")
@@ -245,7 +252,7 @@ def scan(
         console.print("[green]Open TCP ports:[/green] None found in the default safe port list.")
 
     console.print(f"[bold]Total scan time:[/bold] {scan_result['duration_seconds']} seconds")
-    _print_ssh_audit_status(scan_result.get("ssh_audit", {}))
+    _print_ssh_audit_summary(scan_result.get("ssh_audit_summary", {"enabled": False}))
 
     _print_findings(scan_result["findings"])
 
@@ -705,43 +712,82 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         console.print("[green]Findings:[/green] None found.")
         return
 
-    table = Table(title="Findings")
-    table.add_column("Risk", justify="right")
-    table.add_column("Risk Label")
-    table.add_column("Severity")
-    table.add_column("Title")
-    table.add_column("Source")
-    table.add_column("Affected")
-    table.add_column("Evidence")
-    table.add_column("Recommendation")
-
+    source_order = [
+        "port_scan",
+        "http_audit",
+        "tls_audit",
+        "ssh_audit",
+        "package_audit",
+        "ssh_hardening",
+        "linux_config_audit",
+    ]
+    grouped: dict[str, list[dict[str, Any]]] = {source: [] for source in source_order}
+    grouped["other"] = []
     for finding in findings:
-        table.add_row(
-            str(finding["risk_score"]),
-            finding["risk_label"],
-            finding["severity"],
-            finding["title"],
-            finding["source"],
-            _affected_summary(finding),
-            finding["evidence"],
-            finding["recommendation"],
-        )
+        source = str(finding.get("source") or "other")
+        if source not in grouped:
+            source = "other"
+        grouped[source].append(finding)
 
+    for source in source_order + ["other"]:
+        source_findings = grouped.get(source, [])
+        if not source_findings:
+            continue
+        table = Table(title=f"Findings - {source}")
+        table.add_column("Risk", justify="right")
+        table.add_column("Risk Label")
+        table.add_column("Severity")
+        table.add_column("Title")
+        table.add_column("Category")
+        table.add_column("Affected")
+        table.add_column("Evidence")
+        table.add_column("Recommendation")
+
+        for finding in source_findings:
+            table.add_row(
+                str(finding["risk_score"]),
+                finding["risk_label"],
+                finding["severity"],
+                finding["title"],
+                finding["category"],
+                _affected_summary(finding),
+                finding["evidence"],
+                finding["recommendation"],
+            )
+
+        console.print(table)
+
+
+def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+
+    table = Table(title="Credentialed SSH Audit Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Status", summary.get("status")),
+        ("Authenticated", summary.get("authenticated")),
+        ("Username", summary.get("username_used")),
+        ("Auth method", summary.get("auth_method")),
+        ("OS family", summary.get("os_family")),
+        ("Hostname", summary.get("hostname")),
+        ("Package manager", summary.get("package_manager")),
+        ("Package update count", summary.get("package_update_count")),
+        ("SSH hardening checked", summary.get("ssh_hardening_checked")),
+        ("Linux config audit checked", summary.get("linux_config_audit_checked")),
+        ("Total SSH findings", summary.get("total_ssh_findings")),
+        (
+            "Highest SSH risk",
+            f"{summary.get('highest_ssh_risk_score')} ({summary.get('highest_ssh_risk_label')})",
+        ),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
     console.print(table)
-
-
-def _print_ssh_audit_status(ssh_audit: dict[str, Any]) -> None:
-    if not ssh_audit.get("enabled"):
-        return
-
-    status = str(ssh_audit.get("status") or "unknown")
-    if status == "completed":
-        console.print("[green]SSH audit:[/green] Completed authenticated read-only checks.")
-        return
-
-    notes = ssh_audit.get("notes") or []
-    note_text = f" {' '.join(str(note) for note in notes)}" if notes else ""
-    console.print(f"[yellow]SSH audit:[/yellow] {status}.{note_text}")
+    console.print(
+        "[yellow]Authenticated SSH audit uses read-only commands and depends on the permissions of the provided account. Results should be reviewed in operational context.[/yellow]"
+    )
 
 
 def _affected_summary(finding: dict[str, Any]) -> str:
@@ -756,6 +802,60 @@ def _affected_summary(finding: dict[str, Any]) -> str:
     if port:
         return f"port {port}"
     return "n/a"
+
+
+def _is_ssh_related_finding(finding: dict[str, Any]) -> bool:
+    return str(finding.get("source") or "") in {
+        "ssh_audit",
+        "package_audit",
+        "ssh_hardening",
+        "linux_config_audit",
+    }
+
+
+def _build_ssh_audit_summary(
+    scan_result: dict[str, Any],
+    username: str,
+    auth_method: str,
+    ssh_port: int,
+) -> dict[str, Any]:
+    ssh_audit = scan_result.get("ssh_audit", {})
+    ssh_findings = scan_result.get("ssh_findings", [])
+    highest = max(ssh_findings, key=lambda item: int(item.get("risk_score") or 0), default={})
+    raw_status = str(ssh_audit.get("status") or "")
+    authenticated = bool(ssh_audit.get("authenticated"))
+    if raw_status == "completed":
+        status = "success"
+    elif authenticated:
+        status = "partial"
+    elif raw_status in {"not_run", "skipped"}:
+        status = "skipped"
+    else:
+        status = "failed"
+
+    return {
+        "enabled": True,
+        "status": status,
+        "target": scan_result.get("host"),
+        "ssh_port": ssh_port,
+        "authenticated": authenticated,
+        "username_used": username,
+        "auth_method": auth_method,
+        "os_family": ssh_audit.get("os_family"),
+        "hostname": ssh_audit.get("hostname"),
+        "kernel_summary": ssh_audit.get("kernel_summary"),
+        "package_manager": ssh_audit.get("package_manager"),
+        "package_update_count": ssh_audit.get("package_update_count"),
+        "ssh_hardening_checked": bool(ssh_audit.get("ssh_hardening_checked")),
+        "linux_config_audit_checked": bool(ssh_audit.get("linux_config_audit_checked")),
+        "total_ssh_findings": len(ssh_findings),
+        "highest_ssh_risk_score": int(highest.get("risk_score") or 0),
+        "highest_ssh_risk_label": str(highest.get("risk_label") or "Informational"),
+        "limitations": (
+            "Authenticated SSH audit uses read-only commands and depends on the permissions of the provided account. "
+            "Results should be reviewed in operational context."
+        ),
+    }
 
 
 def _print_count_summary(title: str, counts: dict[str, int]) -> None:

@@ -395,29 +395,28 @@
     </section>
 
     <section>
-      <h2>SSH Audit</h2>
-      {% if report.ssh_audit.enabled %}
-      <p><strong>Status:</strong> {{ report.ssh_audit.status }}</p>
-      <p><strong>Port:</strong> {{ report.ssh_audit.port }}</p>
-      <p><strong>Authenticated:</strong> {{ report.ssh_audit.authenticated }}</p>
-      <p><strong>OS family:</strong> {{ report.ssh_audit.os_family or "" }}</p>
-      <p><strong>Package manager:</strong> {{ report.ssh_audit.package_manager or "" }}</p>
-      <p><strong>Package check status:</strong> {{ report.ssh_audit.package_check_status or "" }}</p>
-      <p><strong>Available package updates:</strong> {{ report.ssh_audit.package_update_count if report.ssh_audit.package_update_count is not none else "" }}</p>
-      <p><strong>Linux config audit:</strong> {{ "checked" if report.ssh_audit.linux_config_audit_checked else "not checked" }}</p>
-      <p><strong>Linux config findings:</strong> {{ report.ssh_audit.linux_config_audit_findings_count or 0 }}</p>
-      {% if report.ssh_audit.firewall_status %}
-      <p><strong>Firewall status:</strong> {{ report.ssh_audit.firewall_status.state }} - {{ report.ssh_audit.firewall_status.evidence }}</p>
+      <h2>Authenticated SSH Audit Summary</h2>
+      {% if report.ssh_audit_summary.enabled %}
+      <p><strong>Credentialed SSH Audit:</strong> {{ report.ssh_audit_summary.status }}</p>
+      <p><strong>Read-only authenticated checks:</strong> {{ report.ssh_audit_summary.authenticated }}</p>
+      <p><strong>Username used:</strong> {{ report.ssh_audit_summary.username_used }}</p>
+      <p><strong>Auth method:</strong> {{ report.ssh_audit_summary.auth_method }}</p>
+      <p><strong>OS family:</strong> {{ report.ssh_audit_summary.os_family or "" }}</p>
+      <p><strong>Hostname:</strong> {{ report.ssh_audit_summary.hostname or "" }}</p>
+      <p><strong>Kernel summary:</strong> {{ report.ssh_audit_summary.kernel_summary or "" }}</p>
+      <p><strong>Package and patch indicators:</strong> {{ report.ssh_audit_summary.package_manager or "" }}{% if report.ssh_audit_summary.package_update_count is not none %}, {{ report.ssh_audit_summary.package_update_count }} updates{% endif %}</p>
+      <p><strong>SSH hardening checks:</strong> {{ report.ssh_audit_summary.ssh_hardening_checked }}</p>
+      <p><strong>Linux configuration indicators:</strong> {{ report.ssh_audit_summary.linux_config_audit_checked }}</p>
+      <p><strong>Total SSH findings:</strong> {{ report.ssh_audit_summary.total_ssh_findings }}</p>
+      <p><strong>Highest SSH risk:</strong> {{ report.ssh_audit_summary.highest_ssh_risk_score }} ({{ report.ssh_audit_summary.highest_ssh_risk_label }})</p>
+      <p><strong>Limitations:</strong> {{ report.ssh_audit_summary.limitations }}</p>
+      {% else %}
+      <p class="empty">Credentialed SSH Audit was not requested.</p>
       {% endif %}
-      {% if report.ssh_audit.logging_status %}
-      <p><strong>Logging status:</strong> {{ report.ssh_audit.logging_status.state }} - {{ report.ssh_audit.logging_status.evidence }}</p>
-      {% endif %}
-      {% if report.ssh_audit.package_update_sample %}
-      <p><strong>Package update sample:</strong> {{ report.ssh_audit.package_update_sample | join(", ") }}</p>
-      {% endif %}
-      {% if report.ssh_audit.notes %}
-      <p><strong>Notes:</strong> {{ report.ssh_audit.notes | join(" ") }}</p>
-      {% endif %}
+    </section>
+
+    <section>
+      <h2>Credentialed SSH Audit Findings</h2>
       {% if report.ssh_findings %}
       <table>
         <thead>
@@ -425,6 +424,7 @@
             <th>Severity</th>
             <th>Title</th>
             <th>Category</th>
+            <th>Source</th>
             <th>Affected Host</th>
             <th>Port</th>
             <th>Evidence</th>
@@ -440,6 +440,7 @@
             <td>{{ finding.severity }}</td>
             <td>{{ finding.title }}</td>
             <td>{{ finding.category }}</td>
+            <td>{{ finding.source }}</td>
             <td>{{ finding.affected_host }}</td>
             <td>{{ finding.affected_port }}</td>
             <td>{{ finding.evidence }}</td>
@@ -452,10 +453,7 @@
         </tbody>
       </table>
       {% else %}
-      <p class="empty">No SSH audit findings were recorded.</p>
-      {% endif %}
-      {% else %}
-      <p class="empty">No SSH audit was requested. Run with --ssh-audit and explicitly provided SSH credentials to perform read-only Linux checks.</p>
+      <p class="empty">No Credentialed SSH Audit findings were recorded.</p>
       {% endif %}
     </section>
 
@@ -469,6 +467,7 @@
     <section class="notice">
       <h2>Safe Usage Disclaimer</h2>
       <p>Use VulScan only on systems you own or have explicit permission to assess. This report is intended for authorised defensive security review.</p>
+      <p>Authenticated SSH audit uses read-only commands and depends on the permissions of the provided account. Results should be reviewed in operational context.</p>
     </section>
 
     <section>

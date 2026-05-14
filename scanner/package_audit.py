@@ -7,7 +7,7 @@ from typing import Any
 from scanner.finding import Finding, create_finding
 
 
-SOURCE = "ssh_audit"
+SOURCE = "package_audit"
 SUPPORTED_PACKAGE_MANAGERS = ("apt", "dnf", "yum", "pacman", "zypper")
 PACKAGE_MANAGER_COMMANDS = {
     "apt": "apt list --upgradable",

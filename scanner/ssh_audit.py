@@ -83,6 +83,9 @@ def audit_ssh_host(
         "package_update_count": None,
         "package_update_sample": [],
         "package_check_status": "not_run",
+        "hostname": "",
+        "kernel_summary": "",
+        "ssh_hardening_checked": False,
         "linux_config_audit_checked": False,
         "linux_config_audit_findings_count": 0,
         "firewall_status": {},
@@ -129,10 +132,13 @@ def audit_ssh_host(
         result.update(
             {
                 "os_family": package_summary["os_family"],
+                "hostname": _hostname_from_commands(commands),
+                "kernel_summary": _kernel_summary_from_commands(commands),
                 "package_manager": package_summary["package_manager"],
                 "package_update_count": package_summary["package_update_count"],
                 "package_update_sample": package_summary["package_update_sample"],
                 "package_check_status": package_summary["package_check_status"],
+                "ssh_hardening_checked": _command_was_successful(commands, "sshd -T"),
                 "linux_config_audit_checked": linux_config_summary["linux_config_audit_checked"],
                 "firewall_status": linux_config_summary["firewall_status"],
                 "logging_status": linux_config_summary["logging_status"],
@@ -372,7 +378,7 @@ def _sshd_findings(host: str, port: int, sshd_config: dict[str, Any]) -> list[Fi
                 recommendation="Disable password authentication where possible and use SSH keys.",
                 verification="Run sshd -T and check passwordauthentication.",
                 limitation="Effective SSH configuration may vary by match blocks or service-specific deployment context.",
-                source=SOURCE,
+                source="ssh_hardening",
             )
         )
 
@@ -391,7 +397,7 @@ def _sshd_findings(host: str, port: int, sshd_config: dict[str, Any]) -> list[Fi
                 recommendation="Disable direct root login and use a named user with privilege escalation where required.",
                 verification="Run sshd -T and check permitrootlogin.",
                 limitation="Effective SSH configuration may vary by match blocks or service-specific deployment context.",
-                source=SOURCE,
+                source="ssh_hardening",
             )
         )
 
@@ -427,6 +433,29 @@ def _os_release_value(output: str, key: str) -> str:
         if line.startswith(prefix):
             return line[len(prefix) :].strip().strip('"')
     return ""
+
+
+def _hostname_from_commands(commands: list[dict[str, Any]]) -> str:
+    command_by_name = {command["command"]: command for command in commands}
+    output = str(command_by_name.get("hostname", {}).get("stdout") or "")
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return ""
+
+
+def _kernel_summary_from_commands(commands: list[dict[str, Any]]) -> str:
+    command_by_name = {command["command"]: command for command in commands}
+    output = str(command_by_name.get("uname -a", {}).get("stdout") or "")
+    return _truncate(output.strip(), max_chars=240)
+
+
+def _command_was_successful(commands: list[dict[str, Any]], command_name: str) -> bool:
+    for command in commands:
+        if command.get("command") == command_name:
+            return command.get("exit_status") == 0
+    return False
 
 
 def _command_report(command: dict[str, Any]) -> dict[str, Any]:

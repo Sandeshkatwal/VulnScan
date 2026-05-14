@@ -44,7 +44,9 @@ Optional authenticated SSH audit for an authorised Linux system:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa
 ```
 
-SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords or private key paths. Package and configuration checks are read-only and do not install, update, or modify packages or files. Results are indicators for authorised review, not a full CIS benchmark implementation. Use least-privilege credentials. Windows SMB/WinRM auditing is planned for a future version.
+SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords, key values, or private key paths. Package and configuration checks are read-only and do not install, update, or modify packages or files. Results are indicators for authorised review, not a full CIS benchmark implementation. Use least-privilege credentials. Windows SMB/WinRM auditing is planned for a future version.
+
+Credentialed SSH audit output includes a sanitized summary in terminal, JSON, and HTML reports. Passwords, key values, and private key paths are never included.
 
 You can also use the helper script:
 
