@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only package and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 
 ## Requirements
 
@@ -42,11 +42,13 @@ Optional authenticated SSH audit for an authorised Linux system:
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-password PASSWORD
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile detailed --json --html --save-db
 ```
 
 SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords, key values, or private key paths. Package and configuration checks are read-only and do not install, update, or modify packages or files. Results are indicators for authorised review, not a full CIS benchmark implementation. Use least-privilege credentials. Windows SMB/WinRM auditing is planned for a future version.
 
-Credentialed SSH audit output includes a sanitized summary in terminal, JSON, and HTML reports. Passwords, key values, and private key paths are never included.
+Credentialed SSH audit output includes a sanitized summary in terminal, JSON, and HTML reports. Passwords, key values, and private key paths are never included. Audit profiles apply only with `--ssh-audit`: `basic` is fastest, `standard` is the default, and `detailed` runs additional read-only configuration indicators that may take slightly longer.
 
 You can also use the helper script:
 

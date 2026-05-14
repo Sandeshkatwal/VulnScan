@@ -401,6 +401,10 @@
       <p><strong>Read-only authenticated checks:</strong> {{ report.ssh_audit_summary.authenticated }}</p>
       <p><strong>Username used:</strong> {{ report.ssh_audit_summary.username_used }}</p>
       <p><strong>Auth method:</strong> {{ report.ssh_audit_summary.auth_method }}</p>
+      <p><strong>Audit profile:</strong> {{ report.ssh_audit_summary.audit_profile }}</p>
+      <p><strong>Profile description:</strong> {{ report.ssh_audit_summary.profile_description }}</p>
+      <p><strong>Enabled checks:</strong> {{ report.ssh_audit_summary.checks_enabled | join(", ") }}</p>
+      <p><strong>Skipped checks:</strong> {{ report.ssh_audit_summary.checks_skipped | join(", ") }}</p>
       <p><strong>OS family:</strong> {{ report.ssh_audit_summary.os_family or "" }}</p>
       <p><strong>Hostname:</strong> {{ report.ssh_audit_summary.hostname or "" }}</p>
       <p><strong>Kernel summary:</strong> {{ report.ssh_audit_summary.kernel_summary or "" }}</p>

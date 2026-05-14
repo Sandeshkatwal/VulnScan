@@ -14,16 +14,50 @@ def build_linux_config_audit_summary(
     commands: list[dict[str, Any]],
     os_family: str,
     open_ports: list[dict[str, Any]] | None = None,
+    checks: dict[str, bool] | None = None,
 ) -> dict[str, Any]:
     """Build structured Linux configuration audit output."""
+    enabled = checks or {
+        "firewall_checks": True,
+        "logging_checks": True,
+        "password_policy_checks": True,
+        "temp_directory_checks": True,
+        "cleartext_service_checks": True,
+    }
     command_by_name = {str(command["command"]): command for command in commands}
-    password_policy = _password_policy_indicators(command_by_name)
-    temp_permissions = _temp_directory_permissions(command_by_name)
-    firewall_status = _firewall_status(command_by_name)
-    logging_status = _logging_status(command_by_name)
+    password_policy = (
+        _password_policy_indicators(command_by_name)
+        if enabled.get("password_policy_checks")
+        else _skipped_password_policy()
+    )
+    temp_permissions = (
+        _temp_directory_permissions(command_by_name)
+        if enabled.get("temp_directory_checks")
+        else {}
+    )
+    firewall_status = (
+        _firewall_status(command_by_name)
+        if enabled.get("firewall_checks")
+        else _skipped_status("Firewall checks were skipped by the selected audit profile.")
+    )
+    logging_status = (
+        _logging_status(command_by_name)
+        if enabled.get("logging_checks")
+        else _skipped_status("Logging checks were skipped by the selected audit profile.")
+    )
 
     return {
-        "linux_config_audit_checked": True,
+        "linux_config_audit_checked": any(
+            bool(enabled.get(key))
+            for key in (
+                "firewall_checks",
+                "logging_checks",
+                "password_policy_checks",
+                "temp_directory_checks",
+                "cleartext_service_checks",
+            )
+        ),
+        "checks": enabled,
         "firewall_status": firewall_status,
         "logging_status": logging_status,
         "password_policy_indicators": password_policy,
@@ -32,7 +66,11 @@ def build_linux_config_audit_summary(
             "hostname": _first_line(_command_output(command_by_name.get("hostname", {}))),
             "os_family": os_family,
         },
-        "cleartext_services": _cleartext_services(open_ports or []),
+        "cleartext_services": (
+            _cleartext_services(open_ports or [])
+            if enabled.get("cleartext_service_checks")
+            else []
+        ),
     }
 
 
@@ -43,12 +81,19 @@ def build_linux_config_findings(
 ) -> list[Finding]:
     """Create standard findings from Linux configuration audit output."""
     findings: list[Finding] = []
-    findings.extend(_system_info_findings(host, port, config_summary))
-    findings.extend(_firewall_findings(host, port, config_summary["firewall_status"]))
-    findings.extend(_logging_findings(host, port, config_summary["logging_status"]))
-    findings.extend(_password_policy_findings(host, port, config_summary["password_policy_indicators"]))
-    findings.extend(_temp_permission_findings(host, port, config_summary["temp_directory_permissions"]))
-    findings.extend(_cleartext_service_findings(config_summary["cleartext_services"]))
+    checks = config_summary.get("checks") or {}
+    if config_summary.get("linux_config_audit_checked"):
+        findings.extend(_system_info_findings(host, port, config_summary))
+    if checks.get("firewall_checks"):
+        findings.extend(_firewall_findings(host, port, config_summary["firewall_status"]))
+    if checks.get("logging_checks"):
+        findings.extend(_logging_findings(host, port, config_summary["logging_status"]))
+    if checks.get("password_policy_checks"):
+        findings.extend(_password_policy_findings(host, port, config_summary["password_policy_indicators"]))
+    if checks.get("temp_directory_checks"):
+        findings.extend(_temp_permission_findings(host, port, config_summary["temp_directory_permissions"]))
+    if checks.get("cleartext_service_checks"):
+        findings.extend(_cleartext_service_findings(config_summary["cleartext_services"]))
     return findings
 
 
@@ -334,6 +379,24 @@ def _logging_status(command_by_name: dict[str, dict[str, Any]]) -> dict[str, Any
         "services": states,
         "evidence": evidence,
         "confidence": "Medium" if state != "unavailable" else "Low",
+    }
+
+
+def _skipped_status(evidence: str) -> dict[str, Any]:
+    return {
+        "state": "skipped",
+        "services": {},
+        "evidence": evidence,
+        "confidence": "Low",
+    }
+
+
+def _skipped_password_policy() -> dict[str, Any]:
+    return {
+        "login_defs_read": False,
+        "pwquality_conf_read": False,
+        "age_policy_issues": [],
+        "quality_policy_issues": [],
     }
 
 

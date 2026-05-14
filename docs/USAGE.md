@@ -209,7 +209,7 @@ The TLS audit checks certificate validation status, hostname mismatch where poss
 
 ## Authenticated SSH Audit
 
-Version 11.4 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.
+Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.
 
 Use least-privilege read-only credentials:
 
@@ -219,13 +219,24 @@ Use least-privilege read-only credentials:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile standard
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile detailed --json --html --save-db
 ```
 
 Use `--ssh-port` if SSH is listening on a non-standard port. The default is `22`.
 
+Use `--audit-profile` to choose the depth of read-only credentialed checks. Profiles apply only when `--ssh-audit` is used:
+
+- `basic`: SSH login verification, OS information, hostname, kernel summary, and SSH hardening review.
+- `standard`: default profile; includes `basic` plus package manager detection, package update checks, firewall indicators, and logging indicators.
+- `detailed`: includes `standard` plus password policy indicators, temporary directory sticky-bit checks, and cleartext service exposure indicators.
+
+All profiles are read-only. The `detailed` profile runs more checks and may take slightly longer.
+
 The SSH audit attempts one login using the credentials explicitly provided for that scan. Passwords, key values, and private key paths are not stored in reports, the SQLite database, logs, or terminal output. SSH audit results are stored as sanitized audit status, command results, a top-level `ssh_audit_summary`, and standard findings.
 
-When `--ssh-audit` is used, the terminal output includes a **Credentialed SSH Audit Summary** before the general findings. JSON and HTML reports include a top-level SSH audit summary with authentication status, username, auth method, OS family, hostname, kernel summary, package indicators, SSH hardening status, Linux configuration status, total SSH findings, highest SSH risk, and limitations. SSH findings are grouped by source in terminal output, including `ssh_audit`, `package_audit`, `ssh_hardening`, and `linux_config_audit`.
+When `--ssh-audit` is used, the terminal output includes a **Credentialed SSH Audit Summary** before the general findings. JSON and HTML reports include a top-level SSH audit summary with authentication status, username, auth method, audit profile, enabled/skipped checks, OS family, hostname, kernel summary, package indicators, SSH hardening status, Linux configuration status, total SSH findings, highest SSH risk, and limitations. SSH findings are grouped by source in terminal output, including `ssh_audit`, `package_audit`, `ssh_hardening`, and `linux_config_audit`.
 
 After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, package update checks, and Linux configuration indicator checks. It does not run `sudo`, change files, install packages, update packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.
 

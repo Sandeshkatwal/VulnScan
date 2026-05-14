@@ -153,9 +153,14 @@ To run the optional authenticated SSH audit against an authorised Linux system:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile standard
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile detailed --json --html --save-db
 ```
 
 SSH audit is for authorised Linux systems only. Use least-privilege credentials. VulScan attempts one SSH login, runs read-only inspection commands only, and does not run `sudo`, modify files, install packages, update packages, restart services, exploit, brute force, guess passwords, or attempt privilege escalation. SSH passwords, key values, and private key paths are not stored in reports, the SQLite database, logs, or terminal output. The SSH audit summary appears in terminal, JSON, and HTML output, and SSH findings are grouped by source. Windows SMB/WinRM auditing is planned for a future version.
+
+Credentialed audit profiles apply only with `--ssh-audit`. `standard` is the default. `basic` performs fast login, OS, and SSH hardening checks. `standard` adds package, firewall, and logging indicators. `detailed` adds password policy, temporary directory sticky-bit, and cleartext service exposure indicators. All profiles are read-only; `detailed` may take slightly longer.
 
 Package checks over SSH are read-only. VulScan detects package managers with `command -v` for `apt`, `apt-get`, `dnf`, `yum`, `pacman`, and `zypper`, then runs the appropriate read-only update check such as `apt list --upgradable`, `dnf check-update`, `yum check-update`, `pacman -Qu`, or `zypper list-updates`. It does not run `apt update`, upgrade packages, or install anything. On apt-based systems, results may depend on existing package metadata on the host. Package findings support patch management review but do not replace full vulnerability intelligence or vendor advisory review.
 

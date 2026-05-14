@@ -10,6 +10,11 @@ from rich.panel import Panel
 from rich.table import Table
 
 from scanner import __version__
+from scanner.audit_profiles import (
+    AuditProfileError,
+    DEFAULT_AUDIT_PROFILE,
+    get_audit_profile,
+)
 from scanner.assets import get_asset_services, get_assets
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
 from scanner.database import database_exists, get_missing_required_tables
@@ -143,6 +148,13 @@ def scan(
             help="SSH port for authenticated audit.",
         ),
     ] = 22,
+    audit_profile: Annotated[
+        str,
+        typer.Option(
+            "--audit-profile",
+            help="Credentialed SSH audit profile: basic, standard, or detailed.",
+        ),
+    ] = DEFAULT_AUDIT_PROFILE,
     save_db: Annotated[
         bool,
         typer.Option(
@@ -152,6 +164,17 @@ def scan(
     ] = False,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
+    try:
+        selected_audit_profile = get_audit_profile(audit_profile)
+    except AuditProfileError as exc:
+        console.print(f"[red]Audit profile error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    if not ssh_audit and selected_audit_profile.name != DEFAULT_AUDIT_PROFILE:
+        console.print(
+            "[yellow]Audit profiles apply to SSH audit only. The selected audit profile will be ignored because --ssh-audit was not provided.[/yellow]"
+        )
+
     try:
         validate_ssh_audit_options(
             ssh_audit=ssh_audit,
@@ -195,6 +218,7 @@ def scan(
                 key_path=ssh_key,
                 port=ssh_port,
                 open_ports=scan_result["open_ports"],
+                audit_profile=selected_audit_profile,
             )
             scan_result["ssh_audit"] = ssh_result
             findings.extend(ssh_result.get("findings", []))
@@ -217,6 +241,7 @@ def scan(
                 username=str(ssh_user),
                 auth_method="key" if ssh_key is not None else "password",
                 ssh_port=ssh_port,
+                audit_profile=selected_audit_profile,
             )
         scan_end_time = datetime.now().astimezone()
         scan_result["scan_start_time"] = scan_start_time.isoformat(timespec="seconds")
@@ -770,6 +795,10 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
         ("Authenticated", summary.get("authenticated")),
         ("Username", summary.get("username_used")),
         ("Auth method", summary.get("auth_method")),
+        ("Audit profile", summary.get("audit_profile")),
+        ("Profile description", summary.get("profile_description")),
+        ("Enabled checks", _format_summary_list(summary.get("checks_enabled"))),
+        ("Skipped checks", _format_summary_list(summary.get("checks_skipped"))),
         ("OS family", summary.get("os_family")),
         ("Hostname", summary.get("hostname")),
         ("Package manager", summary.get("package_manager")),
@@ -818,6 +847,7 @@ def _build_ssh_audit_summary(
     username: str,
     auth_method: str,
     ssh_port: int,
+    audit_profile: Any,
 ) -> dict[str, Any]:
     ssh_audit = scan_result.get("ssh_audit", {})
     ssh_findings = scan_result.get("ssh_findings", [])
@@ -841,6 +871,10 @@ def _build_ssh_audit_summary(
         "authenticated": authenticated,
         "username_used": username,
         "auth_method": auth_method,
+        "audit_profile": audit_profile.name,
+        "profile_description": audit_profile.description,
+        "checks_enabled": list(audit_profile.checks_enabled),
+        "checks_skipped": list(audit_profile.checks_skipped),
         "os_family": ssh_audit.get("os_family"),
         "hostname": ssh_audit.get("hostname"),
         "kernel_summary": ssh_audit.get("kernel_summary"),
@@ -856,6 +890,14 @@ def _build_ssh_audit_summary(
             "Results should be reviewed in operational context."
         ),
     }
+
+
+def _format_summary_list(value: Any) -> str:
+    if not value:
+        return "None"
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    return str(value)
 
 
 def _print_count_summary(title: str, counts: dict[str, int]) -> None:

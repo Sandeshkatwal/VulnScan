@@ -54,6 +54,7 @@ Vulnerability Scanner
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
+- Credentialed SSH audit profiles for `basic`, `standard`, and `detailed` read-only check depth.
 - Standard finding model with sequential IDs, severity, confidence, evidence, impact, recommendation, verification, limitation, source, and timestamps.
 - Prioritisation Engine risk scoring with heuristic risk score, risk label, and fix priority.
 - Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
@@ -96,5 +97,7 @@ Version 11.1 improves Linux package and patch checks. VulScan detects OS family 
 Version 11.3 adds Linux configuration audit templates over the existing authenticated SSH session. The checks are read-only and cover host firewall indicators, logging service indicators, password policy indicators, temporary directory sticky-bit indicators, cleartext service exposure indicators, and a basic Linux configuration audit completion summary. Findings use the `linux_config_audit` source and flow through the existing risk scoring, reporting, SQLite, diff, remediation, asset, and export pipeline. These checks are indicators and are not a full CIS benchmark implementation yet.
 
 Version 11.4 refines SSH audit reporting. Scan results now include a sanitized `ssh_audit_summary` with authentication status, username, auth method, OS family, hostname, kernel summary, package indicators, SSH hardening status, Linux configuration status, total SSH findings, highest SSH risk, and limitations. Terminal findings are grouped by source, and JSON/HTML reports expose the SSH summary while keeping SSH findings in the standard top-level finding pipeline.
+
+Version 11.5 adds credentialed audit profiles for authenticated SSH audits. The default `standard` profile runs login verification, OS and SSH hardening checks, package and patch indicators, firewall indicators, and logging indicators. The `basic` profile limits the run to fast credentialed verification and SSH hardening review. The `detailed` profile adds password policy indicators, temporary directory sticky-bit checks, and cleartext service exposure indicators. Profile metadata is included in `ssh_audit_summary` as the selected profile, description, enabled checks, and skipped checks.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

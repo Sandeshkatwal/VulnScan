@@ -11,6 +11,7 @@ try:
 except ImportError:  # pragma: no cover - exercised only when dependency is absent.
     paramiko = None  # type: ignore[assignment]
 
+from scanner.audit_profiles import AuditProfile, get_audit_profile
 from scanner.finding import Finding, create_finding
 from scanner.linux_config_audit import (
     build_linux_config_audit_summary,
@@ -67,12 +68,18 @@ def audit_ssh_host(
     port: int = 22,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     open_ports: list[dict[str, Any]] | None = None,
+    audit_profile: AuditProfile | None = None,
 ) -> dict[str, Any]:
     """Run one authenticated SSH login and read-only Linux configuration checks."""
+    profile = audit_profile or get_audit_profile(None)
     result: dict[str, Any] = {
         "enabled": True,
         "target": host,
         "port": port,
+        "audit_profile": profile.name,
+        "profile_description": profile.description,
+        "checks_enabled": profile.checks_enabled,
+        "checks_skipped": profile.checks_skipped,
         "status": "not_run",
         "authenticated": False,
         "commands": [],
@@ -121,13 +128,18 @@ def audit_ssh_host(
         client.connect(**connect_kwargs)
         result["authenticated"] = True
         result["status"] = "completed"
-        commands = _collect_linux_audit_data(client)
+        commands = _collect_linux_audit_data(client, profile)
         result["commands"] = [_command_report(command) for command in commands]
-        package_summary = build_package_audit_summary(commands)
+        package_summary = (
+            build_package_audit_summary(commands)
+            if profile.checks["package_checks"]
+            else _skipped_package_summary(commands)
+        )
         linux_config_summary = build_linux_config_audit_summary(
             commands=commands,
             os_family=str(package_summary["os_family"]),
             open_ports=open_ports or [],
+            checks=profile.checks,
         )
         result.update(
             {
@@ -138,7 +150,8 @@ def audit_ssh_host(
                 "package_update_count": package_summary["package_update_count"],
                 "package_update_sample": package_summary["package_update_sample"],
                 "package_check_status": package_summary["package_check_status"],
-                "ssh_hardening_checked": _command_was_successful(commands, "sshd -T"),
+                "ssh_hardening_checked": _command_was_successful(commands, "sshd -T")
+                or _command_was_successful(commands, "cat /etc/ssh/sshd_config"),
                 "linux_config_audit_checked": linux_config_summary["linux_config_audit_checked"],
                 "firewall_status": linux_config_summary["firewall_status"],
                 "logging_status": linux_config_summary["logging_status"],
@@ -157,6 +170,7 @@ def audit_ssh_host(
             commands=commands,
             package_summary=package_summary,
             linux_config_summary=linux_config_summary,
+            profile=profile,
         )
         result["linux_config_audit_findings_count"] = sum(
             1 for finding in result["findings"] if finding.source == "linux_config_audit"
@@ -178,7 +192,7 @@ def audit_ssh_host(
         client.close()
 
 
-def _collect_linux_audit_data(client: Any) -> list[dict[str, Any]]:
+def _collect_linux_audit_data(client: Any, profile: AuditProfile) -> list[dict[str, Any]]:
     commands: list[dict[str, Any]] = []
 
     uname = _run_command(client, "uname -a")
@@ -189,43 +203,54 @@ def _collect_linux_audit_data(client: Any) -> list[dict[str, Any]]:
     if not is_linux:
         return commands
 
-    if _command_exists(client, "sshd", commands):
-        commands.append(_run_command(client, "sshd -T"))
+    if profile.checks["ssh_hardening"] and _command_exists(client, "sshd", commands):
+        sshd_effective = _run_command(client, "sshd -T")
+        commands.append(sshd_effective)
+        if sshd_effective["exit_status"] != 0:
+            commands.append(_run_command(client, "cat /etc/ssh/sshd_config"))
+    elif profile.checks["ssh_hardening"]:
+        commands.append(_run_command(client, "cat /etc/ssh/sshd_config"))
 
-    if _command_exists(client, "systemctl", commands):
-        commands.append(_run_command(client, "systemctl is-active ufw"))
-        commands.append(_run_command(client, "systemctl is-active firewalld"))
-        commands.append(_run_command(client, "systemctl is-active auditd"))
-        commands.append(_run_command(client, "systemctl is-active rsyslog"))
-        commands.append(_run_command(client, "systemctl is-active systemd-journald"))
+    needs_systemctl = profile.checks["firewall_checks"] or profile.checks["logging_checks"]
+    if needs_systemctl and _command_exists(client, "systemctl", commands):
+        if profile.checks["firewall_checks"]:
+            commands.append(_run_command(client, "systemctl is-active ufw"))
+            commands.append(_run_command(client, "systemctl is-active firewalld"))
+        if profile.checks["logging_checks"]:
+            commands.append(_run_command(client, "systemctl is-active auditd"))
+            commands.append(_run_command(client, "systemctl is-active rsyslog"))
+            commands.append(_run_command(client, "systemctl is-active systemd-journald"))
 
-    if _command_exists(client, "ufw", commands):
+    if profile.checks["firewall_checks"] and _command_exists(client, "ufw", commands):
         commands.append(_run_command(client, "ufw status"))
-    if _command_exists(client, "firewall-cmd", commands):
+    if profile.checks["firewall_checks"] and _command_exists(client, "firewall-cmd", commands):
         commands.append(_run_command(client, "firewall-cmd --state"))
 
     commands.append(_run_command(client, "hostname"))
-    commands.append(_run_command(client, "cat /etc/login.defs"))
-    commands.append(_run_command(client, "cat /etc/security/pwquality.conf"))
-    commands.append(_run_command(client, "test -d /tmp"))
-    commands.append(_run_command(client, "test -d /var/tmp"))
-    commands.append(_run_command(client, "ls -ld /tmp"))
-    commands.append(_run_command(client, "ls -ld /var/tmp"))
+    if profile.checks["password_policy_checks"]:
+        commands.append(_run_command(client, "cat /etc/login.defs"))
+        commands.append(_run_command(client, "cat /etc/security/pwquality.conf"))
+    if profile.checks["temp_directory_checks"]:
+        commands.append(_run_command(client, "test -d /tmp"))
+        commands.append(_run_command(client, "test -d /var/tmp"))
+        commands.append(_run_command(client, "ls -ld /tmp"))
+        commands.append(_run_command(client, "ls -ld /var/tmp"))
 
-    manager_availability = {
-        "apt": _command_exists(client, "apt", commands),
-        "apt-get": _command_exists(client, "apt-get", commands),
-        "dnf": _command_exists(client, "dnf", commands),
-        "yum": _command_exists(client, "yum", commands),
-        "pacman": _command_exists(client, "pacman", commands),
-        "zypper": _command_exists(client, "zypper", commands),
-    }
-    package_manager = _select_package_manager_for_commands(
-        os_release_output=os_release["stdout"],
-        manager_availability=manager_availability,
-    )
-    if package_manager is not None:
-        commands.append(_run_command(client, PACKAGE_MANAGER_COMMANDS[package_manager]))
+    if profile.checks["package_checks"]:
+        manager_availability = {
+            "apt": _command_exists(client, "apt", commands),
+            "apt-get": _command_exists(client, "apt-get", commands),
+            "dnf": _command_exists(client, "dnf", commands),
+            "yum": _command_exists(client, "yum", commands),
+            "pacman": _command_exists(client, "pacman", commands),
+            "zypper": _command_exists(client, "zypper", commands),
+        }
+        package_manager = _select_package_manager_for_commands(
+            os_release_output=os_release["stdout"],
+            manager_availability=manager_availability,
+        )
+        if package_manager is not None:
+            commands.append(_run_command(client, PACKAGE_MANAGER_COMMANDS[package_manager]))
 
     return commands
 
@@ -271,6 +296,7 @@ def _build_findings(
     commands: list[dict[str, Any]],
     package_summary: dict[str, Any],
     linux_config_summary: dict[str, Any],
+    profile: AuditProfile,
 ) -> list[Finding]:
     findings = [
         create_finding(
@@ -315,11 +341,16 @@ def _build_findings(
         )
 
     sshd_config = command_by_name.get("sshd -T")
+    if sshd_config and sshd_config.get("exit_status") != 0:
+        sshd_config = command_by_name.get("cat /etc/ssh/sshd_config")
+    if not sshd_config:
+        sshd_config = command_by_name.get("cat /etc/ssh/sshd_config")
     if sshd_config:
         findings.extend(_sshd_findings(host, port, sshd_config))
 
     if _linux_details_available(commands):
-        findings.extend(build_package_findings(host, port, package_summary))
+        if profile.checks["package_checks"]:
+            findings.extend(build_package_findings(host, port, package_summary))
         findings.extend(build_linux_config_findings(host, port, linux_config_summary))
 
     return findings
@@ -361,7 +392,9 @@ def _select_package_manager_for_commands(
 
 def _sshd_findings(host: str, port: int, sshd_config: dict[str, Any]) -> list[Finding]:
     findings: list[Finding] = []
-    config = _parse_sshd_t(str(sshd_config.get("raw_stdout") or sshd_config.get("stdout") or ""))
+    config = _parse_sshd_config(
+        str(sshd_config.get("raw_stdout") or sshd_config.get("stdout") or "")
+    )
 
     if config.get("passwordauthentication") == "yes":
         findings.append(
@@ -411,6 +444,33 @@ def _parse_sshd_t(output: str) -> dict[str, str]:
         if len(parts) == 2:
             config[parts[0].lower()] = parts[1].strip().lower()
     return config
+
+
+def _parse_sshd_config(output: str) -> dict[str, str]:
+    config: dict[str, str] = {}
+    for line in output.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        parts = stripped.split(None, 1)
+        if len(parts) == 2:
+            config[parts[0].lower()] = parts[1].strip().lower()
+    return config
+
+
+def _skipped_package_summary(commands: list[dict[str, Any]]) -> dict[str, Any]:
+    command_by_name = {str(command["command"]): command for command in commands}
+    os_release = str(command_by_name.get("cat /etc/os-release", {}).get("stdout") or "")
+    return {
+        "os_family": detect_os_family(os_release),
+        "package_manager": None,
+        "available_package_managers": [],
+        "package_update_count": None,
+        "package_update_sample": [],
+        "package_check_status": "skipped_by_profile",
+        "package_check_command": None,
+        "package_check_message": "Package checks were skipped by the selected audit profile.",
+    }
 
 
 def _os_evidence(uname: dict[str, Any], os_release: dict[str, Any]) -> str:
