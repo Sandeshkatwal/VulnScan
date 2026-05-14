@@ -45,6 +45,7 @@ class Finding:
     risk_score: int = 0
     risk_label: str = "Informational"
     fix_priority: str = "Document and monitor"
+    evidence_details: dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=_created_at)
 
 
@@ -97,6 +98,7 @@ def create_finding(
     affected_port: int | None = None,
     affected_url: str | None = None,
     service: str | None = None,
+    evidence_details: dict[str, Any] | None = None,
 ) -> Finding:
     """Create a standard finding with a temporary ID before scan-level numbering."""
     temporary_id = make_finding_id(0)
@@ -116,6 +118,7 @@ def create_finding(
         verification=verification,
         limitation=limitation,
         source=source,
+        evidence_details=evidence_details or {},
     )
 
 

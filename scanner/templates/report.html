@@ -302,7 +302,14 @@
             <td>{{ finding.affected_port or "" }}</td>
             <td>{{ finding.affected_url or "" }}</td>
             <td>{{ finding.service or "" }}</td>
-            <td>{{ finding.evidence }}</td>
+            <td>
+              {{ finding.evidence }}
+              {% if finding.evidence_details %}
+              <div class="label">Source: {{ finding.evidence_details.source }}</div>
+              {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
+              {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% endif %}
+            </td>
             <td>{{ finding.impact }}</td>
             <td>{{ finding.recommendation }}</td>
             <td>{{ finding.verification }}</td>
@@ -340,7 +347,14 @@
             <td>{{ finding.title }}</td>
             <td>{{ finding.category }}</td>
             <td>{{ finding.affected_url }}</td>
-            <td>{{ finding.evidence }}</td>
+            <td>
+              {{ finding.evidence }}
+              {% if finding.evidence_details %}
+              <div class="label">Source: {{ finding.evidence_details.source }}</div>
+              {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
+              {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% endif %}
+            </td>
             <td>{{ finding.confidence }}</td>
             <td>{{ finding.recommendation }}</td>
             <td>{{ finding.verification }}</td>
@@ -380,7 +394,14 @@
             <td>{{ finding.category }}</td>
             <td>{{ finding.affected_host }}</td>
             <td>{{ finding.affected_port }}</td>
-            <td>{{ finding.evidence }}</td>
+            <td>
+              {{ finding.evidence }}
+              {% if finding.evidence_details %}
+              <div class="label">Source: {{ finding.evidence_details.source }}</div>
+              {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
+              {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% endif %}
+            </td>
             <td>{{ finding.confidence }}</td>
             <td>{{ finding.recommendation }}</td>
             <td>{{ finding.verification }}</td>
@@ -456,7 +477,14 @@
             <td>{{ finding.source }}</td>
             <td>{{ finding.affected_host }}</td>
             <td>{{ finding.affected_port }}</td>
-            <td>{{ finding.evidence }}</td>
+            <td>
+              {{ finding.evidence }}
+              {% if finding.evidence_details %}
+              <div class="label">Source: {{ finding.evidence_details.source }}</div>
+              {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
+              {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% endif %}
+            </td>
             <td>{{ finding.confidence }}</td>
             <td>{{ finding.recommendation }}</td>
             <td>{{ finding.verification }}</td>

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scanner.package_audit import build_package_audit_summary
+from scanner.package_audit import build_package_audit_summary, build_package_findings
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -51,3 +51,22 @@ def test_apt_no_updates_output_reports_no_updates() -> None:
 
     assert summary["package_update_count"] == 0
     assert summary["package_check_status"] == "no_updates"
+
+
+def test_package_update_finding_sample_is_limited_to_ten() -> None:
+    summary = {
+        "os_family": "Debian/Kali/Parrot/Ubuntu",
+        "package_manager": "apt",
+        "available_package_managers": ["apt"],
+        "package_update_count": 12,
+        "package_update_sample": [f"package-{index}" for index in range(12)],
+        "package_check_status": "updates_available",
+        "package_check_command": "apt list --upgradable",
+        "package_check_message": "12 package updates reported.",
+    }
+
+    findings = build_package_findings("host.example", 22, summary)
+    update_finding = next(finding for finding in findings if finding.title == "Package Updates Available")
+
+    assert len(update_finding.evidence_details["sample"]) == 10
+    assert "package-10" not in update_finding.evidence

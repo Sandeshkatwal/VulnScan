@@ -13,6 +13,7 @@ except ImportError:  # pragma: no cover - exercised only when dependency is abse
     paramiko = None  # type: ignore[assignment]
 
 from scanner.audit_profiles import AuditProfile, get_audit_profile
+from scanner.evidence import STDERR_MAX_CHARS, build_evidence, evidence_summary, safe_truncate
 from scanner.finding import Finding, create_finding
 from scanner.linux_config_audit import (
     build_linux_config_audit_summary,
@@ -378,7 +379,7 @@ def _run_command(client: Any, command: str) -> dict[str, Any]:
             "success": exit_status == 0,
             "exit_status": exit_status,
             "stdout": _truncate(stdout_text.strip()),
-            "stderr": _truncate(stderr_text.strip()),
+            "stderr": _truncate(stderr_text.strip(), max_chars=STDERR_MAX_CHARS),
             "raw_stdout": stdout_text.strip(),
             "raw_stderr": stderr_text.strip(),
             "error_code": None if exit_status == 0 else ERROR_COMMAND_FAILED,
@@ -427,14 +428,23 @@ def _build_findings(
     profile: AuditProfile,
 ) -> list[Finding]:
     findings = [
-        create_finding(
+        _create_evidence_finding(
             title="SSH Login Successful",
             severity="Informational",
             category="Credentialed Access",
             affected_host=host,
             affected_port=port,
             service="ssh",
-            evidence="Authenticated SSH session established",
+            evidence_details=build_evidence(
+                summary="Authenticated SSH session established using the provided username.",
+                source=SOURCE,
+                command_name="ssh authentication",
+                command_used_safe_label="SSH authentication",
+                observed_value="authenticated",
+                expected_value="authenticated",
+                confidence_reason="Paramiko established one SSH session with explicitly provided credentials.",
+                limitation="Checks are limited by the permission level of the provided account.",
+            ),
             confidence="High",
             impact="Credentialed auditing can reduce false positives by checking system state directly.",
             recommendation="Use least-privilege read-only credentials for routine audits.",
@@ -451,14 +461,23 @@ def _build_findings(
     os_evidence = _os_evidence(uname, os_release)
     if os_evidence:
         findings.append(
-            create_finding(
+            _create_evidence_finding(
                 title="OS Information Collected",
                 severity="Informational",
                 category="System Information",
                 affected_host=host,
                 affected_port=port,
                 service="ssh",
-                evidence=os_evidence,
+                evidence_details=build_evidence(
+                    summary=os_evidence,
+                    source=SOURCE,
+                    command_name="uname -a; cat /etc/os-release",
+                    command_used_safe_label="OS identification commands",
+                    observed_value=os_evidence,
+                    expected_value="Linux OS information available",
+                    confidence_reason="OS family and kernel summary were collected through the authenticated SSH session.",
+                    limitation="Reported values depend on what the provided account can read.",
+                ),
                 confidence="High",
                 impact="OS and kernel metadata can support patch verification and asset inventory.",
                 recommendation="Use OS and kernel information for patch verification and asset inventory.",
@@ -523,17 +542,27 @@ def _sshd_findings(host: str, port: int, sshd_config: dict[str, Any]) -> list[Fi
     config = _parse_sshd_config(
         str(sshd_config.get("raw_stdout") or sshd_config.get("stdout") or "")
     )
+    source_label = "sshd -T" if sshd_config.get("command") == "sshd -T" else "sshd_config fallback"
 
     if config.get("passwordauthentication") == "yes":
         findings.append(
-            create_finding(
+            _create_evidence_finding(
                 title="SSH Password Authentication Enabled",
                 severity="Medium",
                 category="SSH Configuration",
                 affected_host=host,
                 affected_port=port,
                 service="ssh",
-                evidence="PasswordAuthentication yes from sshd -T",
+                evidence_details=build_evidence(
+                    summary="Effective SSH setting passwordauthentication=yes; expected no.",
+                    source="ssh_hardening",
+                    command_name=source_label,
+                    command_used_safe_label=source_label,
+                    observed_value="passwordauthentication=yes",
+                    expected_value="passwordauthentication=no",
+                    confidence_reason="The effective SSH configuration was parsed from a read-only SSH configuration command.",
+                    limitation="Effective SSH configuration may vary by match blocks or service-specific deployment context.",
+                ),
                 confidence="High",
                 impact="Password-based SSH access may increase exposure to credential misuse and password attacks.",
                 recommendation="Disable password authentication where possible and use SSH keys.",
@@ -545,14 +574,23 @@ def _sshd_findings(host: str, port: int, sshd_config: dict[str, Any]) -> list[Fi
 
     if config.get("permitrootlogin") == "yes":
         findings.append(
-            create_finding(
+            _create_evidence_finding(
                 title="SSH Root Login Enabled",
                 severity="High",
                 category="SSH Configuration",
                 affected_host=host,
                 affected_port=port,
                 service="ssh",
-                evidence="PermitRootLogin yes from sshd -T",
+                evidence_details=build_evidence(
+                    summary="Effective SSH setting permitrootlogin=yes; expected no.",
+                    source="ssh_hardening",
+                    command_name=source_label,
+                    command_used_safe_label=source_label,
+                    observed_value="permitrootlogin=yes",
+                    expected_value="permitrootlogin=no",
+                    confidence_reason="The effective SSH configuration was parsed from a read-only SSH configuration command.",
+                    limitation="Effective SSH configuration may vary by match blocks or service-specific deployment context.",
+                ),
                 confidence="High",
                 impact="Direct root SSH login increases the impact of credential compromise.",
                 recommendation="Disable direct root login and use a named user with privilege escalation where required.",
@@ -602,17 +640,56 @@ def _skipped_package_summary(commands: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _os_evidence(uname: dict[str, Any], os_release: dict[str, Any]) -> str:
-    parts: list[str] = []
-    if uname.get("stdout"):
-        parts.append(f"uname -a: {uname['stdout']}")
-
     os_release_output = str(os_release.get("stdout") or "")
     pretty_name = _os_release_value(os_release_output, "PRETTY_NAME")
     os_name = pretty_name or _os_release_value(os_release_output, "NAME")
-    if os_name:
-        parts.append(f"/etc/os-release: {os_name}")
+    family = detect_os_family(os_release_output)
+    kernel = safe_truncate(str(uname.get("stdout") or ""), max_chars=120)
+    parts: list[str] = []
+    if family and family != "Unknown Linux":
+        parts.append(f"Linux host identified as {family}.")
+    elif os_name:
+        parts.append(f"Linux host identified as {safe_truncate(os_name, max_chars=80)}.")
+    if kernel:
+        parts.append("Kernel summary collected.")
 
-    return _truncate("; ".join(parts), max_chars=MAX_OUTPUT_CHARS)
+    return safe_truncate(" ".join(parts), max_chars=300)
+
+
+def _create_evidence_finding(
+    *,
+    title: str,
+    severity: str,
+    category: str,
+    evidence_details: dict[str, Any],
+    confidence: str,
+    impact: str,
+    recommendation: str,
+    verification: str,
+    limitation: str,
+    source: str,
+    affected_host: str | None = None,
+    affected_port: int | None = None,
+    affected_url: str | None = None,
+    service: str | None = None,
+) -> Finding:
+    return create_finding(
+        title=title,
+        severity=severity,  # type: ignore[arg-type]
+        category=category,
+        affected_host=affected_host,
+        affected_port=affected_port,
+        affected_url=affected_url,
+        service=service,
+        evidence=evidence_summary(evidence_details),
+        evidence_details=evidence_details,
+        confidence=confidence,  # type: ignore[arg-type]
+        impact=impact,
+        recommendation=recommendation,
+        verification=verification,
+        limitation=limitation,
+        source=source,
+    )
 
 
 def _os_release_value(output: str, key: str) -> str:
@@ -661,6 +738,4 @@ def _command_report(command: dict[str, Any]) -> dict[str, Any]:
 
 
 def _truncate(value: str, max_chars: int = MAX_OUTPUT_CHARS) -> str:
-    if len(value) <= max_chars:
-        return value
-    return value[: max_chars - 15].rstrip() + " ... [truncated]"
+    return safe_truncate(value, max_chars=max_chars)

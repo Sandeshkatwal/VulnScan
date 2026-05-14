@@ -240,6 +240,8 @@ When `--ssh-audit` is used, the terminal output includes a **Credentialed SSH Au
 
 Version 11.6 adds structured SSH audit error handling. If authentication fails, the SSH target times out, a key file is missing, or an individual read-only command cannot complete, VulScan returns safe status fields such as `success`, `failed`, `skipped`, or `partial` with a short error code and message. Partial command failures do not crash the scan; VulScan continues other read-only checks where safe. Technical details are sanitized and credentials are not stored or printed.
 
+Version 11.7 improves credentialed audit evidence quality. VulScan stores concise evidence summaries for SSH findings instead of full raw SSH command output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values where useful, limits package samples, and redacts values that look like passwords, tokens, private keys, authorization headers, or secrets. Credentialed audit evidence should still be reviewed in operational context.
+
 After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, package update checks, and Linux configuration indicator checks. It does not run `sudo`, change files, install packages, update packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.
 
 Package manager detection checks `apt`, `apt-get`, `dnf`, `yum`, `pacman`, and `zypper` with `command -v`. VulScan derives the Linux family from `/etc/os-release` and reports Debian/Kali/Parrot/Ubuntu, Fedora/RHEL/Rocky/Alma, Arch, openSUSE/SUSE, or Unknown Linux.

@@ -52,6 +52,8 @@ Credentialed SSH audit output includes a sanitized summary in terminal, JSON, an
 
 SSH audit error handling reports safe status and error-code fields for authentication failures, timeouts, missing key files, unsupported targets, and partial command failures. Tests use fake fixtures and mocked SSH behavior; they do not require a live SSH server or real credentials.
 
+Credentialed audit findings store concise evidence summaries, not full raw SSH output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values in JSON and HTML reports where useful, and redacts values that look like passwords, tokens, private keys, authorization headers, or secrets.
+
 You can also use the helper script:
 
 ```powershell

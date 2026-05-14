@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from scanner.evidence import build_evidence, evidence_summary, safe_truncate
 from scanner.finding import Finding, create_finding
 
 
@@ -104,6 +105,16 @@ def _system_info_findings(
 ) -> list[Finding]:
     system_info = config_summary["system_info"]
     hostname = system_info.get("hostname") or "Unavailable"
+    details = build_evidence(
+        summary=f"Linux configuration indicators reviewed for OS family {system_info.get('os_family')}; hostname collected.",
+        source=SOURCE,
+        command_name="hostname; Linux configuration indicators",
+        command_used_safe_label="Linux configuration audit",
+        observed_value=f"OS family: {system_info.get('os_family')}; hostname: {hostname}",
+        expected_value="Linux configuration indicators available for review",
+        confidence_reason="Read-only Linux configuration indicators were collected through authenticated SSH.",
+        limitation="This is not a full CIS benchmark implementation and does not evaluate every control.",
+    )
     return [
         create_finding(
             title="Linux Configuration Audit Completed",
@@ -112,7 +123,8 @@ def _system_info_findings(
             affected_host=host,
             affected_port=port,
             service="ssh",
-            evidence=f"OS family: {system_info.get('os_family')}; hostname: {hostname}.",
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence="High",
             impact="Read-only Linux configuration indicators were collected for review.",
             recommendation="Review configuration indicators in operational context and against local policy.",
@@ -125,6 +137,16 @@ def _system_info_findings(
 
 def _firewall_findings(host: str, port: int, firewall_status: dict[str, Any]) -> list[Finding]:
     if firewall_status["state"] == "inactive":
+        details = build_evidence(
+            summary=f"Firewall status indicates {firewall_status['state']}.",
+            source=SOURCE,
+            command_name="ufw/firewalld status",
+            command_used_safe_label="Firewall status indicators",
+            observed_value=firewall_status["state"],
+            expected_value="active or policy-approved",
+            confidence_reason="Available firewall status commands were reviewed.",
+            limitation="This check does not evaluate external firewalls, cloud security groups, or all host policy details.",
+        )
         return [
             create_finding(
                 title="Firewall Appears Inactive",
@@ -133,7 +155,8 @@ def _firewall_findings(host: str, port: int, firewall_status: dict[str, Any]) ->
                 affected_host=host,
                 affected_port=port,
                 service="ssh",
-                evidence=firewall_status["evidence"],
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="A disabled host firewall can increase exposure if network controls are incomplete.",
                 recommendation="Enable and configure a host firewall where appropriate.",
@@ -143,6 +166,16 @@ def _firewall_findings(host: str, port: int, firewall_status: dict[str, Any]) ->
             )
         ]
 
+    details = build_evidence(
+        summary=f"Firewall status reviewed; state is {firewall_status['state']}.",
+        source=SOURCE,
+        command_name="ufw/firewalld status",
+        command_used_safe_label="Firewall status indicators",
+        observed_value=firewall_status["state"],
+        expected_value="reviewed",
+        confidence_reason="Available firewall status commands were reviewed.",
+        limitation="This check is an indicator and does not fully validate firewall rules or external filtering.",
+    )
     return [
         create_finding(
             title="Firewall Status Reviewed",
@@ -151,7 +184,8 @@ def _firewall_findings(host: str, port: int, firewall_status: dict[str, Any]) ->
             affected_host=host,
             affected_port=port,
             service="ssh",
-            evidence=firewall_status["evidence"],
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence=firewall_status["confidence"],
             impact="Host firewall status was reviewed using available read-only indicators.",
             recommendation="Confirm host firewall policy is appropriate for the system role.",
@@ -165,6 +199,20 @@ def _firewall_findings(host: str, port: int, firewall_status: dict[str, Any]) ->
 def _logging_findings(host: str, port: int, logging_status: dict[str, Any]) -> list[Finding]:
     if logging_status["state"] in {"inactive", "partial"}:
         severity = "Medium" if logging_status["state"] == "inactive" else "Low"
+        observed = "; ".join(
+            f"{service} service status: {status}"
+            for service, status in (logging_status.get("services") or {}).items()
+        )
+        details = build_evidence(
+            summary=safe_truncate(observed or f"Logging service status: {logging_status['state']}."),
+            source=SOURCE,
+            command_name="systemctl is-active logging services",
+            command_used_safe_label="Logging service indicators",
+            observed_value=observed or logging_status["state"],
+            expected_value="audit/logging services active according to policy",
+            confidence_reason="Available audit/logging service status commands were reviewed.",
+            limitation="Logging architecture varies; central logging agents or alternative services may be in use.",
+        )
         return [
             create_finding(
                 title="Audit Logging Service May Be Inactive",
@@ -173,7 +221,8 @@ def _logging_findings(host: str, port: int, logging_status: dict[str, Any]) -> l
                 affected_host=host,
                 affected_port=port,
                 service="ssh",
-                evidence=logging_status["evidence"],
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Inactive audit or logging services can reduce detection and investigation capability.",
                 recommendation="Ensure audit/logging services are enabled according to security policy.",
@@ -183,6 +232,16 @@ def _logging_findings(host: str, port: int, logging_status: dict[str, Any]) -> l
             )
         ]
 
+    details = build_evidence(
+        summary=f"Logging service status reviewed; state is {logging_status['state']}.",
+        source=SOURCE,
+        command_name="systemctl is-active logging services",
+        command_used_safe_label="Logging service indicators",
+        observed_value=logging_status["state"],
+        expected_value="reviewed",
+        confidence_reason="Available audit/logging service status commands were reviewed.",
+        limitation="This does not verify log forwarding, retention, alerting, or SIEM ingestion.",
+    )
     return [
         create_finding(
             title="Logging Service Status Reviewed",
@@ -191,7 +250,8 @@ def _logging_findings(host: str, port: int, logging_status: dict[str, Any]) -> l
             affected_host=host,
             affected_port=port,
             service="ssh",
-            evidence=logging_status["evidence"],
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence=logging_status["confidence"],
             impact="Available audit and logging service indicators were reviewed.",
             recommendation="Confirm logging configuration matches security monitoring requirements.",
@@ -211,6 +271,16 @@ def _password_policy_findings(
     age_issues = indicators["age_policy_issues"]
     if age_issues:
         severity = "Medium" if any("PASS_MAX_DAYS" in issue for issue in age_issues) else "Low"
+        details = build_evidence(
+            summary=safe_truncate("; ".join(age_issues)),
+            source=SOURCE,
+            command_name="cat /etc/login.defs",
+            command_used_safe_label="Password age policy indicator",
+            observed_value="; ".join(age_issues),
+            expected_value="PASS_MAX_DAYS 365 or lower; PASS_MIN_DAYS and PASS_WARN_AGE set",
+            confidence_reason="/etc/login.defs was parsed for common local password age indicators.",
+            limitation="These checks are indicators only and may not reflect all PAM or enterprise identity policy.",
+        )
         findings.append(
             create_finding(
                 title="Weak Password Age Policy Indicator",
@@ -219,7 +289,8 @@ def _password_policy_findings(
                 affected_host=host,
                 affected_port=port,
                 service="ssh",
-                evidence="; ".join(age_issues),
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Weak local password age indicators may increase account compromise risk.",
                 recommendation="Review local and enterprise account policy settings for appropriate password aging controls.",
@@ -231,6 +302,16 @@ def _password_policy_findings(
 
     quality_issues = indicators["quality_policy_issues"]
     if quality_issues:
+        details = build_evidence(
+            summary=safe_truncate("; ".join(quality_issues)),
+            source=SOURCE,
+            command_name="cat /etc/security/pwquality.conf",
+            command_used_safe_label="Password quality policy indicator",
+            observed_value="; ".join(quality_issues),
+            expected_value="minlen 12 or greater where local policy applies",
+            confidence_reason="pwquality.conf was parsed for common local password quality indicators.",
+            limitation="These checks are indicators only and may not reflect all PAM or enterprise identity policy.",
+        )
         findings.append(
             create_finding(
                 title="Password Quality Policy May Be Weak",
@@ -239,7 +320,8 @@ def _password_policy_findings(
                 affected_host=host,
                 affected_port=port,
                 service="ssh",
-                evidence="; ".join(quality_issues),
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Weak local password quality indicators may allow easier-to-guess local passwords.",
                 recommendation="Review password quality settings and require sufficient password length where appropriate.",
@@ -260,6 +342,16 @@ def _temp_permission_findings(
     findings: list[Finding] = []
     for path, info in temp_permissions.items():
         if info["exists"] and not info["sticky_bit"]:
+            details = build_evidence(
+                summary=f"{path} permissions do not include the sticky bit.",
+                source=SOURCE,
+                command_name=f"ls -ld {path}",
+                command_used_safe_label="Temporary directory permission check",
+                observed_value=info["mode"],
+                expected_value="sticky bit present",
+                confidence_reason="Directory permissions were inspected with read-only metadata commands.",
+                limitation="This check reviews only common temporary directories and does not modify permissions.",
+            )
             findings.append(
                 create_finding(
                     title="Sticky Bit Missing on Temporary Directory",
@@ -268,7 +360,8 @@ def _temp_permission_findings(
                     affected_host=host,
                     affected_port=port,
                     service="ssh",
-                    evidence=f"{path}: {info['evidence']}",
+                    evidence=evidence_summary(details),
+                    evidence_details=details,
                     confidence="Medium",
                     impact="Missing sticky bit on shared temporary directories can allow users to delete or rename others' files.",
                     recommendation="Set the sticky bit on shared temporary directories where appropriate.",
@@ -285,6 +378,16 @@ def _cleartext_service_findings(cleartext_services: list[dict[str, Any]]) -> lis
     for service in cleartext_services:
         service_name = service["service"]
         severity = "Medium" if service_name == "ftp" else "High"
+        details = build_evidence(
+            summary=f"{service_name} cleartext remote access service detected on {service.get('port')}/tcp.",
+            source=SOURCE,
+            command_name="existing service inventory",
+            command_used_safe_label="Cleartext service exposure indicator",
+            observed_value=service_name,
+            expected_value="encrypted remote access service",
+            confidence_reason="The finding is based on existing VulScan service detection output.",
+            limitation="This finding is based on detected service inventory and does not inspect application configuration.",
+        )
         findings.append(
             create_finding(
                 title="Cleartext Remote Access Service Detected",
@@ -293,7 +396,8 @@ def _cleartext_service_findings(cleartext_services: list[dict[str, Any]]) -> lis
                 affected_host=str(service.get("host") or ""),
                 affected_port=int(service.get("port") or 0),
                 service=service_name,
-                evidence=f"{service_name} detected on {service.get('port')}/tcp.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Cleartext remote access services may expose credentials or session data on the network.",
                 recommendation="Replace with SSH, SFTP, or other encrypted alternatives.",

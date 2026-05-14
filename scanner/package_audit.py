@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from scanner.evidence import SAMPLE_MAX_ITEMS, build_evidence, evidence_summary, limited_sample
 from scanner.finding import Finding, create_finding
 
 
@@ -138,10 +139,21 @@ def _package_manager_detected_finding(
 ) -> Finding:
     manager = package_summary.get("package_manager") or "none"
     available = package_summary.get("available_package_managers") or []
-    evidence = (
-        f"OS family: {package_summary.get('os_family')}; "
-        f"selected package manager: {manager}; "
-        f"detected managers: {', '.join(available) if available else 'none'}."
+    summary = (
+        f"Detected {manager} package manager on {package_summary.get('os_family')} Linux."
+        if manager != "none"
+        else f"No supported package manager detected on {package_summary.get('os_family')} Linux."
+    )
+    details = build_evidence(
+        summary=summary,
+        source=SOURCE,
+        command_name="command -v package manager",
+        command_used_safe_label="Package manager detection",
+        observed_value=manager,
+        expected_value="supported package manager detected",
+        sample=available,
+        confidence_reason="Package manager availability was checked using read-only command discovery.",
+        limitation="Package manager detection does not confirm whether all security patches are installed.",
     )
     return create_finding(
         title="Package Manager Detected",
@@ -150,7 +162,8 @@ def _package_manager_detected_finding(
         affected_host=host,
         affected_port=port,
         service="ssh",
-        evidence=evidence,
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="High" if manager != "none" else "Medium",
         impact="Package manager information supports patch verification and host inventory.",
         recommendation="Use package manager information for patch verification.",
@@ -166,8 +179,20 @@ def _updates_available_finding(
     package_summary: dict[str, Any],
 ) -> Finding:
     update_count = int(package_summary.get("package_update_count") or 0)
-    sample = [str(item) for item in package_summary.get("package_update_sample") or []]
+    sample = limited_sample(package_summary.get("package_update_sample") or [], limit=SAMPLE_MAX_ITEMS)
     sample_text = ", ".join(sample) if sample else "sample unavailable"
+    manager = package_summary.get("package_manager")
+    details = build_evidence(
+        summary=f"{manager} reported {update_count} upgradable packages. Sample: {sample_text}.",
+        source=SOURCE,
+        command_name=str(package_summary.get("package_check_command") or ""),
+        command_used_safe_label=f"{manager} package update check",
+        observed_value=f"{update_count} upgradable packages",
+        expected_value="0 upgradable packages or approved maintenance baseline",
+        sample=sample,
+        confidence_reason="The selected package manager reported available updates during a read-only check.",
+        limitation="This check reports available package updates, not necessarily confirmed exploitable vulnerabilities.",
+    )
     return create_finding(
         title="Package Updates Available",
         severity="Medium",
@@ -175,7 +200,8 @@ def _updates_available_finding(
         affected_host=host,
         affected_port=port,
         service="ssh",
-        evidence=f"{update_count} available updates reported by {package_summary.get('package_manager')}. Sample packages: {sample_text}.",
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="Medium",
         impact="Available package updates may include reliability fixes and security patches.",
         recommendation="Review and apply updates according to change management.",
@@ -190,6 +216,16 @@ def _no_updates_finding(
     port: int,
     package_summary: dict[str, Any],
 ) -> Finding:
+    details = build_evidence(
+        summary="Package manager did not report available updates during this read-only check.",
+        source=SOURCE,
+        command_name=str(package_summary.get("package_check_command") or ""),
+        command_used_safe_label="Package update check",
+        observed_value="no updates reported",
+        expected_value="no updates reported",
+        confidence_reason="The selected package manager completed without reporting package updates.",
+        limitation="Results depend on package metadata available on the host.",
+    )
     return create_finding(
         title="No Package Updates Detected",
         severity="Informational",
@@ -197,7 +233,8 @@ def _no_updates_finding(
         affected_host=host,
         affected_port=port,
         service="ssh",
-        evidence=f"{package_summary.get('package_manager')} did not report available updates.",
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="Medium",
         impact="No package updates were reported by the selected package manager at scan time.",
         recommendation="Continue regular patch monitoring.",
@@ -215,6 +252,16 @@ def _unable_to_complete_finding(
     status = str(package_summary.get("package_check_status") or "unknown")
     message = str(package_summary.get("package_check_message") or "Package check did not complete.")
     severity = "Low" if status in {"permission_denied", "timeout", "command_failed"} else "Informational"
+    details = build_evidence(
+        summary=f"Read-only package command did not complete: {status}.",
+        source=SOURCE,
+        command_name=str(package_summary.get("package_check_command") or ""),
+        command_used_safe_label="Package update check",
+        observed_value=message,
+        expected_value="command completes",
+        confidence_reason="The package check was attempted through the authenticated SSH audit where enabled.",
+        limitation="VulScan could not confirm package update status.",
+    )
     return create_finding(
         title="Package Check Unable to Complete",
         severity=severity,
@@ -222,7 +269,8 @@ def _unable_to_complete_finding(
         affected_host=host,
         affected_port=port,
         service="ssh",
-        evidence=f"{status}: {message}",
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="Medium",
         impact="VulScan could not confirm package update status for this host.",
         recommendation="Verify patch status manually or provide an account with enough read-only access.",

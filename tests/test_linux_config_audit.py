@@ -35,9 +35,14 @@ def test_password_policy_indicators_find_weak_values() -> None:
     )
     findings = build_linux_config_findings("host.example", 22, summary)
     titles = {finding.title for finding in findings}
+    age_finding = next(
+        finding for finding in findings if finding.title == "Weak Password Age Policy Indicator"
+    )
 
     assert "Weak Password Age Policy Indicator" in titles
     assert "Password Quality Policy May Be Weak" in titles
+    assert "PASS_MAX_DAYS" in age_finding.evidence_details["observed_value"]
+    assert len(age_finding.evidence) <= 300
 
 
 def test_reasonable_password_policy_has_no_password_findings() -> None:
