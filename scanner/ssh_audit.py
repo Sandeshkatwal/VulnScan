@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket
+import time
 from pathlib import Path
 from typing import Any
 
@@ -30,9 +31,29 @@ DEFAULT_TIMEOUT_SECONDS = 8.0
 COMMAND_TIMEOUT_SECONDS = 10.0
 MAX_OUTPUT_CHARS = 1200
 
+STATUS_SUCCESS = "success"
+STATUS_FAILED = "failed"
+STATUS_SKIPPED = "skipped"
+STATUS_PARTIAL = "partial"
+
+ERROR_AUTH_FAILED = "SSH_AUTH_FAILED"
+ERROR_TIMEOUT = "SSH_TIMEOUT"
+ERROR_CONNECTION_FAILED = "SSH_CONNECTION_FAILED"
+ERROR_KEY_NOT_FOUND = "SSH_KEY_NOT_FOUND"
+ERROR_KEY_LOAD_FAILED = "SSH_KEY_LOAD_FAILED"
+ERROR_UNSUPPORTED_TARGET = "SSH_UNSUPPORTED_TARGET"
+ERROR_COMMAND_TIMEOUT = "SSH_COMMAND_TIMEOUT"
+ERROR_COMMAND_FAILED = "SSH_COMMAND_FAILED"
+ERROR_CREDENTIALS_MISSING = "SSH_CREDENTIALS_MISSING"
+ERROR_UNKNOWN = "SSH_UNKNOWN_ERROR"
+
 
 class SshAuditConfigurationError(ValueError):
     """Raised when SSH audit options are incomplete or unsafe."""
+
+    def __init__(self, message: str, error_code: str = ERROR_UNKNOWN) -> None:
+        super().__init__(message)
+        self.error_code = error_code
 
 
 def validate_ssh_audit_options(
@@ -47,16 +68,21 @@ def validate_ssh_audit_options(
 
     if not ssh_user or not ssh_user.strip():
         raise SshAuditConfigurationError(
-            "SSH audit requires --ssh-user. Provide a least-privilege account for an authorised Linux system."
+            "SSH audit requires --ssh-user. Provide a least-privilege account for an authorised Linux system.",
+            ERROR_CREDENTIALS_MISSING,
         )
 
     if not ssh_password and ssh_key is None:
         raise SshAuditConfigurationError(
-            "SSH audit requires either --ssh-password or --ssh-key. Interactive password prompts are not supported."
+            "SSH audit requires either --ssh-password or --ssh-key. Interactive password prompts are not supported.",
+            ERROR_CREDENTIALS_MISSING,
         )
 
     if ssh_key is not None and not ssh_key.expanduser().is_file():
-        raise SshAuditConfigurationError("SSH key file was not found or is not readable.")
+        raise SshAuditConfigurationError(
+            "SSH key file was not found or is not readable.",
+            ERROR_KEY_NOT_FOUND,
+        )
 
 
 def audit_ssh_host(
@@ -80,9 +106,17 @@ def audit_ssh_host(
         "profile_description": profile.description,
         "checks_enabled": profile.checks_enabled,
         "checks_skipped": profile.checks_skipped,
-        "status": "not_run",
+        "status": STATUS_SKIPPED,
+        "error_code": None,
+        "error_message": "",
+        "debug_details": "",
         "authenticated": False,
         "commands": [],
+        "checks_completed": 0,
+        "checks_failed": 0,
+        "partial_failures": 0,
+        "command_timeout_seconds": COMMAND_TIMEOUT_SECONDS,
+        "connection_timeout_seconds": timeout,
         "findings": [],
         "notes": [],
         "os_family": "Unknown Linux",
@@ -101,9 +135,18 @@ def audit_ssh_host(
         "temp_directory_permissions": {},
     }
 
+    if key_path is not None and not key_path.expanduser().is_file():
+        result["status"] = STATUS_FAILED
+        result["error_code"] = ERROR_KEY_NOT_FOUND
+        result["error_message"] = "SSH key file was not found or is not readable."
+        result["notes"].append(result["error_message"])
+        return result
+
     if paramiko is None:
-        result["status"] = "dependency_missing"
-        result["notes"].append("Paramiko is required for SSH audit but is not installed.")
+        result["status"] = STATUS_FAILED
+        result["error_code"] = ERROR_CONNECTION_FAILED
+        result["error_message"] = "Paramiko is required for SSH audit but is not installed."
+        result["notes"].append(result["error_message"])
         return result
 
     client = paramiko.SSHClient()
@@ -127,9 +170,10 @@ def audit_ssh_host(
 
         client.connect(**connect_kwargs)
         result["authenticated"] = True
-        result["status"] = "completed"
+        result["status"] = STATUS_SUCCESS
         commands = _collect_linux_audit_data(client, profile)
         result["commands"] = [_command_report(command) for command in commands]
+        _apply_command_status(result, commands)
         package_summary = (
             build_package_audit_summary(commands)
             if profile.checks["package_checks"]
@@ -160,10 +204,12 @@ def audit_ssh_host(
             }
         )
         if not _linux_details_available(commands):
-            result["status"] = "unsupported_non_linux"
-            result["notes"].append(
-                "Authenticated SSH succeeded, but Linux OS details were not available. Linux-specific checks were skipped."
+            result["status"] = STATUS_PARTIAL
+            result["error_code"] = ERROR_UNSUPPORTED_TARGET
+            result["error_message"] = (
+                "Authenticated SSH succeeded, but Linux OS details were not available."
             )
+            result["notes"].append("Linux-specific checks were skipped.")
         result["findings"] = _build_findings(
             host=host,
             port=port,
@@ -177,16 +223,30 @@ def audit_ssh_host(
         )
         return result
     except paramiko.AuthenticationException:
-        result["status"] = "authentication_failed"
-        result["notes"].append("SSH authentication failed. No audit commands were run.")
+        result["status"] = STATUS_FAILED
+        result["error_code"] = ERROR_AUTH_FAILED
+        result["error_message"] = "SSH authentication failed. No audit commands were run."
+        result["notes"].append(result["error_message"])
         return result
     except (socket.timeout, TimeoutError):
-        result["status"] = "timeout"
-        result["notes"].append("SSH connection timed out. No audit commands were run.")
+        result["status"] = STATUS_FAILED
+        result["error_code"] = ERROR_TIMEOUT
+        result["error_message"] = "SSH connection timed out. No audit commands were run."
+        result["notes"].append(result["error_message"])
         return result
     except (paramiko.SSHException, OSError) as exc:
-        result["status"] = "connection_failed"
-        result["notes"].append(f"SSH audit could not complete safely: {exc.__class__.__name__}.")
+        result["status"] = STATUS_FAILED
+        result["error_code"] = ERROR_KEY_LOAD_FAILED if key_path is not None else ERROR_CONNECTION_FAILED
+        result["error_message"] = "SSH audit could not complete safely."
+        result["debug_details"] = exc.__class__.__name__
+        result["notes"].append(result["error_message"])
+        return result
+    except Exception as exc:  # pragma: no cover - defensive safety net.
+        result["status"] = STATUS_FAILED
+        result["error_code"] = ERROR_UNKNOWN
+        result["error_message"] = "SSH audit failed unexpectedly but safely."
+        result["debug_details"] = exc.__class__.__name__
+        result["notes"].append(result["error_message"])
         return result
     finally:
         client.close()
@@ -262,31 +322,99 @@ def _command_exists(client: Any, executable: str, commands: list[dict[str, Any]]
     return result["exit_status"] == 0 and bool(result["stdout"].strip())
 
 
+def _apply_command_status(result: dict[str, Any], commands: list[dict[str, Any]]) -> None:
+    completed = sum(1 for command in commands if command.get("success"))
+    failed_commands = [
+        command for command in commands if _is_actionable_command_failure(command)
+    ]
+    result["checks_completed"] = completed
+    result["checks_failed"] = len(failed_commands)
+    result["partial_failures"] = len(failed_commands)
+    if not failed_commands:
+        return
+
+    result["status"] = STATUS_PARTIAL if completed else STATUS_FAILED
+    if any(command.get("timed_out") for command in failed_commands):
+        result["error_code"] = ERROR_COMMAND_TIMEOUT
+        result["error_message"] = "One or more SSH audit commands timed out."
+    else:
+        result["error_code"] = ERROR_COMMAND_FAILED
+        result["error_message"] = "One or more SSH audit commands could not complete."
+    result["notes"].append(result["error_message"])
+
+
+def _is_actionable_command_failure(command: dict[str, Any]) -> bool:
+    if command.get("timed_out"):
+        return True
+    if command.get("exit_status") in (0, None):
+        return False
+
+    command_name = str(command.get("command") or "")
+    if command_name.startswith("command -v "):
+        return False
+    if command_name.startswith("systemctl is-active "):
+        return False
+    if command_name.startswith("test -d "):
+        return False
+    if command_name in {"ufw status", "firewall-cmd --state", "cat /etc/security/pwquality.conf"}:
+        return False
+    if command_name in set(PACKAGE_MANAGER_COMMANDS.values()):
+        return False
+    return True
+
+
 def _run_command(client: Any, command: str) -> dict[str, Any]:
+    started = time.perf_counter()
     try:
         stdin, stdout, stderr = client.exec_command(command, timeout=COMMAND_TIMEOUT_SECONDS)
         stdin.close()
         stdout_text = stdout.read().decode("utf-8", errors="replace")
         stderr_text = stderr.read().decode("utf-8", errors="replace")
         exit_status = stdout.channel.recv_exit_status()
+        duration = round(time.perf_counter() - started, 3)
         return {
             "command": command,
+            "command_name": command,
+            "success": exit_status == 0,
             "exit_status": exit_status,
             "stdout": _truncate(stdout_text.strip()),
             "stderr": _truncate(stderr_text.strip()),
             "raw_stdout": stdout_text.strip(),
             "raw_stderr": stderr_text.strip(),
+            "error_code": None if exit_status == 0 else ERROR_COMMAND_FAILED,
+            "duration_seconds": duration,
             "timed_out": False,
         }
     except socket.timeout:
+        duration = round(time.perf_counter() - started, 3)
         return {
             "command": command,
+            "command_name": command,
+            "success": False,
             "exit_status": None,
             "stdout": "",
             "stderr": "Command timed out.",
             "raw_stdout": "",
             "raw_stderr": "Command timed out.",
+            "error_code": ERROR_COMMAND_TIMEOUT,
+            "duration_seconds": duration,
             "timed_out": True,
+        }
+    except Exception as exc:  # pragma: no cover - defensive wrapper.
+        duration = round(time.perf_counter() - started, 3)
+        return {
+            "command": command,
+            "command_name": command,
+            "success": False,
+            "exit_status": None,
+            "stdout": "",
+            "stderr": "Command failed.",
+            "raw_stdout": "",
+            "raw_stderr": "Command failed.",
+            "error_code": ERROR_COMMAND_FAILED,
+            "duration_seconds": duration,
+            "timed_out": False,
+            "debug_details": exc.__class__.__name__,
         }
 
 
@@ -521,9 +649,13 @@ def _command_was_successful(commands: list[dict[str, Any]], command_name: str) -
 def _command_report(command: dict[str, Any]) -> dict[str, Any]:
     return {
         "command": command["command"],
+        "command_name": command.get("command_name", command["command"]),
+        "success": bool(command.get("success")),
         "exit_status": command["exit_status"],
         "stdout": command["stdout"],
         "stderr": command["stderr"],
+        "error_code": command.get("error_code"),
+        "duration_seconds": command.get("duration_seconds", 0.0),
         "timed_out": command["timed_out"],
     }
 

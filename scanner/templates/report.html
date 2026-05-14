@@ -398,6 +398,10 @@
       <h2>Authenticated SSH Audit Summary</h2>
       {% if report.ssh_audit_summary.enabled %}
       <p><strong>Credentialed SSH Audit:</strong> {{ report.ssh_audit_summary.status }}</p>
+      {% if report.ssh_audit_summary.error_code %}
+      <p><strong>Error code:</strong> {{ report.ssh_audit_summary.error_code }}</p>
+      <p><strong>Error message:</strong> {{ report.ssh_audit_summary.error_message }}</p>
+      {% endif %}
       <p><strong>Read-only authenticated checks:</strong> {{ report.ssh_audit_summary.authenticated }}</p>
       <p><strong>Username used:</strong> {{ report.ssh_audit_summary.username_used }}</p>
       <p><strong>Auth method:</strong> {{ report.ssh_audit_summary.auth_method }}</p>
@@ -405,6 +409,11 @@
       <p><strong>Profile description:</strong> {{ report.ssh_audit_summary.profile_description }}</p>
       <p><strong>Enabled checks:</strong> {{ report.ssh_audit_summary.checks_enabled | join(", ") }}</p>
       <p><strong>Skipped checks:</strong> {{ report.ssh_audit_summary.checks_skipped | join(", ") }}</p>
+      <p><strong>Checks completed:</strong> {{ report.ssh_audit_summary.checks_completed }}</p>
+      <p><strong>Checks failed:</strong> {{ report.ssh_audit_summary.checks_failed }}</p>
+      <p><strong>Partial failures:</strong> {{ report.ssh_audit_summary.partial_failures }}</p>
+      <p><strong>Command timeout seconds:</strong> {{ report.ssh_audit_summary.command_timeout_seconds }}</p>
+      <p><strong>Connection timeout seconds:</strong> {{ report.ssh_audit_summary.connection_timeout_seconds }}</p>
       <p><strong>OS family:</strong> {{ report.ssh_audit_summary.os_family or "" }}</p>
       <p><strong>Hostname:</strong> {{ report.ssh_audit_summary.hostname or "" }}</p>
       <p><strong>Kernel summary:</strong> {{ report.ssh_audit_summary.kernel_summary or "" }}</p>

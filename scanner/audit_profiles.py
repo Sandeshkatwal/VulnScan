@@ -80,10 +80,15 @@ AUDIT_PROFILES = {
 }
 
 DEFAULT_AUDIT_PROFILE = "standard"
+ERROR_PROFILE_INVALID = "SSH_PROFILE_INVALID"
 
 
 class AuditProfileError(ValueError):
     """Raised when an audit profile name is not supported."""
+
+    def __init__(self, message: str, error_code: str = ERROR_PROFILE_INVALID) -> None:
+        super().__init__(message)
+        self.error_code = error_code
 
 
 def get_audit_profile(name: str | None) -> AuditProfile:

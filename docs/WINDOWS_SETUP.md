@@ -162,9 +162,13 @@ SSH audit is for authorised Linux systems only. Use least-privilege credentials.
 
 Credentialed audit profiles apply only with `--ssh-audit`. `standard` is the default. `basic` performs fast login, OS, and SSH hardening checks. `standard` adds package, firewall, and logging indicators. `detailed` adds password policy, temporary directory sticky-bit, and cleartext service exposure indicators. All profiles are read-only; `detailed` may take slightly longer.
 
+SSH audit error handling is structured. Authentication failures, connection timeouts, missing key files, unsupported targets, and command timeouts are reported with safe status and error-code fields such as `failed`, `partial`, `SSH_AUTH_FAILED`, or `SSH_COMMAND_TIMEOUT`. Partial command failures do not crash the scan, and credentials are not printed or stored.
+
 Package checks over SSH are read-only. VulScan detects package managers with `command -v` for `apt`, `apt-get`, `dnf`, `yum`, `pacman`, and `zypper`, then runs the appropriate read-only update check such as `apt list --upgradable`, `dnf check-update`, `yum check-update`, `pacman -Qu`, or `zypper list-updates`. It does not run `apt update`, upgrade packages, or install anything. On apt-based systems, results may depend on existing package metadata on the host. Package findings support patch management review but do not replace full vulnerability intelligence or vendor advisory review.
 
 Linux configuration audit checks over SSH are read-only and require authorised SSH credentials. VulScan reviews firewall indicators, logging service indicators, local password policy indicators, temporary directory sticky-bit indicators, cleartext service exposure indicators, and basic hostname/OS information. Results are indicators that need operational review. This is not a full CIS benchmark implementation yet, but it prepares the framework for CIS-style templates.
+
+The pytest suite uses fake SSH audit fixtures in `tests\fixtures` and mocked command output. Tests do not require internet access, a live SSH server, or real SSH credentials. Runtime SSH testing still requires authorised Linux credentials.
 
 You can also run the included helper script:
 

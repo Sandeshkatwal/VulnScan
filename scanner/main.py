@@ -199,7 +199,7 @@ def scan(
         scan_result["scan_mode"] = mode
         scan_result["http_findings"] = []
         scan_result["tls_findings"] = []
-        scan_result["ssh_audit"] = {"enabled": False, "status": "not_run", "findings": []}
+        scan_result["ssh_audit"] = {"enabled": False, "status": "skipped", "findings": []}
         scan_result["ssh_audit_summary"] = {"enabled": False, "status": "skipped"}
         scan_result["ssh_findings"] = []
         findings = create_port_exposure_findings(scan_result["open_ports"])
@@ -792,6 +792,8 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
     table.add_column("Value")
     rows = [
         ("Status", summary.get("status")),
+        ("Error code", summary.get("error_code")),
+        ("Error message", summary.get("error_message")),
         ("Authenticated", summary.get("authenticated")),
         ("Username", summary.get("username_used")),
         ("Auth method", summary.get("auth_method")),
@@ -799,6 +801,11 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
         ("Profile description", summary.get("profile_description")),
         ("Enabled checks", _format_summary_list(summary.get("checks_enabled"))),
         ("Skipped checks", _format_summary_list(summary.get("checks_skipped"))),
+        ("Checks completed", summary.get("checks_completed")),
+        ("Checks failed", summary.get("checks_failed")),
+        ("Partial failures", summary.get("partial_failures")),
+        ("Command timeout seconds", summary.get("command_timeout_seconds")),
+        ("Connection timeout seconds", summary.get("connection_timeout_seconds")),
         ("OS family", summary.get("os_family")),
         ("Hostname", summary.get("hostname")),
         ("Package manager", summary.get("package_manager")),
@@ -854,9 +861,9 @@ def _build_ssh_audit_summary(
     highest = max(ssh_findings, key=lambda item: int(item.get("risk_score") or 0), default={})
     raw_status = str(ssh_audit.get("status") or "")
     authenticated = bool(ssh_audit.get("authenticated"))
-    if raw_status == "completed":
+    if raw_status in {"completed", "success"}:
         status = "success"
-    elif authenticated:
+    elif raw_status == "partial" or authenticated:
         status = "partial"
     elif raw_status in {"not_run", "skipped"}:
         status = "skipped"
@@ -866,6 +873,8 @@ def _build_ssh_audit_summary(
     return {
         "enabled": True,
         "status": status,
+        "error_code": ssh_audit.get("error_code"),
+        "error_message": ssh_audit.get("error_message"),
         "target": scan_result.get("host"),
         "ssh_port": ssh_port,
         "authenticated": authenticated,
@@ -875,6 +884,11 @@ def _build_ssh_audit_summary(
         "profile_description": audit_profile.description,
         "checks_enabled": list(audit_profile.checks_enabled),
         "checks_skipped": list(audit_profile.checks_skipped),
+        "checks_completed": int(ssh_audit.get("checks_completed") or 0),
+        "checks_failed": int(ssh_audit.get("checks_failed") or 0),
+        "partial_failures": int(ssh_audit.get("partial_failures") or 0),
+        "command_timeout_seconds": ssh_audit.get("command_timeout_seconds"),
+        "connection_timeout_seconds": ssh_audit.get("connection_timeout_seconds"),
         "os_family": ssh_audit.get("os_family"),
         "hostname": ssh_audit.get("hostname"),
         "kernel_summary": ssh_audit.get("kernel_summary"),

@@ -1,0 +1,4 @@
+passwordauthentication no
+permitrootlogin no
+pubkeyauthentication yes
+challengeresponseauthentication no

@@ -1,0 +1,4 @@
+Listing...
+openssl/stable-security 3.0.11-1~deb12u2 amd64 [upgradable from: 3.0.11-1~deb12u1]
+curl/stable-security 7.88.1-10+deb12u8 amd64 [upgradable from: 7.88.1-10+deb12u7]
+linux-image-amd64/stable-security 6.1.76-1 amd64 [upgradable from: 6.1.69-1]

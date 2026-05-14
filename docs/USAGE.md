@@ -238,6 +238,8 @@ The SSH audit attempts one login using the credentials explicitly provided for t
 
 When `--ssh-audit` is used, the terminal output includes a **Credentialed SSH Audit Summary** before the general findings. JSON and HTML reports include a top-level SSH audit summary with authentication status, username, auth method, audit profile, enabled/skipped checks, OS family, hostname, kernel summary, package indicators, SSH hardening status, Linux configuration status, total SSH findings, highest SSH risk, and limitations. SSH findings are grouped by source in terminal output, including `ssh_audit`, `package_audit`, `ssh_hardening`, and `linux_config_audit`.
 
+Version 11.6 adds structured SSH audit error handling. If authentication fails, the SSH target times out, a key file is missing, or an individual read-only command cannot complete, VulScan returns safe status fields such as `success`, `failed`, `skipped`, or `partial` with a short error code and message. Partial command failures do not crash the scan; VulScan continues other read-only checks where safe. Technical details are sanitized and credentials are not stored or printed.
+
 After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, package update checks, and Linux configuration indicator checks. It does not run `sudo`, change files, install packages, update packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.
 
 Package manager detection checks `apt`, `apt-get`, `dnf`, `yum`, `pacman`, and `zypper` with `command -v`. VulScan derives the Linux family from `/etc/os-release` and reports Debian/Kali/Parrot/Ubuntu, Fedora/RHEL/Rocky/Alma, Arch, openSUSE/SUSE, or Unknown Linux.
@@ -344,13 +346,15 @@ After activating `.venv311`, install the project requirements from PowerShell:
 python -m pip install -r requirements.txt
 ```
 
-## Running Tests Later
+## Running Tests
 
-When tests are added, run them from the project root with:
+Run tests from the project root with:
 
 ```powershell
-python -m pytest
+.\.venv311\Scripts\python.exe -m pytest
 ```
+
+SSH audit tests use fake fixtures in `tests\fixtures` and mocked command output. They do not require internet access, a live SSH server, or real credentials. Runtime SSH testing still requires authorised Linux credentials. Test fixtures must not contain real passwords, private keys, tokens, host secrets, or personal data.
 
 ## Safety Boundaries
 

@@ -50,6 +50,8 @@ SSH audit uses one explicitly provided login, runs read-only Linux inspection co
 
 Credentialed SSH audit output includes a sanitized summary in terminal, JSON, and HTML reports. Passwords, key values, and private key paths are never included. Audit profiles apply only with `--ssh-audit`: `basic` is fastest, `standard` is the default, and `detailed` runs additional read-only configuration indicators that may take slightly longer.
 
+SSH audit error handling reports safe status and error-code fields for authentication failures, timeouts, missing key files, unsupported targets, and partial command failures. Tests use fake fixtures and mocked SSH behavior; they do not require a live SSH server or real credentials.
+
 You can also use the helper script:
 
 ```powershell
@@ -60,10 +62,10 @@ The scanner prints the VulScan version, target, resolved IP, scan mode, safe usa
 
 ## Tests
 
-Tests can be run later from PowerShell with:
+Run tests from PowerShell with:
 
 ```powershell
-python -m pytest
+.\.venv311\Scripts\python.exe -m pytest
 ```
 
 ## Safety

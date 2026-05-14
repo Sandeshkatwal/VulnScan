@@ -42,7 +42,7 @@ def save_html_report(
         "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),
         "tls_findings": scan_result.get("tls_findings", []),
-        "ssh_audit": scan_result.get("ssh_audit", {"enabled": False, "status": "not_run"}),
+        "ssh_audit": scan_result.get("ssh_audit", {"enabled": False, "status": "skipped"}),
         "ssh_audit_summary": scan_result.get(
             "ssh_audit_summary",
             {"enabled": False, "status": "skipped"},
