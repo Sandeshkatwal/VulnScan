@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import socket
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 try:
     import paramiko
@@ -30,6 +31,9 @@ from scanner.package_audit import (
 SOURCE = "ssh_audit"
 DEFAULT_TIMEOUT_SECONDS = 8.0
 COMMAND_TIMEOUT_SECONDS = 10.0
+MAX_CONNECTION_TIMEOUT_SECONDS = 60.0
+MAX_COMMAND_TIMEOUT_SECONDS = 120.0
+MAX_AUDIT_TIMEOUT_SECONDS = 600.0
 MAX_OUTPUT_CHARS = 1200
 
 STATUS_SUCCESS = "success"
@@ -45,6 +49,7 @@ ERROR_KEY_LOAD_FAILED = "SSH_KEY_LOAD_FAILED"
 ERROR_UNSUPPORTED_TARGET = "SSH_UNSUPPORTED_TARGET"
 ERROR_COMMAND_TIMEOUT = "SSH_COMMAND_TIMEOUT"
 ERROR_COMMAND_FAILED = "SSH_COMMAND_FAILED"
+ERROR_AUDIT_TIME_BUDGET_EXCEEDED = "SSH_AUDIT_TIME_BUDGET_EXCEEDED"
 ERROR_CREDENTIALS_MISSING = "SSH_CREDENTIALS_MISSING"
 ERROR_UNKNOWN = "SSH_UNKNOWN_ERROR"
 
@@ -62,6 +67,9 @@ def validate_ssh_audit_options(
     ssh_user: str | None,
     ssh_password: str | None,
     ssh_key: Path | None,
+    ssh_timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    ssh_command_timeout: float = COMMAND_TIMEOUT_SECONDS,
+    ssh_audit_timeout: float | None = None,
 ) -> None:
     """Validate SSH audit options without exposing credential values."""
     if not ssh_audit:
@@ -85,6 +93,58 @@ def validate_ssh_audit_options(
             ERROR_KEY_NOT_FOUND,
         )
 
+    _validate_timeout_value(
+        "--ssh-timeout",
+        ssh_timeout,
+        maximum=MAX_CONNECTION_TIMEOUT_SECONDS,
+    )
+    _validate_timeout_value(
+        "--ssh-command-timeout",
+        ssh_command_timeout,
+        maximum=MAX_COMMAND_TIMEOUT_SECONDS,
+    )
+    if ssh_audit_timeout is not None:
+        _validate_timeout_value(
+            "--ssh-audit-timeout",
+            ssh_audit_timeout,
+            maximum=MAX_AUDIT_TIMEOUT_SECONDS,
+        )
+
+
+def _validate_timeout_value(option_name: str, value: float, *, maximum: float) -> None:
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError) as exc:
+        raise SshAuditConfigurationError(
+            f"{option_name} must be a number greater than 0 and no more than {maximum:g} seconds."
+        ) from exc
+    if numeric_value <= 0 or numeric_value > maximum:
+        raise SshAuditConfigurationError(
+            f"{option_name} must be greater than 0 and no more than {maximum:g} seconds."
+        )
+
+
+@dataclass
+class _AuditRuntime:
+    command_timeout_seconds: float
+    audit_timeout_seconds: float
+    started_at: float = field(default_factory=time.perf_counter)
+    skipped_checks: list[str] = field(default_factory=list)
+
+    def elapsed(self) -> float:
+        return time.perf_counter() - self.started_at
+
+    def remaining(self) -> float:
+        return max(0.0, self.audit_timeout_seconds - self.elapsed())
+
+    def has_budget(self) -> bool:
+        return self.remaining() > 0
+
+    def skip_command(self, command: str) -> dict[str, Any]:
+        if command not in self.skipped_checks:
+            self.skipped_checks.append(command)
+        return _skipped_command(command, self.elapsed())
+
 
 def audit_ssh_host(
     host: str,
@@ -94,11 +154,23 @@ def audit_ssh_host(
     key_path: Path | None = None,
     port: int = 22,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    command_timeout: float = COMMAND_TIMEOUT_SECONDS,
+    audit_timeout: float | None = None,
     open_ports: list[dict[str, Any]] | None = None,
     audit_profile: AuditProfile | None = None,
+    progress_callback: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     """Run one authenticated SSH login and read-only Linux configuration checks."""
     profile = audit_profile or get_audit_profile(None)
+    audit_timeout_seconds = (
+        float(audit_timeout)
+        if audit_timeout is not None
+        else float(profile.default_audit_timeout_seconds)
+    )
+    runtime = _AuditRuntime(
+        command_timeout_seconds=float(command_timeout),
+        audit_timeout_seconds=audit_timeout_seconds,
+    )
     result: dict[str, Any] = {
         "enabled": True,
         "target": host,
@@ -106,7 +178,7 @@ def audit_ssh_host(
         "audit_profile": profile.name,
         "profile_description": profile.description,
         "checks_enabled": profile.checks_enabled,
-        "checks_skipped": profile.checks_skipped,
+        "profile_checks_skipped": profile.checks_skipped,
         "status": STATUS_SKIPPED,
         "error_code": None,
         "error_message": "",
@@ -115,9 +187,17 @@ def audit_ssh_host(
         "commands": [],
         "checks_completed": 0,
         "checks_failed": 0,
+        "checks_planned": 0,
+        "checks_skipped": 0,
         "partial_failures": 0,
-        "command_timeout_seconds": COMMAND_TIMEOUT_SECONDS,
+        "command_timeout_seconds": float(command_timeout),
         "connection_timeout_seconds": timeout,
+        "audit_timeout_seconds": audit_timeout_seconds,
+        "total_duration_seconds": 0.0,
+        "timed_out_commands": 0,
+        "slowest_command_name": None,
+        "slowest_command_duration_seconds": None,
+        "performance_notes": [],
         "findings": [],
         "notes": [],
         "os_family": "Unknown Linux",
@@ -154,6 +234,7 @@ def audit_ssh_host(
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     try:
+        _progress(progress_callback, "Connecting to SSH service...")
         connect_kwargs: dict[str, Any] = {
             "hostname": resolved_ip,
             "port": port,
@@ -172,8 +253,10 @@ def audit_ssh_host(
         client.connect(**connect_kwargs)
         result["authenticated"] = True
         result["status"] = STATUS_SUCCESS
-        commands = _collect_linux_audit_data(client, profile)
+        _progress(progress_callback, "Authenticated successfully.")
+        commands = _collect_linux_audit_data(client, profile, runtime, progress_callback)
         result["commands"] = [_command_report(command) for command in commands]
+        _apply_performance_summary(result, commands, runtime)
         _apply_command_status(result, commands)
         package_summary = (
             build_package_audit_summary(commands)
@@ -206,11 +289,19 @@ def audit_ssh_host(
         )
         if not _linux_details_available(commands):
             result["status"] = STATUS_PARTIAL
-            result["error_code"] = ERROR_UNSUPPORTED_TARGET
-            result["error_message"] = (
-                "Authenticated SSH succeeded, but Linux OS details were not available."
-            )
+            if not result["error_code"] and not runtime.skipped_checks:
+                result["error_code"] = ERROR_UNSUPPORTED_TARGET
+                result["error_message"] = (
+                    "Authenticated SSH succeeded, but Linux OS details were not available."
+                )
             result["notes"].append("Linux-specific checks were skipped.")
+        if runtime.skipped_checks:
+            result["status"] = STATUS_PARTIAL
+            result["error_code"] = result["error_code"] or ERROR_AUDIT_TIME_BUDGET_EXCEEDED
+            result["error_message"] = result["error_message"] or (
+                "SSH audit time budget was exceeded before all checks completed."
+            )
+            result["notes"].append("Some SSH audit checks were skipped because the audit time budget was exceeded.")
         result["findings"] = _build_findings(
             host=host,
             port=port,
@@ -222,6 +313,8 @@ def audit_ssh_host(
         result["linux_config_audit_findings_count"] = sum(
             1 for finding in result["findings"] if finding.source == "linux_config_audit"
         )
+        result["total_duration_seconds"] = round(runtime.elapsed(), 3)
+        _progress(progress_callback, f"SSH audit completed with status: {result['status']}")
         return result
     except paramiko.AuthenticationException:
         result["status"] = STATUS_FAILED
@@ -250,75 +343,104 @@ def audit_ssh_host(
         result["notes"].append(result["error_message"])
         return result
     finally:
+        result["total_duration_seconds"] = round(runtime.elapsed(), 3)
         client.close()
 
 
-def _collect_linux_audit_data(client: Any, profile: AuditProfile) -> list[dict[str, Any]]:
+def _collect_linux_audit_data(
+    client: Any,
+    profile: AuditProfile,
+    runtime: _AuditRuntime,
+    progress_callback: Callable[[str], None] | None = None,
+) -> list[dict[str, Any]]:
     commands: list[dict[str, Any]] = []
 
-    uname = _run_command(client, "uname -a")
-    os_release = _run_command(client, "cat /etc/os-release")
+    _progress(progress_callback, "Collecting OS information...")
+    uname = _run_command(client, "uname -a", timeout=runtime.command_timeout_seconds, runtime=runtime)
+    os_release = _run_command(
+        client,
+        "cat /etc/os-release",
+        timeout=runtime.command_timeout_seconds,
+        runtime=runtime,
+    )
     commands.extend([uname, os_release])
 
     is_linux = "linux" in uname["stdout"].lower() or bool(os_release["stdout"].strip())
     if not is_linux:
         return commands
 
-    if profile.checks["ssh_hardening"] and _command_exists(client, "sshd", commands):
-        sshd_effective = _run_command(client, "sshd -T")
+    if profile.checks["ssh_hardening"] and _command_exists(client, "sshd", commands, runtime):
+        _progress(progress_callback, "Checking SSH hardening...")
+        sshd_effective = _run_command(client, "sshd -T", timeout=runtime.command_timeout_seconds, runtime=runtime)
         commands.append(sshd_effective)
         if sshd_effective["exit_status"] != 0:
-            commands.append(_run_command(client, "cat /etc/ssh/sshd_config"))
+            commands.append(_run_command(client, "cat /etc/ssh/sshd_config", timeout=runtime.command_timeout_seconds, runtime=runtime))
     elif profile.checks["ssh_hardening"]:
-        commands.append(_run_command(client, "cat /etc/ssh/sshd_config"))
+        _progress(progress_callback, "Checking SSH hardening...")
+        commands.append(_run_command(client, "cat /etc/ssh/sshd_config", timeout=runtime.command_timeout_seconds, runtime=runtime))
 
     needs_systemctl = profile.checks["firewall_checks"] or profile.checks["logging_checks"]
-    if needs_systemctl and _command_exists(client, "systemctl", commands):
+    if needs_systemctl and _command_exists(client, "systemctl", commands, runtime):
         if profile.checks["firewall_checks"]:
-            commands.append(_run_command(client, "systemctl is-active ufw"))
-            commands.append(_run_command(client, "systemctl is-active firewalld"))
+            _progress(progress_callback, "Checking Linux configuration indicators...")
+            commands.append(_run_command(client, "systemctl is-active ufw", timeout=runtime.command_timeout_seconds, runtime=runtime))
+            commands.append(_run_command(client, "systemctl is-active firewalld", timeout=runtime.command_timeout_seconds, runtime=runtime))
         if profile.checks["logging_checks"]:
-            commands.append(_run_command(client, "systemctl is-active auditd"))
-            commands.append(_run_command(client, "systemctl is-active rsyslog"))
-            commands.append(_run_command(client, "systemctl is-active systemd-journald"))
+            _progress(progress_callback, "Checking Linux configuration indicators...")
+            commands.append(_run_command(client, "systemctl is-active auditd", timeout=runtime.command_timeout_seconds, runtime=runtime))
+            commands.append(_run_command(client, "systemctl is-active rsyslog", timeout=runtime.command_timeout_seconds, runtime=runtime))
+            commands.append(_run_command(client, "systemctl is-active systemd-journald", timeout=runtime.command_timeout_seconds, runtime=runtime))
 
-    if profile.checks["firewall_checks"] and _command_exists(client, "ufw", commands):
-        commands.append(_run_command(client, "ufw status"))
-    if profile.checks["firewall_checks"] and _command_exists(client, "firewall-cmd", commands):
-        commands.append(_run_command(client, "firewall-cmd --state"))
+    if profile.checks["firewall_checks"] and _command_exists(client, "ufw", commands, runtime):
+        commands.append(_run_command(client, "ufw status", timeout=runtime.command_timeout_seconds, runtime=runtime))
+    if profile.checks["firewall_checks"] and _command_exists(client, "firewall-cmd", commands, runtime):
+        commands.append(_run_command(client, "firewall-cmd --state", timeout=runtime.command_timeout_seconds, runtime=runtime))
 
-    commands.append(_run_command(client, "hostname"))
+    commands.append(_run_command(client, "hostname", timeout=runtime.command_timeout_seconds, runtime=runtime))
     if profile.checks["password_policy_checks"]:
-        commands.append(_run_command(client, "cat /etc/login.defs"))
-        commands.append(_run_command(client, "cat /etc/security/pwquality.conf"))
+        _progress(progress_callback, "Checking Linux configuration indicators...")
+        commands.append(_run_command(client, "cat /etc/login.defs", timeout=runtime.command_timeout_seconds, runtime=runtime))
+        commands.append(_run_command(client, "cat /etc/security/pwquality.conf", timeout=runtime.command_timeout_seconds, runtime=runtime))
     if profile.checks["temp_directory_checks"]:
-        commands.append(_run_command(client, "test -d /tmp"))
-        commands.append(_run_command(client, "test -d /var/tmp"))
-        commands.append(_run_command(client, "ls -ld /tmp"))
-        commands.append(_run_command(client, "ls -ld /var/tmp"))
+        _progress(progress_callback, "Checking Linux configuration indicators...")
+        commands.append(_run_command(client, "test -d /tmp", timeout=runtime.command_timeout_seconds, runtime=runtime))
+        commands.append(_run_command(client, "test -d /var/tmp", timeout=runtime.command_timeout_seconds, runtime=runtime))
+        commands.append(_run_command(client, "ls -ld /tmp", timeout=runtime.command_timeout_seconds, runtime=runtime))
+        commands.append(_run_command(client, "ls -ld /var/tmp", timeout=runtime.command_timeout_seconds, runtime=runtime))
 
     if profile.checks["package_checks"]:
+        _progress(progress_callback, "Checking package status...")
         manager_availability = {
-            "apt": _command_exists(client, "apt", commands),
-            "apt-get": _command_exists(client, "apt-get", commands),
-            "dnf": _command_exists(client, "dnf", commands),
-            "yum": _command_exists(client, "yum", commands),
-            "pacman": _command_exists(client, "pacman", commands),
-            "zypper": _command_exists(client, "zypper", commands),
+            "apt": _command_exists(client, "apt", commands, runtime),
+            "apt-get": _command_exists(client, "apt-get", commands, runtime),
+            "dnf": _command_exists(client, "dnf", commands, runtime),
+            "yum": _command_exists(client, "yum", commands, runtime),
+            "pacman": _command_exists(client, "pacman", commands, runtime),
+            "zypper": _command_exists(client, "zypper", commands, runtime),
         }
         package_manager = _select_package_manager_for_commands(
             os_release_output=os_release["stdout"],
             manager_availability=manager_availability,
         )
         if package_manager is not None:
-            commands.append(_run_command(client, PACKAGE_MANAGER_COMMANDS[package_manager]))
+            commands.append(_run_command(client, PACKAGE_MANAGER_COMMANDS[package_manager], timeout=runtime.command_timeout_seconds, runtime=runtime))
 
     return commands
 
 
-def _command_exists(client: Any, executable: str, commands: list[dict[str, Any]]) -> bool:
+def _command_exists(
+    client: Any,
+    executable: str,
+    commands: list[dict[str, Any]],
+    runtime: _AuditRuntime | None = None,
+) -> bool:
     command = f"command -v {executable}"
-    result = _run_command(client, command)
+    result = _run_command(
+        client,
+        command,
+        timeout=runtime.command_timeout_seconds if runtime else COMMAND_TIMEOUT_SECONDS,
+        runtime=runtime,
+    )
     commands.append(result)
     return result["exit_status"] == 0 and bool(result["stdout"].strip())
 
@@ -344,6 +466,33 @@ def _apply_command_status(result: dict[str, Any], commands: list[dict[str, Any]]
     result["notes"].append(result["error_message"])
 
 
+def _apply_performance_summary(
+    result: dict[str, Any],
+    commands: list[dict[str, Any]],
+    runtime: _AuditRuntime,
+) -> None:
+    result["checks_planned"] = len(commands)
+    result["checks_skipped"] = sum(1 for command in commands if command.get("skipped"))
+    result["timed_out_commands"] = sum(1 for command in commands if command.get("timed_out"))
+    result["total_duration_seconds"] = round(runtime.elapsed(), 3)
+    completed_commands = [command for command in commands if not command.get("skipped")]
+    slowest = max(
+        completed_commands,
+        key=lambda command: float(command.get("duration_seconds") or 0.0),
+        default=None,
+    )
+    if slowest:
+        result["slowest_command_name"] = slowest.get("command_name") or slowest.get("command")
+        result["slowest_command_duration_seconds"] = slowest.get("duration_seconds")
+    notes = result["performance_notes"]
+    if result["timed_out_commands"]:
+        notes.append(f"{result['timed_out_commands']} command(s) timed out.")
+    if result["checks_skipped"]:
+        notes.append(
+            f"{result['checks_skipped']} check(s) skipped because the SSH audit time budget was exceeded."
+        )
+
+
 def _is_actionable_command_failure(command: dict[str, Any]) -> bool:
     if command.get("timed_out"):
         return True
@@ -364,10 +513,25 @@ def _is_actionable_command_failure(command: dict[str, Any]) -> bool:
     return True
 
 
-def _run_command(client: Any, command: str) -> dict[str, Any]:
+def _run_command(
+    client: Any,
+    command: str,
+    timeout: float = COMMAND_TIMEOUT_SECONDS,
+    runtime: _AuditRuntime | None = None,
+) -> dict[str, Any]:
+    if runtime is not None and not runtime.has_budget():
+        return runtime.skip_command(command)
+
     started = time.perf_counter()
+    stdout = None
+    stderr = None
     try:
-        stdin, stdout, stderr = client.exec_command(command, timeout=COMMAND_TIMEOUT_SECONDS)
+        effective_timeout = min(float(timeout), runtime.remaining()) if runtime is not None else float(timeout)
+        if effective_timeout <= 0:
+            return runtime.skip_command(command) if runtime is not None else _skipped_command(command, 0.0)
+        stdin, stdout, stderr = client.exec_command(command, timeout=effective_timeout)
+        if hasattr(stdout, "channel") and hasattr(stdout.channel, "settimeout"):
+            stdout.channel.settimeout(effective_timeout)
         stdin.close()
         stdout_text = stdout.read().decode("utf-8", errors="replace")
         stderr_text = stderr.read().decode("utf-8", errors="replace")
@@ -386,7 +550,9 @@ def _run_command(client: Any, command: str) -> dict[str, Any]:
             "duration_seconds": duration,
             "timed_out": False,
         }
-    except socket.timeout:
+    except (socket.timeout, TimeoutError):
+        _close_command_stream(stdout)
+        _close_command_stream(stderr)
         duration = round(time.perf_counter() - started, 3)
         return {
             "command": command,
@@ -417,6 +583,35 @@ def _run_command(client: Any, command: str) -> dict[str, Any]:
             "timed_out": False,
             "debug_details": exc.__class__.__name__,
         }
+
+
+def _skipped_command(command: str, elapsed_seconds: float) -> dict[str, Any]:
+    return {
+        "command": command,
+        "command_name": command,
+        "success": False,
+        "exit_status": None,
+        "stdout": "",
+        "stderr": "Command skipped because the SSH audit time budget was exceeded.",
+        "raw_stdout": "",
+        "raw_stderr": "Command skipped because the SSH audit time budget was exceeded.",
+        "error_code": ERROR_AUDIT_TIME_BUDGET_EXCEEDED,
+        "duration_seconds": 0.0,
+        "timed_out": False,
+        "skipped": True,
+        "elapsed_seconds": round(elapsed_seconds, 3),
+    }
+
+
+def _close_command_stream(stream: Any) -> None:
+    if stream is None:
+        return
+    channel = getattr(stream, "channel", None)
+    if channel is not None and hasattr(channel, "close"):
+        try:
+            channel.close()
+        except Exception:
+            return
 
 
 def _build_findings(
@@ -734,8 +929,14 @@ def _command_report(command: dict[str, Any]) -> dict[str, Any]:
         "error_code": command.get("error_code"),
         "duration_seconds": command.get("duration_seconds", 0.0),
         "timed_out": command["timed_out"],
+        "skipped": bool(command.get("skipped")),
     }
 
 
 def _truncate(value: str, max_chars: int = MAX_OUTPUT_CHARS) -> str:
     return safe_truncate(value, max_chars=max_chars)
+
+
+def _progress(callback: Callable[[str], None] | None, message: str) -> None:
+    if callback is not None:
+        callback(message)

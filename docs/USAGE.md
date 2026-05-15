@@ -222,9 +222,18 @@ Use least-privilege read-only credentials:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile standard
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile detailed --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic --ssh-timeout 8 --ssh-command-timeout 10
+.\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile detailed --ssh-audit-timeout 90 --json --html --save-db
 ```
 
 Use `--ssh-port` if SSH is listening on a non-standard port. The default is `22`.
+
+Use SSH timeout options to tune slow or unreliable authorised targets:
+
+- `--ssh-timeout`: SSH connection timeout in seconds. Default `8`. Valid range: greater than `0` and no more than `60`.
+- `--ssh-command-timeout`: timeout for each remote read-only command. Default `10`. Valid range: greater than `0` and no more than `120`.
+- `--ssh-audit-timeout`: overall post-login SSH audit budget. Defaults by profile: `basic` `30`, `standard` `60`, `detailed` `90`. Valid range: greater than `0` and no more than `600`.
+- `--ssh-progress` / `--no-ssh-progress`: show or suppress compact terminal progress messages. Progress is terminal-only and is not embedded as noisy output in JSON or HTML reports.
 
 Use `--audit-profile` to choose the depth of read-only credentialed checks. Profiles apply only when `--ssh-audit` is used:
 
@@ -236,9 +245,11 @@ All profiles are read-only. The `detailed` profile runs more checks and may take
 
 The SSH audit attempts one login using the credentials explicitly provided for that scan. Passwords, key values, and private key paths are not stored in reports, the SQLite database, logs, or terminal output. SSH audit results are stored as sanitized audit status, command results, a top-level `ssh_audit_summary`, and standard findings.
 
-When `--ssh-audit` is used, the terminal output includes a **Credentialed SSH Audit Summary** before the general findings. JSON and HTML reports include a top-level SSH audit summary with authentication status, username, auth method, audit profile, enabled/skipped checks, OS family, hostname, kernel summary, package indicators, SSH hardening status, Linux configuration status, total SSH findings, highest SSH risk, and limitations. SSH findings are grouped by source in terminal output, including `ssh_audit`, `package_audit`, `ssh_hardening`, and `linux_config_audit`.
+When `--ssh-audit` is used, the terminal output includes progress messages and a **Credentialed SSH Audit Summary** before the general findings. JSON and HTML reports include a top-level SSH audit summary with authentication status, username, auth method, audit profile, enabled/skipped checks, timeout settings, total SSH audit duration, completed/failed/skipped checks, timed-out command count, slowest command metadata, OS family, hostname, kernel summary, package indicators, SSH hardening status, Linux configuration status, total SSH findings, highest SSH risk, and limitations. SSH findings are grouped by source in terminal output, including `ssh_audit`, `package_audit`, `ssh_hardening`, and `linux_config_audit`.
 
 Version 11.6 adds structured SSH audit error handling. If authentication fails, the SSH target times out, a key file is missing, or an individual read-only command cannot complete, VulScan returns safe status fields such as `success`, `failed`, `skipped`, or `partial` with a short error code and message. Partial command failures do not crash the scan; VulScan continues other read-only checks where safe. Technical details are sanitized and credentials are not stored or printed.
+
+Version 11.8 adds credentialed audit performance controls. Commands record duration and timeout status. If one non-critical command fails or times out, the SSH audit can return `partial` while preserving completed findings. If the overall audit budget is exceeded after login, VulScan skips remaining checks, records `SSH_AUDIT_TIME_BUDGET_EXCEEDED`, and returns partial results instead of aborting the whole scan.
 
 Version 11.7 improves credentialed audit evidence quality. VulScan stores concise evidence summaries for SSH findings instead of full raw SSH command output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values where useful, limits package samples, and redacts values that look like passwords, tokens, private keys, authorization headers, or secrets. Credentialed audit evidence should still be reviewed in operational context.
 

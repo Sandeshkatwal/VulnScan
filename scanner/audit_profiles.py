@@ -24,6 +24,7 @@ class AuditProfile:
     name: str
     description: str
     checks: dict[str, bool]
+    default_audit_timeout_seconds: float
 
     @property
     def checks_enabled(self) -> list[str]:
@@ -38,6 +39,7 @@ AUDIT_PROFILES = {
     "basic": AuditProfile(
         name="basic",
         description="Fast credentialed verification and SSH configuration review.",
+        default_audit_timeout_seconds=30.0,
         checks={
             "collect_os_info": True,
             "ssh_hardening": True,
@@ -52,6 +54,7 @@ AUDIT_PROFILES = {
     "standard": AuditProfile(
         name="standard",
         description="Recommended default for normal read-only credentialed audits.",
+        default_audit_timeout_seconds=60.0,
         checks={
             "collect_os_info": True,
             "ssh_hardening": True,
@@ -66,6 +69,7 @@ AUDIT_PROFILES = {
     "detailed": AuditProfile(
         name="detailed",
         description="Deeper read-only host configuration audit with additional Linux indicators.",
+        default_audit_timeout_seconds=90.0,
         checks={
             "collect_os_info": True,
             "ssh_hardening": True,

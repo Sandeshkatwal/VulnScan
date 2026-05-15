@@ -15,6 +15,7 @@ def test_basic_profile_skips_deeper_checks() -> None:
     assert profile.checks["ssh_hardening"] is True
     assert profile.checks["package_checks"] is False
     assert profile.checks["firewall_checks"] is False
+    assert profile.default_audit_timeout_seconds == 30.0
     assert profile.checks_skipped
 
 
@@ -24,6 +25,7 @@ def test_detailed_profile_enables_deeper_checks() -> None:
     assert profile.checks["password_policy_checks"] is True
     assert profile.checks["temp_directory_checks"] is True
     assert profile.checks["cleartext_service_checks"] is True
+    assert profile.default_audit_timeout_seconds == 90.0
 
 
 def test_invalid_profile_raises_friendly_error() -> None:

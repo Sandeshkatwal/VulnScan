@@ -17,6 +17,30 @@ class _TimeoutClient:
         raise socket.timeout()
 
 
+def test_invalid_timeout_values_are_rejected() -> None:
+    invalid_options = [
+        {"ssh_timeout": 0},
+        {"ssh_timeout": 61},
+        {"ssh_command_timeout": 0},
+        {"ssh_command_timeout": 121},
+        {"ssh_audit_timeout": 0},
+        {"ssh_audit_timeout": 601},
+    ]
+
+    for options in invalid_options:
+        try:
+            validate_ssh_audit_options(
+                True,
+                "user",
+                "placeholder",
+                None,
+                **options,
+            )
+        except SshAuditConfigurationError:
+            continue
+        raise AssertionError(f"Expected invalid timeout options to raise: {options}")
+
+
 def test_missing_credentials_validation_uses_structured_code() -> None:
     try:
         validate_ssh_audit_options(True, "user", None, None)
@@ -103,3 +127,87 @@ def test_command_failure_does_not_crash_collection() -> None:
     }
 
     assert ssh_audit._is_actionable_command_failure(command) is True
+
+
+def test_overall_audit_budget_skips_remaining_checks() -> None:
+    runtime = ssh_audit._AuditRuntime(
+        command_timeout_seconds=10.0,
+        audit_timeout_seconds=0.001,
+    )
+    runtime.started_at -= 1.0
+
+    result = _run_command(object(), "hostname", timeout=10.0, runtime=runtime)
+
+    assert result["success"] is False
+    assert result["skipped"] is True
+    assert result["error_code"] == "SSH_AUDIT_TIME_BUDGET_EXCEEDED"
+
+
+def test_partial_status_when_commands_timeout() -> None:
+    commands = [
+        {
+            "command": "uname -a",
+            "command_name": "uname -a",
+            "success": True,
+            "exit_status": 0,
+            "timed_out": False,
+        },
+        {
+            "command": "cat /etc/os-release",
+            "command_name": "cat /etc/os-release",
+            "success": False,
+            "exit_status": None,
+            "timed_out": True,
+        },
+    ]
+    result = {"status": "success", "notes": []}
+
+    ssh_audit._apply_command_status(result, commands)
+
+    assert result["status"] == "partial"
+    assert result["error_code"] == "SSH_COMMAND_TIMEOUT"
+
+
+def test_performance_summary_fields_and_secret_hygiene() -> None:
+    runtime = ssh_audit._AuditRuntime(
+        command_timeout_seconds=10.0,
+        audit_timeout_seconds=30.0,
+    )
+    commands = [
+        {
+            "command": "uname -a",
+            "command_name": "uname -a",
+            "success": True,
+            "exit_status": 0,
+            "duration_seconds": 0.25,
+            "timed_out": False,
+        },
+        {
+            "command": "cat /etc/os-release",
+            "command_name": "cat /etc/os-release",
+            "success": False,
+            "exit_status": None,
+            "duration_seconds": 1.0,
+            "timed_out": True,
+        },
+        {
+            "command": "hostname",
+            "command_name": "hostname",
+            "success": False,
+            "exit_status": None,
+            "duration_seconds": 0.0,
+            "timed_out": False,
+            "skipped": True,
+        },
+    ]
+    result = {"performance_notes": []}
+
+    ssh_audit._apply_performance_summary(result, commands, runtime)
+
+    assert result["checks_planned"] == 3
+    assert result["checks_skipped"] == 1
+    assert result["timed_out_commands"] == 1
+    assert result["slowest_command_name"] == "cat /etc/os-release"
+    serialized = str(result)
+    assert "secret-password" not in serialized
+    assert "C:\\Users\\Sande\\.ssh\\id_rsa" not in serialized

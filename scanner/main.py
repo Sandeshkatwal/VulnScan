@@ -148,6 +148,34 @@ def scan(
             help="SSH port for authenticated audit.",
         ),
     ] = 22,
+    ssh_timeout: Annotated[
+        float,
+        typer.Option(
+            "--ssh-timeout",
+            help="SSH connection timeout in seconds. Must be greater than 0 and no more than 60.",
+        ),
+    ] = 8.0,
+    ssh_command_timeout: Annotated[
+        float,
+        typer.Option(
+            "--ssh-command-timeout",
+            help="Timeout for each read-only SSH audit command in seconds. Must be greater than 0 and no more than 120.",
+        ),
+    ] = 10.0,
+    ssh_audit_timeout: Annotated[
+        float | None,
+        typer.Option(
+            "--ssh-audit-timeout",
+            help="Overall SSH audit check budget after login. Defaults by profile: basic 30, standard 60, detailed 90 seconds.",
+        ),
+    ] = None,
+    ssh_progress: Annotated[
+        bool,
+        typer.Option(
+            "--ssh-progress/--no-ssh-progress",
+            help="Show compact terminal progress for authenticated SSH audit.",
+        ),
+    ] = True,
     audit_profile: Annotated[
         str,
         typer.Option(
@@ -181,6 +209,9 @@ def scan(
             ssh_user=ssh_user,
             ssh_password=ssh_password,
             ssh_key=ssh_key,
+            ssh_timeout=ssh_timeout,
+            ssh_command_timeout=ssh_command_timeout,
+            ssh_audit_timeout=ssh_audit_timeout,
         )
     except SshAuditConfigurationError as exc:
         console.print(f"[red]SSH audit configuration error:[/red] {exc}")
@@ -210,6 +241,13 @@ def scan(
             tls_findings = audit_tls_services(scan_result["open_ports"])
             findings.extend(tls_findings)
         if ssh_audit:
+            if ssh_progress:
+                console.print("Credentialed SSH Audit")
+            effective_ssh_audit_timeout = (
+                ssh_audit_timeout
+                if ssh_audit_timeout is not None
+                else selected_audit_profile.default_audit_timeout_seconds
+            )
             ssh_result = audit_ssh_host(
                 host=scan_result["host"],
                 resolved_ip=scan_result["resolved_ip"],
@@ -217,8 +255,12 @@ def scan(
                 password=ssh_password,
                 key_path=ssh_key,
                 port=ssh_port,
+                timeout=ssh_timeout,
+                command_timeout=ssh_command_timeout,
+                audit_timeout=effective_ssh_audit_timeout,
                 open_ports=scan_result["open_ports"],
                 audit_profile=selected_audit_profile,
+                progress_callback=_ssh_progress_callback if ssh_progress else None,
             )
             scan_result["ssh_audit"] = ssh_result
             findings.extend(ssh_result.get("findings", []))
@@ -800,12 +842,19 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
         ("Audit profile", summary.get("audit_profile")),
         ("Profile description", summary.get("profile_description")),
         ("Enabled checks", _format_summary_list(summary.get("checks_enabled"))),
-        ("Skipped checks", _format_summary_list(summary.get("checks_skipped"))),
+        ("Profile-skipped checks", _format_summary_list(summary.get("profile_checks_skipped"))),
+        ("Checks planned", summary.get("checks_planned")),
         ("Checks completed", summary.get("checks_completed")),
         ("Checks failed", summary.get("checks_failed")),
+        ("Checks skipped", summary.get("checks_skipped")),
         ("Partial failures", summary.get("partial_failures")),
-        ("Command timeout seconds", summary.get("command_timeout_seconds")),
         ("Connection timeout seconds", summary.get("connection_timeout_seconds")),
+        ("Command timeout seconds", summary.get("command_timeout_seconds")),
+        ("Audit timeout seconds", summary.get("audit_timeout_seconds")),
+        ("Total SSH audit duration seconds", summary.get("total_duration_seconds")),
+        ("Timed out commands", summary.get("timed_out_commands")),
+        ("Slowest command", summary.get("slowest_command_name")),
+        ("Slowest command duration seconds", summary.get("slowest_command_duration_seconds")),
         ("OS family", summary.get("os_family")),
         ("Hostname", summary.get("hostname")),
         ("Package manager", summary.get("package_manager")),
@@ -822,8 +871,21 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
         table.add_row(label, "" if value is None else str(value))
     console.print(table)
     console.print(
+        "[bold]SSH audit performance:[/bold] "
+        f"{summary.get('checks_completed', 0)} checks completed, "
+        f"{summary.get('checks_skipped', 0)} checks skipped, "
+        f"{summary.get('timed_out_commands', 0)} command(s) timed out, "
+        f"{summary.get('total_duration_seconds') or 0} seconds total."
+    )
+    console.print(
         "[yellow]Authenticated SSH audit uses read-only commands and depends on the permissions of the provided account. Results should be reviewed in operational context.[/yellow]"
     )
+    if summary.get("performance_notes"):
+        console.print(f"[yellow]Performance notes:[/yellow] {_format_summary_list(summary.get('performance_notes'))}")
+
+
+def _ssh_progress_callback(message: str) -> None:
+    console.print(f"- {message}")
 
 
 def _affected_summary(finding: dict[str, Any]) -> str:
@@ -883,12 +945,20 @@ def _build_ssh_audit_summary(
         "audit_profile": audit_profile.name,
         "profile_description": audit_profile.description,
         "checks_enabled": list(audit_profile.checks_enabled),
-        "checks_skipped": list(audit_profile.checks_skipped),
+        "profile_checks_skipped": list(audit_profile.checks_skipped),
+        "checks_planned": int(ssh_audit.get("checks_planned") or 0),
         "checks_completed": int(ssh_audit.get("checks_completed") or 0),
         "checks_failed": int(ssh_audit.get("checks_failed") or 0),
+        "checks_skipped": int(ssh_audit.get("checks_skipped") or 0),
         "partial_failures": int(ssh_audit.get("partial_failures") or 0),
         "command_timeout_seconds": ssh_audit.get("command_timeout_seconds"),
         "connection_timeout_seconds": ssh_audit.get("connection_timeout_seconds"),
+        "audit_timeout_seconds": ssh_audit.get("audit_timeout_seconds"),
+        "total_duration_seconds": ssh_audit.get("total_duration_seconds"),
+        "timed_out_commands": int(ssh_audit.get("timed_out_commands") or 0),
+        "slowest_command_name": ssh_audit.get("slowest_command_name"),
+        "slowest_command_duration_seconds": ssh_audit.get("slowest_command_duration_seconds"),
+        "performance_notes": list(ssh_audit.get("performance_notes") or []),
         "os_family": ssh_audit.get("os_family"),
         "hostname": ssh_audit.get("hostname"),
         "kernel_summary": ssh_audit.get("kernel_summary"),
