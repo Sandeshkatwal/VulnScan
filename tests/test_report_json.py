@@ -37,8 +37,40 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
         "http_findings": [],
         "tls_findings": [],
         "ssh_findings": [],
+        "windows_findings": [
+            {
+                "id": "FINDING-0002",
+                "title": "WinRM Authentication Successful",
+                "severity": "Informational",
+                "category": "Windows Credentialed Access",
+                "affected_host": "127.0.0.1",
+                "affected_port": None,
+                "affected_url": None,
+                "service": "winrm",
+                "evidence": "WinRM authentication succeeded.",
+                "confidence": "High",
+                "impact": "Credentialed Windows auditing can be performed in later versions.",
+                "recommendation": "Use least-privilege accounts.",
+                "verification": "Re-run VulScan.",
+                "limitation": "Authentication success does not indicate vulnerability.",
+                "source": "windows_audit",
+                "risk_score": 0,
+                "risk_label": "Informational",
+                "fix_priority": "Document and monitor",
+                "created_at": "2026-05-16T10:00:00+00:00",
+            }
+        ],
         "ssh_audit": {"enabled": True, "status": "success"},
         "ssh_audit_summary": {"enabled": True, "status": "success"},
+        "windows_audit_summary": {
+            "enabled": True,
+            "status": "success",
+            "auth_method": "winrm",
+            "username_used": "auditor",
+            "winrm_auth_status": "authenticated",
+            "winrm_authenticated": True,
+            "winrm_endpoint_used": "http://127.0.0.1:5985/wsman",
+        },
         "credentialed_audits": [
             {
                 "source": "ssh_audit",
@@ -51,6 +83,21 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
                 "profile": "standard",
                 "duration_seconds": 1.0,
                 "checks_completed": 1,
+                "checks_failed": 0,
+                "checks_skipped": 0,
+                "findings": [],
+            },
+            {
+                "source": "windows_audit",
+                "module_name": "Windows WinRM Authentication Check",
+                "status": "success",
+                "target": "127.0.0.1",
+                "authenticated": True,
+                "auth_method": "winrm",
+                "username": "auditor",
+                "profile": "foundation",
+                "duration_seconds": 1.0,
+                "checks_completed": 6,
                 "checks_failed": 0,
                 "checks_skipped": 0,
                 "findings": [],
@@ -70,4 +117,6 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
     report = json.loads(path.read_text(encoding="utf-8"))
 
     assert report["credentialed_audits"][0]["source"] == "ssh_audit"
+    assert report["credentialed_audits"][1]["source"] == "windows_audit"
+    assert report["windows_audit_summary"]["winrm_auth_status"] == "authenticated"
     assert report["findings"][0]["title"] == "SSH Login Successful"

@@ -3,7 +3,7 @@
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
 Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
-Version 12.0 also adds a Windows SMB/WinRM audit foundation that performs safe socket reachability checks for SMB, WinRM, and RDP.
+Version 12.1 also includes Windows SMB/WinRM audit foundation checks and an optional single-attempt WinRM authentication validation using explicitly provided credentials.
 
 ## Requirements
 
@@ -48,7 +48,7 @@ Optional authenticated SSH audit for an authorised Linux system:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic --ssh-timeout 8 --ssh-command-timeout 10
 ```
 
-SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords, key values, or private key paths. Package and configuration checks are read-only and do not install, update, or modify packages or files. Results are indicators for authorised review, not a full CIS benchmark implementation. Use least-privilege credentials. Windows SMB/WinRM auditing is planned for a future version.
+SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords, key values, or private key paths. Package and configuration checks are read-only and do not install, update, or modify packages or files. Results are indicators for authorised review, not a full CIS benchmark implementation. Use least-privilege credentials. Windows WinRM authentication validation uses one explicitly provided username/password pair, runs only a harmless command such as `hostname`, and does not store or print the password.
 
 Credentialed SSH audit output includes a sanitized summary in terminal, JSON, and HTML reports. Passwords, key values, and private key paths are never included. Audit profiles apply only with `--ssh-audit`: `basic` is fastest with a 30 second default audit budget, `standard` is the default with 60 seconds, and `detailed` runs additional read-only configuration indicators with 90 seconds.
 
@@ -64,9 +64,10 @@ Windows audit foundation examples:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --windows-audit
 .\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method none
 .\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-user USER --windows-password PASSWORD --windows-domain WORKGROUP --windows-auth-method smb --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method winrm --windows-user USER --windows-password PASSWORD
 ```
 
-Version 12.0 Windows audit is foundation-only. It checks TCP reachability for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. It does not authenticate, exploit, brute force, enumerate shares, dump credentials, modify systems, or restart services. Passwords are not stored or printed.
+Version 12.1 Windows audit checks TCP reachability for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. With `--windows-auth-method winrm`, it requires `--windows-user` and `--windows-password`, prefers HTTPS on 5986 over HTTP on 5985, uses `pywinrm` when installed, and performs one safe read-only validation command only. It does not run deep Windows enumeration, registry queries, patch checks, share enumeration, exploitation, brute forcing, credential dumping, system modification, or service restarts. Passwords are not stored or printed. WinRM should be restricted to trusted networks; deeper authenticated Windows policy and patch checks are planned for later versions.
 
 You can also use the helper script:
 

@@ -127,14 +127,14 @@ def scan(
         str | None,
         typer.Option(
             "--windows-user",
-            help="Username for future Windows credentialed audit. Password is not stored or printed.",
+            help="Username for Windows WinRM authentication validation. Password is not stored or printed.",
         ),
     ] = None,
     windows_password: Annotated[
         str | None,
         typer.Option(
             "--windows-password",
-            help="Password for future Windows credentialed audit. Not stored or printed.",
+            help="Password for Windows WinRM authentication validation. Not stored or printed.",
         ),
     ] = None,
     windows_domain: Annotated[
@@ -148,7 +148,7 @@ def scan(
         str,
         typer.Option(
             "--windows-auth-method",
-            help="Windows auth method foundation setting: none, smb, or winrm.",
+            help="Windows auth method: none, smb foundation metadata, or winrm authentication validation.",
         ),
     ] = "none",
     ssh_audit: Annotated[
@@ -989,6 +989,12 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         ("WinRM HTTP reachable", summary.get("winrm_http_reachable")),
         ("WinRM HTTPS reachable", summary.get("winrm_https_reachable")),
         ("RDP reachable", summary.get("rdp_reachable")),
+        ("WinRM authentication attempted", summary.get("winrm_auth_attempted")),
+        ("WinRM authentication status", summary.get("winrm_auth_status")),
+        ("WinRM endpoint used", summary.get("winrm_endpoint_used")),
+        ("WinRM transport", summary.get("winrm_transport")),
+        ("Safe validation command", summary.get("safe_validation_command")),
+        ("Validation result summary", summary.get("validation_result_summary")),
         ("Findings count", summary.get("findings_count")),
         (
             "Highest Windows risk",
@@ -998,8 +1004,11 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
     for label, value in rows:
         table.add_row(label, "" if value is None else str(value))
     console.print(table)
+    limitations = summary.get("limitations")
+    if limitations:
+        console.print(f"[yellow]Windows audit limitations:[/yellow] {_format_summary_list(limitations)}")
     console.print(
-        "[yellow]Windows audit foundation uses socket reachability checks only. It does not authenticate, enumerate shares, exploit, brute force, dump credentials, or modify systems.[/yellow]"
+        "[yellow]Windows audit uses safe reachability checks and, when requested, one WinRM authentication validation command only. It does not enumerate shares, exploit, brute force, dump credentials, or modify systems.[/yellow]"
     )
 
 

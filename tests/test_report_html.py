@@ -14,8 +14,31 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
         "http_findings": [],
         "tls_findings": [],
         "ssh_findings": [],
+        "windows_findings": [],
         "ssh_audit": {"enabled": True, "status": "success"},
         "ssh_audit_summary": {"enabled": True, "status": "success"},
+        "windows_audit_summary": {
+            "enabled": True,
+            "status": "success",
+            "auth_method": "winrm",
+            "username_used": "auditor",
+            "domain": "WORKGROUP",
+            "smb_reachable": False,
+            "winrm_http_reachable": True,
+            "winrm_https_reachable": False,
+            "rdp_reachable": False,
+            "winrm_auth_attempted": True,
+            "winrm_auth_status": "authenticated",
+            "winrm_error_code": "WINRM_AUTH_SUCCESS",
+            "winrm_endpoint_used": "http://127.0.0.1:5985/wsman",
+            "winrm_transport": "ntlm",
+            "safe_validation_command": "hostname",
+            "validation_result_summary": "LABHOST",
+            "findings_count": 1,
+            "highest_windows_risk_score": 0,
+            "highest_windows_risk_label": "Informational",
+            "limitations": ["Validation only."],
+        },
         "credentialed_audits": [
             {
                 "source": "ssh_audit",
@@ -28,6 +51,21 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
                 "profile": "standard",
                 "duration_seconds": 1.0,
                 "checks_completed": 1,
+                "checks_failed": 0,
+                "checks_skipped": 0,
+                "findings": [],
+            },
+            {
+                "source": "windows_audit",
+                "module_name": "Windows WinRM Authentication Check",
+                "status": "success",
+                "target": "127.0.0.1",
+                "authenticated": True,
+                "auth_method": "winrm",
+                "username": "auditor",
+                "profile": "foundation",
+                "duration_seconds": 1.0,
+                "checks_completed": 6,
                 "checks_failed": 0,
                 "checks_skipped": 0,
                 "findings": [],
@@ -48,3 +86,6 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
 
     assert "Credentialed Audit Modules" in html
     assert "Authenticated SSH Audit" in html
+    assert "Windows WinRM Authentication Check" in html
+    assert "LABHOST" in html
+    assert "SENSITIVE_VALUE" not in html

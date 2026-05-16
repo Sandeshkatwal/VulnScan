@@ -427,6 +427,14 @@
       <p><strong>WinRM HTTP reachable:</strong> {{ report.windows_audit_summary.winrm_http_reachable }}</p>
       <p><strong>WinRM HTTPS reachable:</strong> {{ report.windows_audit_summary.winrm_https_reachable }}</p>
       <p><strong>RDP reachable:</strong> {{ report.windows_audit_summary.rdp_reachable }}</p>
+      <h3>WinRM Authentication</h3>
+      <p><strong>Attempted:</strong> {{ report.windows_audit_summary.winrm_auth_attempted }}</p>
+      <p><strong>Status:</strong> {{ report.windows_audit_summary.winrm_auth_status or "" }}</p>
+      <p><strong>Error code:</strong> {{ report.windows_audit_summary.winrm_error_code or "" }}</p>
+      <p><strong>Endpoint used:</strong> {{ report.windows_audit_summary.winrm_endpoint_used or "" }}</p>
+      <p><strong>Transport:</strong> {{ report.windows_audit_summary.winrm_transport or "" }}</p>
+      <p><strong>Safe validation command:</strong> {{ report.windows_audit_summary.safe_validation_command or "" }}</p>
+      <p><strong>Validation result summary:</strong> {{ report.windows_audit_summary.validation_result_summary or "" }}</p>
       <p><strong>Findings count:</strong> {{ report.windows_audit_summary.findings_count }}</p>
       <p><strong>Highest Windows risk:</strong> {{ report.windows_audit_summary.highest_windows_risk_score }} ({{ report.windows_audit_summary.highest_windows_risk_label }})</p>
       {% if report.windows_audit_summary.service_statuses %}
@@ -455,7 +463,13 @@
         </tbody>
       </table>
       {% endif %}
-      <p><strong>Limitations:</strong> {{ report.windows_audit_summary.limitations }}</p>
+      <p><strong>Limitations:</strong>
+        {% if report.windows_audit_summary.limitations is string %}
+          {{ report.windows_audit_summary.limitations }}
+        {% else %}
+          {{ report.windows_audit_summary.limitations | join("; ") }}
+        {% endif %}
+      </p>
       {% else %}
       <p class="empty">Windows SMB/WinRM Audit was not requested.</p>
       {% endif %}
@@ -607,7 +621,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall bypassing, cipher probing, protocol downgrade testing, or CVE validation.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command only. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
     </section>
   </main>
 </body>

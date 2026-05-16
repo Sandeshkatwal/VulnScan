@@ -159,7 +159,7 @@ To run the optional authenticated SSH audit against an authorised Linux system:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic --ssh-timeout 8 --ssh-command-timeout 10
 ```
 
-SSH audit is for authorised Linux systems only. Use least-privilege credentials. VulScan attempts one SSH login, runs read-only inspection commands only, and does not run `sudo`, modify files, install packages, update packages, restart services, exploit, brute force, guess passwords, or attempt privilege escalation. SSH passwords, key values, and private key paths are not stored in reports, the SQLite database, logs, or terminal output. The SSH audit summary appears in terminal, JSON, and HTML output, and SSH findings are grouped by source. Windows SMB/WinRM auditing is planned for a future version.
+SSH audit is for authorised Linux systems only. Use least-privilege credentials. VulScan attempts one SSH login, runs read-only inspection commands only, and does not run `sudo`, modify files, install packages, update packages, restart services, exploit, brute force, guess passwords, or attempt privilege escalation. SSH passwords, key values, and private key paths are not stored in reports, the SQLite database, logs, or terminal output. The SSH audit summary appears in terminal, JSON, and HTML output, and SSH findings are grouped by source. Windows SMB/WinRM auditing currently provides safe reachability checks and optional WinRM authentication validation only.
 
 Credentialed audit profiles apply only with `--ssh-audit`. `standard` is the default. `basic` performs fast login, OS, and SSH hardening checks. `standard` adds package, firewall, and logging indicators. `detailed` adds password policy, temporary directory sticky-bit, and cleartext service exposure indicators. All profiles are read-only; `detailed` may take slightly longer.
 
@@ -171,17 +171,20 @@ Package checks over SSH are read-only. VulScan detects package managers with `co
 
 Linux configuration audit checks over SSH are read-only and require authorised SSH credentials. VulScan reviews firewall indicators, logging service indicators, local password policy indicators, temporary directory sticky-bit indicators, cleartext service exposure indicators, and basic hostname/OS information. Results are indicators that need operational review. This is not a full CIS benchmark implementation yet, but it prepares the framework for CIS-style templates.
 
-Version 12.0 adds Windows SMB/WinRM audit foundation checks:
+Version 12.1 includes Windows SMB/WinRM audit foundation checks and optional safe WinRM authentication validation:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --windows-audit
 .\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method none
 .\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-user USER --windows-password PASSWORD --windows-domain WORKGROUP --windows-auth-method smb --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method winrm --windows-domain WORKGROUP --windows-user USER --windows-password PASSWORD --json --html --save-db
 ```
 
-The Windows foundation checks use safe TCP socket reachability only for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. Version 12.0 does not authenticate, exploit, brute force, enumerate shares, dump credentials, modify systems, or restart services. Passwords are not stored or printed. Deeper authenticated Windows SMB/WinRM checks are planned for later versions.
+The Windows foundation checks use safe TCP socket reachability only for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. With `--windows-auth-method winrm`, VulScan requires an explicitly provided username and password, selects HTTPS 5986 when reachable before HTTP 5985, uses `pywinrm` if installed, and performs one harmless command such as `hostname` to validate authentication. If `pywinrm` is missing, VulScan reports a friendly dependency-missing result instead of crashing.
 
-The pytest suite uses fake SSH audit fixtures in `tests\fixtures` and mocked command output. Tests do not require internet access, a live SSH server, or real SSH credentials. Runtime SSH testing still requires authorised Linux credentials.
+Version 12.1 does not run deep Windows enumeration, registry queries, patch enumeration, share enumeration, process listing, file listing, credential dumping, privilege checks, exploitation, brute forcing, system modification, or service restarts. Passwords are not stored or printed. WinRM should be enabled only where required and restricted to trusted networks. Deeper authenticated Windows policy and patch checks are planned for later versions.
+
+The pytest suite uses fake SSH audit fixtures, mocked socket reachability, and mocked WinRM behavior. Tests do not require internet access, a live SSH server, a live WinRM server, or real credentials. Runtime SSH testing still requires authorised Linux credentials.
 
 You can also run the included helper script:
 
