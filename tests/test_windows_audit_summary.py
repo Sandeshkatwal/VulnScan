@@ -151,6 +151,13 @@ def test_windows_credentialed_audit_summary_includes_host_info_fields() -> None:
             "workgroup": "",
             "powershell_version": "5.1",
         },
+        "windows_security_status": {
+            "firewall_profiles": [
+                {"name": "Domain", "enabled": "True"},
+                {"name": "Private", "enabled": "False"},
+            ],
+            "defender_status": {"real_time_protection_enabled": "False"},
+        },
     }
 
     audits = _build_windows_credentialed_audits(
@@ -164,4 +171,8 @@ def test_windows_credentialed_audit_summary_includes_host_info_fields() -> None:
     assert summary["hostname"] == "LABHOST"
     assert summary["os_caption"] == "Microsoft Windows Server 2022 Standard"
     assert summary["domain_or_workgroup"] == "WORKGROUP"
+    assert summary["firewall_profiles_checked"] == 2
+    assert summary["firewall_disabled_profiles_count"] == 1
+    assert summary["defender_realtime_enabled"] == "False"
     assert audits[0]["metadata"]["windows_host_info"]["os_build"] == "20348"
+    assert audits[0]["metadata"]["windows_security_status"]["firewall_profiles"][1]["enabled"] == "False"

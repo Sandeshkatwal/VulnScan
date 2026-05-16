@@ -470,6 +470,60 @@
         </tbody>
       </table>
       {% endif %}
+      <h3>Windows Security Status</h3>
+      <p><strong>Checked:</strong> {{ report.windows_audit_summary.windows_security_status_checked }}</p>
+      <p><strong>Status:</strong> {{ report.windows_audit_summary.windows_security_status_status or "" }}</p>
+      {% if report.windows_audit_summary.windows_security_status_checked and report.windows_audit_summary.windows_security_status %}
+      {% if report.windows_audit_summary.windows_security_status.firewall_profiles %}
+      <table>
+        <thead>
+          <tr>
+            <th>Firewall profile</th>
+            <th>Enabled</th>
+            <th>Default inbound</th>
+            <th>Default outbound</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for profile in report.windows_audit_summary.windows_security_status.firewall_profiles %}
+          <tr>
+            <td>{{ profile.name }}</td>
+            <td>{{ profile.enabled }}</td>
+            <td>{{ profile.default_inbound_action }}</td>
+            <td>{{ profile.default_outbound_action }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      <table>
+        <thead>
+          <tr>
+            <th>Defender service</th>
+            <th>Start type</th>
+            <th>Real-time protection</th>
+            <th>Antivirus enabled</th>
+            <th>AM service enabled</th>
+            <th>AV signature updated</th>
+            <th>AS signature updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.windows_audit_summary.windows_security_status.defender_service.status }}</td>
+            <td>{{ report.windows_audit_summary.windows_security_status.defender_service.start_type }}</td>
+            <td>{{ report.windows_audit_summary.windows_security_status.defender_status.real_time_protection_enabled }}</td>
+            <td>{{ report.windows_audit_summary.windows_security_status.defender_status.antivirus_enabled }}</td>
+            <td>{{ report.windows_audit_summary.windows_security_status.defender_status.am_service_enabled }}</td>
+            <td>{{ report.windows_audit_summary.windows_security_status.defender_status.antivirus_signature_last_updated }}</td>
+            <td>{{ report.windows_audit_summary.windows_security_status.defender_status.antispyware_signature_last_updated }}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% if report.windows_audit_summary.windows_security_status.security_status_limitations %}
+      <p><strong>Security status limitations:</strong> {{ report.windows_audit_summary.windows_security_status.security_status_limitations | join("; ") }}</p>
+      {% endif %}
+      {% endif %}
       <p><strong>Findings count:</strong> {{ report.windows_audit_summary.findings_count }}</p>
       <p><strong>Highest Windows risk:</strong> {{ report.windows_audit_summary.highest_windows_risk_score }} ({{ report.windows_audit_summary.highest_windows_risk_label }})</p>
       {% if report.windows_audit_summary.service_statuses %}
@@ -656,7 +710,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command only. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information and Firewall/Defender status commands. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
     </section>
   </main>
 </body>

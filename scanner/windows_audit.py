@@ -18,6 +18,7 @@ from scanner.finding import Finding, create_finding, finding_to_dict
 
 
 SOURCE = "windows_audit"
+SECURITY_SOURCE = "windows_security_audit"
 MODULE_NAME = "Windows WinRM Authentication Check"
 FOUNDATION_MODULE_NAME = "Windows SMB/WinRM Audit Foundation"
 PROFILE = "foundation"
@@ -40,6 +41,20 @@ WINDOWS_HOST_INFO_COMMANDS = {
     ),
     "timezone": "Get-TimeZone | Select-Object Id, DisplayName | ConvertTo-Json -Compress",
 }
+WINDOWS_SECURITY_STATUS_COMMANDS = {
+    "firewall_profiles": (
+        "Get-NetFirewallProfile | "
+        "Select-Object Name, Enabled, DefaultInboundAction, DefaultOutboundAction | "
+        "ConvertTo-Json -Compress"
+    ),
+    "defender_service": "Get-Service WinDefend | Select-Object Name, Status, StartType | ConvertTo-Json -Compress",
+    "defender_status": (
+        "Get-MpComputerStatus | "
+        "Select-Object AMServiceEnabled, AntispywareEnabled, AntivirusEnabled, RealTimeProtectionEnabled, "
+        "BehaviorMonitorEnabled, IoavProtectionEnabled, NISEnabled, AntivirusSignatureLastUpdated, "
+        "AntispywareSignatureLastUpdated | ConvertTo-Json -Compress"
+    ),
+}
 EMPTY_WINDOWS_HOST_INFO = {
     "hostname": "",
     "current_identity": "",
@@ -58,14 +73,33 @@ EMPTY_WINDOWS_HOST_INFO = {
     "timezone_id": "",
     "timezone_display_name": "",
 }
+EMPTY_WINDOWS_SECURITY_STATUS = {
+    "firewall_profiles": [],
+    "defender_service": {"status": "", "start_type": ""},
+    "defender_status": {
+        "am_service_enabled": "",
+        "antispyware_enabled": "",
+        "antivirus_enabled": "",
+        "real_time_protection_enabled": "",
+        "behavior_monitor_enabled": "",
+        "ioav_protection_enabled": "",
+        "nis_enabled": "",
+        "antivirus_signature_last_updated": "",
+        "antispyware_signature_last_updated": "",
+    },
+    "security_status_limitations": [],
+}
 
 ERROR_INVALID_AUTH_METHOD = "WINDOWS_AUTH_METHOD_INVALID"
 ERROR_PASSWORD_WITHOUT_USERNAME = "WINDOWS_PASSWORD_WITHOUT_USERNAME"
 ERROR_WINRM_CREDENTIALS_MISSING = "WINRM_CREDENTIALS_MISSING"
 ERROR_WINDOWS_HOST_INFO_PREREQUISITES = "WINDOWS_HOST_INFO_PREREQUISITES_MISSING"
+ERROR_WINDOWS_SECURITY_STATUS_PREREQUISITES = "WINDOWS_SECURITY_STATUS_PREREQUISITES_MISSING"
 ERROR_SERVICE_CHECK_FAILED = "WINDOWS_AUDIT_SERVICE_CHECK_FAILED"
 ERROR_WINDOWS_HOST_INFO_FAILED = "WINDOWS_HOST_INFO_FAILED"
 ERROR_WINDOWS_HOST_INFO_TIMEOUT = "WINDOWS_HOST_INFO_TIMEOUT"
+ERROR_WINDOWS_SECURITY_STATUS_FAILED = "WINDOWS_SECURITY_STATUS_FAILED"
+ERROR_WINDOWS_SECURITY_STATUS_TIMEOUT = "WINDOWS_SECURITY_STATUS_TIMEOUT"
 WINRM_AUTH_SUCCESS = "WINRM_AUTH_SUCCESS"
 WINRM_AUTH_FAILED = "WINRM_AUTH_FAILED"
 WINRM_NOT_REACHABLE = "WINRM_NOT_REACHABLE"
@@ -128,6 +162,7 @@ def validate_windows_audit_options(
     windows_password: str | None,
     windows_auth_method: str,
     windows_host_info: bool = False,
+    windows_security_status: bool = False,
 ) -> str:
     """Validate Windows audit options without exposing credential values."""
     normalized_method = (windows_auth_method or "none").strip().lower()
@@ -142,6 +177,11 @@ def validate_windows_audit_options(
             raise WindowsAuditConfigurationError(
                 "--windows-host-info requires --windows-audit.",
                 ERROR_WINDOWS_HOST_INFO_PREREQUISITES,
+            )
+        if windows_security_status:
+            raise WindowsAuditConfigurationError(
+                "--windows-security-status requires --windows-audit.",
+                ERROR_WINDOWS_SECURITY_STATUS_PREREQUISITES,
             )
         return normalized_method
     if windows_password and not (windows_user and windows_user.strip()):
@@ -161,6 +201,11 @@ def validate_windows_audit_options(
             "--windows-host-info requires --windows-auth-method winrm.",
             ERROR_WINDOWS_HOST_INFO_PREREQUISITES,
         )
+    if windows_security_status and normalized_method != "winrm":
+        raise WindowsAuditConfigurationError(
+            "--windows-security-status requires --windows-auth-method winrm.",
+            ERROR_WINDOWS_SECURITY_STATUS_PREREQUISITES,
+        )
     return normalized_method
 
 
@@ -173,6 +218,7 @@ def audit_windows_host(
     domain: str | None = None,
     auth_method: str = "none",
     collect_host_info: bool = False,
+    collect_security_status: bool = False,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Run safe Windows service reachability checks and optional single WinRM auth validation."""
@@ -184,6 +230,7 @@ def audit_windows_host(
         windows_password=password,
         windows_auth_method=auth_method,
         windows_host_info=collect_host_info,
+        windows_security_status=collect_security_status,
     )
 
     service_statuses = [
@@ -198,6 +245,7 @@ def audit_windows_host(
             domain=domain,
             service_statuses=service_statuses,
             collect_host_info=collect_host_info,
+            collect_security_status=collect_security_status,
             timeout=timeout,
         )
     findings = _build_windows_findings(target, service_statuses)
@@ -205,15 +253,25 @@ def audit_windows_host(
         findings.append(_winrm_auth_finding(target, winrm_auth))
     if collect_host_info:
         findings.extend(_host_info_findings(target, winrm_auth))
+    if collect_security_status:
+        findings.extend(_security_status_findings(target, winrm_auth))
     findings.append(_completed_finding(target, service_statuses, winrm_auth, normalized_method))
     checks_failed = sum(1 for status in service_statuses if status.get("error_code"))
     if winrm_auth["attempted"] and winrm_auth["status"] != "authenticated":
         checks_failed += 1
     if collect_host_info and winrm_auth.get("host_info_status") == "failed":
         checks_failed += 1
+    if collect_security_status and winrm_auth.get("security_status_status") in {"failed", "partial"}:
+        checks_failed += 1
     status = (
         "partial"
-        if collect_host_info and winrm_auth.get("authenticated") and winrm_auth.get("host_info_status") == "failed"
+        if (
+            winrm_auth.get("authenticated")
+            and (
+                (collect_host_info and winrm_auth.get("host_info_status") == "failed")
+                or (collect_security_status and winrm_auth.get("security_status_status") in {"failed", "partial"})
+            )
+        )
         else _audit_status(checks_failed=checks_failed)
     )
     duration = round(perf_counter() - started, 3)
@@ -254,6 +312,20 @@ def audit_windows_host(
         )
         if host_info_error:
             errors.append(host_info_error)
+    if collect_security_status and winrm_auth.get("security_status_status") in {"failed", "partial"}:
+        security_status_error = build_error(
+            error_code=winrm_auth.get("security_status_error_code") or ERROR_WINDOWS_SECURITY_STATUS_FAILED,
+            message=str(
+                winrm_auth.get("security_status_error_message")
+                or "Windows security status collection failed."
+            ),
+            source=SECURITY_SOURCE,
+            check_name="Windows security status",
+            severity="error",
+            safe_detail=str(winrm_auth.get("security_status_safe_detail") or ""),
+        )
+        if security_status_error:
+            errors.append(security_status_error)
     summary = _build_summary(
         target=target,
         username=username,
@@ -379,6 +451,13 @@ def _initial_winrm_auth_result() -> dict[str, Any]:
         "host_info_safe_detail": "",
         "host_info": dict(EMPTY_WINDOWS_HOST_INFO),
         "host_info_commands_completed": 0,
+        "security_status_requested": False,
+        "security_status_status": "skipped",
+        "security_status_error_code": "",
+        "security_status_error_message": "",
+        "security_status_safe_detail": "",
+        "security_status": dict(EMPTY_WINDOWS_SECURITY_STATUS),
+        "security_status_commands_completed": 0,
     }
 
 
@@ -390,6 +469,7 @@ def _perform_winrm_auth_check(
     domain: str | None,
     service_statuses: list[dict[str, Any]],
     collect_host_info: bool,
+    collect_security_status: bool,
     timeout: float,
 ) -> dict[str, Any]:
     started = perf_counter()
@@ -402,6 +482,7 @@ def _perform_winrm_auth_check(
             message="WinRM authentication was requested, but ports 5985 and 5986 were not reachable.",
             limitations="WinRM may be disabled, filtered by a firewall, or intentionally unavailable.",
             host_info_requested=collect_host_info,
+            security_status_requested=collect_security_status,
         )
 
     try:
@@ -416,6 +497,7 @@ def _perform_winrm_auth_check(
             transport="ntlm",
             limitations="Install pywinrm in the VulScan virtual environment to enable this check.",
             host_info_requested=collect_host_info,
+            security_status_requested=collect_security_status,
         )
 
     endpoint_url = str(endpoint["url"])
@@ -445,6 +527,7 @@ def _perform_winrm_auth_check(
             safe_detail=exc.__class__.__name__,
             limitations=limitations,
             host_info_requested=collect_host_info,
+            security_status_requested=collect_security_status,
         )
     except Exception as exc:  # pywinrm exposes transport/auth failures through several exception classes.
         error_code = _classify_winrm_exception(exc)
@@ -458,12 +541,18 @@ def _perform_winrm_auth_check(
             safe_detail=exc.__class__.__name__,
             limitations=limitations,
             host_info_requested=collect_host_info,
+            security_status_requested=collect_security_status,
         )
 
     status_code = int(getattr(response, "status_code", 1) or 0)
     if status_code == 0:
         host_info_result = (
             _collect_windows_host_info(session) if collect_host_info else _initial_host_info_result(False)
+        )
+        security_status_result = (
+            _collect_windows_security_status(session)
+            if collect_security_status
+            else _initial_security_status_result(False)
         )
         return _winrm_auth_result(
             started=started,
@@ -477,6 +566,8 @@ def _perform_winrm_auth_check(
             limitations=limitations,
             host_info_requested=collect_host_info,
             host_info_result=host_info_result,
+            security_status_requested=collect_security_status,
+            security_status_result=security_status_result,
         )
 
     return _winrm_auth_result(
@@ -489,6 +580,7 @@ def _perform_winrm_auth_check(
         safe_detail=f"status_code={status_code}",
         limitations=limitations,
         host_info_requested=collect_host_info,
+        security_status_requested=collect_security_status,
     )
 
 
@@ -594,13 +686,17 @@ def _safe_output_text(value: Any) -> str:
 
 
 def _json_object(value: str) -> dict[str, Any]:
-    if not value:
-        return {}
-    parsed = json.loads(value)
+    parsed = _json_value(value)
     if isinstance(parsed, list):
         first = parsed[0] if parsed else {}
         return first if isinstance(first, dict) else {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def _json_value(value: str) -> Any:
+    if not value:
+        return {}
+    return json.loads(value)
 
 
 def _build_host_info(
@@ -650,6 +746,139 @@ def _initial_host_info_result(requested: bool) -> dict[str, Any]:
     }
 
 
+def _collect_windows_security_status(session: Any) -> dict[str, Any]:
+    completed = 0
+    limitations: list[str] = []
+    firewall_profiles: list[dict[str, str]] = []
+    defender_service: dict[str, str] = {"status": "", "start_type": ""}
+    defender_status = dict(EMPTY_WINDOWS_SECURITY_STATUS["defender_status"])
+
+    try:
+        firewall_profiles = _firewall_profiles_from_output(
+            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["firewall_profiles"])
+        )
+        completed += 1
+    except TimeoutError as exc:
+        return _security_status_error(ERROR_WINDOWS_SECURITY_STATUS_TIMEOUT, exc, completed)
+    except Exception as exc:
+        limitations.append(f"Firewall profile status unavailable: {exc.__class__.__name__}.")
+
+    try:
+        defender_service = _defender_service_from_output(
+            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["defender_service"])
+        )
+        completed += 1
+    except TimeoutError as exc:
+        return _security_status_error(ERROR_WINDOWS_SECURITY_STATUS_TIMEOUT, exc, completed)
+    except Exception as exc:
+        limitations.append(f"Defender service status unavailable: {exc.__class__.__name__}.")
+
+    try:
+        defender_status = _defender_status_from_output(
+            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["defender_status"])
+        )
+        completed += 1
+    except TimeoutError as exc:
+        return _security_status_error(ERROR_WINDOWS_SECURITY_STATUS_TIMEOUT, exc, completed)
+    except Exception as exc:
+        limitations.append(f"Defender computer status unavailable: {exc.__class__.__name__}.")
+
+    security_status = {
+        "firewall_profiles": firewall_profiles,
+        "defender_service": defender_service,
+        "defender_status": defender_status,
+        "security_status_limitations": limitations,
+    }
+    has_data = bool(firewall_profiles or any(defender_service.values()) or any(defender_status.values()))
+    if has_data and limitations:
+        status = "partial"
+    elif has_data:
+        status = "checked"
+    else:
+        status = "failed"
+    result = _initial_security_status_result(True)
+    result.update(
+        {
+            "status": status,
+            "security_status": security_status,
+            "commands_completed": completed,
+            "error_code": "" if status == "checked" else ERROR_WINDOWS_SECURITY_STATUS_FAILED,
+            "error_message": ""
+            if status == "checked"
+            else "One or more Windows security status commands failed or returned incomplete data.",
+            "safe_detail": "; ".join(limitations),
+        }
+    )
+    return result
+
+
+def _security_status_error(error_code: str, exc: Exception, commands_completed: int) -> dict[str, Any]:
+    result = _initial_security_status_result(True)
+    result.update(
+        {
+            "status": "failed",
+            "error_code": error_code,
+            "error_message": "Windows security status collection failed.",
+            "safe_detail": exc.__class__.__name__,
+            "commands_completed": commands_completed,
+        }
+    )
+    return result
+
+
+def _initial_security_status_result(requested: bool) -> dict[str, Any]:
+    return {
+        "requested": requested,
+        "status": "skipped",
+        "error_code": "",
+        "error_message": "",
+        "safe_detail": "",
+        "security_status": dict(EMPTY_WINDOWS_SECURITY_STATUS),
+        "commands_completed": 0,
+    }
+
+
+def _firewall_profiles_from_output(value: str) -> list[dict[str, str]]:
+    parsed = _json_value(value)
+    items = parsed if isinstance(parsed, list) else [parsed]
+    profiles: list[dict[str, str]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        profiles.append(
+            {
+                "name": _short_value(item.get("Name")),
+                "enabled": _short_value(item.get("Enabled")),
+                "default_inbound_action": _short_value(item.get("DefaultInboundAction")),
+                "default_outbound_action": _short_value(item.get("DefaultOutboundAction")),
+            }
+        )
+    return profiles
+
+
+def _defender_service_from_output(value: str) -> dict[str, str]:
+    data = _json_object(value)
+    return {
+        "status": _short_value(data.get("Status")),
+        "start_type": _short_value(data.get("StartType")),
+    }
+
+
+def _defender_status_from_output(value: str) -> dict[str, str]:
+    data = _json_object(value)
+    return {
+        "am_service_enabled": _short_value(data.get("AMServiceEnabled")),
+        "antispyware_enabled": _short_value(data.get("AntispywareEnabled")),
+        "antivirus_enabled": _short_value(data.get("AntivirusEnabled")),
+        "real_time_protection_enabled": _short_value(data.get("RealTimeProtectionEnabled")),
+        "behavior_monitor_enabled": _short_value(data.get("BehaviorMonitorEnabled")),
+        "ioav_protection_enabled": _short_value(data.get("IoavProtectionEnabled")),
+        "nis_enabled": _short_value(data.get("NISEnabled")),
+        "antivirus_signature_last_updated": _short_value(data.get("AntivirusSignatureLastUpdated")),
+        "antispyware_signature_last_updated": _short_value(data.get("AntispywareSignatureLastUpdated")),
+    }
+
+
 def _classify_winrm_exception(exc: Exception) -> str:
     name = exc.__class__.__name__.lower()
     text = str(exc).lower()
@@ -694,8 +923,11 @@ def _winrm_auth_result(
     limitations: str,
     host_info_requested: bool = False,
     host_info_result: dict[str, Any] | None = None,
+    security_status_requested: bool = False,
+    security_status_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     host_result = host_info_result or _initial_host_info_result(host_info_requested)
+    security_result = security_status_result or _initial_security_status_result(security_status_requested)
     return {
         "attempted": True,
         "status": status,
@@ -716,6 +948,13 @@ def _winrm_auth_result(
         "host_info_safe_detail": host_result.get("safe_detail") or "",
         "host_info": host_result.get("host_info") or dict(EMPTY_WINDOWS_HOST_INFO),
         "host_info_commands_completed": int(host_result.get("commands_completed") or 0),
+        "security_status_requested": bool(security_result.get("requested")),
+        "security_status_status": security_result.get("status") or "skipped",
+        "security_status_error_code": security_result.get("error_code") or "",
+        "security_status_error_message": security_result.get("error_message") or "",
+        "security_status_safe_detail": security_result.get("safe_detail") or "",
+        "security_status": security_result.get("security_status") or dict(EMPTY_WINDOWS_SECURITY_STATUS),
+        "security_status_commands_completed": int(security_result.get("commands_completed") or 0),
     }
 
 
@@ -891,6 +1130,125 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
     ]
 
 
+def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding]:
+    if not winrm_auth.get("authenticated"):
+        return []
+
+    security_status = dict(winrm_auth.get("security_status") or {})
+    firewall_profiles = list(security_status.get("firewall_profiles") or [])
+    defender_service = dict(security_status.get("defender_service") or {})
+    defender_status = dict(security_status.get("defender_status") or {})
+    findings: list[Finding] = []
+
+    disabled_profiles = [
+        profile for profile in firewall_profiles if str(profile.get("enabled") or "").lower() == "false"
+    ]
+    if disabled_profiles:
+        findings.append(
+            create_finding(
+                title="Windows Firewall Profile Disabled",
+                severity="Medium",
+                category="Windows Firewall",
+                affected_host=target,
+                service="winrm",
+                evidence="One or more Windows Firewall profiles reported Enabled=False.",
+                confidence="Medium",
+                impact="Disabled firewall profiles may allow unwanted inbound network access.",
+                recommendation="Enable Windows Firewall profiles unless a documented compensating control exists.",
+                verification="Run Get-NetFirewallProfile and review Enabled state.",
+                limitation="Domain policy or third-party firewall controls may affect interpretation.",
+                source=SECURITY_SOURCE,
+            )
+        )
+    if firewall_profiles:
+        findings.append(
+            create_finding(
+                title="Windows Firewall Status Reviewed",
+                severity="Informational",
+                category="Windows Firewall",
+                affected_host=target,
+                service="winrm",
+                evidence="Firewall profile status was collected using read-only PowerShell.",
+                confidence="High",
+                impact="Firewall status supports host exposure review.",
+                recommendation="Review firewall profile settings according to organisational policy.",
+                verification="Run Get-NetFirewallProfile.",
+                limitation="This check does not enumerate individual firewall rules.",
+                source=SECURITY_SOURCE,
+            )
+        )
+
+    if defender_service and str(defender_service.get("status") or "").lower() not in {"", "running"}:
+        findings.append(
+            create_finding(
+                title="Microsoft Defender Service Not Running",
+                severity="Medium",
+                category="Endpoint Protection",
+                affected_host=target,
+                service="windefend",
+                evidence="WinDefend service status is not Running.",
+                confidence="Medium",
+                impact="Endpoint protection may not be active.",
+                recommendation="Verify Microsoft Defender or approved alternative endpoint protection is active.",
+                verification="Run Get-Service WinDefend.",
+                limitation="Third-party antivirus may be used instead of Defender.",
+                source=SECURITY_SOURCE,
+            )
+        )
+    if str(defender_status.get("real_time_protection_enabled") or "").lower() == "false":
+        findings.append(
+            create_finding(
+                title="Microsoft Defender Real-Time Protection Disabled",
+                severity="High",
+                category="Endpoint Protection",
+                affected_host=target,
+                service="defender",
+                evidence="RealTimeProtectionEnabled=False from Get-MpComputerStatus.",
+                confidence="Medium",
+                impact="Malware protection may be reduced.",
+                recommendation="Enable real-time protection or verify approved compensating controls.",
+                verification="Run Get-MpComputerStatus and check RealTimeProtectionEnabled.",
+                limitation="Some enterprise policies or third-party EDR solutions may change Defender behaviour.",
+                source=SECURITY_SOURCE,
+            )
+        )
+    if any(defender_status.values()):
+        findings.append(
+            create_finding(
+                title="Microsoft Defender Status Reviewed",
+                severity="Informational",
+                category="Endpoint Protection",
+                affected_host=target,
+                service="defender",
+                evidence="Defender status was collected using read-only PowerShell.",
+                confidence="High",
+                impact="Endpoint protection status supports security posture review.",
+                recommendation="Review Defender/EDR posture according to organisational policy.",
+                verification="Run Get-MpComputerStatus.",
+                limitation="Get-MpComputerStatus may be unavailable or restricted on some systems.",
+                source=SECURITY_SOURCE,
+            )
+        )
+    if winrm_auth.get("security_status_status") == "failed" or security_status.get("security_status_limitations"):
+        findings.append(
+            create_finding(
+                title="Windows Security Status Collection Failed",
+                severity="Informational",
+                category="Windows Security Status",
+                affected_host=target,
+                service="winrm",
+                evidence="One or more read-only Windows security status commands failed or returned incomplete data.",
+                confidence="Medium",
+                impact="VulScan could not fully confirm firewall or Defender status.",
+                recommendation="Verify manually with appropriate permissions.",
+                verification="Run Get-NetFirewallProfile and Get-MpComputerStatus manually.",
+                limitation="Command availability and permissions vary by Windows version and policy.",
+                source=SECURITY_SOURCE,
+            )
+        )
+    return findings
+
+
 def _completed_finding(
     target: str,
     service_statuses: list[dict[str, Any]],
@@ -946,10 +1304,11 @@ def _build_summary(
         len(service_statuses)
         + (1 if winrm_auth.get("attempted") else 0)
         + int(winrm_auth.get("host_info_commands_completed") or 0)
+        + int(winrm_auth.get("security_status_commands_completed") or 0)
     )
     limitations = [
-        "Version 12.2 performs socket reachability checks, one safe WinRM authentication validation when requested, and optional read-only host information collection.",
-        "It does not enumerate shares, query the registry, query security policy, list users, list groups, list files, list processes, dump credentials, exploit, brute force, or modify systems.",
+        "Version 12.3 performs socket reachability checks, one safe WinRM authentication validation when requested, optional read-only host information collection, and optional read-only firewall and Defender status collection.",
+        "It does not enumerate shares, query the registry, query security policy, list users, list groups, list files, list processes, dump credentials, change firewall or Defender settings, exploit, brute force, or modify systems.",
     ]
     if winrm_auth.get("limitations"):
         limitations.append(str(winrm_auth["limitations"]))
@@ -987,6 +1346,11 @@ def _build_summary(
         "windows_host_info_status": winrm_auth.get("host_info_status") or "skipped",
         "windows_host_info_error_code": winrm_auth.get("host_info_error_code") or "",
         "windows_host_info_error_message": winrm_auth.get("host_info_error_message") or "",
+        "windows_security_status_checked": winrm_auth.get("security_status_status") in {"checked", "partial"},
+        "windows_security_status": winrm_auth.get("security_status") or dict(EMPTY_WINDOWS_SECURITY_STATUS),
+        "windows_security_status_status": winrm_auth.get("security_status_status") or "skipped",
+        "windows_security_status_error_code": winrm_auth.get("security_status_error_code") or "",
+        "windows_security_status_error_message": winrm_auth.get("security_status_error_message") or "",
         "limitations": limitations,
     }
 
@@ -1053,7 +1417,31 @@ def _build_credentialed_audit(
                 else "Windows host information collection failed.",
             ).to_dict()
         )
+    security_status = dict(summary.get("windows_security_status") or {})
+    if summary.get("windows_security_status_checked") or summary.get("windows_security_status_status") == "failed":
+        checks.append(
+            CredentialedCheckResult(
+                check_id="windows-security-status",
+                check_name="Windows firewall and Defender status",
+                source=SECURITY_SOURCE,
+                status="partial"
+                if summary.get("windows_security_status_status") == "partial"
+                else "success"
+                if summary.get("windows_security_status_checked")
+                else "failed",
+                command_name="safe-winrm-security-status",
+                duration_seconds=0.0,
+                findings_count=1,
+                error_code=str(summary.get("windows_security_status_error_code") or "") or None,
+                error_message=str(summary.get("windows_security_status_error_message") or ""),
+                evidence_summary="Windows firewall and Defender status collected."
+                if summary.get("windows_security_status_checked")
+                else "Windows security status collection failed.",
+            ).to_dict()
+        )
     domain_or_workgroup = host_info.get("domain") or host_info.get("workgroup") or ""
+    firewall_profiles = list(security_status.get("firewall_profiles") or [])
+    defender_status = dict(security_status.get("defender_status") or {})
     credentialed_summary = dict(summary)
     credentialed_summary.update(
         {
@@ -1063,6 +1451,12 @@ def _build_credentialed_audit(
             "os_build": host_info.get("os_build") or "",
             "domain_or_workgroup": domain_or_workgroup,
             "powershell_version": host_info.get("powershell_version") or "",
+            "firewall_profiles_checked": len(firewall_profiles),
+            "defender_status_available": any(defender_status.values()),
+            "defender_realtime_enabled": defender_status.get("real_time_protection_enabled") or "",
+            "firewall_disabled_profiles_count": sum(
+                1 for profile in firewall_profiles if str(profile.get("enabled") or "").lower() == "false"
+            ),
         }
     )
     audit = CredentialedAuditResult(
@@ -1096,6 +1490,7 @@ def _build_credentialed_audit(
             "winrm_endpoint_used": summary.get("winrm_endpoint_used") or "",
             "winrm_transport": summary.get("winrm_transport") or "",
             "windows_host_info": host_info,
+            "windows_security_status": security_status,
             "checks": checks,
         },
     )

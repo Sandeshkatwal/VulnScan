@@ -49,6 +49,27 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
                 "last_boot_time": "2026-05-16T09:00:00Z",
                 "timezone_display_name": "GMT Standard Time",
             },
+            "windows_security_status_checked": True,
+            "windows_security_status_status": "checked",
+            "windows_security_status": {
+                "firewall_profiles": [
+                    {
+                        "name": "Domain",
+                        "enabled": "True",
+                        "default_inbound_action": "Block",
+                        "default_outbound_action": "Allow",
+                    }
+                ],
+                "defender_service": {"status": "Running", "start_type": "Automatic"},
+                "defender_status": {
+                    "real_time_protection_enabled": "True",
+                    "antivirus_enabled": "True",
+                    "am_service_enabled": "True",
+                    "antivirus_signature_last_updated": "2026-05-15T10:00:00Z",
+                    "antispyware_signature_last_updated": "2026-05-15T10:00:00Z",
+                },
+                "security_status_limitations": [],
+            },
             "findings_count": 1,
             "highest_windows_risk_score": 0,
             "highest_windows_risk_label": "Informational",
@@ -104,4 +125,6 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
     assert "Windows WinRM Authentication Check" in html
     assert "LABHOST" in html
     assert "Microsoft Windows Server 2022 Standard" in html
+    assert "Windows Security Status" in html
+    assert "Running" in html
     assert "SENSITIVE_VALUE" not in html

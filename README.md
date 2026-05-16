@@ -3,7 +3,7 @@
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
 Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
-Version 12.2 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, and opt-in read-only Windows host information collection using explicitly provided credentials.
+Version 12.3 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, and opt-in Windows Firewall and Microsoft Defender status collection using explicitly provided credentials.
 
 ## Requirements
 
@@ -48,7 +48,7 @@ Optional authenticated SSH audit for an authorised Linux system:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic --ssh-timeout 8 --ssh-command-timeout 10
 ```
 
-SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords, key values, or private key paths. Package and configuration checks are read-only and do not install, update, or modify packages or files. Results are indicators for authorised review, not a full CIS benchmark implementation. Use least-privilege credentials. Windows WinRM authentication validation uses one explicitly provided username/password pair, and optional host information collection runs only safe read-only commands for hostname, current identity, PowerShell version, OS, computer system, and timezone. VulScan does not store or print the Windows password.
+SSH audit uses one explicitly provided login, runs read-only Linux inspection commands only, and does not store SSH passwords, key values, or private key paths. Package and configuration checks are read-only and do not install, update, or modify packages or files. Results are indicators for authorised review, not a full CIS benchmark implementation. Use least-privilege credentials. Windows WinRM authentication validation uses one explicitly provided username/password pair. Optional Windows collection runs only safe read-only commands for host information, Firewall profile status, WinDefend service status, and Defender computer status. VulScan does not store or print the Windows password.
 
 Credentialed SSH audit output includes a sanitized summary in terminal, JSON, and HTML reports. Passwords, key values, and private key paths are never included. Audit profiles apply only with `--ssh-audit`: `basic` is fastest with a 30 second default audit budget, `standard` is the default with 60 seconds, and `detailed` runs additional read-only configuration indicators with 90 seconds.
 
@@ -66,9 +66,10 @@ Windows audit foundation examples:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-user USER --windows-password PASSWORD --windows-domain WORKGROUP --windows-auth-method smb --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method winrm --windows-user USER --windows-password PASSWORD
 .\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method winrm --windows-user USER --windows-password PASSWORD --windows-host-info
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method winrm --windows-user USER --windows-password PASSWORD --windows-security-status
 ```
 
-Version 12.2 Windows audit checks TCP reachability for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. With `--windows-auth-method winrm`, it requires `--windows-user` and `--windows-password`, prefers HTTPS on 5986 over HTTP on 5985, uses `pywinrm` when installed, and performs one safe read-only validation command. With `--windows-host-info`, it collects basic host information only after successful WinRM authentication. It does not query registry or security policy, enumerate users, groups, files, processes, shares, patches, secrets, browser data, hashes, tokens, or private keys, exploit, brute force, modify systems, or restart services. Passwords are not stored or printed. WinRM should be restricted to trusted networks; host information supports future Windows patch, policy, Defender, and firewall checks.
+Version 12.3 Windows audit checks TCP reachability for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. With `--windows-auth-method winrm`, it requires `--windows-user` and `--windows-password`, prefers HTTPS on 5986 over HTTP on 5985, uses `pywinrm` when installed, and performs one safe read-only validation command. With `--windows-host-info`, it collects basic host information only after successful WinRM authentication. With `--windows-security-status`, it collects read-only Firewall profile and Defender status. It does not change Firewall or Defender settings, enumerate firewall rules, query registry or security policy, enumerate users, groups, files, processes, shares, patches, secrets, browser data, hashes, tokens, or private keys, exploit, brute force, modify systems, or restart services. Defender disabled may be expected where approved third-party EDR/AV is used. Passwords are not stored or printed.
 
 You can also use the helper script:
 

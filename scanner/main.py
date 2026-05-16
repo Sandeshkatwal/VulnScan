@@ -158,6 +158,13 @@ def scan(
             help="Collect basic Windows host information using safe read-only WinRM commands after successful authentication.",
         ),
     ] = False,
+    windows_security_status: Annotated[
+        bool,
+        typer.Option(
+            "--windows-security-status",
+            help="Collect Windows Firewall and Microsoft Defender status using safe read-only WinRM commands after successful authentication.",
+        ),
+    ] = False,
     ssh_audit: Annotated[
         bool,
         typer.Option(
@@ -270,6 +277,7 @@ def scan(
             windows_password=windows_password,
             windows_auth_method=windows_auth_method,
             windows_host_info=windows_host_info,
+            windows_security_status=windows_security_status,
         )
     except WindowsAuditConfigurationError as exc:
         console.print(f"[red]Windows audit configuration error:[/red] {exc}")
@@ -311,6 +319,7 @@ def scan(
                 domain=windows_domain,
                 auth_method=selected_windows_auth_method,
                 collect_host_info=windows_host_info,
+                collect_security_status=windows_security_status,
             )
             scan_result["windows_audit"] = windows_result
             findings.extend(windows_result.get("findings", []))
@@ -885,6 +894,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "ssh_hardening",
         "linux_config_audit",
         "windows_audit",
+        "windows_security_audit",
     ]
     grouped: dict[str, list[dict[str, Any]]] = {source: [] for source in source_order}
     grouped["other"] = []
@@ -1006,6 +1016,8 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         ("Validation result summary", summary.get("validation_result_summary")),
         ("Windows host info collected", summary.get("windows_host_info_collected")),
         ("Windows host info status", summary.get("windows_host_info_status")),
+        ("Windows security status checked", summary.get("windows_security_status_checked")),
+        ("Windows security status", summary.get("windows_security_status_status")),
         ("Findings count", summary.get("findings_count")),
         (
             "Highest Windows risk",
@@ -1035,6 +1047,32 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         for label, value in host_rows:
             host_table.add_row(label, "" if value is None else str(value))
         console.print(host_table)
+    security_status = summary.get("windows_security_status") or {}
+    if summary.get("windows_security_status_checked") and security_status:
+        firewall_profiles = list(security_status.get("firewall_profiles") or [])
+        defender_service = security_status.get("defender_service") or {}
+        defender_status = security_status.get("defender_status") or {}
+        disabled_profiles = sum(
+            1 for profile in firewall_profiles if str(profile.get("enabled") or "").lower() == "false"
+        )
+        security_table = Table(title="Windows Security Status")
+        security_table.add_column("Field")
+        security_table.add_column("Value")
+        security_rows = [
+            ("Firewall profiles checked", len(firewall_profiles)),
+            ("Disabled firewall profiles", disabled_profiles),
+            ("Defender service status", defender_service.get("status")),
+            ("Defender real-time protection", defender_status.get("real_time_protection_enabled")),
+            ("Defender status available", bool(any(defender_status.values()))),
+            ("Antivirus signature last updated", defender_status.get("antivirus_signature_last_updated")),
+            ("Antispyware signature last updated", defender_status.get("antispyware_signature_last_updated")),
+        ]
+        for label, value in security_rows:
+            security_table.add_row(label, "" if value is None else str(value))
+        console.print(security_table)
+        limitations = security_status.get("security_status_limitations")
+        if limitations:
+            console.print(f"[yellow]Windows security status limitations:[/yellow] {_format_summary_list(limitations)}")
     limitations = summary.get("limitations")
     if limitations:
         console.print(f"[yellow]Windows audit limitations:[/yellow] {_format_summary_list(limitations)}")
@@ -1100,7 +1138,7 @@ def _is_ssh_related_finding(finding: dict[str, Any]) -> bool:
 
 
 def _is_windows_related_finding(finding: dict[str, Any]) -> bool:
-    return str(finding.get("source") or "") == "windows_audit"
+    return str(finding.get("source") or "") in {"windows_audit", "windows_security_audit"}
 
 
 def _build_ssh_audit_summary(
@@ -1223,6 +1261,9 @@ def _build_windows_credentialed_audits(
     credentialed_audit["checks_skipped"] = int(windows_summary.get("checks_skipped") or 0)
     credentialed_summary = dict(windows_summary)
     host_info = dict(windows_summary.get("windows_host_info") or {})
+    security_status = dict(windows_summary.get("windows_security_status") or {})
+    firewall_profiles = list(security_status.get("firewall_profiles") or [])
+    defender_status = dict(security_status.get("defender_status") or {})
     credentialed_summary.update(
         {
             "hostname": host_info.get("hostname") or "",
@@ -1231,11 +1272,18 @@ def _build_windows_credentialed_audits(
             "os_build": host_info.get("os_build") or "",
             "domain_or_workgroup": host_info.get("domain") or host_info.get("workgroup") or "",
             "powershell_version": host_info.get("powershell_version") or "",
+            "firewall_profiles_checked": len(firewall_profiles),
+            "defender_status_available": any(defender_status.values()),
+            "defender_realtime_enabled": defender_status.get("real_time_protection_enabled") or "",
+            "firewall_disabled_profiles_count": sum(
+                1 for profile in firewall_profiles if str(profile.get("enabled") or "").lower() == "false"
+            ),
         }
     )
     credentialed_audit["summary"] = credentialed_summary
     metadata = dict(credentialed_audit.get("metadata") or {})
     metadata["windows_host_info"] = host_info
+    metadata["windows_security_status"] = security_status
     credentialed_audit["metadata"] = metadata
     return [credentialed_audit]
 

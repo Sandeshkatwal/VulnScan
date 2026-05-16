@@ -80,6 +80,13 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
                 "workgroup": "",
                 "powershell_version": "5.1",
             },
+            "windows_security_status_checked": True,
+            "windows_security_status": {
+                "firewall_profiles": [{"name": "Domain", "enabled": "True"}],
+                "defender_service": {"status": "Running", "start_type": "Automatic"},
+                "defender_status": {"real_time_protection_enabled": "True"},
+                "security_status_limitations": [],
+            },
         },
         "credentialed_audits": [
             {
@@ -130,4 +137,5 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
     assert report["credentialed_audits"][1]["source"] == "windows_audit"
     assert report["windows_audit_summary"]["winrm_auth_status"] == "authenticated"
     assert report["windows_audit_summary"]["windows_host_info"]["hostname"] == "LABHOST"
+    assert report["windows_audit_summary"]["windows_security_status"]["defender_service"]["status"] == "Running"
     assert report["findings"][0]["title"] == "SSH Login Successful"
