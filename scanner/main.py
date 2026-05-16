@@ -232,6 +232,7 @@ def scan(
         scan_result["tls_findings"] = []
         scan_result["ssh_audit"] = {"enabled": False, "status": "skipped", "findings": []}
         scan_result["ssh_audit_summary"] = {"enabled": False, "status": "skipped"}
+        scan_result["credentialed_audits"] = []
         scan_result["ssh_findings"] = []
         findings = create_port_exposure_findings(scan_result["open_ports"])
         if http_audit:
@@ -278,6 +279,10 @@ def scan(
         ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
+            scan_result["credentialed_audits"] = _build_credentialed_audits(
+                ssh_result=scan_result["ssh_audit"],
+                ssh_findings=scan_result["ssh_findings"],
+            )
             scan_result["ssh_audit_summary"] = _build_ssh_audit_summary(
                 scan_result=scan_result,
                 username=str(ssh_user),
@@ -320,6 +325,7 @@ def scan(
 
     console.print(f"[bold]Total scan time:[/bold] {scan_result['duration_seconds']} seconds")
     _print_ssh_audit_summary(scan_result.get("ssh_audit_summary", {"enabled": False}))
+    _print_credentialed_audit_modules(scan_result.get("credentialed_audits", []))
 
     _print_findings(scan_result["findings"])
 
@@ -888,6 +894,35 @@ def _ssh_progress_callback(message: str) -> None:
     console.print(f"- {message}")
 
 
+def _print_credentialed_audit_modules(credentialed_audits: list[dict[str, Any]]) -> None:
+    if not credentialed_audits:
+        return
+
+    table = Table(title="Credentialed Audit Modules")
+    table.add_column("Module")
+    table.add_column("Source")
+    table.add_column("Status")
+    table.add_column("Profile")
+    table.add_column("Completed", justify="right")
+    table.add_column("Failed", justify="right")
+    table.add_column("Skipped", justify="right")
+    table.add_column("Findings", justify="right")
+    table.add_column("Duration", justify="right")
+    for audit in credentialed_audits:
+        table.add_row(
+            str(audit.get("module_name") or ""),
+            str(audit.get("source") or ""),
+            str(audit.get("status") or ""),
+            str(audit.get("profile") or ""),
+            str(audit.get("checks_completed") or 0),
+            str(audit.get("checks_failed") or 0),
+            str(audit.get("checks_skipped") or 0),
+            str(len(audit.get("findings") or [])),
+            str(audit.get("duration_seconds") or 0),
+        )
+    console.print(table)
+
+
 def _affected_summary(finding: dict[str, Any]) -> str:
     if finding.get("affected_url"):
         return str(finding["affected_url"])
@@ -919,6 +954,9 @@ def _build_ssh_audit_summary(
     audit_profile: Any,
 ) -> dict[str, Any]:
     ssh_audit = scan_result.get("ssh_audit", {})
+    credentialed_audit = _first_credentialed_audit(scan_result, "ssh_audit")
+    if credentialed_audit:
+        ssh_audit = _ssh_audit_from_credentialed(ssh_audit, credentialed_audit)
     ssh_findings = scan_result.get("ssh_findings", [])
     highest = max(ssh_findings, key=lambda item: int(item.get("risk_score") or 0), default={})
     raw_status = str(ssh_audit.get("status") or "")
@@ -974,6 +1012,72 @@ def _build_ssh_audit_summary(
             "Results should be reviewed in operational context."
         ),
     }
+
+
+def _build_credentialed_audits(
+    *,
+    ssh_result: dict[str, Any],
+    ssh_findings: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    credentialed_audit = dict(ssh_result.get("credentialed_audit") or {})
+    if not credentialed_audit:
+        return []
+    credentialed_audit["findings"] = list(ssh_findings)
+    credentialed_audit["checks_completed"] = int(ssh_result.get("checks_completed") or 0)
+    credentialed_audit["checks_failed"] = int(ssh_result.get("checks_failed") or 0)
+    credentialed_audit["checks_skipped"] = int(ssh_result.get("checks_skipped") or 0)
+    credentialed_audit["duration_seconds"] = ssh_result.get("total_duration_seconds") or credentialed_audit.get("duration_seconds") or 0
+    performance = dict(credentialed_audit.get("performance") or {})
+    performance["total_duration_seconds"] = ssh_result.get("total_duration_seconds")
+    credentialed_audit["performance"] = performance
+    return [credentialed_audit]
+
+
+def _first_credentialed_audit(scan_result: dict[str, Any], source: str) -> dict[str, Any]:
+    for audit in scan_result.get("credentialed_audits", []) or []:
+        if str(audit.get("source") or "") == source:
+            return audit
+    return {}
+
+
+def _ssh_audit_from_credentialed(
+    ssh_audit: dict[str, Any],
+    credentialed_audit: dict[str, Any],
+) -> dict[str, Any]:
+    merged = dict(ssh_audit)
+    performance = credentialed_audit.get("performance") or {}
+    summary = credentialed_audit.get("summary") or {}
+    metadata = credentialed_audit.get("metadata") or {}
+    first_error = (credentialed_audit.get("errors") or [{}])[0]
+    merged.update(
+        {
+            "status": credentialed_audit.get("status"),
+            "authenticated": credentialed_audit.get("authenticated"),
+            "error_code": first_error.get("error_code") or merged.get("error_code"),
+            "error_message": first_error.get("message") or merged.get("error_message"),
+            "audit_profile": credentialed_audit.get("profile") or merged.get("audit_profile"),
+            "checks_planned": credentialed_audit.get("checks_planned"),
+            "checks_completed": credentialed_audit.get("checks_completed"),
+            "checks_failed": credentialed_audit.get("checks_failed"),
+            "checks_skipped": credentialed_audit.get("checks_skipped"),
+            "connection_timeout_seconds": performance.get("connection_timeout_seconds"),
+            "command_timeout_seconds": performance.get("command_timeout_seconds"),
+            "audit_timeout_seconds": performance.get("audit_timeout_seconds"),
+            "total_duration_seconds": performance.get("total_duration_seconds") or credentialed_audit.get("duration_seconds"),
+            "timed_out_commands": performance.get("timed_out_commands"),
+            "slowest_command_name": performance.get("slowest_command_name"),
+            "slowest_command_duration_seconds": performance.get("slowest_command_duration_seconds"),
+            "performance_notes": performance.get("performance_notes") or [],
+            "package_manager": summary.get("package_manager"),
+            "package_update_count": summary.get("package_update_count"),
+            "ssh_hardening_checked": summary.get("ssh_hardening_checked"),
+            "linux_config_audit_checked": summary.get("linux_config_audit_checked"),
+            "os_family": metadata.get("os_family"),
+            "hostname": metadata.get("hostname"),
+            "kernel_summary": metadata.get("kernel_summary"),
+        }
+    )
+    return merged
 
 
 def _format_summary_list(value: Any) -> str:

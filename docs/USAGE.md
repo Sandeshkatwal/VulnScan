@@ -215,8 +215,8 @@ Use least-privilege read-only credentials:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-password PASSWORD
-.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa
-.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key PATH_TO_PRIVATE_KEY
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key PATH_TO_PRIVATE_KEY --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target KALI_IP --ssh-audit --ssh-user USER --ssh-password PASSWORD --audit-profile basic
@@ -250,6 +250,8 @@ When `--ssh-audit` is used, the terminal output includes progress messages and a
 Version 11.6 adds structured SSH audit error handling. If authentication fails, the SSH target times out, a key file is missing, or an individual read-only command cannot complete, VulScan returns safe status fields such as `success`, `failed`, `skipped`, or `partial` with a short error code and message. Partial command failures do not crash the scan; VulScan continues other read-only checks where safe. Technical details are sanitized and credentials are not stored or printed.
 
 Version 11.8 adds credentialed audit performance controls. Commands record duration and timeout status. If one non-critical command fails or times out, the SSH audit can return `partial` while preserving completed findings. If the overall audit budget is exceeded after login, VulScan skips remaining checks, records `SSH_AUDIT_TIME_BUDGET_EXCEEDED`, and returns partial results instead of aborting the whole scan.
+
+Version 11.9 normalises credentialed audit results internally. SSH audit output still includes the user-friendly `ssh_audit_summary`, but reports also include a top-level `credentialed_audits` list with standard fields for module name, source, status, target, authentication method, username, profile, check counts, findings, errors, limitations, performance, and metadata. Passwords, private key contents, and private key paths are not stored in this normalised result. This prepares VulScan for future Windows SMB/WinRM audit modules without changing existing commands.
 
 Version 11.7 improves credentialed audit evidence quality. VulScan stores concise evidence summaries for SSH findings instead of full raw SSH command output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values where useful, limits package samples, and redacts values that look like passwords, tokens, private keys, authorization headers, or secrets. Credentialed audit evidence should still be reviewed in operational context.
 
@@ -305,7 +307,7 @@ Equivalent explicit virtual environment commands:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main scan --target example.com --http-audit --tls-audit --json --html
-.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key C:\Users\Sande\.ssh\id_rsa --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 192.168.1.143 --ssh-audit --ssh-user USER --ssh-key PATH_TO_PRIVATE_KEY --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main assets
 .\.venv311\Scripts\python.exe -m scanner.main assets --target 127.0.0.1

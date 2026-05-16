@@ -109,6 +109,8 @@ def test_auth_failure_returns_structured_result(monkeypatch) -> None:
     assert result["status"] == "failed"
     assert result["error_code"] == "SSH_AUTH_FAILED"
     assert result["authenticated"] is False
+    assert result["credentialed_audit"]["status"] == "failed"
+    assert result["credentialed_audit"]["errors"][0]["error_code"] == "SSH_AUTH_FAILED"
 
 
 def test_command_failure_does_not_crash_collection() -> None:
@@ -209,5 +211,5 @@ def test_performance_summary_fields_and_secret_hygiene() -> None:
     assert result["timed_out_commands"] == 1
     assert result["slowest_command_name"] == "cat /etc/os-release"
     serialized = str(result)
-    assert "secret-password" not in serialized
-    assert "C:\\Users\\Sande\\.ssh\\id_rsa" not in serialized
+    assert "SENSITIVE_VALUE" not in serialized
+    assert "SENSITIVE_PATH" not in serialized

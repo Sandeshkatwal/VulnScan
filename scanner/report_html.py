@@ -10,7 +10,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from scanner.finding import findings_to_dicts
-from scanner.report_json import build_summary
+from scanner.report_json import build_summary, credentialed_audits_to_dicts
 
 
 REPORTS_DIR = Path("reports")
@@ -46,6 +46,9 @@ def save_html_report(
         "ssh_audit_summary": scan_result.get(
             "ssh_audit_summary",
             {"enabled": False, "status": "skipped"},
+        ),
+        "credentialed_audits": credentialed_audits_to_dicts(
+            scan_result.get("credentialed_audits", [])
         ),
         "ssh_findings": scan_result.get("ssh_findings", []),
         "summary": build_summary(scan_result),

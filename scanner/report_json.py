@@ -44,6 +44,9 @@ def save_json_report(
             "ssh_audit_summary",
             {"enabled": False, "status": "skipped"},
         ),
+        "credentialed_audits": credentialed_audits_to_dicts(
+            scan_result.get("credentialed_audits", [])
+        ),
         "ssh_findings": scan_result.get("ssh_findings", []),
         "summary": build_summary(scan_result),
     }
@@ -75,6 +78,15 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "highest_risk_level": _highest_risk_level(findings),
         "notes": "TCP connect scan of common ports only. Review exposed services for business need and network access controls.",
     }
+
+
+def credentialed_audits_to_dicts(value: Any) -> list[dict[str, Any]]:
+    audits: list[dict[str, Any]] = []
+    for audit in value or []:
+        audit_dict = audit.to_dict() if hasattr(audit, "to_dict") else dict(audit)
+        audit_dict["findings"] = findings_to_dicts(audit_dict.get("findings", []))
+        audits.append(audit_dict)
+    return audits
 
 
 def _highest_risk_level(findings: list[dict[str, Any]]) -> str:

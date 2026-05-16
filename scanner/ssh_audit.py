@@ -5,6 +5,7 @@ from __future__ import annotations
 import socket
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -14,8 +15,13 @@ except ImportError:  # pragma: no cover - exercised only when dependency is abse
     paramiko = None  # type: ignore[assignment]
 
 from scanner.audit_profiles import AuditProfile, get_audit_profile
+from scanner.credentialed_result import (
+    CredentialedAuditResult,
+    CredentialedCheckResult,
+    build_error,
+)
 from scanner.evidence import STDERR_MAX_CHARS, build_evidence, evidence_summary, safe_truncate
-from scanner.finding import Finding, create_finding
+from scanner.finding import Finding, create_finding, finding_to_dict
 from scanner.linux_config_audit import (
     build_linux_config_audit_summary,
     build_linux_config_findings,
@@ -171,8 +177,11 @@ def audit_ssh_host(
         command_timeout_seconds=float(command_timeout),
         audit_timeout_seconds=audit_timeout_seconds,
     )
+    started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     result: dict[str, Any] = {
         "enabled": True,
+        "source": SOURCE,
+        "module_name": "Authenticated SSH Audit",
         "target": host,
         "port": port,
         "audit_profile": profile.name,
@@ -221,14 +230,14 @@ def audit_ssh_host(
         result["error_code"] = ERROR_KEY_NOT_FOUND
         result["error_message"] = "SSH key file was not found or is not readable."
         result["notes"].append(result["error_message"])
-        return result
+        return _finalize_credentialed_result(result, username=username, auth_method=_auth_method(key_path), started_at=started_at)
 
     if paramiko is None:
         result["status"] = STATUS_FAILED
         result["error_code"] = ERROR_CONNECTION_FAILED
         result["error_message"] = "Paramiko is required for SSH audit but is not installed."
         result["notes"].append(result["error_message"])
-        return result
+        return _finalize_credentialed_result(result, username=username, auth_method=_auth_method(key_path), started_at=started_at)
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -315,33 +324,33 @@ def audit_ssh_host(
         )
         result["total_duration_seconds"] = round(runtime.elapsed(), 3)
         _progress(progress_callback, f"SSH audit completed with status: {result['status']}")
-        return result
+        return _finalize_credentialed_result(result, username=username, auth_method=_auth_method(key_path), started_at=started_at)
     except paramiko.AuthenticationException:
         result["status"] = STATUS_FAILED
         result["error_code"] = ERROR_AUTH_FAILED
         result["error_message"] = "SSH authentication failed. No audit commands were run."
         result["notes"].append(result["error_message"])
-        return result
+        return _finalize_credentialed_result(result, username=username, auth_method=_auth_method(key_path), started_at=started_at)
     except (socket.timeout, TimeoutError):
         result["status"] = STATUS_FAILED
         result["error_code"] = ERROR_TIMEOUT
         result["error_message"] = "SSH connection timed out. No audit commands were run."
         result["notes"].append(result["error_message"])
-        return result
+        return _finalize_credentialed_result(result, username=username, auth_method=_auth_method(key_path), started_at=started_at)
     except (paramiko.SSHException, OSError) as exc:
         result["status"] = STATUS_FAILED
         result["error_code"] = ERROR_KEY_LOAD_FAILED if key_path is not None else ERROR_CONNECTION_FAILED
         result["error_message"] = "SSH audit could not complete safely."
         result["debug_details"] = exc.__class__.__name__
         result["notes"].append(result["error_message"])
-        return result
+        return _finalize_credentialed_result(result, username=username, auth_method=_auth_method(key_path), started_at=started_at)
     except Exception as exc:  # pragma: no cover - defensive safety net.
         result["status"] = STATUS_FAILED
         result["error_code"] = ERROR_UNKNOWN
         result["error_message"] = "SSH audit failed unexpectedly but safely."
         result["debug_details"] = exc.__class__.__name__
         result["notes"].append(result["error_message"])
-        return result
+        return _finalize_credentialed_result(result, username=username, auth_method=_auth_method(key_path), started_at=started_at)
     finally:
         result["total_duration_seconds"] = round(runtime.elapsed(), 3)
         client.close()
@@ -491,6 +500,189 @@ def _apply_performance_summary(
         notes.append(
             f"{result['checks_skipped']} check(s) skipped because the SSH audit time budget was exceeded."
         )
+
+
+def _finalize_credentialed_result(
+    result: dict[str, Any],
+    *,
+    username: str,
+    auth_method: str,
+    started_at: str,
+) -> dict[str, Any]:
+    ended_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    result["credentialed_audit"] = _build_credentialed_audit_result(
+        result=result,
+        username=username,
+        auth_method=auth_method,
+        started_at=started_at,
+        ended_at=ended_at,
+    )
+    return result
+
+
+def _build_credentialed_audit_result(
+    *,
+    result: dict[str, Any],
+    username: str,
+    auth_method: str,
+    started_at: str,
+    ended_at: str,
+) -> dict[str, Any]:
+    errors: list[dict[str, Any]] = []
+    error = build_error(
+        error_code=result.get("error_code"),
+        message=str(result.get("error_message") or ""),
+        source=SOURCE,
+        check_name="Authenticated SSH Audit",
+        safe_detail=str(result.get("debug_details") or ""),
+    )
+    if error:
+        errors.append(error)
+
+    commands = list(result.get("commands") or [])
+    checks = [_normalised_check_from_command(index, command) for index, command in enumerate(commands, start=1)]
+    findings = [finding_to_dict(finding) for finding in result.get("findings", [])]
+    ssh_hardening_findings = [finding for finding in findings if finding.get("source") == "ssh_hardening"]
+
+    audit_result = CredentialedAuditResult(
+        source=SOURCE,
+        module_name="Authenticated SSH Audit",
+        status=str(result.get("status") or STATUS_SKIPPED),
+        target=str(result.get("target") or ""),
+        authenticated=bool(result.get("authenticated")),
+        auth_method=auth_method,
+        username=username,
+        profile=str(result.get("audit_profile") or ""),
+        started_at=started_at,
+        ended_at=ended_at,
+        duration_seconds=float(result.get("total_duration_seconds") or 0.0),
+        checks_planned=int(result.get("checks_planned") or len(commands)),
+        checks_completed=int(result.get("checks_completed") or 0),
+        checks_failed=int(result.get("checks_failed") or 0),
+        checks_skipped=int(result.get("checks_skipped") or 0),
+        findings=findings,
+        summary={
+            "package_manager": result.get("package_manager"),
+            "package_update_count": result.get("package_update_count"),
+            "package_update_sample": result.get("package_update_sample") or [],
+            "package_check_status": result.get("package_check_status"),
+            "ssh_hardening_checked": bool(result.get("ssh_hardening_checked")),
+            "ssh_hardening_source": _ssh_hardening_source(commands),
+            "settings_checked": _sshd_settings_checked(commands),
+            "risky_settings_count": len(ssh_hardening_findings),
+            "linux_config_audit_checked": bool(result.get("linux_config_audit_checked")),
+            "firewall_status": result.get("firewall_status") or {},
+            "logging_status": result.get("logging_status") or {},
+            "password_policy_indicators": result.get("password_policy_indicators") or {},
+            "temp_directory_permissions": result.get("temp_directory_permissions") or {},
+        },
+        errors=errors,
+        limitations=[
+            "Authenticated SSH audit uses read-only commands and depends on the permissions of the provided account.",
+            "Package and Linux configuration checks are indicators and should be reviewed in operational context.",
+        ],
+        performance={
+            "connection_timeout_seconds": result.get("connection_timeout_seconds"),
+            "command_timeout_seconds": result.get("command_timeout_seconds"),
+            "audit_timeout_seconds": result.get("audit_timeout_seconds"),
+            "total_duration_seconds": result.get("total_duration_seconds"),
+            "timed_out_commands": result.get("timed_out_commands"),
+            "slowest_command_name": result.get("slowest_command_name"),
+            "slowest_command_duration_seconds": result.get("slowest_command_duration_seconds"),
+            "performance_notes": result.get("performance_notes") or [],
+        },
+        metadata={
+            "port": result.get("port"),
+            "os_family": result.get("os_family"),
+            "hostname": result.get("hostname"),
+            "kernel_summary": result.get("kernel_summary"),
+            "profile_description": result.get("profile_description"),
+            "checks_enabled": result.get("checks_enabled") or [],
+            "profile_checks_skipped": result.get("profile_checks_skipped") or [],
+            "checks": checks,
+        },
+    )
+    return audit_result.to_dict()
+
+
+def _normalised_check_from_command(index: int, command: dict[str, Any]) -> dict[str, Any]:
+    status = _normalised_command_status(command)
+    return CredentialedCheckResult(
+        check_id=f"ssh-command-{index:03d}",
+        check_name=str(command.get("command_name") or command.get("command") or ""),
+        source=_command_source(command),
+        status=status,
+        command_name=str(command.get("command_name") or command.get("command") or ""),
+        duration_seconds=float(command.get("duration_seconds") or 0.0),
+        findings_count=0,
+        error_code=command.get("error_code"),
+        error_message=str(command.get("stderr") or ""),
+        evidence_summary=_command_evidence_summary(command),
+        skipped_reason=str(command.get("stderr") or "") if status == STATUS_SKIPPED else "",
+    ).to_dict()
+
+
+def _normalised_command_status(command: dict[str, Any]) -> str:
+    if command.get("skipped"):
+        return "skipped"
+    if command.get("timed_out"):
+        return "timeout"
+    if command.get("success"):
+        return "success"
+    return "failed"
+
+
+def _command_source(command: dict[str, Any]) -> str:
+    command_name = str(command.get("command") or "")
+    if command_name in {"sshd -T", "cat /etc/ssh/sshd_config"}:
+        return "ssh_hardening"
+    if command_name in set(PACKAGE_MANAGER_COMMANDS.values()) or command_name.startswith("command -v "):
+        return "package_audit"
+    if command_name.startswith("systemctl ") or command_name in {
+        "ufw status",
+        "firewall-cmd --state",
+        "cat /etc/login.defs",
+        "cat /etc/security/pwquality.conf",
+        "test -d /tmp",
+        "test -d /var/tmp",
+        "ls -ld /tmp",
+        "ls -ld /var/tmp",
+    }:
+        return "linux_config_audit"
+    return SOURCE
+
+
+def _command_evidence_summary(command: dict[str, Any]) -> str:
+    stdout = str(command.get("stdout") or "")
+    stderr = str(command.get("stderr") or "")
+    if stdout:
+        return safe_truncate(stdout, max_chars=160)
+    if stderr:
+        return safe_truncate(stderr, max_chars=160)
+    if command.get("success"):
+        return "Command completed."
+    return ""
+
+
+def _auth_method(key_path: Path | None) -> str:
+    return "key" if key_path is not None else "password"
+
+
+def _ssh_hardening_source(commands: list[dict[str, Any]]) -> str:
+    if _command_was_successful(commands, "sshd -T"):
+        return "sshd -T"
+    if _command_was_successful(commands, "cat /etc/ssh/sshd_config"):
+        return "sshd_config fallback"
+    return ""
+
+
+def _sshd_settings_checked(commands: list[dict[str, Any]]) -> list[str]:
+    command_by_name = {command["command"]: command for command in commands}
+    sshd_config = command_by_name.get("sshd -T") or command_by_name.get("cat /etc/ssh/sshd_config")
+    if not sshd_config:
+        return []
+    parsed = _parse_sshd_config(str(sshd_config.get("raw_stdout") or sshd_config.get("stdout") or ""))
+    return sorted(key for key in parsed if key in {"passwordauthentication", "permitrootlogin"})
 
 
 def _is_actionable_command_failure(command: dict[str, Any]) -> bool:

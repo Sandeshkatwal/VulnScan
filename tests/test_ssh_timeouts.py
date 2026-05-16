@@ -82,5 +82,5 @@ def test_ssh_audit_summary_does_not_include_secrets() -> None:
     )
 
     serialized = str(summary)
-    assert "secret-password" not in serialized
-    assert "C:\\Users\\Sande\\.ssh\\id_rsa" not in serialized
+    assert "SENSITIVE_VALUE" not in serialized
+    assert "SENSITIVE_PATH" not in serialized

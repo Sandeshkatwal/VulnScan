@@ -416,6 +416,44 @@
     </section>
 
     <section>
+      <h2>Credentialed Audit Modules</h2>
+      {% if report.credentialed_audits %}
+      <table>
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Profile</th>
+            <th>Checks Completed</th>
+            <th>Checks Failed</th>
+            <th>Checks Skipped</th>
+            <th>Findings</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for audit in report.credentialed_audits %}
+          <tr>
+            <td>{{ audit.module_name }}</td>
+            <td>{{ audit.source }}</td>
+            <td>{{ audit.status }}</td>
+            <td>{{ audit.profile }}</td>
+            <td>{{ audit.checks_completed }}</td>
+            <td>{{ audit.checks_failed }}</td>
+            <td>{{ audit.checks_skipped }}</td>
+            <td>{{ audit.findings | length }}</td>
+            <td>{{ audit.duration_seconds }} seconds</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No credentialed audit modules were run.</p>
+      {% endif %}
+    </section>
+
+    <section>
       <h2>Authenticated SSH Audit Summary</h2>
       {% if report.ssh_audit_summary.enabled %}
       <p><strong>Credentialed SSH Audit:</strong> {{ report.ssh_audit_summary.status }}</p>
