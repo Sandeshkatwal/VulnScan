@@ -435,6 +435,41 @@
       <p><strong>Transport:</strong> {{ report.windows_audit_summary.winrm_transport or "" }}</p>
       <p><strong>Safe validation command:</strong> {{ report.windows_audit_summary.safe_validation_command or "" }}</p>
       <p><strong>Validation result summary:</strong> {{ report.windows_audit_summary.validation_result_summary or "" }}</p>
+      <h3>Windows Host Information</h3>
+      <p><strong>Collected:</strong> {{ report.windows_audit_summary.windows_host_info_collected }}</p>
+      <p><strong>Status:</strong> {{ report.windows_audit_summary.windows_host_info_status or "" }}</p>
+      {% if report.windows_audit_summary.windows_host_info_collected and report.windows_audit_summary.windows_host_info %}
+      <table>
+        <thead>
+          <tr>
+            <th>Hostname</th>
+            <th>Current identity</th>
+            <th>OS</th>
+            <th>Version / Build</th>
+            <th>Architecture</th>
+            <th>Domain</th>
+            <th>Workgroup</th>
+            <th>PowerShell</th>
+            <th>Last boot</th>
+            <th>Timezone</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.windows_audit_summary.windows_host_info.hostname }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.current_identity }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.os_caption }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.os_version }} / {{ report.windows_audit_summary.windows_host_info.os_build }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.os_architecture }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.domain }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.workgroup }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.powershell_version }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.last_boot_time }}</td>
+            <td>{{ report.windows_audit_summary.windows_host_info.timezone_display_name or report.windows_audit_summary.windows_host_info.timezone_id }}</td>
+          </tr>
+        </tbody>
+      </table>
+      {% endif %}
       <p><strong>Findings count:</strong> {{ report.windows_audit_summary.findings_count }}</p>
       <p><strong>Highest Windows risk:</strong> {{ report.windows_audit_summary.highest_windows_risk_score }} ({{ report.windows_audit_summary.highest_windows_risk_label }})</p>
       {% if report.windows_audit_summary.service_statuses %}

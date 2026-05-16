@@ -81,7 +81,7 @@ def test_windows_credentialed_audits_contains_windows_audit() -> None:
     assert audits[0]["source"] == "windows_audit"
     assert audits[0]["module_name"] == "Windows SMB/WinRM Audit Foundation"
     assert audits[0]["findings"] == windows_findings
-    assert audits[0]["summary"] == windows_summary
+    assert audits[0]["summary"]["smb_reachable"] is True
 
 
 def test_windows_summary_does_not_include_password() -> None:
@@ -117,3 +117,51 @@ def test_windows_summary_does_not_include_password() -> None:
 
     assert "SENSITIVE_VALUE" not in str(summary)
     assert summary["username_used"] == "auditor"
+
+
+def test_windows_credentialed_audit_summary_includes_host_info_fields() -> None:
+    windows_result = {
+        "credentialed_audit": {
+            "source": "windows_audit",
+            "module_name": "Windows WinRM Authentication Check",
+            "status": "success",
+            "target": "192.0.2.50",
+            "authenticated": True,
+            "auth_method": "winrm",
+            "username": "auditor",
+            "profile": "foundation",
+            "findings": [],
+            "summary": {},
+            "errors": [],
+            "limitations": [],
+            "performance": {},
+            "metadata": {},
+        }
+    }
+    windows_summary = {
+        "checks_completed": 6,
+        "checks_failed": 0,
+        "checks_skipped": 0,
+        "windows_host_info": {
+            "hostname": "LABHOST",
+            "os_caption": "Microsoft Windows Server 2022 Standard",
+            "os_version": "10.0.20348",
+            "os_build": "20348",
+            "domain": "WORKGROUP",
+            "workgroup": "",
+            "powershell_version": "5.1",
+        },
+    }
+
+    audits = _build_windows_credentialed_audits(
+        windows_result=windows_result,
+        windows_findings=[],
+        windows_summary=windows_summary,
+    )
+
+    summary = audits[0]["summary"]
+
+    assert summary["hostname"] == "LABHOST"
+    assert summary["os_caption"] == "Microsoft Windows Server 2022 Standard"
+    assert summary["domain_or_workgroup"] == "WORKGROUP"
+    assert audits[0]["metadata"]["windows_host_info"]["os_build"] == "20348"

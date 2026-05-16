@@ -151,6 +151,13 @@ def scan(
             help="Windows auth method: none, smb foundation metadata, or winrm authentication validation.",
         ),
     ] = "none",
+    windows_host_info: Annotated[
+        bool,
+        typer.Option(
+            "--windows-host-info",
+            help="Collect basic Windows host information using safe read-only WinRM commands after successful authentication.",
+        ),
+    ] = False,
     ssh_audit: Annotated[
         bool,
         typer.Option(
@@ -262,6 +269,7 @@ def scan(
             windows_user=windows_user,
             windows_password=windows_password,
             windows_auth_method=windows_auth_method,
+            windows_host_info=windows_host_info,
         )
     except WindowsAuditConfigurationError as exc:
         console.print(f"[red]Windows audit configuration error:[/red] {exc}")
@@ -302,6 +310,7 @@ def scan(
                 password=windows_password,
                 domain=windows_domain,
                 auth_method=selected_windows_auth_method,
+                collect_host_info=windows_host_info,
             )
             scan_result["windows_audit"] = windows_result
             findings.extend(windows_result.get("findings", []))
@@ -995,6 +1004,8 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         ("WinRM transport", summary.get("winrm_transport")),
         ("Safe validation command", summary.get("safe_validation_command")),
         ("Validation result summary", summary.get("validation_result_summary")),
+        ("Windows host info collected", summary.get("windows_host_info_collected")),
+        ("Windows host info status", summary.get("windows_host_info_status")),
         ("Findings count", summary.get("findings_count")),
         (
             "Highest Windows risk",
@@ -1004,11 +1015,31 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
     for label, value in rows:
         table.add_row(label, "" if value is None else str(value))
     console.print(table)
+    host_info = summary.get("windows_host_info") or {}
+    if summary.get("windows_host_info_collected") and host_info:
+        host_table = Table(title="Windows Host Information")
+        host_table.add_column("Field")
+        host_table.add_column("Value")
+        host_rows = [
+            ("Hostname", host_info.get("hostname")),
+            ("Current identity", host_info.get("current_identity")),
+            ("OS caption", host_info.get("os_caption")),
+            ("OS version/build", f"{host_info.get('os_version') or ''} / {host_info.get('os_build') or ''}".strip(" /")),
+            ("Architecture", host_info.get("os_architecture")),
+            ("Domain", host_info.get("domain")),
+            ("Workgroup", host_info.get("workgroup")),
+            ("PowerShell version", host_info.get("powershell_version")),
+            ("Last boot time", host_info.get("last_boot_time")),
+            ("Timezone", host_info.get("timezone_display_name") or host_info.get("timezone_id")),
+        ]
+        for label, value in host_rows:
+            host_table.add_row(label, "" if value is None else str(value))
+        console.print(host_table)
     limitations = summary.get("limitations")
     if limitations:
         console.print(f"[yellow]Windows audit limitations:[/yellow] {_format_summary_list(limitations)}")
     console.print(
-        "[yellow]Windows audit uses safe reachability checks and, when requested, one WinRM authentication validation command only. It does not enumerate shares, exploit, brute force, dump credentials, or modify systems.[/yellow]"
+        "[yellow]Windows audit uses safe reachability checks, one WinRM authentication validation command when requested, and optional read-only host information commands. It does not enumerate shares, exploit, brute force, dump credentials, or modify systems.[/yellow]"
     )
 
 
@@ -1190,7 +1221,22 @@ def _build_windows_credentialed_audits(
     credentialed_audit["checks_completed"] = int(windows_summary.get("checks_completed") or 0)
     credentialed_audit["checks_failed"] = int(windows_summary.get("checks_failed") or 0)
     credentialed_audit["checks_skipped"] = int(windows_summary.get("checks_skipped") or 0)
-    credentialed_audit["summary"] = windows_summary
+    credentialed_summary = dict(windows_summary)
+    host_info = dict(windows_summary.get("windows_host_info") or {})
+    credentialed_summary.update(
+        {
+            "hostname": host_info.get("hostname") or "",
+            "os_caption": host_info.get("os_caption") or "",
+            "os_version": host_info.get("os_version") or "",
+            "os_build": host_info.get("os_build") or "",
+            "domain_or_workgroup": host_info.get("domain") or host_info.get("workgroup") or "",
+            "powershell_version": host_info.get("powershell_version") or "",
+        }
+    )
+    credentialed_audit["summary"] = credentialed_summary
+    metadata = dict(credentialed_audit.get("metadata") or {})
+    metadata["windows_host_info"] = host_info
+    credentialed_audit["metadata"] = metadata
     return [credentialed_audit]
 
 

@@ -70,6 +70,16 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
             "winrm_auth_status": "authenticated",
             "winrm_authenticated": True,
             "winrm_endpoint_used": "http://127.0.0.1:5985/wsman",
+            "windows_host_info_collected": True,
+            "windows_host_info": {
+                "hostname": "LABHOST",
+                "os_caption": "Microsoft Windows Server 2022 Standard",
+                "os_version": "10.0.20348",
+                "os_build": "20348",
+                "domain": "WORKGROUP",
+                "workgroup": "",
+                "powershell_version": "5.1",
+            },
         },
         "credentialed_audits": [
             {
@@ -119,4 +129,5 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
     assert report["credentialed_audits"][0]["source"] == "ssh_audit"
     assert report["credentialed_audits"][1]["source"] == "windows_audit"
     assert report["windows_audit_summary"]["winrm_auth_status"] == "authenticated"
+    assert report["windows_audit_summary"]["windows_host_info"]["hostname"] == "LABHOST"
     assert report["findings"][0]["title"] == "SSH Login Successful"

@@ -34,6 +34,21 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
             "winrm_transport": "ntlm",
             "safe_validation_command": "hostname",
             "validation_result_summary": "LABHOST",
+            "windows_host_info_collected": True,
+            "windows_host_info_status": "collected",
+            "windows_host_info": {
+                "hostname": "LABHOST",
+                "current_identity": "workgroup\\auditor",
+                "os_caption": "Microsoft Windows Server 2022 Standard",
+                "os_version": "10.0.20348",
+                "os_build": "20348",
+                "os_architecture": "64-bit",
+                "domain": "WORKGROUP",
+                "workgroup": "",
+                "powershell_version": "5.1",
+                "last_boot_time": "2026-05-16T09:00:00Z",
+                "timezone_display_name": "GMT Standard Time",
+            },
             "findings_count": 1,
             "highest_windows_risk_score": 0,
             "highest_windows_risk_label": "Informational",
@@ -88,4 +103,5 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
     assert "Authenticated SSH Audit" in html
     assert "Windows WinRM Authentication Check" in html
     assert "LABHOST" in html
+    assert "Microsoft Windows Server 2022 Standard" in html
     assert "SENSITIVE_VALUE" not in html

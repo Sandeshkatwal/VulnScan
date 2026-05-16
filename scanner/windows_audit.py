@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import socket
 from datetime import datetime, timezone
 from time import perf_counter
@@ -23,11 +24,48 @@ PROFILE = "foundation"
 ALLOWED_AUTH_METHODS = {"none", "smb", "winrm"}
 DEFAULT_TIMEOUT_SECONDS = 2.0
 SAFE_WINRM_VALIDATION_COMMAND = "hostname"
+WINDOWS_HOST_INFO_COMMANDS = {
+    "hostname": "hostname",
+    "current_identity": "whoami",
+    "powershell_version": "$PSVersionTable.PSVersion.ToString()",
+    "os_information": (
+        "Get-CimInstance Win32_OperatingSystem | "
+        "Select-Object Caption, Version, BuildNumber, OSArchitecture, LastBootUpTime, InstallDate | "
+        "ConvertTo-Json -Compress"
+    ),
+    "computer_system": (
+        "Get-CimInstance Win32_ComputerSystem | "
+        "Select-Object Domain, Workgroup, PartOfDomain, Manufacturer, Model | "
+        "ConvertTo-Json -Compress"
+    ),
+    "timezone": "Get-TimeZone | Select-Object Id, DisplayName | ConvertTo-Json -Compress",
+}
+EMPTY_WINDOWS_HOST_INFO = {
+    "hostname": "",
+    "current_identity": "",
+    "powershell_version": "",
+    "os_caption": "",
+    "os_version": "",
+    "os_build": "",
+    "os_architecture": "",
+    "last_boot_time": "",
+    "install_date": "",
+    "domain": "",
+    "workgroup": "",
+    "part_of_domain": "",
+    "manufacturer": "",
+    "model": "",
+    "timezone_id": "",
+    "timezone_display_name": "",
+}
 
 ERROR_INVALID_AUTH_METHOD = "WINDOWS_AUTH_METHOD_INVALID"
 ERROR_PASSWORD_WITHOUT_USERNAME = "WINDOWS_PASSWORD_WITHOUT_USERNAME"
 ERROR_WINRM_CREDENTIALS_MISSING = "WINRM_CREDENTIALS_MISSING"
+ERROR_WINDOWS_HOST_INFO_PREREQUISITES = "WINDOWS_HOST_INFO_PREREQUISITES_MISSING"
 ERROR_SERVICE_CHECK_FAILED = "WINDOWS_AUDIT_SERVICE_CHECK_FAILED"
+ERROR_WINDOWS_HOST_INFO_FAILED = "WINDOWS_HOST_INFO_FAILED"
+ERROR_WINDOWS_HOST_INFO_TIMEOUT = "WINDOWS_HOST_INFO_TIMEOUT"
 WINRM_AUTH_SUCCESS = "WINRM_AUTH_SUCCESS"
 WINRM_AUTH_FAILED = "WINRM_AUTH_FAILED"
 WINRM_NOT_REACHABLE = "WINRM_NOT_REACHABLE"
@@ -89,6 +127,7 @@ def validate_windows_audit_options(
     windows_user: str | None,
     windows_password: str | None,
     windows_auth_method: str,
+    windows_host_info: bool = False,
 ) -> str:
     """Validate Windows audit options without exposing credential values."""
     normalized_method = (windows_auth_method or "none").strip().lower()
@@ -99,6 +138,11 @@ def validate_windows_audit_options(
             ERROR_INVALID_AUTH_METHOD,
         )
     if not windows_audit:
+        if windows_host_info:
+            raise WindowsAuditConfigurationError(
+                "--windows-host-info requires --windows-audit.",
+                ERROR_WINDOWS_HOST_INFO_PREREQUISITES,
+            )
         return normalized_method
     if windows_password and not (windows_user and windows_user.strip()):
         raise WindowsAuditConfigurationError(
@@ -112,6 +156,11 @@ def validate_windows_audit_options(
             "--windows-auth-method winrm requires both --windows-user and --windows-password.",
             ERROR_WINRM_CREDENTIALS_MISSING,
         )
+    if windows_host_info and normalized_method != "winrm":
+        raise WindowsAuditConfigurationError(
+            "--windows-host-info requires --windows-auth-method winrm.",
+            ERROR_WINDOWS_HOST_INFO_PREREQUISITES,
+        )
     return normalized_method
 
 
@@ -123,6 +172,7 @@ def audit_windows_host(
     password: str | None = None,
     domain: str | None = None,
     auth_method: str = "none",
+    collect_host_info: bool = False,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Run safe Windows service reachability checks and optional single WinRM auth validation."""
@@ -133,6 +183,7 @@ def audit_windows_host(
         windows_user=username,
         windows_password=password,
         windows_auth_method=auth_method,
+        windows_host_info=collect_host_info,
     )
 
     service_statuses = [
@@ -146,16 +197,25 @@ def audit_windows_host(
             password=str(password or ""),
             domain=domain,
             service_statuses=service_statuses,
+            collect_host_info=collect_host_info,
             timeout=timeout,
         )
     findings = _build_windows_findings(target, service_statuses)
     if normalized_method == "winrm":
         findings.append(_winrm_auth_finding(target, winrm_auth))
+    if collect_host_info:
+        findings.extend(_host_info_findings(target, winrm_auth))
     findings.append(_completed_finding(target, service_statuses, winrm_auth, normalized_method))
     checks_failed = sum(1 for status in service_statuses if status.get("error_code"))
     if winrm_auth["attempted"] and winrm_auth["status"] != "authenticated":
         checks_failed += 1
-    status = _audit_status(checks_failed=checks_failed)
+    if collect_host_info and winrm_auth.get("host_info_status") == "failed":
+        checks_failed += 1
+    status = (
+        "partial"
+        if collect_host_info and winrm_auth.get("authenticated") and winrm_auth.get("host_info_status") == "failed"
+        else _audit_status(checks_failed=checks_failed)
+    )
     duration = round(perf_counter() - started, 3)
     ended_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     errors = [
@@ -183,6 +243,17 @@ def audit_windows_host(
         )
         if winrm_error:
             errors.append(winrm_error)
+    if collect_host_info and winrm_auth.get("host_info_status") == "failed":
+        host_info_error = build_error(
+            error_code=winrm_auth.get("host_info_error_code") or ERROR_WINDOWS_HOST_INFO_FAILED,
+            message=str(winrm_auth.get("host_info_error_message") or "Windows host information collection failed."),
+            source=SOURCE,
+            check_name="Windows host information",
+            severity="error",
+            safe_detail=str(winrm_auth.get("host_info_safe_detail") or ""),
+        )
+        if host_info_error:
+            errors.append(host_info_error)
     summary = _build_summary(
         target=target,
         username=username,
@@ -301,6 +372,13 @@ def _initial_winrm_auth_result() -> dict[str, Any]:
         "limitations": "WinRM authentication was not requested.",
         "safe_detail": "",
         "duration_seconds": 0.0,
+        "host_info_requested": False,
+        "host_info_status": "skipped",
+        "host_info_error_code": "",
+        "host_info_error_message": "",
+        "host_info_safe_detail": "",
+        "host_info": dict(EMPTY_WINDOWS_HOST_INFO),
+        "host_info_commands_completed": 0,
     }
 
 
@@ -311,6 +389,7 @@ def _perform_winrm_auth_check(
     password: str,
     domain: str | None,
     service_statuses: list[dict[str, Any]],
+    collect_host_info: bool,
     timeout: float,
 ) -> dict[str, Any]:
     started = perf_counter()
@@ -322,6 +401,7 @@ def _perform_winrm_auth_check(
             error_code=WINRM_NOT_REACHABLE,
             message="WinRM authentication was requested, but ports 5985 and 5986 were not reachable.",
             limitations="WinRM may be disabled, filtered by a firewall, or intentionally unavailable.",
+            host_info_requested=collect_host_info,
         )
 
     try:
@@ -335,6 +415,7 @@ def _perform_winrm_auth_check(
             endpoint_used=endpoint["url"],
             transport="ntlm",
             limitations="Install pywinrm in the VulScan virtual environment to enable this check.",
+            host_info_requested=collect_host_info,
         )
 
     endpoint_url = str(endpoint["url"])
@@ -363,6 +444,7 @@ def _perform_winrm_auth_check(
             transport="ntlm",
             safe_detail=exc.__class__.__name__,
             limitations=limitations,
+            host_info_requested=collect_host_info,
         )
     except Exception as exc:  # pywinrm exposes transport/auth failures through several exception classes.
         error_code = _classify_winrm_exception(exc)
@@ -375,10 +457,14 @@ def _perform_winrm_auth_check(
             transport="ntlm",
             safe_detail=exc.__class__.__name__,
             limitations=limitations,
+            host_info_requested=collect_host_info,
         )
 
     status_code = int(getattr(response, "status_code", 1) or 0)
     if status_code == 0:
+        host_info_result = (
+            _collect_windows_host_info(session) if collect_host_info else _initial_host_info_result(False)
+        )
         return _winrm_auth_result(
             started=started,
             status="authenticated",
@@ -389,6 +475,8 @@ def _perform_winrm_auth_check(
             authenticated=True,
             validation_result_summary=_safe_command_summary(getattr(response, "std_out", b"")),
             limitations=limitations,
+            host_info_requested=collect_host_info,
+            host_info_result=host_info_result,
         )
 
     return _winrm_auth_result(
@@ -400,6 +488,7 @@ def _perform_winrm_auth_check(
         transport="ntlm",
         safe_detail=f"status_code={status_code}",
         limitations=limitations,
+        host_info_requested=collect_host_info,
     )
 
 
@@ -424,6 +513,141 @@ def _safe_command_summary(value: Any) -> str:
     else:
         text = str(value or "")
     return " ".join(text.split())[:120]
+
+
+def _collect_windows_host_info(session: Any) -> dict[str, Any]:
+    completed = 0
+    try:
+        hostname = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["hostname"])
+        completed += 1
+        current_identity = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["current_identity"])
+        completed += 1
+        powershell_version = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["powershell_version"])
+        completed += 1
+        os_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["os_information"]))
+        completed += 1
+        computer_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["computer_system"]))
+        completed += 1
+        timezone_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["timezone"]))
+        completed += 1
+    except TimeoutError as exc:
+        result = _initial_host_info_result(True)
+        result.update(
+            {
+                "status": "failed",
+                "error_code": ERROR_WINDOWS_HOST_INFO_TIMEOUT,
+                "error_message": "Windows host information collection timed out.",
+                "safe_detail": exc.__class__.__name__,
+                "commands_completed": completed,
+            }
+        )
+        return result
+    except Exception as exc:
+        result = _initial_host_info_result(True)
+        result.update(
+            {
+                "status": "failed",
+                "error_code": ERROR_WINDOWS_HOST_INFO_FAILED,
+                "error_message": "Windows host information collection failed.",
+                "safe_detail": exc.__class__.__name__,
+                "commands_completed": completed,
+            }
+        )
+        return result
+
+    host_info = _build_host_info(
+        hostname=hostname,
+        current_identity=current_identity,
+        powershell_version=powershell_version,
+        os_data=os_data,
+        computer_data=computer_data,
+        timezone_data=timezone_data,
+    )
+    status = "collected" if any(host_info.values()) else "failed"
+    result = _initial_host_info_result(True)
+    result.update(
+        {
+            "status": status,
+            "host_info": host_info,
+            "commands_completed": completed,
+            "error_code": "" if status == "collected" else ERROR_WINDOWS_HOST_INFO_FAILED,
+            "error_message": "" if status == "collected" else "Windows host information returned incomplete data.",
+        }
+    )
+    return result
+
+
+def _run_safe_ps(session: Any, command: str) -> str:
+    response = session.run_ps(command)
+    status_code = int(getattr(response, "status_code", 1) or 0)
+    if status_code != 0:
+        raise RuntimeError(f"powershell_status_{status_code}")
+    return _safe_output_text(getattr(response, "std_out", b""))
+
+
+def _safe_output_text(value: Any) -> str:
+    if isinstance(value, bytes):
+        text = value.decode("utf-8", errors="replace")
+    else:
+        text = str(value or "")
+    return " ".join(text.split())
+
+
+def _json_object(value: str) -> dict[str, Any]:
+    if not value:
+        return {}
+    parsed = json.loads(value)
+    if isinstance(parsed, list):
+        first = parsed[0] if parsed else {}
+        return first if isinstance(first, dict) else {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _build_host_info(
+    *,
+    hostname: str,
+    current_identity: str,
+    powershell_version: str,
+    os_data: dict[str, Any],
+    computer_data: dict[str, Any],
+    timezone_data: dict[str, Any],
+) -> dict[str, str]:
+    return {
+        "hostname": _short_value(hostname),
+        "current_identity": _short_value(current_identity),
+        "powershell_version": _short_value(powershell_version),
+        "os_caption": _short_value(os_data.get("Caption")),
+        "os_version": _short_value(os_data.get("Version")),
+        "os_build": _short_value(os_data.get("BuildNumber")),
+        "os_architecture": _short_value(os_data.get("OSArchitecture")),
+        "last_boot_time": _short_value(os_data.get("LastBootUpTime")),
+        "install_date": _short_value(os_data.get("InstallDate")),
+        "domain": _short_value(computer_data.get("Domain")),
+        "workgroup": _short_value(computer_data.get("Workgroup")),
+        "part_of_domain": _short_value(computer_data.get("PartOfDomain")),
+        "manufacturer": _short_value(computer_data.get("Manufacturer")),
+        "model": _short_value(computer_data.get("Model")),
+        "timezone_id": _short_value(timezone_data.get("Id")),
+        "timezone_display_name": _short_value(timezone_data.get("DisplayName")),
+    }
+
+
+def _short_value(value: Any, limit: int = 160) -> str:
+    if value is None:
+        return ""
+    return " ".join(str(value).split())[:limit]
+
+
+def _initial_host_info_result(requested: bool) -> dict[str, Any]:
+    return {
+        "requested": requested,
+        "status": "skipped",
+        "error_code": "",
+        "error_message": "",
+        "safe_detail": "",
+        "host_info": dict(EMPTY_WINDOWS_HOST_INFO),
+        "commands_completed": 0,
+    }
 
 
 def _classify_winrm_exception(exc: Exception) -> str:
@@ -468,7 +692,10 @@ def _winrm_auth_result(
     validation_result_summary: str = "",
     safe_detail: str = "",
     limitations: str,
+    host_info_requested: bool = False,
+    host_info_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    host_result = host_info_result or _initial_host_info_result(host_info_requested)
     return {
         "attempted": True,
         "status": status,
@@ -482,6 +709,13 @@ def _winrm_auth_result(
         "limitations": limitations,
         "safe_detail": safe_detail,
         "duration_seconds": round(perf_counter() - started, 3),
+        "host_info_requested": bool(host_result.get("requested")),
+        "host_info_status": host_result.get("status") or "skipped",
+        "host_info_error_code": host_result.get("error_code") or "",
+        "host_info_error_message": host_result.get("error_message") or "",
+        "host_info_safe_detail": host_result.get("safe_detail") or "",
+        "host_info": host_result.get("host_info") or dict(EMPTY_WINDOWS_HOST_INFO),
+        "host_info_commands_completed": int(host_result.get("commands_completed") or 0),
     }
 
 
@@ -578,6 +812,85 @@ def _winrm_auth_finding(target: str, winrm_auth: dict[str, Any]) -> Finding:
     )
 
 
+def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding]:
+    findings: list[Finding] = []
+    if not winrm_auth.get("authenticated"):
+        return findings
+
+    host_info = dict(winrm_auth.get("host_info") or {})
+    status = str(winrm_auth.get("host_info_status") or "")
+    if status == "collected":
+        findings.append(
+            create_finding(
+                title="Windows Host Information Collected",
+                severity="Informational",
+                category="Windows Host Information",
+                affected_host=target,
+                service="winrm",
+                evidence="Basic Windows host information collected using read-only WinRM commands.",
+                confidence="High",
+                impact="Host information improves asset inventory, reporting, and future vulnerability correlation.",
+                recommendation="Use this information to support asset management and patch review.",
+                verification="Re-run VulScan with --windows-host-info.",
+                limitation="Host information alone does not confirm vulnerabilities.",
+                source=SOURCE,
+            )
+        )
+        part_of_domain = str(host_info.get("part_of_domain") or "").lower()
+        if part_of_domain == "true" and host_info.get("domain"):
+            findings.append(
+                create_finding(
+                    title="Windows System Appears Domain Joined",
+                    severity="Informational",
+                    category="Windows Host Information",
+                    affected_host=target,
+                    service="winrm",
+                    evidence="PartOfDomain is true and a domain value was reported.",
+                    confidence="Medium",
+                    impact="Domain context may affect interpretation of future Windows policy checks.",
+                    recommendation="Consider domain policy context when interpreting future local policy checks.",
+                    verification="Re-run VulScan with --windows-host-info.",
+                    limitation="Domain membership does not indicate insecure configuration.",
+                    source=SOURCE,
+                )
+            )
+        elif part_of_domain == "false" or host_info.get("workgroup"):
+            findings.append(
+                create_finding(
+                    title="Windows System Appears Workgroup Joined",
+                    severity="Informational",
+                    category="Windows Host Information",
+                    affected_host=target,
+                    service="winrm",
+                    evidence="PartOfDomain is false or a workgroup value was reported.",
+                    confidence="Medium",
+                    impact="Local security configuration may be more important when domain policy does not apply.",
+                    recommendation="Review local security configuration directly because domain policy may not apply.",
+                    verification="Re-run VulScan with --windows-host-info.",
+                    limitation="Workgroup membership does not indicate vulnerability.",
+                    source=SOURCE,
+                )
+            )
+        return findings
+
+    return [
+        create_finding(
+            title="Windows Host Information Collection Failed",
+            severity="Informational",
+            category="Windows Host Information",
+            affected_host=target,
+            service="winrm",
+            evidence="Safe read-only host information command failed or returned incomplete data.",
+            confidence="Medium",
+            impact="Windows host information could not be used for reporting or future correlation.",
+            recommendation="Verify WinRM permissions and target configuration.",
+            verification="Re-run VulScan with --windows-host-info after confirming WinRM permissions.",
+            limitation="Missing host info may be caused by permissions, policy, or WinRM configuration.",
+            source=SOURCE,
+        )
+    ]
+
+
 def _completed_finding(
     target: str,
     service_statuses: list[dict[str, Any]],
@@ -595,7 +908,7 @@ def _completed_finding(
             impact="A safe single-attempt WinRM authentication validation was completed.",
             recommendation="Use later authenticated Windows audit modules for deeper read-only checks.",
             verification="Re-run VulScan with --windows-audit --windows-auth-method winrm.",
-            limitation="Version 12.1 validates authentication only and does not run deep Windows enumeration.",
+            limitation="Version 12.2 validates authentication and optionally collects basic host information only; it does not run deep Windows enumeration.",
             source=SOURCE,
         )
 
@@ -611,7 +924,7 @@ def _completed_finding(
         impact="Foundation-level Windows service exposure indicators were collected.",
         recommendation="Use authenticated Windows audit in later versions for deeper checks.",
         verification="Re-run VulScan with --windows-audit.",
-        limitation="Version 12.1 performs foundation-level reachability checks unless WinRM authentication validation is explicitly requested.",
+        limitation="Version 12.2 performs foundation-level reachability checks unless WinRM authentication or host information collection is explicitly requested.",
         source=SOURCE,
     )
 
@@ -629,10 +942,14 @@ def _build_summary(
     winrm_auth: dict[str, Any],
 ) -> dict[str, Any]:
     service_by_port = {int(item["port"]): item for item in service_statuses}
-    checks_completed = len(service_statuses) + (1 if winrm_auth.get("attempted") else 0)
+    checks_completed = (
+        len(service_statuses)
+        + (1 if winrm_auth.get("attempted") else 0)
+        + int(winrm_auth.get("host_info_commands_completed") or 0)
+    )
     limitations = [
-        "Version 12.1 performs socket reachability checks and, when explicitly requested, one safe WinRM authentication validation only.",
-        "It does not enumerate shares, query the registry, list users, dump credentials, exploit, brute force, or modify systems.",
+        "Version 12.2 performs socket reachability checks, one safe WinRM authentication validation when requested, and optional read-only host information collection.",
+        "It does not enumerate shares, query the registry, query security policy, list users, list groups, list files, list processes, dump credentials, exploit, brute force, or modify systems.",
     ]
     if winrm_auth.get("limitations"):
         limitations.append(str(winrm_auth["limitations"]))
@@ -665,6 +982,11 @@ def _build_summary(
         "safe_validation_command": winrm_auth.get("safe_validation_command") or "",
         "validation_result_summary": winrm_auth.get("validation_result_summary") or "",
         "winrm_auth_duration_seconds": float(winrm_auth.get("duration_seconds") or 0.0),
+        "windows_host_info_collected": winrm_auth.get("host_info_status") == "collected",
+        "windows_host_info": winrm_auth.get("host_info") or dict(EMPTY_WINDOWS_HOST_INFO),
+        "windows_host_info_status": winrm_auth.get("host_info_status") or "skipped",
+        "windows_host_info_error_code": winrm_auth.get("host_info_error_code") or "",
+        "windows_host_info_error_message": winrm_auth.get("host_info_error_message") or "",
         "limitations": limitations,
     }
 
@@ -713,6 +1035,36 @@ def _build_credentialed_audit(
                 evidence_summary=str(summary.get("validation_result_summary") or winrm_auth or ""),
             ).to_dict()
         )
+    host_info = dict(summary.get("windows_host_info") or {})
+    if summary.get("windows_host_info_collected") or summary.get("windows_host_info_status") == "failed":
+        checks.append(
+            CredentialedCheckResult(
+                check_id="windows-host-information",
+                check_name="Windows host information",
+                source=SOURCE,
+                status="success" if summary.get("windows_host_info_collected") else "failed",
+                command_name="safe-winrm-host-info",
+                duration_seconds=0.0,
+                findings_count=1,
+                error_code=str(summary.get("windows_host_info_error_code") or "") or None,
+                error_message=str(summary.get("windows_host_info_error_message") or ""),
+                evidence_summary="Windows host information collected."
+                if summary.get("windows_host_info_collected")
+                else "Windows host information collection failed.",
+            ).to_dict()
+        )
+    domain_or_workgroup = host_info.get("domain") or host_info.get("workgroup") or ""
+    credentialed_summary = dict(summary)
+    credentialed_summary.update(
+        {
+            "hostname": host_info.get("hostname") or "",
+            "os_caption": host_info.get("os_caption") or "",
+            "os_version": host_info.get("os_version") or "",
+            "os_build": host_info.get("os_build") or "",
+            "domain_or_workgroup": domain_or_workgroup,
+            "powershell_version": host_info.get("powershell_version") or "",
+        }
+    )
     audit = CredentialedAuditResult(
         source=SOURCE,
         module_name=MODULE_NAME if auth_method == "winrm" else FOUNDATION_MODULE_NAME,
@@ -730,7 +1082,7 @@ def _build_credentialed_audit(
         checks_failed=len(errors),
         checks_skipped=0,
         findings=[finding_to_dict(finding) for finding in findings],
-        summary=summary,
+        summary=credentialed_summary,
         errors=errors,
         limitations=list(summary["limitations"]),
         performance={
@@ -743,6 +1095,7 @@ def _build_credentialed_audit(
             "service_statuses": service_statuses,
             "winrm_endpoint_used": summary.get("winrm_endpoint_used") or "",
             "winrm_transport": summary.get("winrm_transport") or "",
+            "windows_host_info": host_info,
             "checks": checks,
         },
     )
