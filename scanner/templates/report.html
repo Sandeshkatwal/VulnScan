@@ -211,6 +211,7 @@
       <p><strong>HTTP audit findings:</strong> {{ report.summary.total_http_findings }}</p>
       <p><strong>TLS audit findings:</strong> {{ report.summary.total_tls_findings }}</p>
       <p><strong>SSH audit findings:</strong> {{ report.summary.total_ssh_findings }}</p>
+      <p><strong>Windows audit findings:</strong> {{ report.summary.total_windows_findings }}</p>
       <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
       <p><strong>Scan start:</strong> {{ report.scan_start_time }}</p>
       <p><strong>Scan end:</strong> {{ report.scan_end_time }}</p>
@@ -412,6 +413,51 @@
       </table>
       {% else %}
       <p class="empty">No TLS audit findings were recorded. Run with --tls-audit to perform passive certificate checks against detected HTTPS services.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Windows SMB/WinRM Audit Summary</h2>
+      {% if report.windows_audit_summary.enabled %}
+      <p><strong>Status:</strong> {{ report.windows_audit_summary.status }}</p>
+      <p><strong>Auth method:</strong> {{ report.windows_audit_summary.auth_method }}</p>
+      <p><strong>Username used:</strong> {{ report.windows_audit_summary.username_used or "" }}</p>
+      <p><strong>Domain:</strong> {{ report.windows_audit_summary.domain or "" }}</p>
+      <p><strong>SMB reachable:</strong> {{ report.windows_audit_summary.smb_reachable }}</p>
+      <p><strong>WinRM HTTP reachable:</strong> {{ report.windows_audit_summary.winrm_http_reachable }}</p>
+      <p><strong>WinRM HTTPS reachable:</strong> {{ report.windows_audit_summary.winrm_https_reachable }}</p>
+      <p><strong>RDP reachable:</strong> {{ report.windows_audit_summary.rdp_reachable }}</p>
+      <p><strong>Findings count:</strong> {{ report.windows_audit_summary.findings_count }}</p>
+      <p><strong>Highest Windows risk:</strong> {{ report.windows_audit_summary.highest_windows_risk_score }} ({{ report.windows_audit_summary.highest_windows_risk_label }})</p>
+      {% if report.windows_audit_summary.service_statuses %}
+      <table>
+        <thead>
+          <tr>
+            <th>Port</th>
+            <th>Service</th>
+            <th>Reachable</th>
+            <th>Evidence</th>
+            <th>Recommendation</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for service in report.windows_audit_summary.service_statuses %}
+          <tr>
+            <td>{{ service.port }}</td>
+            <td>{{ service.service }}</td>
+            <td>{{ service.reachable }}</td>
+            <td>{{ service.evidence }}</td>
+            <td>{{ service.recommendation }}</td>
+            <td>{{ service.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      <p><strong>Limitations:</strong> {{ report.windows_audit_summary.limitations }}</p>
+      {% else %}
+      <p class="empty">Windows SMB/WinRM Audit was not requested.</p>
       {% endif %}
     </section>
 

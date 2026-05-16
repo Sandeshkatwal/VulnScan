@@ -47,10 +47,15 @@ def save_html_report(
             "ssh_audit_summary",
             {"enabled": False, "status": "skipped"},
         ),
+        "windows_audit_summary": scan_result.get(
+            "windows_audit_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
         "credentialed_audits": credentialed_audits_to_dicts(
             scan_result.get("credentialed_audits", [])
         ),
         "ssh_findings": scan_result.get("ssh_findings", []),
+        "windows_findings": scan_result.get("windows_findings", []),
         "summary": build_summary(scan_result),
     }
 

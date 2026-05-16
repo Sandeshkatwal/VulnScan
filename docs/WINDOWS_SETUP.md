@@ -171,6 +171,16 @@ Package checks over SSH are read-only. VulScan detects package managers with `co
 
 Linux configuration audit checks over SSH are read-only and require authorised SSH credentials. VulScan reviews firewall indicators, logging service indicators, local password policy indicators, temporary directory sticky-bit indicators, cleartext service exposure indicators, and basic hostname/OS information. Results are indicators that need operational review. This is not a full CIS benchmark implementation yet, but it prepares the framework for CIS-style templates.
 
+Version 12.0 adds Windows SMB/WinRM audit foundation checks:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --windows-audit
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method none
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-user USER --windows-password PASSWORD --windows-domain WORKGROUP --windows-auth-method smb --json --html --save-db
+```
+
+The Windows foundation checks use safe TCP socket reachability only for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. Version 12.0 does not authenticate, exploit, brute force, enumerate shares, dump credentials, modify systems, or restart services. Passwords are not stored or printed. Deeper authenticated Windows SMB/WinRM checks are planned for later versions.
+
 The pytest suite uses fake SSH audit fixtures in `tests\fixtures` and mocked command output. Tests do not require internet access, a live SSH server, or real SSH credentials. Runtime SSH testing still requires authorised Linux credentials.
 
 You can also run the included helper script:

@@ -17,6 +17,7 @@ BASE_SEVERITY_SCORES = {
 }
 
 SENSITIVE_PORTS = {445, 3389, 3306, 5432, 6379}
+REMOTE_MANAGEMENT_PORTS = {5985, 5986}
 
 
 def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
@@ -31,6 +32,8 @@ def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
 
     if affected_port in SENSITIVE_PORTS:
         score += 10
+    if affected_port in REMOTE_MANAGEMENT_PORTS:
+        score += 5
     if service == "telnet":
         score += 20
     if service == "ftp":

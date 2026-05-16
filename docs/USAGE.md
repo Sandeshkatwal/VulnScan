@@ -253,6 +253,17 @@ Version 11.8 adds credentialed audit performance controls. Commands record durat
 
 Version 11.9 normalises credentialed audit results internally. SSH audit output still includes the user-friendly `ssh_audit_summary`, but reports also include a top-level `credentialed_audits` list with standard fields for module name, source, status, target, authentication method, username, profile, check counts, findings, errors, limitations, performance, and metadata. Passwords, private key contents, and private key paths are not stored in this normalised result. This prepares VulScan for future Windows SMB/WinRM audit modules without changing existing commands.
 
+Version 12.0 adds Windows SMB/WinRM audit foundation checks. These checks use safe TCP socket reachability only for SMB `445`, NetBIOS/SMB `139`, WinRM HTTP `5985`, WinRM HTTPS `5986`, and RDP `3389`.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --windows-audit
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method none
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-user USER --windows-password PASSWORD --windows-domain WORKGROUP --windows-auth-method smb
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-user USER --windows-password PASSWORD --windows-auth-method winrm --json --html --save-db
+```
+
+Allowed `--windows-auth-method` values are `none`, `smb`, and `winrm`; the default is `none`. Version 12.0 does not perform Windows authentication yet, but it records safe metadata such as username, domain, and auth method when explicitly provided. Passwords are not stored or printed. Windows audit results include `windows_audit_summary`, standard findings with source `windows_audit`, and a normalised `credentialed_audits` entry. Version 12.0 does not exploit, brute force, enumerate shares, dump credentials, modify systems, restart services, or validate vulnerabilities. Deeper authenticated Windows SMB/WinRM checks are planned for later versions.
+
 Version 11.7 improves credentialed audit evidence quality. VulScan stores concise evidence summaries for SSH findings instead of full raw SSH command output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values where useful, limits package samples, and redacts values that look like passwords, tokens, private keys, authorization headers, or secrets. Credentialed audit evidence should still be reviewed in operational context.
 
 After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, package update checks, and Linux configuration indicator checks. It does not run `sudo`, change files, install packages, update packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.

@@ -47,6 +47,11 @@ from scanner.ssh_audit import (
     validate_ssh_audit_options,
 )
 from scanner.tls_audit import audit_tls_services
+from scanner.windows_audit import (
+    WindowsAuditConfigurationError,
+    audit_windows_host,
+    validate_windows_audit_options,
+)
 
 
 app = typer.Typer(
@@ -111,6 +116,41 @@ def scan(
             help="Run passive TLS certificate checks against detected HTTPS services.",
         ),
     ] = False,
+    windows_audit: Annotated[
+        bool,
+        typer.Option(
+            "--windows-audit",
+            help="Run safe Windows SMB/WinRM/RDP audit foundation checks.",
+        ),
+    ] = False,
+    windows_user: Annotated[
+        str | None,
+        typer.Option(
+            "--windows-user",
+            help="Username for future Windows credentialed audit. Password is not stored or printed.",
+        ),
+    ] = None,
+    windows_password: Annotated[
+        str | None,
+        typer.Option(
+            "--windows-password",
+            help="Password for future Windows credentialed audit. Not stored or printed.",
+        ),
+    ] = None,
+    windows_domain: Annotated[
+        str | None,
+        typer.Option(
+            "--windows-domain",
+            help="Optional Windows domain or workgroup name.",
+        ),
+    ] = None,
+    windows_auth_method: Annotated[
+        str,
+        typer.Option(
+            "--windows-auth-method",
+            help="Windows auth method foundation setting: none, smb, or winrm.",
+        ),
+    ] = "none",
     ssh_audit: Annotated[
         bool,
         typer.Option(
@@ -216,6 +256,16 @@ def scan(
     except SshAuditConfigurationError as exc:
         console.print(f"[red]SSH audit configuration error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
+    try:
+        selected_windows_auth_method = validate_windows_audit_options(
+            windows_audit=windows_audit,
+            windows_user=windows_user,
+            windows_password=windows_password,
+            windows_auth_method=windows_auth_method,
+        )
+    except WindowsAuditConfigurationError as exc:
+        console.print(f"[red]Windows audit configuration error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
 
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
     console.print(f"[bold]Target:[/bold] {target}")
@@ -232,8 +282,11 @@ def scan(
         scan_result["tls_findings"] = []
         scan_result["ssh_audit"] = {"enabled": False, "status": "skipped", "findings": []}
         scan_result["ssh_audit_summary"] = {"enabled": False, "status": "skipped"}
+        scan_result["windows_audit"] = {"enabled": False, "status": "skipped", "findings": []}
+        scan_result["windows_audit_summary"] = {"enabled": False, "status": "skipped"}
         scan_result["credentialed_audits"] = []
         scan_result["ssh_findings"] = []
+        scan_result["windows_findings"] = []
         findings = create_port_exposure_findings(scan_result["open_ports"])
         if http_audit:
             http_findings = audit_http_services(scan_result["open_ports"])
@@ -241,6 +294,17 @@ def scan(
         if tls_audit:
             tls_findings = audit_tls_services(scan_result["open_ports"])
             findings.extend(tls_findings)
+        if windows_audit:
+            windows_result = audit_windows_host(
+                target=scan_result["host"],
+                resolved_ip=scan_result["resolved_ip"],
+                username=windows_user,
+                password=windows_password,
+                domain=windows_domain,
+                auth_method=selected_windows_auth_method,
+            )
+            scan_result["windows_audit"] = windows_result
+            findings.extend(windows_result.get("findings", []))
         if ssh_audit:
             if ssh_progress:
                 console.print("Credentialed SSH Audit")
@@ -277,6 +341,11 @@ def scan(
             for finding in scan_result["findings"]
             if _is_ssh_related_finding(finding)
         ]
+        scan_result["windows_findings"] = [
+            finding
+            for finding in scan_result["findings"]
+            if _is_windows_related_finding(finding)
+        ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
             scan_result["credentialed_audits"] = _build_credentialed_audits(
@@ -289,6 +358,18 @@ def scan(
                 auth_method="key" if ssh_key is not None else "password",
                 ssh_port=ssh_port,
                 audit_profile=selected_audit_profile,
+            )
+        if windows_audit:
+            scan_result["windows_audit"]["findings"] = scan_result["windows_findings"]
+            scan_result["windows_audit_summary"] = _build_windows_audit_summary(
+                scan_result=scan_result,
+            )
+            scan_result["credentialed_audits"].extend(
+                _build_windows_credentialed_audits(
+                    windows_result=scan_result["windows_audit"],
+                    windows_findings=scan_result["windows_findings"],
+                    windows_summary=scan_result["windows_audit_summary"],
+                )
             )
         scan_end_time = datetime.now().astimezone()
         scan_result["scan_start_time"] = scan_start_time.isoformat(timespec="seconds")
@@ -325,6 +406,7 @@ def scan(
 
     console.print(f"[bold]Total scan time:[/bold] {scan_result['duration_seconds']} seconds")
     _print_ssh_audit_summary(scan_result.get("ssh_audit_summary", {"enabled": False}))
+    _print_windows_audit_summary(scan_result.get("windows_audit_summary", {"enabled": False}))
     _print_credentialed_audit_modules(scan_result.get("credentialed_audits", []))
 
     _print_findings(scan_result["findings"])
@@ -793,6 +875,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "package_audit",
         "ssh_hardening",
         "linux_config_audit",
+        "windows_audit",
     ]
     grouped: dict[str, list[dict[str, Any]]] = {source: [] for source in source_order}
     grouped["other"] = []
@@ -890,6 +973,36 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
         console.print(f"[yellow]Performance notes:[/yellow] {_format_summary_list(summary.get('performance_notes'))}")
 
 
+def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+
+    table = Table(title="Windows SMB/WinRM Audit Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Status", summary.get("status")),
+        ("Auth method", summary.get("auth_method")),
+        ("Username", summary.get("username_used")),
+        ("Domain", summary.get("domain")),
+        ("SMB reachable", summary.get("smb_reachable")),
+        ("WinRM HTTP reachable", summary.get("winrm_http_reachable")),
+        ("WinRM HTTPS reachable", summary.get("winrm_https_reachable")),
+        ("RDP reachable", summary.get("rdp_reachable")),
+        ("Findings count", summary.get("findings_count")),
+        (
+            "Highest Windows risk",
+            f"{summary.get('highest_windows_risk_score')} ({summary.get('highest_windows_risk_label')})",
+        ),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+    console.print(
+        "[yellow]Windows audit foundation uses socket reachability checks only. It does not authenticate, enumerate shares, exploit, brute force, dump credentials, or modify systems.[/yellow]"
+    )
+
+
 def _ssh_progress_callback(message: str) -> None:
     console.print(f"- {message}")
 
@@ -944,6 +1057,10 @@ def _is_ssh_related_finding(finding: dict[str, Any]) -> bool:
         "ssh_hardening",
         "linux_config_audit",
     }
+
+
+def _is_windows_related_finding(finding: dict[str, Any]) -> bool:
+    return str(finding.get("source") or "") == "windows_audit"
 
 
 def _build_ssh_audit_summary(
@@ -1014,6 +1131,24 @@ def _build_ssh_audit_summary(
     }
 
 
+def _build_windows_audit_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
+    windows_audit = scan_result.get("windows_audit", {})
+    windows_findings = scan_result.get("windows_findings", [])
+    base_summary = dict(windows_audit.get("summary") or {})
+    highest = max(windows_findings, key=lambda item: int(item.get("risk_score") or 0), default={})
+    base_summary.update(
+        {
+            "enabled": True,
+            "status": windows_audit.get("status") or base_summary.get("status") or "skipped",
+            "target": scan_result.get("host"),
+            "findings_count": len(windows_findings),
+            "highest_windows_risk_score": int(highest.get("risk_score") or 0),
+            "highest_windows_risk_label": str(highest.get("risk_label") or "Informational"),
+        }
+    )
+    return base_summary
+
+
 def _build_credentialed_audits(
     *,
     ssh_result: dict[str, Any],
@@ -1030,6 +1165,23 @@ def _build_credentialed_audits(
     performance = dict(credentialed_audit.get("performance") or {})
     performance["total_duration_seconds"] = ssh_result.get("total_duration_seconds")
     credentialed_audit["performance"] = performance
+    return [credentialed_audit]
+
+
+def _build_windows_credentialed_audits(
+    *,
+    windows_result: dict[str, Any],
+    windows_findings: list[dict[str, Any]],
+    windows_summary: dict[str, Any],
+) -> list[dict[str, Any]]:
+    credentialed_audit = dict(windows_result.get("credentialed_audit") or {})
+    if not credentialed_audit:
+        return []
+    credentialed_audit["findings"] = list(windows_findings)
+    credentialed_audit["checks_completed"] = int(windows_summary.get("checks_completed") or 0)
+    credentialed_audit["checks_failed"] = int(windows_summary.get("checks_failed") or 0)
+    credentialed_audit["checks_skipped"] = int(windows_summary.get("checks_skipped") or 0)
+    credentialed_audit["summary"] = windows_summary
     return [credentialed_audit]
 
 

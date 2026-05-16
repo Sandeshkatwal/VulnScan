@@ -3,6 +3,7 @@
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
 Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Version 12.0 also adds a Windows SMB/WinRM audit foundation that performs safe socket reachability checks for SMB, WinRM, and RDP.
 
 ## Requirements
 
@@ -56,6 +57,16 @@ SSH audit timeout options are `--ssh-timeout`, `--ssh-command-timeout`, and `--s
 Credentialed audit findings store concise evidence summaries, not full raw SSH output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values in JSON and HTML reports where useful, and redacts values that look like passwords, tokens, private keys, authorization headers, or secrets.
 
 Credentialed audit results are normalised internally under `credentialed_audits` in JSON and HTML reports. Existing SSH summaries remain available, and existing commands are unchanged. The normalised model avoids storing passwords, private key contents, or private key paths and prepares VulScan for future Windows SMB/WinRM audit modules.
+
+Windows audit foundation examples:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --windows-audit
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-auth-method none
+.\.venv311\Scripts\python.exe -m scanner.main scan --target WINDOWS_IP --windows-audit --windows-user USER --windows-password PASSWORD --windows-domain WORKGROUP --windows-auth-method smb --json --html --save-db
+```
+
+Version 12.0 Windows audit is foundation-only. It checks TCP reachability for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. It does not authenticate, exploit, brute force, enumerate shares, dump credentials, modify systems, or restart services. Passwords are not stored or printed.
 
 You can also use the helper script:
 
