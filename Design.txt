@@ -1,5 +1,5 @@
 Vulnerability Scanner
-│
+
 ├── Discovery Engine
 │   ├── Host discovery
 │   ├── Port scanning
