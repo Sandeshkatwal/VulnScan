@@ -3,6 +3,7 @@ from scanner.web_crawler import WebFormResult, WebPageResult
 
 def test_web_form_result_serializes_to_dict() -> None:
     result = WebFormResult(
+        form_id="FORM-TEST",
         page_url="https://example.test/login",
         method="POST",
         action="https://example.test/login",

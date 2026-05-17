@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import posixpath
+import hashlib
 from collections import deque
 from dataclasses import asdict, dataclass, field
 from time import perf_counter
@@ -48,9 +49,27 @@ LIMITATIONS = [
 
 @dataclass(frozen=True)
 class WebFormResult:
+    form_id: str
     page_url: str
     method: str
     action: str
+    page_title: str = ""
+    resolved_action_url: str = ""
+    action_host: str = ""
+    is_internal_action: bool = True
+    is_https_context: bool = False
+    sends_to_http_from_https: bool = False
+    enctype: str = ""
+    autocomplete: str = ""
+    input_count: int = 0
+    hidden_input_count: int = 0
+    password_input_count: int = 0
+    file_input_count: int = 0
+    textarea_count: int = 0
+    select_count: int = 0
+    submit_button_count: int = 0
+    csrf_token_like_fields: list[str] = field(default_factory=list)
+    input_fields: list[dict[str, Any]] = field(default_factory=list)
     input_names: list[str] = field(default_factory=list)
     input_types: list[str] = field(default_factory=list)
     has_password_field: bool = False
@@ -367,7 +386,10 @@ def _parse_html(page_url: str, html: str) -> dict[str, Any]:
                 internal_links.append(normalized)
         elif normalized not in external_links:
             external_links.append(normalized)
-    forms = [_parse_form(page_url, form).to_dict() for form in soup.find_all("form")]
+    forms = [
+        _parse_form(page_url, form, page_title=title, index=index).to_dict()
+        for index, form in enumerate(soup.find_all("form"), start=1)
+    ]
     return {
         "title": title,
         "internal_links": internal_links,
@@ -376,32 +398,135 @@ def _parse_html(page_url: str, html: str) -> dict[str, Any]:
     }
 
 
-def _parse_form(page_url: str, form: Any) -> WebFormResult:
+def _parse_form(page_url: str, form: Any, *, page_title: str, index: int) -> WebFormResult:
     method = str(form.get("method") or "GET").upper()
-    action = normalize_url(str(form.get("action") or page_url), page_url)
+    action = str(form.get("action") or page_url)
+    resolved_action = normalize_url(action, page_url)
+    page_host = urlsplit(page_url).netloc.lower()
+    action_host = urlsplit(resolved_action).netloc.lower()
+    is_https_context = urlsplit(page_url).scheme == "https"
+    enctype = str(form.get("enctype") or "").strip().lower()
+    autocomplete = str(form.get("autocomplete") or "").strip()
     input_names: list[str] = []
     input_types: list[str] = []
+    input_fields: list[dict[str, Any]] = []
+    csrf_like: list[str] = []
     has_password = False
     has_file = False
+    hidden_count = 0
+    password_count = 0
+    file_count = 0
+    textarea_count = 0
+    select_count = 0
+    submit_count = 0
     for input_node in form.find_all(["input", "textarea", "select"]):
         name = str(input_node.get("name") or "").strip()
+        field_id = str(input_node.get("id") or "").strip()
         input_type = str(input_node.get("type") or input_node.name or "text").strip().lower()
+        placeholder = str(input_node.get("placeholder") or "").strip()[:120]
+        field_autocomplete = str(input_node.get("autocomplete") or "").strip()
+        maxlength = str(input_node.get("maxlength") or "").strip()
         if name:
             input_names.append(name)
         input_types.append(input_type)
+        field_label = name or field_id
+        if _is_csrf_like(field_label):
+            csrf_like.append(field_label)
+        if input_type == "hidden":
+            hidden_count += 1
         if input_type == "password":
             has_password = True
+            password_count += 1
         if input_type == "file":
             has_file = True
+            file_count += 1
+        if input_type in {"submit", "button", "image"}:
+            submit_count += 1
+        if input_node.name == "textarea":
+            textarea_count += 1
+        if input_node.name == "select":
+            select_count += 1
+        input_fields.append(
+            {
+                "name": name,
+                "type": input_type,
+                "id": field_id,
+                "placeholder": placeholder,
+                "required": bool(input_node.get("required") is not None),
+                "autocomplete": field_autocomplete,
+                "maxlength": maxlength,
+                "value_present": input_node.get("value") is not None,
+                "looks_sensitive": _looks_sensitive(field_label),
+            }
+        )
+    form_id = _form_id(page_url, method, resolved_action, input_names, input_types, index)
     return WebFormResult(
+        form_id=form_id,
         page_url=page_url,
+        page_title=page_title,
         method=method,
         action=action,
+        resolved_action_url=resolved_action,
+        action_host=action_host,
+        is_internal_action=action_host == page_host,
+        is_https_context=is_https_context,
+        sends_to_http_from_https=is_https_context and urlsplit(resolved_action).scheme == "http",
+        enctype=enctype,
+        autocomplete=autocomplete,
+        input_count=len(input_fields),
+        hidden_input_count=hidden_count,
+        password_input_count=password_count,
+        file_input_count=file_count,
+        textarea_count=textarea_count,
+        select_count=select_count,
+        submit_button_count=submit_count,
+        csrf_token_like_fields=csrf_like,
+        input_fields=input_fields,
         input_names=input_names,
         input_types=input_types,
         has_password_field=has_password,
-        has_file_upload=has_file,
+        has_file_upload=has_file or enctype == "multipart/form-data",
     )
+
+
+def _form_id(
+    page_url: str,
+    method: str,
+    action: str,
+    input_names: list[str],
+    input_types: list[str],
+    index: int,
+) -> str:
+    material = "|".join([page_url, method, action, ",".join(input_names), ",".join(input_types), str(index)])
+    return f"FORM-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:12].upper()}"
+
+
+def _is_csrf_like(value: str) -> bool:
+    lowered = value.lower()
+    return any(marker in lowered for marker in ("csrf", "xsrf", "anti-forgery", "requestverificationtoken"))
+
+
+def _looks_sensitive(value: str) -> bool:
+    lowered = value.lower()
+    indicators = (
+        "password",
+        "passwd",
+        "pwd",
+        "token",
+        "csrf",
+        "secret",
+        "api_key",
+        "auth",
+        "session",
+        "otp",
+        "mfa",
+        "credit",
+        "card",
+        "ssn",
+        "national",
+        "ni_number",
+    )
+    return any(indicator in lowered for indicator in indicators)
 
 
 def _is_html(content_type: str) -> bool:

@@ -584,6 +584,94 @@
       <p class="empty">Web cookie audit was not requested. Run web-scan with --cookies or --headers to check cookie attributes.</p>
       {% endif %}
 
+      <h3>Web Form Discovery</h3>
+      {% if report.web_form_summary.enabled %}
+      <table>
+        <thead>
+          <tr>
+            <th>Pages checked</th>
+            <th>Forms</th>
+            <th>Login</th>
+            <th>Search</th>
+            <th>Contact</th>
+            <th>Upload</th>
+            <th>Newsletter</th>
+            <th>Missing CSRF indicator</th>
+            <th>Submit to HTTP</th>
+            <th>External actions</th>
+            <th>Sensitive hidden fields</th>
+            <th>Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_form_summary.pages_checked }}</td>
+            <td>{{ report.web_form_summary.forms_discovered }}</td>
+            <td>{{ report.web_form_summary.login_forms }}</td>
+            <td>{{ report.web_form_summary.search_forms }}</td>
+            <td>{{ report.web_form_summary.contact_forms }}</td>
+            <td>{{ report.web_form_summary.upload_forms }}</td>
+            <td>{{ report.web_form_summary.newsletter_forms }}</td>
+            <td>{{ report.web_form_summary.forms_missing_csrf_indicator }}</td>
+            <td>{{ report.web_form_summary.forms_submitting_to_http }}</td>
+            <td>{{ report.web_form_summary.external_form_actions }}</td>
+            <td>{{ report.web_form_summary.sensitive_hidden_field_forms }}</td>
+            <td>{{ report.web_form_summary.findings_count }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Enhanced Form Results</h3>
+      {% if report.web_form_results %}
+      <table>
+        <thead>
+          <tr>
+            <th>Form ID</th>
+            <th>Page URL</th>
+            <th>Method</th>
+            <th>Action</th>
+            <th>Resolved action</th>
+            <th>Classification</th>
+            <th>HTTPS page</th>
+            <th>Submit to HTTP</th>
+            <th>Password</th>
+            <th>File upload</th>
+            <th>CSRF-like fields</th>
+            <th>Sensitive fields</th>
+            <th>Inputs</th>
+            <th>Hidden</th>
+            <th>Issues</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for form in report.web_form_results %}
+          <tr>
+            <td>{{ form.form_id }}</td>
+            <td>{{ form.page_url }}</td>
+            <td>{{ form.method }}</td>
+            <td>{{ form.action }}</td>
+            <td>{{ form.resolved_action_url }}</td>
+            <td>{{ form.classification }}</td>
+            <td>{{ form.is_https_context }}</td>
+            <td>{{ form.sends_to_http_from_https }}</td>
+            <td>{{ form.has_password_field }}</td>
+            <td>{{ form.has_file_upload }}</td>
+            <td>{{ form.csrf_token_like_fields | join(", ") }}</td>
+            <td>{{ form.sensitive_field_names | join(", ") }}</td>
+            <td>{{ form.input_count }}</td>
+            <td>{{ form.hidden_input_count }}</td>
+            <td>{{ form.issues | join(", ") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No enhanced form results were recorded.</p>
+      {% endif %}
+      <p><strong>Form discovery limitations:</strong> {{ report.web_form_summary.limitations | join("; ") }}</p>
+      {% else %}
+      <p class="empty">Enhanced form discovery was not requested. Run web-scan with --forms to map form security indicators.</p>
+      {% endif %}
+
       <h3>Crawled Pages</h3>
       {% if report.crawled_pages %}
       <table>

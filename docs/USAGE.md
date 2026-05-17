@@ -246,6 +246,16 @@ Version 13.2 adds focused cookie auditing with `--cookies`:
 
 Cookie audit parses `Set-Cookie` headers and stores only cookie names and attributes. It does not store cookie values, session IDs, or tokens. It checks Secure, HttpOnly, SameSite, SameSite=None with Secure, and persistent cookie indicators. When `--cookies` is used without explicit `--crawl`, VulScan checks only the start URL. Cookie findings are indicators and should be reviewed in application context.
 
+Version 13.3 adds enhanced form discovery with `--forms`:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --forms
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --forms --max-pages 10 --max-depth 1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --max-pages 10 --max-depth 1 --json --html
+```
+
+Form discovery maps methods, action URLs, internal/external action hosts, HTTPS-to-HTTP submission indicators, input names and types, CSRF-like field names, and classifications such as login, search, contact, upload, newsletter, or generic forms. Forms are never submitted, no payloads are sent, no SQL injection or XSS testing is performed, and field values or hidden values are not stored.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.

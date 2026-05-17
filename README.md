@@ -88,11 +88,14 @@ Version 13.1 integrates passive Web DAST security header checks with `--headers`
 
 Version 13.2 improves cookie auditing with `--cookies`. Cookie values are not stored or printed; VulScan records only cookie names and attributes such as Secure, HttpOnly, SameSite, path, domain, Expires, and Max-Age. Cookie findings are duplicate-safe indicators for authorised review.
 
+Version 13.3 improves form discovery with `--forms`. Forms are mapped and classified without submission, field values and hidden values are not stored, and findings are limited to passive indicators that require human review.
+
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl --max-pages 10 --max-depth 1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --max-pages 10 --max-depth 1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --cookies
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --max-pages 10 --max-depth 1 --json --html
 ```
 
 You can also use the helper script:

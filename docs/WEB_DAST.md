@@ -6,6 +6,8 @@ Version 13.1 adds passive security header checks to the same `web-scan` workflow
 
 Version 13.2 improves cookie auditing with value-free Set-Cookie parsing.
 
+Version 13.3 improves passive form discovery and reporting.
+
 Use it only on web applications you own or have explicit permission to assess.
 
 ## What It Does
@@ -23,6 +25,8 @@ Use it only on web applications you own or have explicit permission to assess.
 - Optionally checks passive security header indicators with `--headers`.
 - Optionally checks cookie attributes with `--cookies`.
 - Stores cookie names and attributes only, never cookie values.
+- Optionally maps and classifies forms with `--forms` without submitting them.
+- Stores input names and types only, never input values or hidden values.
 
 ## What It Does Not Do
 
@@ -82,6 +86,18 @@ Run cookie checks across crawled same-host pages:
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --cookies --max-pages 10 --max-depth 1 --json --html
 ```
 
+Run enhanced form discovery against only the start URL:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --forms
+```
+
+Run enhanced form discovery across crawled same-host pages:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --forms --max-pages 10 --max-depth 1 --json --html
+```
+
 ## Report Fields
 
 JSON and HTML reports include:
@@ -94,6 +110,8 @@ JSON and HTML reports include:
 - `web_header_results` when `--headers` is used
 - `web_cookie_summary` when `--headers` or `--cookies` is used
 - `web_cookie_results` when `--headers` or `--cookies` is used
+- `web_form_summary` when `--forms` is used
+- `web_form_results` when `--forms` is used
 - top-level `findings`
 
 Each page result includes URL, method, status code, content type, title, depth, response time, link count, form count, internal links, external links, and forms.
@@ -131,6 +149,17 @@ With `--cookies`, VulScan emits duplicate-safe cookie findings for:
 - Persistent cookie missing one or more recommended security flags.
 - Cookie audit completed.
 
+With `--forms`, VulScan emits passive form findings for:
+
+- Login form discovered.
+- Login form served over HTTP.
+- HTTPS page form submits to HTTP.
+- File upload form discovered.
+- Form missing CSRF token indicator.
+- Sensitive-looking hidden field names.
+- External form action discovered.
+- Web form discovery completed.
+
 These findings are discovery and review indicators. They do not prove a vulnerability by themselves.
 
 ## Cookie Value Handling
@@ -150,6 +179,10 @@ VulScan does not store or print cookie values. Cookie results include only:
 - issue list
 
 If a cookie value is accidentally introduced into evidence, report redaction still removes credential-like strings before JSON and HTML are written.
+
+## Form Value Handling
+
+VulScan does not submit forms and does not store input values. Enhanced form results include only form metadata such as method, action, resolved action URL, classification, counts, input names, input types, CSRF-like field names, and sensitive-looking field-name indicators. Hidden values, token values, and user-provided values are never stored.
 
 ## Future Work
 

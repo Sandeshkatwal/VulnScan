@@ -51,6 +51,7 @@ from scanner.ssh_audit import (
 from scanner.tls_audit import audit_tls_services
 from scanner.web_crawler import DEFAULT_USER_AGENT, crawl_web
 from scanner.web_cookie_audit import audit_web_cookies
+from scanner.web_form_audit import audit_web_forms
 from scanner.web_header_audit import audit_web_headers
 from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
 from scanner.windows_audit_profiles import (
@@ -685,6 +686,13 @@ def web_scan(
             help="Run passive cookie attribute checks for crawled pages or the start URL.",
         ),
     ] = False,
+    forms: Annotated[
+        bool,
+        typer.Option(
+            "--forms",
+            help="Run enhanced passive form discovery for crawled pages or the start URL.",
+        ),
+    ] = False,
     json_report: Annotated[
         bool,
         typer.Option(
@@ -713,7 +721,7 @@ def web_scan(
 
     try:
         scan_start_time = datetime.now().astimezone()
-        crawl_requested = _effective_web_crawl(crawl=crawl, headers=headers, cookies=cookies)
+        crawl_requested = _effective_web_crawl(crawl=crawl, headers=headers, cookies=cookies, forms=forms)
         web_result = crawl_web(
             start_url=url,
             crawl=crawl_requested,
@@ -744,10 +752,22 @@ def web_scan(
                 "findings": [],
             }
         )
+        web_form_result = (
+            audit_web_forms(web_result.get("crawled_pages", []))
+            if forms
+            else {
+                "enabled": False,
+                "status": "skipped",
+                "web_form_summary": {"enabled": False, "status": "skipped"},
+                "web_form_results": [],
+                "findings": [],
+            }
+        )
         all_web_findings = (
             list(web_result.get("findings", []))
             + list(web_header_result.get("findings", []))
             + list(web_cookie_result.get("findings", []))
+            + list(web_form_result.get("findings", []))
         )
         web_findings = assign_sequential_finding_ids(all_web_findings)
         scan_end_time = datetime.now().astimezone()
@@ -780,6 +800,8 @@ def web_scan(
         "web_header_results": web_header_result["web_header_results"],
         "web_cookie_summary": web_cookie_result["web_cookie_summary"],
         "web_cookie_results": web_cookie_result["web_cookie_results"],
+        "web_form_summary": web_form_result["web_form_summary"],
+        "web_form_results": web_form_result["web_form_results"],
         "crawled_pages": web_result["crawled_pages"],
         "discovered_forms": web_result["discovered_forms"],
         "web_findings": web_findings,
@@ -794,6 +816,8 @@ def web_scan(
         _print_web_header_summary(scan_result["web_header_summary"])
     if headers or cookies:
         _print_web_cookie_summary(scan_result["web_cookie_summary"])
+    if forms:
+        _print_web_form_summary(scan_result["web_form_summary"])
     _print_findings(scan_result["findings"])
 
     if json_report or html_report:
@@ -1256,6 +1280,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "web_crawler",
         "web_header_audit",
         "web_cookie_audit",
+        "web_form_audit",
         "ssh_audit",
         "package_audit",
         "ssh_hardening",
@@ -1320,8 +1345,8 @@ def _print_web_scan_summary(summary: dict[str, Any]) -> None:
     console.print(table)
 
 
-def _effective_web_crawl(*, crawl: bool, headers: bool, cookies: bool) -> bool:
-    if not headers and not cookies:
+def _effective_web_crawl(*, crawl: bool, headers: bool, cookies: bool, forms: bool) -> bool:
+    if not headers and not cookies and not forms:
         return crawl
     args = {arg.lower() for arg in sys.argv[1:]}
     if "--crawl" in args:
@@ -1363,6 +1388,26 @@ def _print_web_cookie_summary(summary: dict[str, Any]) -> None:
         ("Missing SameSite", str(summary.get("cookies_missing_samesite") or 0)),
         ("SameSite=None without Secure", str(summary.get("samesite_none_without_secure") or 0)),
         ("Persistent cookie issues", str(summary.get("persistent_cookie_issues") or 0)),
+        ("Findings", str(summary.get("findings_count") or 0)),
+    ]
+    for label, value in rows:
+        table.add_row(label, value)
+    console.print(table)
+
+
+def _print_web_form_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+    table = Table(title="Web Form Discovery Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Forms discovered", str(summary.get("forms_discovered") or 0)),
+        ("Login forms", str(summary.get("login_forms") or 0)),
+        ("Upload forms", str(summary.get("upload_forms") or 0)),
+        ("Missing CSRF indicators", str(summary.get("forms_missing_csrf_indicator") or 0)),
+        ("Submit to HTTP", str(summary.get("forms_submitting_to_http") or 0)),
+        ("External actions", str(summary.get("external_form_actions") or 0)),
         ("Findings", str(summary.get("findings_count") or 0)),
     ]
     for label, value in rows:
