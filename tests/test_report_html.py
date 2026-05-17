@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 
 from scanner.report_html import save_html_report
+from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
+from scanner.windows_audit_profiles import resolve_windows_audit_profile
 
 
 def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
@@ -239,3 +241,61 @@ def test_html_report_redacts_windows_evidence_secrets(tmp_path) -> None:
     assert "Secret123" not in html
     assert "dXNlcjpwYXNz" not in html
     assert "HiddenValue" not in html
+
+
+def test_html_report_shows_windows_demo_banner(tmp_path) -> None:
+    plan = resolve_windows_audit_profile(profile_name="detailed", auth_method="winrm")
+    profile_summary = {
+        "windows_audit_profile": plan["profile_name"],
+        "profile_description": plan["profile_description"],
+        "profile_enabled_sections": plan["profile_enabled_sections"],
+        "profile_skipped_sections": plan["profile_skipped_sections"],
+        "profile_manual_overrides": plan["profile_manual_overrides"],
+        "profile_default_timeout_seconds": plan["profile_default_timeout_seconds"],
+        "profile_effective_audit_timeout_seconds": 180.0,
+        "profile_section_labels": plan["section_labels"],
+        "profile_section_enabled_by_profile": plan["enabled_by_profile"],
+        "profile_section_enabled_by_manual_flag": plan["enabled_by_manual_flag"],
+        "profile_section_skipped_reasons": plan["skipped_reasons"],
+    }
+    windows_result = build_windows_demo_result(
+        target="demo-windows",
+        profile_summary=profile_summary,
+        audit_timeout_seconds=180.0,
+    )
+    scan_result = build_demo_scan_result("demo-windows")
+    scan_result.update(
+        {
+            "scan_mode": "safe",
+            "http_findings": [],
+            "tls_findings": [],
+            "ssh_findings": [],
+            "ssh_audit": {"enabled": False, "status": "skipped"},
+            "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+            "windows_audit": windows_result,
+            "windows_findings": [],
+            "windows_audit_sections": windows_result["windows_audit_sections"],
+            "windows_audit_summary": windows_result["summary"],
+            "windows_audit_consolidated_summary": windows_result["summary"],
+            "credentialed_audits": [windows_result["credentialed_audit"]],
+        }
+    )
+    from scanner.finding import assign_sequential_finding_ids
+
+    scan_result["findings"] = assign_sequential_finding_ids(windows_result["findings"])
+    scan_result["windows_findings"] = scan_result["findings"]
+
+    path = save_html_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    html = path.read_text(encoding="utf-8")
+
+    assert "Demo Mode: This report uses fake sample data. No real system was scanned." in html
+    assert DEMO_NOTICE in html
+    assert "WIN-DEMO-01" in html
+    assert "Windows Audit Demo Mode" in html

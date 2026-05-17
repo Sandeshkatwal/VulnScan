@@ -48,6 +48,7 @@ from scanner.ssh_audit import (
     validate_ssh_audit_options,
 )
 from scanner.tls_audit import audit_tls_services
+from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
 from scanner.windows_audit_profiles import (
     WindowsAuditProfileError,
     get_windows_audit_profile,
@@ -131,6 +132,13 @@ def scan(
         typer.Option(
             "--windows-audit",
             help="Run safe Windows SMB/WinRM/RDP audit foundation checks.",
+        ),
+    ] = False,
+    windows_demo: Annotated[
+        bool,
+        typer.Option(
+            "--windows-demo",
+            help="Generate fake Windows audit demo data only. No network connection is made.",
         ),
     ] = False,
     windows_user: Annotated[
@@ -319,6 +327,10 @@ def scan(
     ] = False,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
+    if windows_demo and ssh_audit:
+        console.print("[red]Windows demo mode cannot be combined with --ssh-audit because demo mode must not connect to any host.[/red]")
+        raise typer.Exit(code=1)
+
     try:
         selected_audit_profile = get_audit_profile(audit_profile)
     except AuditProfileError as exc:
@@ -344,6 +356,12 @@ def scan(
         console.print(f"[red]SSH audit configuration error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
+    if windows_demo and not windows_audit:
+        console.print(
+            "[yellow]Windows demo mode implies --windows-audit. No real target will be scanned.[/yellow]"
+        )
+        windows_audit = True
+
     if windows_audit_profile and not windows_audit:
         console.print(
             "[yellow]Windows audit profiles apply only when --windows-audit is provided. The selected Windows audit profile will be ignored.[/yellow]"
@@ -355,7 +373,7 @@ def scan(
         console.print(f"[red]Windows audit profile error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    preliminary_windows_auth_method = (windows_auth_method or "none").strip().lower()
+    preliminary_windows_auth_method = "winrm" if windows_demo else (windows_auth_method or "none").strip().lower()
     windows_profile_plan = resolve_windows_audit_profile(
         profile_name=selected_windows_profile.profile_name,
         auth_method=preliminary_windows_auth_method,
@@ -370,24 +388,27 @@ def scan(
         if windows_audit_timeout is not None
         else selected_windows_profile.default_audit_timeout_seconds
     )
-    try:
-        selected_windows_auth_method = validate_windows_audit_options(
-            windows_audit=windows_audit,
-            windows_user=windows_user,
-            windows_password=windows_password,
-            windows_auth_method=windows_auth_method,
-            windows_host_info=bool(windows_profile_plan["collect_host_info"]),
-            windows_security_status=bool(windows_profile_plan["collect_security_status"]),
-            windows_policy_status=bool(windows_profile_plan["collect_policy_status"]),
-            windows_registry_audit=bool(windows_profile_plan["collect_registry_audit"]),
-            windows_registry_template=windows_registry_template,
-            windows_timeout=windows_timeout,
-            windows_command_timeout=windows_command_timeout,
-            windows_audit_timeout=effective_windows_audit_timeout,
-        )
-    except WindowsAuditConfigurationError as exc:
-        console.print(f"[red]Windows audit configuration error:[/red] {exc}")
-        raise typer.Exit(code=1) from exc
+    if windows_demo:
+        selected_windows_auth_method = "demo"
+    else:
+        try:
+            selected_windows_auth_method = validate_windows_audit_options(
+                windows_audit=windows_audit,
+                windows_user=windows_user,
+                windows_password=windows_password,
+                windows_auth_method=windows_auth_method,
+                windows_host_info=bool(windows_profile_plan["collect_host_info"]),
+                windows_security_status=bool(windows_profile_plan["collect_security_status"]),
+                windows_policy_status=bool(windows_profile_plan["collect_policy_status"]),
+                windows_registry_audit=bool(windows_profile_plan["collect_registry_audit"]),
+                windows_registry_template=windows_registry_template,
+                windows_timeout=windows_timeout,
+                windows_command_timeout=windows_command_timeout,
+                windows_audit_timeout=effective_windows_audit_timeout,
+            )
+        except WindowsAuditConfigurationError as exc:
+            console.print(f"[red]Windows audit configuration error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
 
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
     console.print(f"[bold]Target:[/bold] {target}")
@@ -398,7 +419,7 @@ def scan(
 
     try:
         scan_start_time = datetime.now().astimezone()
-        scan_result = scan_tcp_ports(target)
+        scan_result = build_demo_scan_result(target) if windows_demo else scan_tcp_ports(target)
         scan_result["scan_mode"] = mode
         scan_result["http_findings"] = []
         scan_result["tls_findings"] = []
@@ -411,7 +432,9 @@ def scan(
         scan_result["credentialed_audits"] = []
         scan_result["ssh_findings"] = []
         scan_result["windows_findings"] = []
-        findings = create_port_exposure_findings(scan_result["open_ports"])
+        scan_result["demo_mode"] = bool(windows_demo)
+        scan_result["demo_notice"] = DEMO_NOTICE if windows_demo else ""
+        findings = [] if windows_demo else create_port_exposure_findings(scan_result["open_ports"])
         if http_audit:
             http_findings = audit_http_services(scan_result["open_ports"])
             findings.extend(http_findings)
@@ -421,30 +444,37 @@ def scan(
         if windows_audit:
             if windows_progress:
                 console.print("Windows Audit")
-            windows_result = audit_windows_host(
-                target=scan_result["host"],
-                resolved_ip=scan_result["resolved_ip"],
-                username=windows_user,
-                password=windows_password,
-                domain=windows_domain,
-                auth_method=selected_windows_auth_method,
-                collect_host_info=bool(windows_profile_plan["collect_host_info"]),
-                collect_security_status=bool(windows_profile_plan["collect_security_status"]),
-                collect_policy_status=bool(windows_profile_plan["collect_policy_status"]),
-                collect_registry_audit=bool(windows_profile_plan["collect_registry_audit"]),
-                registry_template_path=windows_registry_template,
-                timeout=windows_timeout,
-                command_timeout=windows_command_timeout,
-                audit_timeout=effective_windows_audit_timeout,
-                progress_callback=_windows_progress_callback if windows_progress else None,
+            profile_summary_fields = _windows_profile_summary_fields(
+                profile_plan=windows_profile_plan,
+                audit_timeout_seconds=effective_windows_audit_timeout,
             )
-            windows_result["summary"] = dict(windows_result.get("summary") or {})
-            windows_result["summary"].update(
-                _windows_profile_summary_fields(
-                    profile_plan=windows_profile_plan,
+            if windows_demo:
+                console.print("[yellow]DEMO MODE: No real target was scanned.[/yellow]")
+                windows_result = build_windows_demo_result(
+                    target=scan_result["host"],
+                    profile_summary=profile_summary_fields,
                     audit_timeout_seconds=effective_windows_audit_timeout,
                 )
-            )
+            else:
+                windows_result = audit_windows_host(
+                    target=scan_result["host"],
+                    resolved_ip=scan_result["resolved_ip"],
+                    username=windows_user,
+                    password=windows_password,
+                    domain=windows_domain,
+                    auth_method=selected_windows_auth_method,
+                    collect_host_info=bool(windows_profile_plan["collect_host_info"]),
+                    collect_security_status=bool(windows_profile_plan["collect_security_status"]),
+                    collect_policy_status=bool(windows_profile_plan["collect_policy_status"]),
+                    collect_registry_audit=bool(windows_profile_plan["collect_registry_audit"]),
+                    registry_template_path=windows_registry_template,
+                    timeout=windows_timeout,
+                    command_timeout=windows_command_timeout,
+                    audit_timeout=effective_windows_audit_timeout,
+                    progress_callback=_windows_progress_callback if windows_progress else None,
+                )
+                windows_result["summary"] = dict(windows_result.get("summary") or {})
+                windows_result["summary"].update(profile_summary_fields)
             scan_result["windows_audit"] = windows_result
             findings.extend(windows_result.get("findings", []))
         if ssh_audit:
@@ -1028,6 +1058,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "ssh_hardening",
         "linux_config_audit",
         "windows_audit",
+        "windows_demo",
         "windows_security_audit",
     ]
     grouped: dict[str, list[dict[str, Any]]] = {source: [] for source in source_order}
@@ -1153,6 +1184,11 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
 def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
     if not summary.get("enabled"):
         return
+
+    if summary.get("demo_mode"):
+        console.print("[yellow]DEMO MODE: No real target was scanned.[/yellow]")
+        if summary.get("demo_notice"):
+            console.print(f"[yellow]{summary.get('demo_notice')}[/yellow]")
 
     sections = list(summary.get("windows_audit_sections") or [])
     if sections:

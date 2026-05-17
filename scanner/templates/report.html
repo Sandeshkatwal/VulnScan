@@ -184,6 +184,14 @@
       <div class="subtitle">Version {{ report.scanner_version }} | TCP-connect scan for authorised defensive assessment</div>
     </header>
 
+    {% if report.demo_mode %}
+    <section class="notice">
+      <h2>Demo Mode</h2>
+      <p><strong>Demo Mode:</strong> This report uses fake sample data. No real system was scanned.</p>
+      <p>{{ report.demo_notice }}</p>
+    </section>
+    {% endif %}
+
     <div class="grid">
       <div class="metric">
         <div class="label">Target</div>

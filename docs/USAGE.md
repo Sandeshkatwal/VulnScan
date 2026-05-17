@@ -290,6 +290,16 @@ Version 12.10 normalises Windows audit output internally. When `--windows-audit`
 
 Version 12.11 adds Windows audit profiles with `--windows-audit-profile foundation|standard|detailed`. Profiles apply only with `--windows-audit`; `standard` is the default. `foundation` is fastest and runs service reachability plus WinRM authentication validation only when `--windows-auth-method winrm` and credentials are provided. `standard` adds read-only host information, Firewall/Defender status, and patch/update indicators when WinRM is available. `detailed` adds read-only local security policy indicators and the default narrow registry audit template. Manual flags such as `--windows-registry-audit` can extend a selected profile; they do not disable sections already selected by the profile. All profile-driven Windows checks remain read-only, and passwords are not stored or printed.
 
+Version 12.12 adds Windows demo mode for screenshots, report validation, and portfolio use:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target demo-windows --windows-audit --windows-demo
+.\.venv311\Scripts\python.exe -m scanner.main scan --target demo-windows --windows-audit --windows-demo --windows-audit-profile detailed --json --html
+.\.venv311\Scripts\python.exe -m scanner.main scan --target demo-windows --windows-audit --windows-demo --json --html --save-db
+```
+
+Demo mode uses fake sample data only. It does not connect to any host, run socket checks, require WinRM, or require credentials. Terminal, JSON, and HTML output are clearly marked with `demo_mode: true` and `Demo data only. No real target was scanned.` Demo reports should not be used for real security decisions.
+
 After login, VulScan runs read-only Linux inspection commands only: `uname -a`, `cat /etc/os-release`, `sshd -T` when available, firewall status checks when available, package-manager discovery, package update checks, and Linux configuration indicator checks. It does not run `sudo`, change files, install packages, update packages, restart services, fuzz, crawl, exploit, brute force, guess passwords, or attempt privilege escalation.
 
 Package manager detection checks `apt`, `apt-get`, `dnf`, `yum`, `pacman`, and `zypper` with `command -v`. VulScan derives the Linux family from `/etc/os-release` and reports Debian/Kali/Parrot/Ubuntu, Fedora/RHEL/Rocky/Alma, Arch, openSUSE/SUSE, or Unknown Linux.

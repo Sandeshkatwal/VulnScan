@@ -415,6 +415,8 @@ def _section_summary(section_id: str, summary: dict[str, Any]) -> dict[str, Any]
         return {"host_info": summary.get("windows_host_info") or {}}
     if section_id == "windows_security_status":
         return {"security_status": summary.get("windows_security_status") or {}}
+    if section_id == "windows_patch_status":
+        return {"patch_status": summary.get("windows_patch_status") or {}}
     if section_id == "windows_policy_status":
         return {"policy_status": summary.get("windows_policy_status") or {}}
     if section_id == "windows_registry_audit":

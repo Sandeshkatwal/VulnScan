@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timezone
 
 from scanner.report_json import save_json_report
+from scanner.windows_demo import DEMO_NOTICE, build_windows_demo_result, build_demo_scan_result
+from scanner.windows_audit_profiles import resolve_windows_audit_profile
 
 
 def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None:
@@ -230,3 +232,62 @@ def test_json_report_redacts_windows_evidence_secrets(tmp_path) -> None:
     assert "Secret123" not in serialized
     assert "fake-token" not in serialized
     assert "HiddenValue" not in serialized
+
+
+def test_json_report_includes_windows_demo_notice_and_sections(tmp_path) -> None:
+    plan = resolve_windows_audit_profile(profile_name="detailed", auth_method="winrm")
+    profile_summary = {
+        "windows_audit_profile": plan["profile_name"],
+        "profile_description": plan["profile_description"],
+        "profile_enabled_sections": plan["profile_enabled_sections"],
+        "profile_skipped_sections": plan["profile_skipped_sections"],
+        "profile_manual_overrides": plan["profile_manual_overrides"],
+        "profile_default_timeout_seconds": plan["profile_default_timeout_seconds"],
+        "profile_effective_audit_timeout_seconds": 180.0,
+        "profile_section_labels": plan["section_labels"],
+        "profile_section_enabled_by_profile": plan["enabled_by_profile"],
+        "profile_section_enabled_by_manual_flag": plan["enabled_by_manual_flag"],
+        "profile_section_skipped_reasons": plan["skipped_reasons"],
+    }
+    windows_result = build_windows_demo_result(
+        target="demo-windows",
+        profile_summary=profile_summary,
+        audit_timeout_seconds=180.0,
+    )
+    scan_result = build_demo_scan_result("demo-windows")
+    scan_result.update(
+        {
+            "scan_mode": "safe",
+            "http_findings": [],
+            "tls_findings": [],
+            "ssh_findings": [],
+            "ssh_audit": {"enabled": False, "status": "skipped"},
+            "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+            "windows_audit": windows_result,
+            "windows_findings": [],
+            "windows_audit_sections": windows_result["windows_audit_sections"],
+            "windows_audit_summary": windows_result["summary"],
+            "windows_audit_consolidated_summary": windows_result["summary"],
+            "credentialed_audits": [windows_result["credentialed_audit"]],
+        }
+    )
+    from scanner.finding import assign_sequential_finding_ids
+
+    scan_result["findings"] = assign_sequential_finding_ids(windows_result["findings"])
+    scan_result["windows_findings"] = scan_result["findings"]
+
+    path = save_json_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    report = json.loads(path.read_text(encoding="utf-8"))
+
+    assert report["demo_mode"] is True
+    assert report["demo_notice"] == DEMO_NOTICE
+    assert report["windows_audit_sections"]
+    assert report["windows_audit_summary"]["demo_mode"] is True
+    assert all("risk_score" in finding for finding in report["findings"])

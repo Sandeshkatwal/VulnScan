@@ -80,6 +80,8 @@ Version 12.10 normalises Windows audit results into `windows_audit_sections` whi
 
 Version 12.11 adds Windows audit profiles with `--windows-audit-profile foundation|standard|detailed`. `standard` is the default, `foundation` is fastest, and `detailed` runs additional read-only local policy and registry template indicators. Manual Windows flags can extend the selected profile, and all profiles remain read-only. Windows passwords are not stored or printed.
 
+Version 12.12 adds Windows demo mode with `--windows-demo`. Demo mode uses fake sample data only, does not connect to any host, does not require credentials, and clearly marks terminal, JSON, and HTML output as demo data. Use it for screenshots, report testing, and portfolio demonstrations only; demo reports must not be used for real security decisions. See `docs\DEMO_MODE.md`.
+
 You can also use the helper script:
 
 ```powershell

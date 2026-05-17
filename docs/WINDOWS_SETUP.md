@@ -204,6 +204,15 @@ Version 12.10 adds normalised Windows audit section results without changing use
 
 Version 12.11 adds `--windows-audit-profile`. Use `foundation` for the fastest service reachability baseline, `standard` for the default read-only host/security/patch baseline, and `detailed` for additional read-only local policy and default registry template indicators. Manual Windows flags can extend the selected profile; for example, `--windows-audit-profile foundation --windows-registry-audit` runs the foundation profile plus the registry audit when WinRM credentials are provided. Profiles remain read-only and do not store or print passwords.
 
+Version 12.12 adds fake-data Windows demo mode:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target demo-windows --windows-audit --windows-demo
+.\.venv311\Scripts\python.exe -m scanner.main scan --target demo-windows --windows-audit --windows-demo --windows-audit-profile detailed --json --html
+```
+
+Demo mode does not connect to any host, run socket checks, require WinRM, or require credentials. It is for screenshots, report testing, and portfolio demonstrations only. Demo scans saved with `--save-db` are sample data and should use an obvious demo target name.
+
 Version 12.6 does not run deep Windows enumeration, broad registry queries, registry hive exports, security policy exports, patch enumeration, user enumeration, group enumeration, share enumeration, process listing, file listing, credential dumping, browser data collection, hash collection, token collection, private key collection, privilege checks, exploitation, brute forcing, system modification, or service restarts. Passwords are not stored or printed. WinRM should be enabled only where required and restricted to trusted networks.
 
 The pytest suite uses fake SSH audit fixtures, mocked socket reachability, and mocked WinRM behavior. Tests do not require internet access, a live SSH server, a live WinRM server, or real credentials. Runtime SSH testing still requires authorised Linux credentials.
