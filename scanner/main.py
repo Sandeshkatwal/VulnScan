@@ -48,6 +48,7 @@ from scanner.ssh_audit import (
     validate_ssh_audit_options,
 )
 from scanner.tls_audit import audit_tls_services
+from scanner.web_crawler import DEFAULT_USER_AGENT, crawl_web
 from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
 from scanner.windows_audit_profiles import (
     WindowsAuditProfileError,
@@ -620,6 +621,152 @@ def scan(
         console.print(f"HTML report saved: {report_path}")
 
 
+@app.command("web-scan")
+def web_scan(
+    url: Annotated[
+        str,
+        typer.Option(
+            "--url",
+            help="Authorised web application URL to crawl.",
+        ),
+    ],
+    crawl: Annotated[
+        bool,
+        typer.Option(
+            "--crawl/--no-crawl",
+            help="Follow same-host links using safe GET requests only.",
+        ),
+    ] = True,
+    max_pages: Annotated[
+        int,
+        typer.Option(
+            "--max-pages",
+            min=1,
+            help="Maximum number of same-host pages to fetch.",
+        ),
+    ] = 20,
+    max_depth: Annotated[
+        int,
+        typer.Option(
+            "--max-depth",
+            min=0,
+            help="Maximum same-host crawl depth from the start URL.",
+        ),
+    ] = 2,
+    timeout: Annotated[
+        float,
+        typer.Option(
+            "--timeout",
+            min=1.0,
+            help="Per-request timeout in seconds.",
+        ),
+    ] = 10.0,
+    user_agent: Annotated[
+        str,
+        typer.Option(
+            "--user-agent",
+            help="User-Agent header for safe crawler requests.",
+        ),
+    ] = DEFAULT_USER_AGENT,
+    json_report: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Save web scan results to a JSON report in the reports folder.",
+        ),
+    ] = False,
+    html_report: Annotated[
+        bool,
+        typer.Option(
+            "--html",
+            help="Save web scan results to an HTML report in the reports folder.",
+        ),
+    ] = False,
+) -> None:
+    """Run the Version 13.0 safe Web DAST crawler foundation."""
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    console.print("[bold]Web DAST Crawler[/bold]")
+    console.print(f"[bold]Start URL:[/bold] {url}")
+    console.print(
+        "[yellow]Safe usage warning:[/yellow] Only crawl web applications you own or have explicit permission to assess."
+    )
+    console.print(
+        "[yellow]Version 13.0:[/yellow] GET-only crawler foundation. Forms are discovered but never submitted."
+    )
+
+    try:
+        scan_start_time = datetime.now().astimezone()
+        web_result = crawl_web(
+            start_url=url,
+            crawl=crawl,
+            max_pages=max_pages,
+            max_depth=max_depth,
+            timeout=timeout,
+            user_agent=user_agent,
+        )
+        web_findings = assign_sequential_finding_ids(web_result.get("findings", []))
+        scan_end_time = datetime.now().astimezone()
+    except ValueError as exc:
+        console.print(f"[red]Web DAST configuration error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    summary = web_result["web_scan_summary"]
+    scan_result = {
+        "host": summary["allowed_host"],
+        "resolved_ip": "",
+        "scan_mode": "web-dast",
+        "duration_seconds": summary["duration_seconds"],
+        "open_ports": [],
+        "findings": web_findings,
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped", "findings": []},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit": {"enabled": False, "status": "skipped", "findings": []},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "windows_audit_consolidated_summary": {"enabled": False, "status": "skipped"},
+        "credentialed_audits": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "web_scan": web_result,
+        "web_scan_summary": summary,
+        "crawled_pages": web_result["crawled_pages"],
+        "discovered_forms": web_result["discovered_forms"],
+        "web_findings": web_findings,
+        "demo_mode": False,
+        "demo_notice": "",
+        "scan_start_time": scan_start_time.isoformat(timespec="seconds"),
+        "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
+    }
+
+    _print_web_scan_summary(summary)
+    _print_findings(scan_result["findings"])
+
+    if json_report or html_report:
+        enrich_findings_with_remediation(scan_result["findings"])
+
+    if json_report:
+        report_path = save_json_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+        )
+        console.print(f"[bold]JSON report saved:[/bold] {report_path}")
+
+    if html_report:
+        report_path = save_html_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+        )
+        console.print(f"HTML report saved: {report_path}")
+
+
 @app.command()
 def history(
     target: Annotated[
@@ -1053,6 +1200,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "port_scan",
         "http_audit",
         "tls_audit",
+        "web_crawler",
         "ssh_audit",
         "package_audit",
         "ssh_hardening",
@@ -1096,6 +1244,25 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
             )
 
         console.print(table)
+
+
+def _print_web_scan_summary(summary: dict[str, Any]) -> None:
+    table = Table(title="Web DAST Crawler")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Start URL", str(summary.get("start_url") or "")),
+        ("Allowed host", str(summary.get("allowed_host") or "")),
+        ("Pages crawled", str(summary.get("pages_crawled") or 0)),
+        ("Forms discovered", str(summary.get("forms_discovered") or 0)),
+        ("Password forms", str(summary.get("password_forms_discovered") or 0)),
+        ("File upload forms", str(summary.get("file_upload_forms_discovered") or 0)),
+        ("External links", str(summary.get("unique_external_links") or 0)),
+        ("Duration", f"{summary.get('duration_seconds') or 0} seconds"),
+    ]
+    for label, value in rows:
+        table.add_row(label, value)
+    console.print(table)
 
 
 def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:

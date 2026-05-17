@@ -207,6 +207,26 @@ python -m scanner.main scan --target example.com --tls-audit --json --html
 
 The TLS audit checks certificate validation status, hostname mismatch where possible, certificate expiry, certificates expiring within 30 days, subject, issuer, and validity dates. It does not test weak ciphers, perform downgrade testing, or run aggressive TLS probing.
 
+## Web DAST Crawler
+
+Version 13.0 adds the Web DAST crawler foundation as a separate `web-scan` command. It is for authorised web applications only and sends safe, bounded GET requests. It does not authenticate, submit forms, fuzz, test SQL injection, test XSS, or send attack payloads.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl --max-pages 10 --max-depth 1 --json --html
+```
+
+Crawler options:
+
+- `--url` is required and must be an absolute `http` or `https` URL.
+- `--crawl/--no-crawl` controls whether same-host links are followed. Crawling is enabled by default.
+- `--max-pages` defaults to `20`.
+- `--max-depth` defaults to `2`.
+- `--timeout` defaults to `10` seconds per request.
+- `--user-agent` defaults to `VulScan-WebDAST/13.0`.
+
+The crawler only follows same-host links by default, ignores fragments, skips unsafe schemes such as `mailto:`, `tel:`, `javascript:`, `data:`, and `file:`, and skips common static/binary files. Reports include `web_scan_summary`, `crawled_pages`, `discovered_forms`, and standard findings. Forms are discovered and reported, but never submitted.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.

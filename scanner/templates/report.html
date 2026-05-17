@@ -220,6 +220,7 @@
       <p><strong>TLS audit findings:</strong> {{ report.summary.total_tls_findings }}</p>
       <p><strong>SSH audit findings:</strong> {{ report.summary.total_ssh_findings }}</p>
       <p><strong>Windows audit findings:</strong> {{ report.summary.total_windows_findings }}</p>
+      <p><strong>Web DAST findings:</strong> {{ report.summary.total_web_findings }}</p>
       <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
       <p><strong>Scan start:</strong> {{ report.scan_start_time }}</p>
       <p><strong>Scan end:</strong> {{ report.scan_end_time }}</p>
@@ -424,6 +425,144 @@
       </table>
       {% else %}
       <p class="empty">No TLS audit findings were recorded. Run with --tls-audit to perform passive certificate checks against detected HTTPS services.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Web DAST Report</h2>
+      {% if report.web_scan_summary.enabled %}
+      <h3>Crawl Summary</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Start URL</th>
+            <th>Allowed host</th>
+            <th>Pages crawled</th>
+            <th>Pages skipped</th>
+            <th>Forms</th>
+            <th>Password forms</th>
+            <th>File uploads</th>
+            <th>External links</th>
+            <th>Errors</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_scan_summary.start_url }}</td>
+            <td>{{ report.web_scan_summary.allowed_host }}</td>
+            <td>{{ report.web_scan_summary.pages_crawled }}</td>
+            <td>{{ report.web_scan_summary.pages_skipped }}</td>
+            <td>{{ report.web_scan_summary.forms_discovered }}</td>
+            <td>{{ report.web_scan_summary.password_forms_discovered }}</td>
+            <td>{{ report.web_scan_summary.file_upload_forms_discovered }}</td>
+            <td>{{ report.web_scan_summary.unique_external_links }}</td>
+            <td>{{ report.web_scan_summary.errors_count }}</td>
+            <td>{{ report.web_scan_summary.duration_seconds }} seconds</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Limitations:</strong> {{ report.web_scan_summary.limitations | join("; ") }}</p>
+
+      <h3>Crawled Pages</h3>
+      {% if report.crawled_pages %}
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Status</th>
+            <th>Title</th>
+            <th>Depth</th>
+            <th>Content type</th>
+            <th>Response time</th>
+            <th>Links</th>
+            <th>Forms</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for page in report.crawled_pages %}
+          <tr>
+            <td>{{ page.url }}</td>
+            <td>{{ page.status_code }}</td>
+            <td>{{ page.title }}</td>
+            <td>{{ page.depth }}</td>
+            <td>{{ page.content_type }}</td>
+            <td>{{ page.response_time_seconds }} seconds</td>
+            <td>{{ page.links_found_count }}</td>
+            <td>{{ page.forms_found_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No pages were crawled.</p>
+      {% endif %}
+
+      <h3>Discovered Forms</h3>
+      {% if report.discovered_forms %}
+      <table>
+        <thead>
+          <tr>
+            <th>Page URL</th>
+            <th>Method</th>
+            <th>Action</th>
+            <th>Input names</th>
+            <th>Input types</th>
+            <th>Password field</th>
+            <th>File upload</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for form in report.discovered_forms %}
+          <tr>
+            <td>{{ form.page_url }}</td>
+            <td>{{ form.method }}</td>
+            <td>{{ form.action }}</td>
+            <td>{{ form.input_names | join(", ") }}</td>
+            <td>{{ form.input_types | join(", ") }}</td>
+            <td>{{ form.has_password_field }}</td>
+            <td>{{ form.has_file_upload }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No forms were discovered.</p>
+      {% endif %}
+
+      <h3>Web Findings</h3>
+      {% if report.web_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Affected URL</th>
+            <th>Evidence</th>
+            <th>Recommendation</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in report.web_findings %}
+          <tr>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.category }}</td>
+            <td>{{ finding.affected_url or "" }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.recommendation }}</td>
+            <td>{{ finding.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No Web DAST findings were recorded.</p>
+      {% endif %}
+      {% else %}
+      <p class="empty">Web DAST crawler was not requested.</p>
       {% endif %}
     </section>
 
@@ -875,13 +1014,13 @@
 
     <section class="notice">
       <h2>Safe Usage Disclaimer</h2>
-      <p>Use VulScan only on systems you own or have explicit permission to assess. This report is intended for authorised defensive security review.</p>
+      <p>Use VulScan only on systems and web applications you own or have explicit permission to assess. This report is intended for authorised defensive security review.</p>
       <p>Authenticated SSH audit uses read-only commands and depends on the permissions of the provided account. Results should be reviewed in operational context.</p>
     </section>
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information, Firewall/Defender status, net accounts policy indicator commands, and exact template-defined registry value checks. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, password policy changes, account changes, registry value changes, broad registry tree queries, registry hive exports, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional Web DAST crawling sends bounded same-host GET requests only, does not submit forms, does not authenticate, does not crawl external domains by default, and does not test SQL injection or XSS in Version 13.0. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information, Firewall/Defender status, net accounts policy indicator commands, and exact template-defined registry value checks. It does not install, update, or modify packages or files. It does not perform fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, password policy changes, account changes, registry value changes, broad registry tree queries, registry hive exports, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
     </section>
   </main>
 </body>

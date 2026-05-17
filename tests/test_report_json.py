@@ -291,3 +291,108 @@ def test_json_report_includes_windows_demo_notice_and_sections(tmp_path) -> None
     assert report["windows_audit_sections"]
     assert report["windows_audit_summary"]["demo_mode"] is True
     assert all("risk_score" in finding for finding in report["findings"])
+
+
+def test_json_report_includes_web_dast_fields(tmp_path) -> None:
+    scan_result = {
+        "host": "example.test",
+        "resolved_ip": "",
+        "scan_mode": "web-dast",
+        "duration_seconds": 0.2,
+        "open_ports": [],
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "web_findings": [
+            {
+                "id": "FINDING-0001",
+                "title": "Web Crawl Completed",
+                "severity": "Informational",
+                "category": "Web DAST",
+                "affected_host": None,
+                "affected_port": None,
+                "affected_url": "https://example.test/",
+                "service": "http",
+                "evidence": "Crawler visited 1 pages and discovered 1 forms.",
+                "confidence": "High",
+                "impact": "Crawl results support review.",
+                "recommendation": "Review discovered pages and forms.",
+                "verification": "Review the report.",
+                "limitation": "Forms are not submitted.",
+                "source": "web_crawler",
+                "risk_score": 0,
+                "risk_label": "Informational",
+                "fix_priority": "Document and monitor",
+                "created_at": "2026-05-18T10:00:00+00:00",
+            }
+        ],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+        "web_scan_summary": {
+            "enabled": True,
+            "start_url": "https://example.test/",
+            "normalized_start_url": "https://example.test/",
+            "allowed_host": "example.test",
+            "max_pages": 20,
+            "max_depth": 2,
+            "pages_crawled": 1,
+            "pages_skipped": 0,
+            "unique_internal_links": 0,
+            "unique_external_links": 0,
+            "forms_discovered": 1,
+            "password_forms_discovered": 1,
+            "file_upload_forms_discovered": 0,
+            "errors_count": 0,
+            "duration_seconds": 0.2,
+            "limitations": ["GET-only crawler foundation."],
+        },
+        "crawled_pages": [
+            {
+                "url": "https://example.test/",
+                "method": "GET",
+                "status_code": 200,
+                "content_type": "text/html",
+                "title": "Home",
+                "depth": 0,
+                "response_time_seconds": 0.01,
+                "links_found_count": 0,
+                "forms_found_count": 1,
+                "internal_links": [],
+                "external_links": [],
+                "forms": [],
+            }
+        ],
+        "discovered_forms": [
+            {
+                "page_url": "https://example.test/",
+                "method": "POST",
+                "action": "https://example.test/login",
+                "input_names": ["password"],
+                "input_types": ["password"],
+                "has_password_field": True,
+                "has_file_upload": False,
+            }
+        ],
+    }
+
+    path = save_json_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    report = json.loads(path.read_text(encoding="utf-8"))
+
+    assert report["web_scan_summary"]["enabled"] is True
+    assert report["web_scan_summary"]["allowed_host"] == "example.test"
+    assert report["crawled_pages"][0]["title"] == "Home"
+    assert report["discovered_forms"][0]["has_password_field"] is True
+    assert report["web_findings"][0]["source"] == "web_crawler"
+    assert report["summary"]["total_web_findings"] == 1

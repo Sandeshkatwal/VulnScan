@@ -54,6 +54,13 @@ def save_json_report(
         ),
         "windows_audit_sections": scan_result.get("windows_audit_sections", []),
         "windows_audit_consolidated_summary": _windows_consolidated_summary(scan_result),
+        "web_scan_summary": scan_result.get(
+            "web_scan_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "crawled_pages": scan_result.get("crawled_pages", []),
+        "discovered_forms": scan_result.get("discovered_forms", []),
+        "web_findings": findings_to_dicts(scan_result.get("web_findings", [])),
         "credentialed_audits": credentialed_audits_to_dicts(
             scan_result.get("credentialed_audits", [])
         ),
@@ -80,6 +87,13 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         }
     )
 
+    notes = "TCP connect scan of common ports only. Review exposed services for business need and network access controls."
+    if scan_result.get("web_scan_summary", {}).get("enabled"):
+        notes = (
+            "Web DAST crawler foundation only. Review discovered pages and forms before deeper testing; "
+            "Version 13.0 does not submit forms or test injection vulnerabilities."
+        )
+
     return {
         "total_open_ports": len(open_ports),
         "services_detected": services_detected,
@@ -88,8 +102,9 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "total_tls_findings": len(scan_result.get("tls_findings", [])),
         "total_ssh_findings": len(scan_result.get("ssh_findings", [])),
         "total_windows_findings": len(scan_result.get("windows_findings", [])),
+        "total_web_findings": len(scan_result.get("web_findings", [])),
         "highest_risk_level": _highest_risk_level(findings),
-        "notes": "TCP connect scan of common ports only. Review exposed services for business need and network access controls.",
+        "notes": notes,
     }
 
 

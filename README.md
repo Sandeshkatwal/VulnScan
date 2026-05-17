@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 Version 12.6 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, opt-in Windows Firewall and Microsoft Defender status collection, opt-in local security policy indicators from `net accounts`, and narrow template-based registry indicators using explicitly provided credentials.
 
 ## Requirements
@@ -82,6 +82,13 @@ Version 12.11 adds Windows audit profiles with `--windows-audit-profile foundati
 
 Version 12.12 adds Windows demo mode with `--windows-demo`. Demo mode uses fake sample data only, does not connect to any host, does not require credentials, and clearly marks terminal, JSON, and HTML output as demo data. Use it for screenshots, report testing, and portfolio demonstrations only; demo reports must not be used for real security decisions. See `docs\DEMO_MODE.md`.
 
+Version 13.0 starts the Web DAST Engine with a safe crawler foundation. It sends bounded same-host GET requests, discovers pages, links, and forms, and reports password/file-upload form indicators without submitting forms or testing SQL injection, XSS, or other payload-based checks. See `docs\WEB_DAST.md`.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl --max-pages 10 --max-depth 1 --json --html
+```
+
 You can also use the helper script:
 
 ```powershell
@@ -100,4 +107,4 @@ Run tests from PowerShell with:
 
 ## Safety
 
-Use VulScan only on systems you own or have explicit written permission to assess. This project must remain defensive and must not include exploitation, brute forcing, credential attacks, password guessing, payload attacks, package modification, privilege escalation, or destructive functionality.
+Use VulScan only on systems and web applications you own or have explicit written permission to assess. This project must remain defensive and must not include exploitation, brute forcing, credential attacks, password guessing, payload attacks, package modification, privilege escalation, or destructive functionality.

@@ -299,3 +299,99 @@ def test_html_report_shows_windows_demo_banner(tmp_path) -> None:
     assert DEMO_NOTICE in html
     assert "WIN-DEMO-01" in html
     assert "Windows Audit Demo Mode" in html
+
+
+def test_html_report_renders_web_dast_section(tmp_path) -> None:
+    scan_result = {
+        "host": "example.test",
+        "resolved_ip": "",
+        "scan_mode": "web-dast",
+        "duration_seconds": 0.2,
+        "open_ports": [],
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "web_findings": [
+            {
+                "id": "FINDING-0001",
+                "title": "Password Form Discovered",
+                "severity": "Informational",
+                "category": "Web Form Discovery",
+                "affected_host": None,
+                "affected_port": None,
+                "affected_url": "https://example.test/login",
+                "service": "http",
+                "evidence": "Password input field discovered.",
+                "confidence": "High",
+                "impact": "Login forms should use HTTPS.",
+                "recommendation": "Ensure login forms use HTTPS.",
+                "verification": "Review the discovered form.",
+                "limitation": "This finding does not test authentication security.",
+                "source": "web_crawler",
+                "risk_score": 0,
+                "risk_label": "Informational",
+                "fix_priority": "Document and monitor",
+                "created_at": "2026-05-18T10:00:00+00:00",
+            }
+        ],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+        "web_scan_summary": {
+            "enabled": True,
+            "start_url": "https://example.test/",
+            "allowed_host": "example.test",
+            "pages_crawled": 1,
+            "pages_skipped": 0,
+            "forms_discovered": 1,
+            "password_forms_discovered": 1,
+            "file_upload_forms_discovered": 0,
+            "unique_external_links": 1,
+            "errors_count": 0,
+            "duration_seconds": 0.2,
+            "limitations": ["Version 13.0 does not submit forms."],
+        },
+        "crawled_pages": [
+            {
+                "url": "https://example.test/",
+                "status_code": 200,
+                "title": "Home",
+                "depth": 0,
+                "content_type": "text/html",
+                "response_time_seconds": 0.01,
+                "links_found_count": 2,
+                "forms_found_count": 1,
+            }
+        ],
+        "discovered_forms": [
+            {
+                "page_url": "https://example.test/",
+                "method": "POST",
+                "action": "https://example.test/login",
+                "input_names": ["username", "password"],
+                "input_types": ["text", "password"],
+                "has_password_field": True,
+                "has_file_upload": False,
+            }
+        ],
+    }
+
+    path = save_html_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    html = path.read_text(encoding="utf-8")
+
+    assert "Web DAST Report" in html
+    assert "Crawl Summary" in html
+    assert "https://example.test/" in html
+    assert "Password Form Discovered" in html
+    assert "Version 13.0 does not submit forms." in html

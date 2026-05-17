@@ -56,6 +56,13 @@ def save_html_report(
         ),
         "windows_audit_sections": scan_result.get("windows_audit_sections", []),
         "windows_audit_consolidated_summary": _windows_consolidated_summary(scan_result),
+        "web_scan_summary": scan_result.get(
+            "web_scan_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "crawled_pages": scan_result.get("crawled_pages", []),
+        "discovered_forms": scan_result.get("discovered_forms", []),
+        "web_findings": findings_to_dicts(scan_result.get("web_findings", [])),
         "credentialed_audits": credentialed_audits_to_dicts(
             scan_result.get("credentialed_audits", [])
         ),
