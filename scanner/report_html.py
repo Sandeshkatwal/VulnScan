@@ -52,6 +52,10 @@ def save_html_report(
             "windows_audit_summary",
             {"enabled": False, "status": "skipped"},
         ),
+        "windows_audit_consolidated_summary": scan_result.get(
+            "windows_audit_consolidated_summary",
+            scan_result.get("windows_audit_summary", {"enabled": False, "status": "skipped"}),
+        ),
         "credentialed_audits": credentialed_audits_to_dicts(
             scan_result.get("credentialed_audits", [])
         ),

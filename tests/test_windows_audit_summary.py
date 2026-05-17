@@ -69,6 +69,13 @@ def test_windows_credentialed_audits_contains_windows_audit() -> None:
         "checks_failed": 0,
         "checks_skipped": 0,
         "smb_reachable": True,
+        "connection_timeout_seconds": 10.0,
+        "command_timeout_seconds": 15.0,
+        "audit_timeout_seconds": 120.0,
+        "total_duration_seconds": 1.2,
+        "timed_out_commands": 0,
+        "slowest_command_name": "hostname",
+        "slowest_command_duration_seconds": 0.2,
     }
     windows_findings = [{"title": "SMB Service Reachable", "source": "windows_audit"}]
 
@@ -82,6 +89,9 @@ def test_windows_credentialed_audits_contains_windows_audit() -> None:
     assert audits[0]["module_name"] == "Windows SMB/WinRM Audit Foundation"
     assert audits[0]["findings"] == windows_findings
     assert audits[0]["summary"]["smb_reachable"] is True
+    assert audits[0]["performance"]["connection_timeout_seconds"] == 10.0
+    assert audits[0]["performance"]["command_timeout_seconds"] == 15.0
+    assert audits[0]["performance"]["audit_timeout_seconds"] == 120.0
 
 
 def test_windows_summary_does_not_include_password() -> None:
@@ -233,3 +243,41 @@ def test_windows_audit_summary_includes_registry_audit() -> None:
     assert summary["windows_registry_audit"]["checks_executed"] == 5
     assert summary["highest_windows_risk_score"] == 45
     assert "SENSITIVE_VALUE" not in str(summary)
+
+
+def test_windows_audit_summary_includes_performance_fields() -> None:
+    scan_result = {
+        "host": "192.0.2.50",
+        "windows_audit": {
+            "status": "partial",
+            "summary": {
+                "enabled": True,
+                "status": "partial",
+                "connection_timeout_seconds": 10.0,
+                "command_timeout_seconds": 15.0,
+                "audit_timeout_seconds": 120.0,
+                "total_duration_seconds": 2.5,
+                "sections_completed": 3,
+                "sections_failed": 1,
+                "sections_skipped": 1,
+                "checks_planned": 9,
+                "checks_completed": 7,
+                "checks_failed": 1,
+                "checks_skipped": 1,
+                "timed_out_commands": 1,
+                "slowest_command_name": "Get-MpComputerStatus",
+                "slowest_command_duration_seconds": 15.1,
+                "performance_notes": ["1 Windows command(s) timed out."],
+            },
+        },
+        "windows_findings": [],
+    }
+
+    summary = _build_windows_audit_summary(scan_result)
+
+    assert summary["connection_timeout_seconds"] == 10.0
+    assert summary["command_timeout_seconds"] == 15.0
+    assert summary["audit_timeout_seconds"] == 120.0
+    assert summary["timed_out_commands"] == 1
+    assert summary["slowest_command_name"] == "Get-MpComputerStatus"
+    assert "password" not in str(summary).lower()

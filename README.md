@@ -74,6 +74,8 @@ Windows audit foundation examples:
 
 Version 12.6 Windows audit checks TCP reachability for SMB, NetBIOS/SMB, WinRM HTTP, WinRM HTTPS, and RDP. With `--windows-auth-method winrm`, it requires `--windows-user` and `--windows-password`, prefers HTTPS on 5986 over HTTP on 5985, uses `pywinrm` when installed, and performs one safe read-only validation command. With `--windows-registry-audit`, it queries only exact HKLM registry paths and value names defined in `templates\windows_registry\basic_security_indicators.json` or a provided template. It does not modify registry values, write to registry, query broad registry trees, export registry hives, enumerate users, collect secrets, exploit, brute force, modify systems, or restart services. Missing registry values may be normal on some Windows versions and should be interpreted in context. Passwords are not stored or printed.
 
+Windows audit timeout tuning is available with `--windows-timeout` (default `10`), `--windows-command-timeout` (default `15`), and `--windows-audit-timeout` (default `120`). Slow or failed Windows sections now return partial results with performance metadata instead of blocking the full scanner. Compact terminal progress is enabled by default and can be disabled with `--no-windows-progress`.
+
 You can also use the helper script:
 
 ```powershell

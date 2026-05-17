@@ -430,6 +430,43 @@
       <p><strong>WinRM HTTP reachable:</strong> {{ report.windows_audit_summary.winrm_http_reachable }}</p>
       <p><strong>WinRM HTTPS reachable:</strong> {{ report.windows_audit_summary.winrm_https_reachable }}</p>
       <p><strong>RDP reachable:</strong> {{ report.windows_audit_summary.rdp_reachable }}</p>
+      <h3>Windows Audit Performance</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Connection timeout</th>
+            <th>Command timeout</th>
+            <th>Audit timeout</th>
+            <th>Total duration</th>
+            <th>Sections completed</th>
+            <th>Sections failed</th>
+            <th>Sections skipped</th>
+            <th>Checks completed</th>
+            <th>Checks failed</th>
+            <th>Checks skipped</th>
+            <th>Timed out commands</th>
+            <th>Slowest command</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.windows_audit_summary.connection_timeout_seconds }}</td>
+            <td>{{ report.windows_audit_summary.command_timeout_seconds }}</td>
+            <td>{{ report.windows_audit_summary.audit_timeout_seconds }}</td>
+            <td>{{ report.windows_audit_summary.total_duration_seconds }}</td>
+            <td>{{ report.windows_audit_summary.sections_completed }}</td>
+            <td>{{ report.windows_audit_summary.sections_failed }}</td>
+            <td>{{ report.windows_audit_summary.sections_skipped }}</td>
+            <td>{{ report.windows_audit_summary.checks_completed }}</td>
+            <td>{{ report.windows_audit_summary.checks_failed }}</td>
+            <td>{{ report.windows_audit_summary.checks_skipped }}</td>
+            <td>{{ report.windows_audit_summary.timed_out_commands }}</td>
+            <td>{{ report.windows_audit_summary.slowest_command_name }} {{ report.windows_audit_summary.slowest_command_duration_seconds }}s</td>
+            <td>{{ report.windows_audit_summary.status }}</td>
+          </tr>
+        </tbody>
+      </table>
       <h3>WinRM Authentication</h3>
       <p><strong>Attempted:</strong> {{ report.windows_audit_summary.winrm_auth_attempted }}</p>
       <p><strong>Status:</strong> {{ report.windows_audit_summary.winrm_auth_status or "" }}</p>

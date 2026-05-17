@@ -43,6 +43,9 @@ FOUNDATION_MODULE_NAME = "Windows SMB/WinRM Audit Foundation"
 PROFILE = "foundation"
 ALLOWED_AUTH_METHODS = {"none", "smb", "winrm"}
 DEFAULT_TIMEOUT_SECONDS = 2.0
+DEFAULT_WINDOWS_TIMEOUT_SECONDS = 10.0
+DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS = 15.0
+DEFAULT_WINDOWS_AUDIT_TIMEOUT_SECONDS = 120.0
 SAFE_WINRM_VALIDATION_COMMAND = "hostname"
 WINDOWS_HOST_INFO_COMMANDS = {
     "hostname": "hostname",
@@ -126,6 +129,17 @@ ERROR_WINDOWS_POLICY_STATUS_FAILED = "WINDOWS_POLICY_STATUS_FAILED"
 ERROR_WINDOWS_POLICY_STATUS_TIMEOUT = "WINDOWS_POLICY_STATUS_TIMEOUT"
 ERROR_WINDOWS_REGISTRY_AUDIT_FAILED = "WINDOWS_REGISTRY_AUDIT_FAILED"
 ERROR_WINDOWS_REGISTRY_AUDIT_TIMEOUT = "WINDOWS_REGISTRY_AUDIT_TIMEOUT"
+ERROR_WINDOWS_TIMEOUT_INVALID = "WINDOWS_TIMEOUT_INVALID"
+ERROR_WINDOWS_COMMAND_TIMEOUT_INVALID = "WINDOWS_COMMAND_TIMEOUT_INVALID"
+ERROR_WINDOWS_AUDIT_TIMEOUT_INVALID = "WINDOWS_AUDIT_TIMEOUT_INVALID"
+WINDOWS_COMMAND_TIMEOUT = "WINDOWS_COMMAND_TIMEOUT"
+WINDOWS_COMMAND_FAILED = "WINDOWS_COMMAND_FAILED"
+WINDOWS_COMMAND_UNAVAILABLE = "WINDOWS_COMMAND_UNAVAILABLE"
+WINDOWS_WINRM_TIMEOUT = "WINDOWS_WINRM_TIMEOUT"
+WINDOWS_WINRM_CONNECTION_FAILED = "WINDOWS_WINRM_CONNECTION_FAILED"
+WINDOWS_AUTH_FAILED = "WINDOWS_AUTH_FAILED"
+WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED = "WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED"
+WINDOWS_UNKNOWN_ERROR = "WINDOWS_UNKNOWN_ERROR"
 WINRM_AUTH_SUCCESS = "WINRM_AUTH_SUCCESS"
 WINRM_AUTH_FAILED = "WINRM_AUTH_FAILED"
 WINRM_NOT_REACHABLE = "WINRM_NOT_REACHABLE"
@@ -181,6 +195,35 @@ class WindowsAuditConfigurationError(ValueError):
         self.error_code = error_code
 
 
+class WindowsCommandError(RuntimeError):
+    """Raised internally for normalised Windows command failures."""
+
+    def __init__(self, error_code: str, message: str) -> None:
+        super().__init__(message)
+        self.error_code = error_code
+
+
+class WindowsAuditBudget:
+    """Track the overall Windows audit time budget."""
+
+    def __init__(self, timeout_seconds: float) -> None:
+        self.timeout_seconds = float(timeout_seconds)
+        self.started = perf_counter()
+        self.exceeded = False
+
+    def elapsed(self) -> float:
+        return perf_counter() - self.started
+
+    def remaining(self) -> float:
+        return max(0.0, self.timeout_seconds - self.elapsed())
+
+    def has_time(self) -> bool:
+        if self.remaining() <= 0:
+            self.exceeded = True
+            return False
+        return True
+
+
 def validate_windows_audit_options(
     *,
     windows_audit: bool,
@@ -192,6 +235,9 @@ def validate_windows_audit_options(
     windows_policy_status: bool = False,
     windows_registry_audit: bool = False,
     windows_registry_template: str | Path | None = None,
+    windows_timeout: float = DEFAULT_WINDOWS_TIMEOUT_SECONDS,
+    windows_command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    windows_audit_timeout: float = DEFAULT_WINDOWS_AUDIT_TIMEOUT_SECONDS,
 ) -> str:
     """Validate Windows audit options without exposing credential values."""
     normalized_method = (windows_auth_method or "none").strip().lower()
@@ -201,6 +247,24 @@ def validate_windows_audit_options(
             f"Unsupported Windows auth method '{windows_auth_method}'. Allowed values: {allowed}.",
             ERROR_INVALID_AUTH_METHOD,
         )
+    _validate_timeout_value(
+        value=windows_timeout,
+        option_name="--windows-timeout",
+        maximum=60,
+        error_code=ERROR_WINDOWS_TIMEOUT_INVALID,
+    )
+    _validate_timeout_value(
+        value=windows_command_timeout,
+        option_name="--windows-command-timeout",
+        maximum=180,
+        error_code=ERROR_WINDOWS_COMMAND_TIMEOUT_INVALID,
+    )
+    _validate_timeout_value(
+        value=windows_audit_timeout,
+        option_name="--windows-audit-timeout",
+        maximum=900,
+        error_code=ERROR_WINDOWS_AUDIT_TIMEOUT_INVALID,
+    )
     if not windows_audit:
         if windows_host_info:
             raise WindowsAuditConfigurationError(
@@ -275,6 +339,21 @@ def validate_windows_audit_options(
     return normalized_method
 
 
+def _validate_timeout_value(*, value: float, option_name: str, maximum: float, error_code: str) -> None:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise WindowsAuditConfigurationError(
+            f"{option_name} must be a number greater than 0 and no more than {maximum:g}.",
+            error_code,
+        ) from exc
+    if numeric <= 0 or numeric > maximum:
+        raise WindowsAuditConfigurationError(
+            f"{option_name} must be greater than 0 and no more than {maximum:g}.",
+            error_code,
+        )
+
+
 def audit_windows_host(
     *,
     target: str,
@@ -288,7 +367,10 @@ def audit_windows_host(
     collect_policy_status: bool = False,
     collect_registry_audit: bool = False,
     registry_template_path: str | Path | None = None,
-    timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    timeout: float = DEFAULT_WINDOWS_TIMEOUT_SECONDS,
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    audit_timeout: float = DEFAULT_WINDOWS_AUDIT_TIMEOUT_SECONDS,
+    progress_callback: Any | None = None,
 ) -> dict[str, Any]:
     """Run safe Windows service reachability checks and optional single WinRM auth validation."""
     started = perf_counter()
@@ -303,13 +385,19 @@ def audit_windows_host(
         windows_policy_status=collect_policy_status,
         windows_registry_audit=collect_registry_audit,
         windows_registry_template=registry_template_path,
+        windows_timeout=timeout,
+        windows_command_timeout=command_timeout,
+        windows_audit_timeout=audit_timeout,
     )
+    budget = WindowsAuditBudget(audit_timeout)
+    _windows_progress(progress_callback, "Checking SMB, WinRM, and RDP reachability...")
 
     service_statuses = [
         _check_service(resolved_ip, check, timeout=timeout) for check in WINDOWS_SERVICE_CHECKS
     ]
     winrm_auth = _initial_winrm_auth_result()
     if normalized_method == "winrm":
+        _windows_progress(progress_callback, "Connecting to WinRM...")
         winrm_auth = _perform_winrm_auth_check(
             target=target,
             username=str(username or ""),
@@ -322,7 +410,12 @@ def audit_windows_host(
             collect_registry_audit=collect_registry_audit,
             registry_template_path=registry_template_path,
             timeout=timeout,
+            command_timeout=command_timeout,
+            budget=budget,
+            progress_callback=progress_callback,
         )
+        if winrm_auth.get("authenticated"):
+            _windows_progress(progress_callback, "WinRM authentication succeeded.")
     findings = _build_windows_findings(target, service_statuses)
     if normalized_method == "winrm":
         findings.append(_winrm_auth_finding(target, winrm_auth))
@@ -335,6 +428,8 @@ def audit_windows_host(
     if collect_registry_audit and winrm_auth.get("authenticated"):
         findings.extend(build_registry_findings(target, winrm_auth.get("registry_audit") or {}))
     findings.append(_completed_finding(target, service_statuses, winrm_auth, normalized_method))
+    if _has_partial_windows_results(winrm_auth):
+        findings.append(_partial_results_finding(target, winrm_auth))
     checks_failed = sum(1 for status in service_statuses if status.get("error_code"))
     if winrm_auth["attempted"] and winrm_auth["status"] != "authenticated":
         checks_failed += 1
@@ -355,10 +450,16 @@ def audit_windows_host(
                 or (collect_security_status and winrm_auth.get("security_status_status") in {"failed", "partial"})
                 or (collect_policy_status and winrm_auth.get("policy_status_status") in {"failed", "partial"})
                 or (collect_registry_audit and winrm_auth.get("registry_audit_status") in {"failed", "partial"})
+                or (collect_host_info and winrm_auth.get("host_info_status") == "skipped")
+                or (collect_security_status and winrm_auth.get("security_status_status") == "skipped")
+                or (collect_policy_status and winrm_auth.get("policy_status_status") == "skipped")
+                or (collect_registry_audit and winrm_auth.get("registry_audit_status") == "skipped")
             )
         )
         else _audit_status(checks_failed=checks_failed)
     )
+    if normalized_method == "winrm" and _has_partial_windows_results(winrm_auth):
+        status = "partial"
     duration = round(perf_counter() - started, 3)
     ended_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     errors = [
@@ -446,6 +547,10 @@ def audit_windows_host(
         checks_failed=checks_failed,
         findings_count=len(findings),
         winrm_auth=winrm_auth,
+        connection_timeout=timeout,
+        command_timeout=command_timeout,
+        audit_timeout=audit_timeout,
+        total_duration=duration,
     )
     credentialed_audit = _build_credentialed_audit(
         target=target,
@@ -462,6 +567,7 @@ def audit_windows_host(
         summary=summary,
     )
 
+    _windows_progress(progress_callback, f"Windows audit completed with status: {status}.")
     return {
         "enabled": True,
         "source": SOURCE,
@@ -475,7 +581,7 @@ def audit_windows_host(
         "service_statuses": service_statuses,
         "checks_completed": summary["checks_completed"],
         "checks_failed": checks_failed,
-        "checks_skipped": 0,
+        "checks_skipped": summary.get("checks_skipped") or 0,
         "findings": findings,
         "summary": summary,
         "credentialed_audit": credentialed_audit,
@@ -582,6 +688,7 @@ def _initial_winrm_auth_result() -> dict[str, Any]:
         "registry_audit_safe_detail": "",
         "registry_audit": empty_registry_audit(),
         "registry_audit_commands_completed": 0,
+        "command_results": [],
     }
 
 
@@ -598,6 +705,9 @@ def _perform_winrm_auth_check(
     collect_registry_audit: bool,
     registry_template_path: str | Path | None,
     timeout: float,
+    command_timeout: float,
+    budget: "WindowsAuditBudget",
+    progress_callback: Any | None = None,
 ) -> dict[str, Any]:
     started = perf_counter()
     endpoint = _select_winrm_endpoint(target, service_statuses)
@@ -645,10 +755,23 @@ def _perform_winrm_auth_check(
             auth=(_winrm_username(username, domain), password),
             transport="ntlm",
             server_cert_validation=cert_validation,
-            operation_timeout_sec=max(1, int(timeout)),
-            read_timeout_sec=max(2, int(timeout) + 1),
+            operation_timeout_sec=max(1, int(command_timeout)),
+            read_timeout_sec=max(2, int(command_timeout) + 1),
         )
-        response = session.run_cmd(SAFE_WINRM_VALIDATION_COMMAND)
+        command_result = execute_windows_command(
+            session,
+            command_name=SAFE_WINRM_VALIDATION_COMMAND,
+            command_used_safe_label=SAFE_WINRM_VALIDATION_COMMAND,
+            command_type="cmd",
+            command=SAFE_WINRM_VALIDATION_COMMAND,
+            command_timeout=command_timeout,
+            budget=budget,
+        )
+        if not command_result["success"]:
+            error_code = str(command_result.get("error_code") or WINRM_AUTH_FAILED)
+            if error_code == WINDOWS_COMMAND_TIMEOUT:
+                error_code = WINRM_TIMEOUT
+            raise WindowsCommandError(error_code, str(command_result.get("error_message") or "WinRM authentication failed."))
     except TimeoutError as exc:
         return _winrm_auth_result(
             started=started,
@@ -664,6 +787,24 @@ def _perform_winrm_auth_check(
             policy_status_requested=collect_policy_status,
             registry_audit_requested=collect_registry_audit,
             registry_audit_template_path=registry_template_path,
+        )
+    except WindowsCommandError as exc:
+        error_code = WINRM_TIMEOUT if exc.error_code in {WINDOWS_COMMAND_TIMEOUT, WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED} else WINRM_AUTH_FAILED
+        return _winrm_auth_result(
+            started=started,
+            status=_winrm_status_from_error_code(error_code),
+            error_code=error_code,
+            message=_winrm_error_message(error_code),
+            endpoint_used=endpoint_url,
+            transport="ntlm",
+            safe_detail=exc.error_code,
+            limitations=limitations,
+            host_info_requested=collect_host_info,
+            security_status_requested=collect_security_status,
+            policy_status_requested=collect_policy_status,
+            registry_audit_requested=collect_registry_audit,
+            registry_audit_template_path=registry_template_path,
+            command_results=[command_result] if "command_result" in locals() else [],
         )
     except Exception as exc:  # pywinrm exposes transport/auth failures through several exception classes.
         error_code = _classify_winrm_exception(exc)
@@ -683,26 +824,74 @@ def _perform_winrm_auth_check(
             registry_audit_template_path=registry_template_path,
         )
 
-    status_code = int(getattr(response, "status_code", 1) or 0)
+    status_code = int(command_result.get("exit_status") if command_result.get("exit_status") is not None else 1)
     if status_code == 0:
+        command_history = [command_result]
         host_info_result = (
-            _collect_windows_host_info(session) if collect_host_info else _initial_host_info_result(False)
+            _run_windows_section(
+                "host_information",
+                collect_host_info,
+                "Collecting host information...",
+                progress_callback,
+                command_timeout,
+                budget,
+                _collect_windows_host_info,
+                session,
+            )
+            if collect_host_info
+            else _initial_host_info_result(False)
         )
+        if collect_host_info:
+            command_history.extend(host_info_result.get("command_results") or [])
         security_status_result = (
-            _collect_windows_security_status(session)
+            _run_windows_section(
+                "security_status",
+                collect_security_status,
+                "Checking Firewall and Defender status...",
+                progress_callback,
+                command_timeout,
+                budget,
+                _collect_windows_security_status,
+                session,
+            )
             if collect_security_status
             else _initial_security_status_result(False)
         )
+        if collect_security_status:
+            command_history.extend(security_status_result.get("command_results") or [])
         policy_status_result = (
-            _collect_windows_policy_status(session)
+            _run_windows_section(
+                "local_security_policy",
+                collect_policy_status,
+                "Checking local security policy indicators...",
+                progress_callback,
+                command_timeout,
+                budget,
+                _collect_windows_policy_status,
+                session,
+            )
             if collect_policy_status
             else _initial_policy_status_result(False)
         )
+        if collect_policy_status:
+            command_history.extend(policy_status_result.get("command_results") or [])
         registry_audit_result = (
-            _collect_windows_registry_audit(session, registry_template_path)
+            _run_windows_section(
+                "registry_audit",
+                collect_registry_audit,
+                "Running registry audit template...",
+                progress_callback,
+                command_timeout,
+                budget,
+                _collect_windows_registry_audit,
+                session,
+                registry_template_path,
+            )
             if collect_registry_audit
             else _initial_registry_audit_result(False, registry_template_path)
         )
+        if collect_registry_audit:
+            command_history.extend(registry_audit_result.get("command_results") or [])
         return _winrm_auth_result(
             started=started,
             status="authenticated",
@@ -711,7 +900,7 @@ def _perform_winrm_auth_check(
             endpoint_used=endpoint_url,
             transport="ntlm",
             authenticated=True,
-            validation_result_summary=_safe_command_summary(getattr(response, "std_out", b"")),
+            validation_result_summary=_safe_command_summary(command_result.get("stdout") or ""),
             limitations=limitations,
             host_info_requested=collect_host_info,
             host_info_result=host_info_result,
@@ -722,6 +911,7 @@ def _perform_winrm_auth_check(
             registry_audit_requested=collect_registry_audit,
             registry_audit_template_path=registry_template_path,
             registry_audit_result=registry_audit_result,
+            command_results=command_history,
         )
 
     return _winrm_auth_result(
@@ -750,6 +940,41 @@ def _select_winrm_endpoint(target: str, service_statuses: list[dict[str, Any]]) 
     return None
 
 
+def _run_windows_section(
+    section_name: str,
+    requested: bool,
+    progress_message: str,
+    progress_callback: Any | None,
+    command_timeout: float,
+    budget: WindowsAuditBudget,
+    collector: Any,
+    *collector_args: Any,
+) -> dict[str, Any]:
+    if not requested:
+        return {"requested": False, "status": "skipped", "commands_completed": 0}
+    if not budget.has_time():
+        return _section_budget_skipped(section_name)
+    _windows_progress(progress_callback, progress_message)
+    result = collector(*collector_args, command_timeout=command_timeout, budget=budget)
+    if budget.exceeded and result.get("status") not in {"failed", "partial"}:
+        result["status"] = "partial"
+        result["error_code"] = WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED
+        result["error_message"] = "Windows audit time budget was exceeded."
+    return result
+
+
+def _section_budget_skipped(section_name: str) -> dict[str, Any]:
+    return {
+        "requested": True,
+        "status": "skipped",
+        "error_code": WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED,
+        "error_message": "Windows audit time budget was exceeded before this section could run.",
+        "safe_detail": section_name,
+        "commands_completed": 0,
+        "command_results": [],
+    }
+
+
 def _winrm_username(username: str, domain: str | None) -> str:
     if domain and "\\" not in username and "@" not in username:
         return f"{domain}\\{username}"
@@ -764,20 +989,127 @@ def _safe_command_summary(value: Any) -> str:
     return " ".join(text.split())[:120]
 
 
-def _collect_windows_host_info(session: Any) -> dict[str, Any]:
-    completed = 0
+def execute_windows_command(
+    session: Any,
+    *,
+    command_name: str,
+    command_used_safe_label: str,
+    command_type: str,
+    command: str,
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    budget: WindowsAuditBudget | None = None,
+) -> dict[str, Any]:
+    """Run one safe WinRM command and return normalised timing/error metadata."""
+    started = perf_counter()
+    started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if budget is not None and not budget.has_time():
+        ended_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        return {
+            "command_name": command_name,
+            "command_used_safe_label": command_used_safe_label,
+            "success": False,
+            "stdout": "",
+            "stderr": "",
+            "exit_status": None,
+            "error_code": WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED,
+            "error_message": "Windows audit time budget was exceeded before command execution.",
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "duration_seconds": 0.0,
+            "timed_out": False,
+        }
     try:
-        hostname = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["hostname"])
+        if command_type == "ps":
+            response = session.run_ps(command)
+        elif command == NET_ACCOUNTS_COMMAND:
+            try:
+                response = session.run_cmd("net", ["accounts"])
+            except TypeError:
+                response = session.run_cmd(command)
+        else:
+            response = session.run_cmd(command)
+        status_code = int(getattr(response, "status_code", 1) or 0)
+        stdout = _safe_multiline_output_text(getattr(response, "std_out", b""))
+        stderr = _safe_multiline_output_text(getattr(response, "std_err", b""))
+        duration = round(perf_counter() - started, 3)
+        timed_out = duration > float(command_timeout)
+        success = status_code == 0 and not timed_out
+        error_code = ""
+        error_message = ""
+        if timed_out:
+            error_code = WINDOWS_COMMAND_TIMEOUT
+            error_message = "Windows command exceeded the configured command timeout."
+        elif status_code != 0:
+            error_code = WINDOWS_COMMAND_FAILED
+            error_message = "Windows command returned a non-zero status."
+        return {
+            "command_name": command_name,
+            "command_used_safe_label": command_used_safe_label,
+            "success": success,
+            "stdout": stdout,
+            "stderr": stderr,
+            "exit_status": status_code,
+            "error_code": error_code,
+            "error_message": error_message,
+            "started_at": started_at,
+            "ended_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "duration_seconds": duration,
+            "timed_out": timed_out,
+        }
+    except TimeoutError:
+        duration = round(perf_counter() - started, 3)
+        return {
+            "command_name": command_name,
+            "command_used_safe_label": command_used_safe_label,
+            "success": False,
+            "stdout": "",
+            "stderr": "",
+            "exit_status": None,
+            "error_code": WINDOWS_COMMAND_TIMEOUT,
+            "error_message": "Windows command timed out.",
+            "started_at": started_at,
+            "ended_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "duration_seconds": duration,
+            "timed_out": True,
+        }
+    except Exception as exc:
+        duration = round(perf_counter() - started, 3)
+        return {
+            "command_name": command_name,
+            "command_used_safe_label": command_used_safe_label,
+            "success": False,
+            "stdout": "",
+            "stderr": "",
+            "exit_status": None,
+            "error_code": _normalise_command_exception(exc),
+            "error_message": "Windows command could not be completed.",
+            "started_at": started_at,
+            "ended_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "duration_seconds": duration,
+            "timed_out": False,
+        }
+
+
+def _collect_windows_host_info(
+    session: Any,
+    *,
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    budget: WindowsAuditBudget | None = None,
+) -> dict[str, Any]:
+    completed = 0
+    command_results: list[dict[str, Any]] = []
+    try:
+        hostname = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["hostname"], "hostname", command_timeout, budget, command_results)
         completed += 1
-        current_identity = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["current_identity"])
+        current_identity = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["current_identity"], "whoami", command_timeout, budget, command_results)
         completed += 1
-        powershell_version = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["powershell_version"])
+        powershell_version = _run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["powershell_version"], "PowerShell version", command_timeout, budget, command_results)
         completed += 1
-        os_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["os_information"]))
+        os_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["os_information"], "Win32_OperatingSystem", command_timeout, budget, command_results))
         completed += 1
-        computer_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["computer_system"]))
+        computer_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["computer_system"], "Win32_ComputerSystem", command_timeout, budget, command_results))
         completed += 1
-        timezone_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["timezone"]))
+        timezone_data = _json_object(_run_safe_ps(session, WINDOWS_HOST_INFO_COMMANDS["timezone"], "Get-TimeZone", command_timeout, budget, command_results))
         completed += 1
     except TimeoutError as exc:
         result = _initial_host_info_result(True)
@@ -788,18 +1120,21 @@ def _collect_windows_host_info(session: Any) -> dict[str, Any]:
                 "error_message": "Windows host information collection timed out.",
                 "safe_detail": exc.__class__.__name__,
                 "commands_completed": completed,
+                "command_results": command_results,
             }
         )
         return result
     except Exception as exc:
+        error_code = ERROR_WINDOWS_HOST_INFO_TIMEOUT if isinstance(exc, WindowsCommandError) and exc.error_code == WINDOWS_COMMAND_TIMEOUT else ERROR_WINDOWS_HOST_INFO_FAILED
         result = _initial_host_info_result(True)
         result.update(
             {
                 "status": "failed",
-                "error_code": ERROR_WINDOWS_HOST_INFO_FAILED,
+                "error_code": error_code,
                 "error_message": "Windows host information collection failed.",
                 "safe_detail": exc.__class__.__name__,
                 "commands_completed": completed,
+                "command_results": command_results,
             }
         )
         return result
@@ -821,17 +1156,34 @@ def _collect_windows_host_info(session: Any) -> dict[str, Any]:
             "commands_completed": completed,
             "error_code": "" if status == "collected" else ERROR_WINDOWS_HOST_INFO_FAILED,
             "error_message": "" if status == "collected" else "Windows host information returned incomplete data.",
+            "command_results": command_results,
         }
     )
     return result
 
 
-def _run_safe_ps(session: Any, command: str) -> str:
-    response = session.run_ps(command)
-    status_code = int(getattr(response, "status_code", 1) or 0)
-    if status_code != 0:
-        raise RuntimeError(f"powershell_status_{status_code}")
-    return _safe_output_text(getattr(response, "std_out", b""))
+def _run_safe_ps(
+    session: Any,
+    command: str,
+    command_name: str = "PowerShell command",
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    budget: WindowsAuditBudget | None = None,
+    command_results: list[dict[str, Any]] | None = None,
+) -> str:
+    result = execute_windows_command(
+        session,
+        command_name=command_name,
+        command_used_safe_label=command_name,
+        command_type="ps",
+        command=command,
+        command_timeout=command_timeout,
+        budget=budget,
+    )
+    if command_results is not None:
+        command_results.append(result)
+    if not result["success"]:
+        raise WindowsCommandError(str(result.get("error_code") or WINDOWS_COMMAND_FAILED), str(result.get("error_message") or "Command failed."))
+    return str(result.get("stdout") or "")
 
 
 def _safe_output_text(value: Any) -> str:
@@ -903,8 +1255,14 @@ def _initial_host_info_result(requested: bool) -> dict[str, Any]:
     }
 
 
-def _collect_windows_security_status(session: Any) -> dict[str, Any]:
+def _collect_windows_security_status(
+    session: Any,
+    *,
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    budget: WindowsAuditBudget | None = None,
+) -> dict[str, Any]:
     completed = 0
+    command_results: list[dict[str, Any]] = []
     limitations: list[str] = []
     firewall_profiles: list[dict[str, str]] = []
     defender_service: dict[str, str] = {"status": "", "start_type": ""}
@@ -912,7 +1270,7 @@ def _collect_windows_security_status(session: Any) -> dict[str, Any]:
 
     try:
         firewall_profiles = _firewall_profiles_from_output(
-            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["firewall_profiles"])
+            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["firewall_profiles"], "Get-NetFirewallProfile", command_timeout, budget, command_results)
         )
         completed += 1
     except TimeoutError as exc:
@@ -922,7 +1280,7 @@ def _collect_windows_security_status(session: Any) -> dict[str, Any]:
 
     try:
         defender_service = _defender_service_from_output(
-            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["defender_service"])
+            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["defender_service"], "Get-Service WinDefend", command_timeout, budget, command_results)
         )
         completed += 1
     except TimeoutError as exc:
@@ -932,7 +1290,7 @@ def _collect_windows_security_status(session: Any) -> dict[str, Any]:
 
     try:
         defender_status = _defender_status_from_output(
-            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["defender_status"])
+            _run_safe_ps(session, WINDOWS_SECURITY_STATUS_COMMANDS["defender_status"], "Get-MpComputerStatus", command_timeout, budget, command_results)
         )
         completed += 1
     except TimeoutError as exc:
@@ -964,6 +1322,7 @@ def _collect_windows_security_status(session: Any) -> dict[str, Any]:
             if status == "checked"
             else "One or more Windows security status commands failed or returned incomplete data.",
             "safe_detail": "; ".join(limitations),
+            "command_results": command_results,
         }
     )
     return result
@@ -995,15 +1354,26 @@ def _initial_security_status_result(requested: bool) -> dict[str, Any]:
     }
 
 
-def _collect_windows_policy_status(session: Any) -> dict[str, Any]:
+def _collect_windows_policy_status(
+    session: Any,
+    *,
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    budget: WindowsAuditBudget | None = None,
+) -> dict[str, Any]:
     completed = 0
+    command_results: list[dict[str, Any]] = []
     try:
-        output = _run_safe_cmd(session, NET_ACCOUNTS_COMMAND)
+        output = _run_safe_cmd(session, NET_ACCOUNTS_COMMAND, NET_ACCOUNTS_COMMAND, command_timeout, budget, command_results)
         completed += 1
     except TimeoutError as exc:
-        return _policy_status_error(ERROR_WINDOWS_POLICY_STATUS_TIMEOUT, exc, completed)
+        result = _policy_status_error(ERROR_WINDOWS_POLICY_STATUS_TIMEOUT, exc, completed)
+        result["command_results"] = command_results
+        return result
     except Exception as exc:
-        return _policy_status_error(ERROR_WINDOWS_POLICY_STATUS_FAILED, exc, completed)
+        error_code = ERROR_WINDOWS_POLICY_STATUS_TIMEOUT if isinstance(exc, WindowsCommandError) and exc.error_code == WINDOWS_COMMAND_TIMEOUT else ERROR_WINDOWS_POLICY_STATUS_FAILED
+        result = _policy_status_error(error_code, exc, completed)
+        result["command_results"] = command_results
+        return result
 
     policy_status = parse_net_accounts_output(output)
     has_core_data = any(
@@ -1038,23 +1408,34 @@ def _collect_windows_policy_status(session: Any) -> dict[str, Any]:
             "error_message": ""
             if status == "checked"
             else "Windows local security policy indicators returned incomplete data.",
+            "command_results": command_results,
         }
     )
     return result
 
 
-def _run_safe_cmd(session: Any, command: str) -> str:
-    if command == NET_ACCOUNTS_COMMAND:
-        try:
-            response = session.run_cmd("net", ["accounts"])
-        except TypeError:
-            response = session.run_cmd(command)
-    else:
-        response = session.run_cmd(command)
-    status_code = int(getattr(response, "status_code", 1) or 0)
-    if status_code != 0:
-        raise RuntimeError(f"command_status_{status_code}")
-    return _safe_multiline_output_text(getattr(response, "std_out", b""))
+def _run_safe_cmd(
+    session: Any,
+    command: str,
+    command_name: str = "command",
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    budget: WindowsAuditBudget | None = None,
+    command_results: list[dict[str, Any]] | None = None,
+) -> str:
+    result = execute_windows_command(
+        session,
+        command_name=command_name,
+        command_used_safe_label=command_name,
+        command_type="cmd",
+        command=command,
+        command_timeout=command_timeout,
+        budget=budget,
+    )
+    if command_results is not None:
+        command_results.append(result)
+    if not result["success"]:
+        raise WindowsCommandError(str(result.get("error_code") or WINDOWS_COMMAND_FAILED), str(result.get("error_message") or "Command failed."))
+    return str(result.get("stdout") or "")
 
 
 def _safe_multiline_output_text(value: Any) -> str:
@@ -1091,8 +1472,15 @@ def _initial_policy_status_result(requested: bool) -> dict[str, Any]:
     }
 
 
-def _collect_windows_registry_audit(session: Any, template_path: str | Path | None) -> dict[str, Any]:
+def _collect_windows_registry_audit(
+    session: Any,
+    template_path: str | Path | None,
+    *,
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    budget: WindowsAuditBudget | None = None,
+) -> dict[str, Any]:
     completed = 0
+    command_results: list[dict[str, Any]] = []
     effective_template_path = template_path or DEFAULT_WINDOWS_REGISTRY_TEMPLATE
     try:
         template = load_registry_template(effective_template_path)
@@ -1119,7 +1507,7 @@ def _collect_windows_registry_audit(session: Any, template_path: str | Path | No
         if not getattr(check, "enabled", False):
             continue
         try:
-            raw_output = _run_safe_ps(session, build_registry_query_command(check))
+            raw_output = _run_safe_ps(session, build_registry_query_command(check), f"registry:{check.id}", command_timeout, budget, command_results)
             completed += 1
             value_data = _json_object(raw_output)
             observed_by_check_id[check.id] = {
@@ -1153,6 +1541,7 @@ def _collect_windows_registry_audit(session: Any, template_path: str | Path | No
             "error_code": "" if status == "checked" else ERROR_WINDOWS_REGISTRY_AUDIT_FAILED,
             "error_message": "" if status == "checked" else "One or more registry indicators could not be read.",
             "safe_detail": "",
+            "command_results": command_results,
         }
     )
     return result
@@ -1287,6 +1676,7 @@ def _winrm_auth_result(
     registry_audit_requested: bool = False,
     registry_audit_template_path: str | Path | None = None,
     registry_audit_result: dict[str, Any] | None = None,
+    command_results: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     host_result = host_info_result or _initial_host_info_result(host_info_requested)
     security_result = security_status_result or _initial_security_status_result(security_status_requested)
@@ -1336,6 +1726,7 @@ def _winrm_auth_result(
         "registry_audit_safe_detail": registry_result.get("safe_detail") or "",
         "registry_audit": registry_result.get("registry_audit") or empty_registry_audit(registry_audit_template_path),
         "registry_audit_commands_completed": int(registry_result.get("commands_completed") or 0),
+        "command_results": command_results or [],
     }
 
 
@@ -1846,6 +2237,219 @@ def _windows_evidence(
     )
 
 
+def _windows_progress(progress_callback: Any | None, message: str) -> None:
+    if progress_callback:
+        progress_callback(message)
+
+
+def _normalise_command_exception(exc: Exception) -> str:
+    name = exc.__class__.__name__.lower()
+    text = str(exc).lower()
+    if "timeout" in name or "timeout" in text:
+        return WINDOWS_COMMAND_TIMEOUT
+    if "not recognized" in text or "not found" in text or "unavailable" in text:
+        return WINDOWS_COMMAND_UNAVAILABLE
+    if any(token in text for token in ("connect", "connection", "refused", "unreachable", "ssl", "certificate")):
+        return WINDOWS_WINRM_CONNECTION_FAILED
+    return WINDOWS_UNKNOWN_ERROR
+
+
+def _has_partial_windows_results(winrm_auth: dict[str, Any]) -> bool:
+    if not winrm_auth.get("attempted"):
+        return False
+    section_statuses = [
+        winrm_auth.get("host_info_status"),
+        winrm_auth.get("security_status_status"),
+        winrm_auth.get("policy_status_status"),
+        winrm_auth.get("registry_audit_status"),
+    ]
+    if any(status in {"failed", "partial"} for status in section_statuses):
+        return True
+    if any(
+        winrm_auth.get(flag) and winrm_auth.get(status_key) == "skipped"
+        for flag, status_key in (
+            ("host_info_requested", "host_info_status"),
+            ("security_status_requested", "security_status_status"),
+            ("policy_status_requested", "policy_status_status"),
+            ("registry_audit_requested", "registry_audit_status"),
+        )
+    ):
+        return True
+    return any(result.get("timed_out") for result in winrm_auth.get("command_results") or [])
+
+
+def _partial_results_finding(target: str, winrm_auth: dict[str, Any]) -> Finding:
+    details = _windows_evidence(
+        summary="One or more Windows audit sections failed, timed out, or were skipped.",
+        source=SOURCE,
+        command_name="windows-audit-orchestration",
+        observed_value=_section_status_summary(winrm_auth),
+        expected_value="All requested Windows audit sections complete successfully",
+        limitation="Partial results may not represent the full Windows security posture.",
+    )
+    return create_finding(
+        title="Windows Audit Completed with Partial Results",
+        severity="Informational",
+        category="Windows Audit Reliability",
+        affected_host=target,
+        service="winrm",
+        evidence=evidence_summary(details),
+        evidence_details=details,
+        confidence="High",
+        impact="Some Windows audit indicators may be unavailable or incomplete.",
+        recommendation="Review timeout settings, WinRM availability, and permissions.",
+        verification="Re-run the Windows audit after reviewing timeout and WinRM settings.",
+        limitation="Partial results may not represent the full Windows security posture.",
+        source=SOURCE,
+    )
+
+
+def _section_status_summary(winrm_auth: dict[str, Any]) -> str:
+    sections = _windows_section_statuses(winrm_auth, [])
+    return ", ".join(f"{name}={section['status']}" for name, section in sections.items())
+
+
+def _windows_section_statuses(
+    winrm_auth: dict[str, Any],
+    service_statuses: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    sections: dict[str, dict[str, Any]] = {
+        "service_reachability": {
+            "status": "success",
+            "checks_planned": len(WINDOWS_SERVICE_CHECKS),
+            "checks_completed": len(service_statuses),
+            "checks_failed": sum(1 for item in service_statuses if item.get("error_code")),
+            "checks_skipped": max(0, len(WINDOWS_SERVICE_CHECKS) - len(service_statuses)),
+            "duration_seconds": round(sum(float(item.get("duration_seconds") or 0.0) for item in service_statuses), 3),
+            "error_code": "",
+            "limitation": "TCP reachability only; no service configuration is changed.",
+        },
+        "winrm_authentication": {
+            "status": _section_status_from_winrm(winrm_auth),
+            "checks_planned": 1 if winrm_auth.get("attempted") else 0,
+            "checks_completed": 1 if winrm_auth.get("attempted") else 0,
+            "checks_failed": 0 if winrm_auth.get("authenticated") or not winrm_auth.get("attempted") else 1,
+            "checks_skipped": 0,
+            "duration_seconds": float(winrm_auth.get("duration_seconds") or 0.0),
+            "error_code": "" if winrm_auth.get("authenticated") else str(winrm_auth.get("error_code") or ""),
+            "limitation": "Single safe WinRM validation command only.",
+        },
+    }
+    _add_requested_section(
+        sections,
+        key="host_information",
+        requested=bool(winrm_auth.get("host_info_requested")),
+        raw_status=str(winrm_auth.get("host_info_status") or "skipped"),
+        planned=6,
+        completed=int(winrm_auth.get("host_info_commands_completed") or 0),
+        error_code=str(winrm_auth.get("host_info_error_code") or ""),
+        command_results=winrm_auth.get("command_results") or [],
+        command_prefixes=("hostname", "whoami", "PowerShell version", "Win32_OperatingSystem", "Win32_ComputerSystem", "Get-TimeZone"),
+        limitation="Read-only host inventory commands only.",
+    )
+    _add_requested_section(
+        sections,
+        key="security_status",
+        requested=bool(winrm_auth.get("security_status_requested")),
+        raw_status=str(winrm_auth.get("security_status_status") or "skipped"),
+        planned=3,
+        completed=int(winrm_auth.get("security_status_commands_completed") or 0),
+        error_code=str(winrm_auth.get("security_status_error_code") or ""),
+        command_results=winrm_auth.get("command_results") or [],
+        command_prefixes=("Get-NetFirewallProfile", "Get-Service WinDefend", "Get-MpComputerStatus"),
+        limitation="Read-only Firewall and Defender status commands only.",
+    )
+    _add_requested_section(
+        sections,
+        key="local_security_policy",
+        requested=bool(winrm_auth.get("policy_status_requested")),
+        raw_status=str(winrm_auth.get("policy_status_status") or "skipped"),
+        planned=1,
+        completed=int(winrm_auth.get("policy_status_commands_completed") or 0),
+        error_code=str(winrm_auth.get("policy_status_error_code") or ""),
+        command_results=winrm_auth.get("command_results") or [],
+        command_prefixes=(NET_ACCOUNTS_COMMAND,),
+        limitation="Read-only net accounts indicator only.",
+    )
+    registry_commands = [
+        result for result in winrm_auth.get("command_results") or [] if str(result.get("command_name") or "").startswith("registry:")
+    ]
+    registry_planned = max(len(registry_commands), int((winrm_auth.get("registry_audit") or {}).get("checks_total") or 0))
+    _add_requested_section(
+        sections,
+        key="registry_audit",
+        requested=bool(winrm_auth.get("registry_audit_requested")),
+        raw_status=str(winrm_auth.get("registry_audit_status") or "skipped"),
+        planned=registry_planned,
+        completed=int(winrm_auth.get("registry_audit_commands_completed") or 0),
+        error_code=str(winrm_auth.get("registry_audit_error_code") or ""),
+        command_results=registry_commands,
+        command_prefixes=("registry:",),
+        limitation="Exact template-defined HKLM value reads only.",
+    )
+    sections["patch_status"] = {
+        "status": "skipped",
+        "checks_planned": 0,
+        "checks_completed": 0,
+        "checks_failed": 0,
+        "checks_skipped": 0,
+        "duration_seconds": 0.0,
+        "error_code": "",
+        "limitation": "Patch status flag is reserved in this build.",
+    }
+    return sections
+
+
+def _add_requested_section(
+    sections: dict[str, dict[str, Any]],
+    *,
+    key: str,
+    requested: bool,
+    raw_status: str,
+    planned: int,
+    completed: int,
+    error_code: str,
+    command_results: list[dict[str, Any]],
+    command_prefixes: tuple[str, ...],
+    limitation: str,
+) -> None:
+    status = _section_status_from_raw(raw_status, requested)
+    related_results = [
+        result
+        for result in command_results
+        if any(str(result.get("command_name") or "").startswith(prefix) for prefix in command_prefixes)
+    ]
+    failed = sum(1 for result in related_results if not result.get("success"))
+    sections[key] = {
+        "status": status,
+        "checks_planned": planned if requested else 0,
+        "checks_completed": completed,
+        "checks_failed": failed if failed else (1 if status == "failed" else 0),
+        "checks_skipped": max(0, (planned if requested else 0) - completed),
+        "duration_seconds": round(sum(float(result.get("duration_seconds") or 0.0) for result in related_results), 3),
+        "error_code": error_code,
+        "limitation": limitation,
+    }
+
+
+def _section_status_from_raw(raw_status: str, requested: bool) -> str:
+    if not requested:
+        return "skipped"
+    if raw_status in {"checked", "collected", "authenticated"}:
+        return "success"
+    if raw_status in {"partial"}:
+        return "partial"
+    if raw_status in {"failed", "timeout", "auth_failed", "error"}:
+        return "failed"
+    return "skipped"
+
+
+def _section_status_from_winrm(winrm_auth: dict[str, Any]) -> str:
+    if not winrm_auth.get("attempted"):
+        return "skipped"
+    return "success" if winrm_auth.get("authenticated") else "failed"
+
+
 def _build_summary(
     *,
     target: str,
@@ -1857,8 +2461,20 @@ def _build_summary(
     checks_failed: int,
     findings_count: int,
     winrm_auth: dict[str, Any],
+    connection_timeout: float = DEFAULT_WINDOWS_TIMEOUT_SECONDS,
+    command_timeout: float = DEFAULT_WINDOWS_COMMAND_TIMEOUT_SECONDS,
+    audit_timeout: float = DEFAULT_WINDOWS_AUDIT_TIMEOUT_SECONDS,
+    total_duration: float = 0.0,
 ) -> dict[str, Any]:
     service_by_port = {int(item["port"]): item for item in service_statuses}
+    command_results = list(winrm_auth.get("command_results") or [])
+    timed_out_commands = sum(1 for result in command_results if result.get("timed_out"))
+    slowest = max(command_results, key=lambda item: float(item.get("duration_seconds") or 0.0), default={})
+    section_statuses = _windows_section_statuses(winrm_auth, service_statuses)
+    sections_planned = len(section_statuses)
+    sections_completed = sum(1 for section in section_statuses.values() if section["status"] == "success")
+    sections_failed = sum(1 for section in section_statuses.values() if section["status"] == "failed")
+    sections_skipped = sum(1 for section in section_statuses.values() if section["status"] == "skipped")
     checks_completed = (
         len(service_statuses)
         + (1 if winrm_auth.get("attempted") else 0)
@@ -1867,6 +2483,12 @@ def _build_summary(
         + int(winrm_auth.get("policy_status_commands_completed") or 0)
         + int(winrm_auth.get("registry_audit_commands_completed") or 0)
     )
+    checks_skipped = sum(int(section.get("checks_skipped") or 0) for section in section_statuses.values())
+    performance_notes = []
+    if timed_out_commands:
+        performance_notes.append(f"{timed_out_commands} Windows command(s) timed out.")
+    if any(section["error_code"] == WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED for section in section_statuses.values()):
+        performance_notes.append("Windows audit time budget was exceeded; remaining checks were skipped.")
     limitations = [
         "Version 12.6 performs socket reachability checks, one safe WinRM authentication validation when requested, optional read-only host information collection, optional read-only firewall and Defender status collection, optional net accounts local security policy indicators, and optional narrow template-based registry indicators.",
         "It does not enumerate shares, query broad registry trees, export registry hives, export security policy, list users, list groups, list files, list processes, dump credentials, change registry values, change password or lockout policy, change firewall or Defender settings, exploit, brute force, or modify systems.",
@@ -1889,7 +2511,7 @@ def _build_summary(
         "service_statuses": service_statuses,
         "checks_completed": checks_completed,
         "checks_failed": checks_failed,
-        "checks_skipped": 0,
+        "checks_skipped": checks_skipped,
         "findings_count": findings_count,
         "highest_windows_risk_score": 0,
         "highest_windows_risk_label": "Informational",
@@ -1922,6 +2544,20 @@ def _build_summary(
         "windows_registry_audit_status": winrm_auth.get("registry_audit_status") or "skipped",
         "windows_registry_audit_error_code": winrm_auth.get("registry_audit_error_code") or "",
         "windows_registry_audit_error_message": winrm_auth.get("registry_audit_error_message") or "",
+        "connection_timeout_seconds": float(connection_timeout),
+        "command_timeout_seconds": float(command_timeout),
+        "audit_timeout_seconds": float(audit_timeout),
+        "total_duration_seconds": float(total_duration),
+        "sections": section_statuses,
+        "sections_planned": sections_planned,
+        "sections_completed": sections_completed,
+        "sections_failed": sections_failed,
+        "sections_skipped": sections_skipped,
+        "checks_planned": sum(int(section.get("checks_planned") or 0) for section in section_statuses.values()),
+        "timed_out_commands": timed_out_commands,
+        "slowest_command_name": slowest.get("command_name") or "",
+        "slowest_command_duration_seconds": float(slowest.get("duration_seconds") or 0.0),
+        "performance_notes": performance_notes,
         "limitations": limitations,
     })
 
@@ -2080,6 +2716,10 @@ def _build_credentialed_audit(
             "registry_template_name": registry_audit.get("template_name") or "",
             "registry_checks_executed": registry_audit.get("checks_executed") or 0,
             "registry_checks_with_findings": registry_audit.get("checks_with_findings") or 0,
+            "sections_completed": summary.get("sections_completed") or 0,
+            "sections_failed": summary.get("sections_failed") or 0,
+            "sections_skipped": summary.get("sections_skipped") or 0,
+            "status": status,
         }
     )
     audit = CredentialedAuditResult(
@@ -2097,14 +2737,20 @@ def _build_credentialed_audit(
         checks_planned=len(checks),
         checks_completed=int(summary.get("checks_completed") or len(checks)),
         checks_failed=len(errors),
-        checks_skipped=0,
+        checks_skipped=int(summary.get("checks_skipped") or 0),
         findings=[finding_to_dict(finding) for finding in findings],
         summary=credentialed_summary,
         errors=errors,
         limitations=list(summary["limitations"]),
         performance={
             "duration_seconds": duration_seconds,
-            "timeout_seconds": DEFAULT_TIMEOUT_SECONDS,
+            "connection_timeout_seconds": summary.get("connection_timeout_seconds"),
+            "command_timeout_seconds": summary.get("command_timeout_seconds"),
+            "audit_timeout_seconds": summary.get("audit_timeout_seconds"),
+            "total_duration_seconds": summary.get("total_duration_seconds"),
+            "timed_out_commands": summary.get("timed_out_commands"),
+            "slowest_command_name": summary.get("slowest_command_name"),
+            "slowest_command_duration_seconds": summary.get("slowest_command_duration_seconds"),
             "winrm_auth_duration_seconds": summary.get("winrm_auth_duration_seconds"),
         },
         metadata={

@@ -124,4 +124,6 @@ Windows audit emits standard findings with source `windows_audit`, Windows secur
 
 Version 12.8 reuses `scanner.evidence` for Windows evidence quality and redaction. Windows findings keep the backward-compatible short `evidence` string and can include `evidence_details` with source, safe command label, observed value, expected value, raw-output-included status, redaction status, and limitation. JSON, HTML, and export writers recursively redact report containers before writing. SQLite continues to store the short evidence string through the existing schema.
 
+Version 12.9 adds Windows audit orchestration metadata without adding new intrusive checks. `scanner.windows_audit` validates connection, command, and overall audit timeout options, wraps WinRM command execution in structured result dictionaries, tracks section-level success/failed/skipped/partial status, and records performance fields such as timed-out command count and slowest command. The overall audit budget is checked before sections and commands; budget exhaustion skips remaining requested work and returns partial results through the existing findings and credentialed audit pipelines.
+
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

@@ -194,6 +194,34 @@ def scan(
             help="Path to a Windows registry audit template JSON file. Applies only with --windows-registry-audit.",
         ),
     ] = None,
+    windows_timeout: Annotated[
+        float,
+        typer.Option(
+            "--windows-timeout",
+            help="WinRM connection/session timeout in seconds. Must be greater than 0 and no more than 60.",
+        ),
+    ] = 10.0,
+    windows_command_timeout: Annotated[
+        float,
+        typer.Option(
+            "--windows-command-timeout",
+            help="Timeout for each read-only Windows command in seconds. Must be greater than 0 and no more than 180.",
+        ),
+    ] = 15.0,
+    windows_audit_timeout: Annotated[
+        float,
+        typer.Option(
+            "--windows-audit-timeout",
+            help="Overall Windows audit time budget in seconds. Must be greater than 0 and no more than 900.",
+        ),
+    ] = 120.0,
+    windows_progress: Annotated[
+        bool,
+        typer.Option(
+            "--windows-progress/--no-windows-progress",
+            help="Show compact terminal progress for Windows audit.",
+        ),
+    ] = True,
     ssh_audit: Annotated[
         bool,
         typer.Option(
@@ -310,6 +338,9 @@ def scan(
             windows_policy_status=windows_policy_status,
             windows_registry_audit=windows_registry_audit,
             windows_registry_template=windows_registry_template,
+            windows_timeout=windows_timeout,
+            windows_command_timeout=windows_command_timeout,
+            windows_audit_timeout=windows_audit_timeout,
         )
     except WindowsAuditConfigurationError as exc:
         console.print(f"[red]Windows audit configuration error:[/red] {exc}")
@@ -343,6 +374,8 @@ def scan(
             tls_findings = audit_tls_services(scan_result["open_ports"])
             findings.extend(tls_findings)
         if windows_audit:
+            if windows_progress:
+                console.print("Windows Audit")
             windows_result = audit_windows_host(
                 target=scan_result["host"],
                 resolved_ip=scan_result["resolved_ip"],
@@ -355,6 +388,10 @@ def scan(
                 collect_policy_status=windows_policy_status,
                 collect_registry_audit=windows_registry_audit,
                 registry_template_path=windows_registry_template,
+                timeout=windows_timeout,
+                command_timeout=windows_command_timeout,
+                audit_timeout=windows_audit_timeout,
+                progress_callback=_windows_progress_callback if windows_progress else None,
             )
             scan_result["windows_audit"] = windows_result
             findings.extend(windows_result.get("findings", []))
@@ -417,6 +454,7 @@ def scan(
             scan_result["windows_audit_summary"] = _build_windows_audit_summary(
                 scan_result=scan_result,
             )
+            scan_result["windows_audit_consolidated_summary"] = dict(scan_result["windows_audit_summary"])
             scan_result["credentialed_audits"].extend(
                 _build_windows_credentialed_audits(
                     windows_result=scan_result["windows_audit"],
@@ -1013,6 +1051,30 @@ def _print_ssh_audit_summary(summary: dict[str, Any]) -> None:
     for label, value in rows:
         table.add_row(label, "" if value is None else str(value))
     console.print(table)
+    performance_table = Table(title="Windows Audit Performance")
+    performance_table.add_column("Field")
+    performance_table.add_column("Value")
+    performance_rows = [
+        ("Connection timeout", summary.get("connection_timeout_seconds")),
+        ("Command timeout", summary.get("command_timeout_seconds")),
+        ("Audit timeout", summary.get("audit_timeout_seconds")),
+        ("Total duration", summary.get("total_duration_seconds")),
+        ("Sections completed", summary.get("sections_completed")),
+        ("Sections failed", summary.get("sections_failed")),
+        ("Sections skipped", summary.get("sections_skipped")),
+        ("Checks completed", summary.get("checks_completed")),
+        ("Checks failed", summary.get("checks_failed")),
+        ("Checks skipped", summary.get("checks_skipped")),
+        ("Timed out commands", summary.get("timed_out_commands")),
+        (
+            "Slowest command",
+            f"{summary.get('slowest_command_name') or ''} {summary.get('slowest_command_duration_seconds') or 0}s".strip(),
+        ),
+        ("Status", summary.get("status")),
+    ]
+    for label, value in performance_rows:
+        performance_table.add_row(label, "" if value is None else str(value))
+    console.print(performance_table)
     console.print(
         "[bold]SSH audit performance:[/bold] "
         f"{summary.get('checks_completed', 0)} checks completed, "
@@ -1156,6 +1218,10 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
 
 
 def _ssh_progress_callback(message: str) -> None:
+    console.print(f"- {message}")
+
+
+def _windows_progress_callback(message: str) -> None:
     console.print(f"- {message}")
 
 
@@ -1369,6 +1435,19 @@ def _build_windows_credentialed_audits(
         }
     )
     credentialed_audit["summary"] = redact_nested(credentialed_summary)
+    performance = dict(credentialed_audit.get("performance") or {})
+    performance.update(
+        {
+            "connection_timeout_seconds": windows_summary.get("connection_timeout_seconds"),
+            "command_timeout_seconds": windows_summary.get("command_timeout_seconds"),
+            "audit_timeout_seconds": windows_summary.get("audit_timeout_seconds"),
+            "total_duration_seconds": windows_summary.get("total_duration_seconds"),
+            "timed_out_commands": windows_summary.get("timed_out_commands"),
+            "slowest_command_name": windows_summary.get("slowest_command_name"),
+            "slowest_command_duration_seconds": windows_summary.get("slowest_command_duration_seconds"),
+        }
+    )
+    credentialed_audit["performance"] = redact_nested(performance)
     metadata = dict(credentialed_audit.get("metadata") or {})
     metadata["windows_host_info"] = host_info
     metadata["windows_security_status"] = security_status
