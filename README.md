@@ -78,6 +78,8 @@ Windows audit timeout tuning is available with `--windows-timeout` (default `10`
 
 Version 12.10 normalises Windows audit results into `windows_audit_sections` while keeping the existing `windows_audit_summary`, `windows_audit_consolidated_summary`, `credentialed_audits`, and `findings` outputs. The normalised section model avoids secrets and raw command output by default and prepares VulScan for future Windows profiles, dashboards, and API integration without changing existing commands.
 
+Version 12.11 adds Windows audit profiles with `--windows-audit-profile foundation|standard|detailed`. `standard` is the default, `foundation` is fastest, and `detailed` runs additional read-only local policy and registry template indicators. Manual Windows flags can extend the selected profile, and all profiles remain read-only. Windows passwords are not stored or printed.
+
 You can also use the helper script:
 
 ```powershell

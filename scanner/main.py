@@ -48,6 +48,11 @@ from scanner.ssh_audit import (
     validate_ssh_audit_options,
 )
 from scanner.tls_audit import audit_tls_services
+from scanner.windows_audit_profiles import (
+    WindowsAuditProfileError,
+    get_windows_audit_profile,
+    resolve_windows_audit_profile,
+)
 from scanner.windows_audit import (
     WindowsAuditConfigurationError,
     audit_windows_host,
@@ -156,6 +161,13 @@ def scan(
             help="Windows auth method: none, smb foundation metadata, or winrm authentication validation.",
         ),
     ] = "none",
+    windows_audit_profile: Annotated[
+        str | None,
+        typer.Option(
+            "--windows-audit-profile",
+            help="Windows audit profile when --windows-audit is used: foundation, standard, or detailed. Default: standard.",
+        ),
+    ] = None,
     windows_host_info: Annotated[
         bool,
         typer.Option(
@@ -213,12 +225,12 @@ def scan(
         ),
     ] = 15.0,
     windows_audit_timeout: Annotated[
-        float,
+        float | None,
         typer.Option(
             "--windows-audit-timeout",
-            help="Overall Windows audit time budget in seconds. Must be greater than 0 and no more than 900.",
+            help="Overall Windows audit time budget in seconds. Defaults by Windows audit profile.",
         ),
-    ] = 120.0,
+    ] = None,
     windows_progress: Annotated[
         bool,
         typer.Option(
@@ -331,20 +343,47 @@ def scan(
     except SshAuditConfigurationError as exc:
         console.print(f"[red]SSH audit configuration error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
+
+    if windows_audit_profile and not windows_audit:
+        console.print(
+            "[yellow]Windows audit profiles apply only when --windows-audit is provided. The selected Windows audit profile will be ignored.[/yellow]"
+        )
+
+    try:
+        selected_windows_profile = get_windows_audit_profile(windows_audit_profile)
+    except WindowsAuditProfileError as exc:
+        console.print(f"[red]Windows audit profile error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    preliminary_windows_auth_method = (windows_auth_method or "none").strip().lower()
+    windows_profile_plan = resolve_windows_audit_profile(
+        profile_name=selected_windows_profile.profile_name,
+        auth_method=preliminary_windows_auth_method,
+        manual_host_info=windows_host_info,
+        manual_security_status=windows_security_status,
+        manual_patch_status=windows_patch_status,
+        manual_policy_status=windows_policy_status,
+        manual_registry_audit=windows_registry_audit,
+    )
+    effective_windows_audit_timeout = (
+        windows_audit_timeout
+        if windows_audit_timeout is not None
+        else selected_windows_profile.default_audit_timeout_seconds
+    )
     try:
         selected_windows_auth_method = validate_windows_audit_options(
             windows_audit=windows_audit,
             windows_user=windows_user,
             windows_password=windows_password,
             windows_auth_method=windows_auth_method,
-            windows_host_info=windows_host_info,
-            windows_security_status=windows_security_status,
-            windows_policy_status=windows_policy_status,
-            windows_registry_audit=windows_registry_audit,
+            windows_host_info=bool(windows_profile_plan["collect_host_info"]),
+            windows_security_status=bool(windows_profile_plan["collect_security_status"]),
+            windows_policy_status=bool(windows_profile_plan["collect_policy_status"]),
+            windows_registry_audit=bool(windows_profile_plan["collect_registry_audit"]),
             windows_registry_template=windows_registry_template,
             windows_timeout=windows_timeout,
             windows_command_timeout=windows_command_timeout,
-            windows_audit_timeout=windows_audit_timeout,
+            windows_audit_timeout=effective_windows_audit_timeout,
         )
     except WindowsAuditConfigurationError as exc:
         console.print(f"[red]Windows audit configuration error:[/red] {exc}")
@@ -389,15 +428,22 @@ def scan(
                 password=windows_password,
                 domain=windows_domain,
                 auth_method=selected_windows_auth_method,
-                collect_host_info=windows_host_info,
-                collect_security_status=windows_security_status,
-                collect_policy_status=windows_policy_status,
-                collect_registry_audit=windows_registry_audit,
+                collect_host_info=bool(windows_profile_plan["collect_host_info"]),
+                collect_security_status=bool(windows_profile_plan["collect_security_status"]),
+                collect_policy_status=bool(windows_profile_plan["collect_policy_status"]),
+                collect_registry_audit=bool(windows_profile_plan["collect_registry_audit"]),
                 registry_template_path=windows_registry_template,
                 timeout=windows_timeout,
                 command_timeout=windows_command_timeout,
-                audit_timeout=windows_audit_timeout,
+                audit_timeout=effective_windows_audit_timeout,
                 progress_callback=_windows_progress_callback if windows_progress else None,
+            )
+            windows_result["summary"] = dict(windows_result.get("summary") or {})
+            windows_result["summary"].update(
+                _windows_profile_summary_fields(
+                    profile_plan=windows_profile_plan,
+                    audit_timeout_seconds=effective_windows_audit_timeout,
+                )
             )
             scan_result["windows_audit"] = windows_result
             findings.extend(windows_result.get("findings", []))
@@ -1134,6 +1180,12 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
     table.add_column("Field")
     table.add_column("Value")
     rows = [
+        ("Windows audit profile", summary.get("windows_audit_profile")),
+        ("Profile description", summary.get("profile_description")),
+        ("Enabled sections", _format_profile_sections(summary, summary.get("profile_enabled_sections"))),
+        ("Skipped sections", _format_profile_sections(summary, summary.get("profile_skipped_sections"))),
+        ("Manual overrides", _format_profile_sections(summary, summary.get("profile_manual_overrides"))),
+        ("Audit timeout", summary.get("audit_timeout_seconds")),
         ("Status", summary.get("status")),
         ("Auth method", summary.get("auth_method")),
         ("Username", summary.get("username_used")),
@@ -1410,6 +1462,26 @@ def _build_windows_audit_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
     return redact_nested(base_summary)
 
 
+def _windows_profile_summary_fields(
+    *,
+    profile_plan: dict[str, Any],
+    audit_timeout_seconds: float,
+) -> dict[str, Any]:
+    return {
+        "windows_audit_profile": profile_plan.get("profile_name") or "standard",
+        "profile_description": profile_plan.get("profile_description") or "",
+        "profile_enabled_sections": list(profile_plan.get("profile_enabled_sections") or []),
+        "profile_skipped_sections": list(profile_plan.get("profile_skipped_sections") or []),
+        "profile_manual_overrides": list(profile_plan.get("profile_manual_overrides") or []),
+        "profile_default_timeout_seconds": float(profile_plan.get("profile_default_timeout_seconds") or 0.0),
+        "profile_effective_audit_timeout_seconds": float(audit_timeout_seconds),
+        "profile_section_labels": dict(profile_plan.get("section_labels") or {}),
+        "profile_section_enabled_by_profile": dict(profile_plan.get("enabled_by_profile") or {}),
+        "profile_section_enabled_by_manual_flag": dict(profile_plan.get("enabled_by_manual_flag") or {}),
+        "profile_section_skipped_reasons": dict(profile_plan.get("skipped_reasons") or {}),
+    }
+
+
 def _build_credentialed_audits(
     *,
     ssh_result: dict[str, Any],
@@ -1548,6 +1620,15 @@ def _format_summary_list(value: Any) -> str:
     if isinstance(value, list):
         return ", ".join(str(item) for item in value)
     return str(value)
+
+
+def _format_profile_sections(summary: dict[str, Any], value: Any) -> str:
+    if not value:
+        return "None"
+    labels = dict(summary.get("profile_section_labels") or {})
+    if isinstance(value, list):
+        return ", ".join(str(labels.get(str(item), item)) for item in value)
+    return str(labels.get(str(value), value))
 
 
 def _print_count_summary(title: str, counts: dict[str, int]) -> None:

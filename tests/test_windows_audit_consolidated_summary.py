@@ -62,11 +62,21 @@ def test_consolidated_summary_can_be_built_from_sections() -> None:
         {"section_id": "winrm_authentication", "status": "success", "checks_completed": 1, "checks_failed": 0, "checks_skipped": 0},
     ]
 
-    summary = build_windows_consolidated_summary(sections=sections, windows_findings=[], base_summary={"enabled": True})
+    summary = build_windows_consolidated_summary(
+        sections=sections,
+        windows_findings=[],
+        base_summary={
+            "enabled": True,
+            "windows_audit_profile": "standard",
+            "profile_description": "Read-only Windows baseline.",
+            "profile_enabled_sections": ["windows_service_reachability", "winrm_authentication"],
+        },
+    )
 
     assert summary["sections_completed"] == 2
     assert summary["checks_completed"] == 6
     assert summary["status"] == "success"
+    assert summary["windows_audit_profile"] == "standard"
 
 
 def test_consolidated_summary_partial_when_one_section_fails() -> None:

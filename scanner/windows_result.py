@@ -125,6 +125,9 @@ class WindowsAuditSectionResult:
     limitations: list[str] = field(default_factory=list)
     performance: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    enabled_by_profile: bool = False
+    enabled_by_manual_flag: bool = False
+    skipped_reason: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -152,11 +155,17 @@ def build_windows_audit_sections(
     errors = [_normalise_error(error) for error in windows_result.get("errors", []) or []]
 
     results: list[dict[str, Any]] = []
+    enabled_by_profile = dict(summary.get("profile_section_enabled_by_profile") or {})
+    enabled_by_manual_flag = dict(summary.get("profile_section_enabled_by_manual_flag") or {})
+    skipped_reasons = dict(summary.get("profile_section_skipped_reasons") or {})
     for section_id, definition in SECTION_DEFINITIONS.items():
         legacy = dict(legacy_sections.get(definition["legacy_key"], {}))
         section_findings = _findings_for_section(section_id, findings)
         section_errors = _errors_for_section(section_id, errors, definition["source"], legacy)
         status = _section_status(legacy.get("status"), section_errors)
+        skipped_reason = str(skipped_reasons.get(section_id) or "")
+        if status == "skipped" and not skipped_reason:
+            skipped_reason = str(legacy.get("limitation") or "")
         result = WindowsAuditSectionResult(
             section_id=section_id,
             section_name=definition["section_name"],
@@ -178,6 +187,9 @@ def build_windows_audit_sections(
                 "timed_out_commands": int(summary.get("timed_out_commands") or 0) if section_id == "winrm_authentication" else 0,
             },
             metadata={"legacy_section_key": definition["legacy_key"]},
+            enabled_by_profile=bool(enabled_by_profile.get(section_id)),
+            enabled_by_manual_flag=bool(enabled_by_manual_flag.get(section_id)),
+            skipped_reason=skipped_reason,
         )
         results.append(result.to_dict())
     return results

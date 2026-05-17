@@ -21,6 +21,18 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
             "enabled": True,
             "status": "success",
             "auth_method": "winrm",
+            "windows_audit_profile": "standard",
+            "profile_description": "Read-only Windows baseline.",
+            "profile_enabled_sections": [
+                "windows_service_reachability",
+                "winrm_authentication",
+                "windows_host_info",
+                "windows_security_status",
+                "windows_patch_status",
+            ],
+            "profile_skipped_sections": ["windows_policy_status", "windows_registry_audit"],
+            "profile_manual_overrides": [],
+            "profile_default_timeout_seconds": 120.0,
             "username_used": "auditor",
             "domain": "WORKGROUP",
             "smb_reachable": False,
@@ -89,6 +101,9 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
                 "errors": [],
                 "limitations": ["Read-only Firewall and Defender status commands only."],
                 "duration_seconds": 0.2,
+                "enabled_by_profile": True,
+                "enabled_by_manual_flag": False,
+                "skipped_reason": "",
             },
             {
                 "section_id": "windows_registry_audit",
@@ -103,6 +118,9 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
                 "errors": [],
                 "limitations": ["Exact template-defined HKLM value reads only."],
                 "duration_seconds": 0.3,
+                "enabled_by_profile": False,
+                "enabled_by_manual_flag": True,
+                "skipped_reason": "",
             },
         ],
         "credentialed_audits": [
@@ -156,6 +174,9 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
     assert "LABHOST" in html
     assert "Microsoft Windows Server 2022 Standard" in html
     assert "Windows Security Status" in html
+    assert "Windows Audit Profile" in html
+    assert "standard" in html
+    assert "windows_patch_status" in html
     assert "Normalised Windows Audit Sections" in html
     assert "Windows Registry Audit" in html
     assert "partial" in html

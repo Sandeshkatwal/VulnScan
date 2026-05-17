@@ -430,6 +430,15 @@
       <p><strong>WinRM HTTP reachable:</strong> {{ report.windows_audit_summary.winrm_http_reachable }}</p>
       <p><strong>WinRM HTTPS reachable:</strong> {{ report.windows_audit_summary.winrm_https_reachable }}</p>
       <p><strong>RDP reachable:</strong> {{ report.windows_audit_summary.rdp_reachable }}</p>
+      {% if report.windows_audit_summary.windows_audit_profile %}
+      <h3>Windows Audit Profile</h3>
+      <p><strong>Profile:</strong> {{ report.windows_audit_summary.windows_audit_profile }}</p>
+      <p><strong>Description:</strong> {{ report.windows_audit_summary.profile_description }}</p>
+      <p><strong>Enabled sections:</strong> {{ report.windows_audit_summary.profile_enabled_sections | join(", ") }}</p>
+      <p><strong>Skipped sections:</strong> {{ report.windows_audit_summary.profile_skipped_sections | join(", ") }}</p>
+      <p><strong>Manual overrides:</strong> {{ report.windows_audit_summary.profile_manual_overrides | join(", ") }}</p>
+      <p><strong>Profile default timeout:</strong> {{ report.windows_audit_summary.profile_default_timeout_seconds }} seconds</p>
+      {% endif %}
       {% if report.windows_audit_sections %}
       <h3>Normalised Windows Audit Sections</h3>
       <table>
@@ -442,6 +451,9 @@
             <th>Checks skipped</th>
             <th>Findings</th>
             <th>Duration</th>
+            <th>Profile</th>
+            <th>Manual</th>
+            <th>Skipped reason</th>
             <th>Limitations</th>
           </tr>
         </thead>
@@ -455,6 +467,9 @@
             <td>{{ section.checks_skipped }}</td>
             <td>{{ section.findings | length }}</td>
             <td>{{ section.duration_seconds }} seconds</td>
+            <td>{{ section.enabled_by_profile }}</td>
+            <td>{{ section.enabled_by_manual_flag }}</td>
+            <td>{{ section.skipped_reason }}</td>
             <td>{{ section.limitations | join("; ") }}</td>
           </tr>
           {% endfor %}

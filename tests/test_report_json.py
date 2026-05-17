@@ -66,6 +66,18 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
             "enabled": True,
             "status": "success",
             "auth_method": "winrm",
+            "windows_audit_profile": "standard",
+            "profile_description": "Read-only Windows baseline.",
+            "profile_enabled_sections": [
+                "windows_service_reachability",
+                "winrm_authentication",
+                "windows_host_info",
+                "windows_security_status",
+                "windows_patch_status",
+            ],
+            "profile_skipped_sections": ["windows_policy_status", "windows_registry_audit"],
+            "profile_manual_overrides": [],
+            "profile_default_timeout_seconds": 120.0,
             "username_used": "auditor",
             "winrm_auth_status": "authenticated",
             "winrm_authenticated": True,
@@ -102,6 +114,9 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
                 "errors": [],
                 "limitations": [],
                 "duration_seconds": 0.2,
+                "enabled_by_profile": True,
+                "enabled_by_manual_flag": False,
+                "skipped_reason": "",
             }
         ],
         "credentialed_audits": [
@@ -154,7 +169,9 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
     assert report["windows_audit_summary"]["winrm_auth_status"] == "authenticated"
     assert report["windows_audit_summary"]["windows_host_info"]["hostname"] == "LABHOST"
     assert report["windows_audit_summary"]["windows_security_status"]["defender_service"]["status"] == "Running"
+    assert report["windows_audit_summary"]["windows_audit_profile"] == "standard"
     assert report["windows_audit_sections"][0]["section_id"] == "windows_security_status"
+    assert report["windows_audit_sections"][0]["enabled_by_profile"] is True
     assert report["findings"][0]["title"] == "SSH Login Successful"
 
 
