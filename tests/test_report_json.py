@@ -88,6 +88,22 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
                 "security_status_limitations": [],
             },
         },
+        "windows_audit_sections": [
+            {
+                "section_id": "windows_security_status",
+                "section_name": "Windows Security Status",
+                "source": "windows_security_audit",
+                "status": "success",
+                "checks_completed": 3,
+                "checks_failed": 0,
+                "checks_skipped": 0,
+                "findings": [],
+                "summary": {},
+                "errors": [],
+                "limitations": [],
+                "duration_seconds": 0.2,
+            }
+        ],
         "credentialed_audits": [
             {
                 "source": "ssh_audit",
@@ -138,6 +154,7 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
     assert report["windows_audit_summary"]["winrm_auth_status"] == "authenticated"
     assert report["windows_audit_summary"]["windows_host_info"]["hostname"] == "LABHOST"
     assert report["windows_audit_summary"]["windows_security_status"]["defender_service"]["status"] == "Running"
+    assert report["windows_audit_sections"][0]["section_id"] == "windows_security_status"
     assert report["findings"][0]["title"] == "SSH Login Successful"
 
 
@@ -179,6 +196,7 @@ def test_json_report_redacts_windows_evidence_secrets(tmp_path) -> None:
         "ssh_audit": {"enabled": False, "status": "skipped"},
         "ssh_audit_summary": {"enabled": False, "status": "skipped"},
         "windows_audit_summary": {"enabled": True, "status": "success", "safe_detail": "pwd=HiddenValue"},
+        "windows_audit_sections": [],
         "credentialed_audits": [],
     }
 

@@ -11,7 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from scanner.evidence import redact_nested
 from scanner.finding import findings_to_dicts
-from scanner.report_json import build_summary, credentialed_audits_to_dicts
+from scanner.report_json import build_summary, credentialed_audits_to_dicts, _windows_consolidated_summary
 
 
 REPORTS_DIR = Path("reports")
@@ -52,10 +52,8 @@ def save_html_report(
             "windows_audit_summary",
             {"enabled": False, "status": "skipped"},
         ),
-        "windows_audit_consolidated_summary": scan_result.get(
-            "windows_audit_consolidated_summary",
-            scan_result.get("windows_audit_summary", {"enabled": False, "status": "skipped"}),
-        ),
+        "windows_audit_sections": scan_result.get("windows_audit_sections", []),
+        "windows_audit_consolidated_summary": _windows_consolidated_summary(scan_result),
         "credentialed_audits": credentialed_audits_to_dicts(
             scan_result.get("credentialed_audits", [])
         ),

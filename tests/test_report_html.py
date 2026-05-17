@@ -75,6 +75,36 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
             "highest_windows_risk_label": "Informational",
             "limitations": ["Validation only."],
         },
+        "windows_audit_sections": [
+            {
+                "section_id": "windows_security_status",
+                "section_name": "Windows Security Status",
+                "source": "windows_security_audit",
+                "status": "success",
+                "checks_completed": 3,
+                "checks_failed": 0,
+                "checks_skipped": 0,
+                "findings": [],
+                "summary": {},
+                "errors": [],
+                "limitations": ["Read-only Firewall and Defender status commands only."],
+                "duration_seconds": 0.2,
+            },
+            {
+                "section_id": "windows_registry_audit",
+                "section_name": "Windows Registry Audit",
+                "source": "windows_registry_audit",
+                "status": "partial",
+                "checks_completed": 1,
+                "checks_failed": 1,
+                "checks_skipped": 0,
+                "findings": [],
+                "summary": {},
+                "errors": [],
+                "limitations": ["Exact template-defined HKLM value reads only."],
+                "duration_seconds": 0.3,
+            },
+        ],
         "credentialed_audits": [
             {
                 "source": "ssh_audit",
@@ -126,6 +156,9 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
     assert "LABHOST" in html
     assert "Microsoft Windows Server 2022 Standard" in html
     assert "Windows Security Status" in html
+    assert "Normalised Windows Audit Sections" in html
+    assert "Windows Registry Audit" in html
+    assert "partial" in html
     assert "Running" in html
     assert "SENSITIVE_VALUE" not in html
 
@@ -168,6 +201,7 @@ def test_html_report_redacts_windows_evidence_secrets(tmp_path) -> None:
         "ssh_audit": {"enabled": False, "status": "skipped"},
         "ssh_audit_summary": {"enabled": False, "status": "skipped"},
         "windows_audit_summary": {"enabled": True, "status": "success", "safe_detail": "AccessToken=HiddenValue"},
+        "windows_audit_sections": [],
         "credentialed_audits": [],
     }
 

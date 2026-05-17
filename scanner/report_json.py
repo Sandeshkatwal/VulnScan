@@ -10,6 +10,7 @@ from typing import Any
 
 from scanner.evidence import redact_nested
 from scanner.finding import SEVERITY_ORDER, findings_to_dicts
+from scanner.windows_result import build_windows_consolidated_summary
 
 
 REPORTS_DIR = Path("reports")
@@ -49,10 +50,8 @@ def save_json_report(
             "windows_audit_summary",
             {"enabled": False, "status": "skipped"},
         ),
-        "windows_audit_consolidated_summary": scan_result.get(
-            "windows_audit_consolidated_summary",
-            scan_result.get("windows_audit_summary", {"enabled": False, "status": "skipped"}),
-        ),
+        "windows_audit_sections": scan_result.get("windows_audit_sections", []),
+        "windows_audit_consolidated_summary": _windows_consolidated_summary(scan_result),
         "credentialed_audits": credentialed_audits_to_dicts(
             scan_result.get("credentialed_audits", [])
         ),
@@ -90,6 +89,19 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "highest_risk_level": _highest_risk_level(findings),
         "notes": "TCP connect scan of common ports only. Review exposed services for business need and network access controls.",
     }
+
+
+def _windows_consolidated_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
+    if scan_result.get("windows_audit_consolidated_summary"):
+        return scan_result["windows_audit_consolidated_summary"]
+    sections = scan_result.get("windows_audit_sections") or []
+    if sections:
+        return build_windows_consolidated_summary(
+            sections=sections,
+            windows_findings=scan_result.get("windows_findings", []),
+            base_summary=scan_result.get("windows_audit_summary", {"enabled": False, "status": "skipped"}),
+        )
+    return scan_result.get("windows_audit_summary", {"enabled": False, "status": "skipped"})
 
 
 def credentialed_audits_to_dicts(value: Any) -> list[dict[str, Any]]:

@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 
 from scanner.report_json import save_json_report
+from scanner.windows_result import build_windows_consolidated_summary
 
 
 def test_windows_audit_consolidated_summary_includes_performance_fields(tmp_path) -> None:
@@ -53,3 +54,40 @@ def test_windows_audit_consolidated_summary_includes_performance_fields(tmp_path
     assert consolidated["command_timeout_seconds"] == 15.0
     assert consolidated["audit_timeout_seconds"] == 120.0
     assert consolidated["timed_out_commands"] == 1
+
+
+def test_consolidated_summary_can_be_built_from_sections() -> None:
+    sections = [
+        {"section_id": "windows_service_reachability", "status": "success", "checks_completed": 5, "checks_failed": 0, "checks_skipped": 0},
+        {"section_id": "winrm_authentication", "status": "success", "checks_completed": 1, "checks_failed": 0, "checks_skipped": 0},
+    ]
+
+    summary = build_windows_consolidated_summary(sections=sections, windows_findings=[], base_summary={"enabled": True})
+
+    assert summary["sections_completed"] == 2
+    assert summary["checks_completed"] == 6
+    assert summary["status"] == "success"
+
+
+def test_consolidated_summary_partial_when_one_section_fails() -> None:
+    sections = [
+        {"section_id": "windows_service_reachability", "status": "success", "checks_completed": 5, "checks_failed": 0, "checks_skipped": 0},
+        {"section_id": "windows_security_status", "status": "failed", "checks_planned": 3, "checks_completed": 1, "checks_failed": 1, "checks_skipped": 2},
+    ]
+
+    summary = build_windows_consolidated_summary(sections=sections, windows_findings=[], base_summary={"enabled": True})
+
+    assert summary["status"] == "partial"
+    assert summary["sections_failed"] == 1
+
+
+def test_consolidated_summary_success_when_requested_sections_succeed() -> None:
+    sections = [
+        {"section_id": "windows_service_reachability", "status": "success", "checks_completed": 5, "checks_failed": 0, "checks_skipped": 0},
+        {"section_id": "winrm_authentication", "status": "success", "checks_planned": 1, "checks_completed": 1, "checks_failed": 0, "checks_skipped": 0},
+        {"section_id": "windows_patch_status", "status": "skipped", "checks_planned": 0, "checks_completed": 0, "checks_failed": 0, "checks_skipped": 0},
+    ]
+
+    summary = build_windows_consolidated_summary(sections=sections, windows_findings=[], base_summary={"enabled": True})
+
+    assert summary["status"] == "success"

@@ -430,6 +430,37 @@
       <p><strong>WinRM HTTP reachable:</strong> {{ report.windows_audit_summary.winrm_http_reachable }}</p>
       <p><strong>WinRM HTTPS reachable:</strong> {{ report.windows_audit_summary.winrm_https_reachable }}</p>
       <p><strong>RDP reachable:</strong> {{ report.windows_audit_summary.rdp_reachable }}</p>
+      {% if report.windows_audit_sections %}
+      <h3>Normalised Windows Audit Sections</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Section</th>
+            <th>Status</th>
+            <th>Checks completed</th>
+            <th>Checks failed</th>
+            <th>Checks skipped</th>
+            <th>Findings</th>
+            <th>Duration</th>
+            <th>Limitations</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for section in report.windows_audit_sections %}
+          <tr>
+            <td>{{ section.section_name }}</td>
+            <td>{{ section.status }}</td>
+            <td>{{ section.checks_completed }}</td>
+            <td>{{ section.checks_failed }}</td>
+            <td>{{ section.checks_skipped }}</td>
+            <td>{{ section.findings | length }}</td>
+            <td>{{ section.duration_seconds }} seconds</td>
+            <td>{{ section.limitations | join("; ") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
       <h3>Windows Audit Performance</h3>
       <table>
         <thead>

@@ -76,6 +76,8 @@ Version 12.6 Windows audit checks TCP reachability for SMB, NetBIOS/SMB, WinRM H
 
 Windows audit timeout tuning is available with `--windows-timeout` (default `10`), `--windows-command-timeout` (default `15`), and `--windows-audit-timeout` (default `120`). Slow or failed Windows sections now return partial results with performance metadata instead of blocking the full scanner. Compact terminal progress is enabled by default and can be disabled with `--no-windows-progress`.
 
+Version 12.10 normalises Windows audit results into `windows_audit_sections` while keeping the existing `windows_audit_summary`, `windows_audit_consolidated_summary`, `credentialed_audits`, and `findings` outputs. The normalised section model avoids secrets and raw command output by default and prepares VulScan for future Windows profiles, dashboards, and API integration without changing existing commands.
+
 You can also use the helper script:
 
 ```powershell

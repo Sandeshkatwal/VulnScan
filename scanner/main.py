@@ -53,6 +53,10 @@ from scanner.windows_audit import (
     audit_windows_host,
     validate_windows_audit_options,
 )
+from scanner.windows_result import (
+    build_windows_audit_sections,
+    build_windows_consolidated_summary,
+)
 
 
 app = typer.Typer(
@@ -363,6 +367,8 @@ def scan(
         scan_result["ssh_audit_summary"] = {"enabled": False, "status": "skipped"}
         scan_result["windows_audit"] = {"enabled": False, "status": "skipped", "findings": []}
         scan_result["windows_audit_summary"] = {"enabled": False, "status": "skipped"}
+        scan_result["windows_audit_sections"] = []
+        scan_result["windows_audit_consolidated_summary"] = {"enabled": False, "status": "skipped"}
         scan_result["credentialed_audits"] = []
         scan_result["ssh_findings"] = []
         scan_result["windows_findings"] = []
@@ -451,10 +457,19 @@ def scan(
             )
         if windows_audit:
             scan_result["windows_audit"]["findings"] = scan_result["windows_findings"]
+            scan_result["windows_audit_sections"] = build_windows_audit_sections(
+                windows_result=scan_result["windows_audit"],
+                windows_findings=scan_result["windows_findings"],
+            )
+            scan_result["windows_audit"]["windows_audit_sections"] = scan_result["windows_audit_sections"]
             scan_result["windows_audit_summary"] = _build_windows_audit_summary(
                 scan_result=scan_result,
             )
-            scan_result["windows_audit_consolidated_summary"] = dict(scan_result["windows_audit_summary"])
+            scan_result["windows_audit_consolidated_summary"] = build_windows_consolidated_summary(
+                sections=scan_result["windows_audit_sections"],
+                windows_findings=scan_result["windows_findings"],
+                base_summary=scan_result["windows_audit_summary"],
+            )
             scan_result["credentialed_audits"].extend(
                 _build_windows_credentialed_audits(
                     windows_result=scan_result["windows_audit"],
@@ -1093,6 +1108,28 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
     if not summary.get("enabled"):
         return
 
+    sections = list(summary.get("windows_audit_sections") or [])
+    if sections:
+        section_table = Table(title="Windows Audit Sections")
+        section_table.add_column("Section")
+        section_table.add_column("Status")
+        section_table.add_column("Completed", justify="right")
+        section_table.add_column("Failed", justify="right")
+        section_table.add_column("Skipped", justify="right")
+        section_table.add_column("Findings", justify="right")
+        section_table.add_column("Duration", justify="right")
+        for section in sections:
+            section_table.add_row(
+                str(section.get("section_name") or section.get("section_id") or ""),
+                str(section.get("status") or ""),
+                str(section.get("checks_completed") or 0),
+                str(section.get("checks_failed") or 0),
+                str(section.get("checks_skipped") or 0),
+                str(len(section.get("findings") or [])),
+                f"{float(section.get('duration_seconds') or 0.0):.3f}s",
+            )
+        console.print(section_table)
+
     table = Table(title="Windows SMB/WinRM Audit Summary")
     table.add_column("Field")
     table.add_column("Value")
@@ -1367,6 +1404,7 @@ def _build_windows_audit_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
             "findings_count": len(windows_findings),
             "highest_windows_risk_score": int(highest.get("risk_score") or 0),
             "highest_windows_risk_label": str(highest.get("risk_label") or "Informational"),
+            "windows_audit_sections": list(scan_result.get("windows_audit_sections") or []),
         }
     )
     return redact_nested(base_summary)

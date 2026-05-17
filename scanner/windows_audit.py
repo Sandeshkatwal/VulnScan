@@ -34,6 +34,7 @@ from scanner.windows_registry_audit import (
     evaluate_registry_audit,
     load_registry_template,
 )
+from scanner.windows_result import build_windows_audit_sections
 
 
 SOURCE = "windows_audit"
@@ -566,6 +567,16 @@ def audit_windows_host(
         errors=errors,
         summary=summary,
     )
+    windows_audit_sections = build_windows_audit_sections(
+        windows_result={
+            "enabled": True,
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "findings": findings,
+            "summary": summary,
+            "errors": errors,
+        },
+    )
 
     _windows_progress(progress_callback, f"Windows audit completed with status: {status}.")
     return {
@@ -578,12 +589,15 @@ def audit_windows_host(
         "auth_method": normalized_method,
         "domain": domain or "",
         "username_used": username or "",
+        "started_at": started_at,
+        "ended_at": ended_at,
         "service_statuses": service_statuses,
         "checks_completed": summary["checks_completed"],
         "checks_failed": checks_failed,
         "checks_skipped": summary.get("checks_skipped") or 0,
         "findings": findings,
         "summary": summary,
+        "windows_audit_sections": windows_audit_sections,
         "credentialed_audit": credentialed_audit,
         "errors": errors,
         "duration_seconds": duration,
