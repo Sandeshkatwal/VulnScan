@@ -524,6 +524,37 @@
       <p><strong>Security status limitations:</strong> {{ report.windows_audit_summary.windows_security_status.security_status_limitations | join("; ") }}</p>
       {% endif %}
       {% endif %}
+      <h3>Windows Local Security Policy Indicators</h3>
+      <p><strong>Checked:</strong> {{ report.windows_audit_summary.windows_policy_status_checked }}</p>
+      <p><strong>Status:</strong> {{ report.windows_audit_summary.windows_policy_status_status or "" }}</p>
+      {% if report.windows_audit_summary.windows_policy_status_checked and report.windows_audit_summary.windows_policy_status %}
+      <table>
+        <thead>
+          <tr>
+            <th>Minimum password length</th>
+            <th>Maximum password age</th>
+            <th>Password history</th>
+            <th>Lockout threshold</th>
+            <th>Lockout duration</th>
+            <th>Observation window</th>
+            <th>Computer role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.windows_audit_summary.windows_policy_status.minimum_password_length }}</td>
+            <td>{{ report.windows_audit_summary.windows_policy_status.maximum_password_age_days }}</td>
+            <td>{{ report.windows_audit_summary.windows_policy_status.password_history_length }}</td>
+            <td>{{ report.windows_audit_summary.windows_policy_status.lockout_threshold }}</td>
+            <td>{{ report.windows_audit_summary.windows_policy_status.lockout_duration_minutes }}</td>
+            <td>{{ report.windows_audit_summary.windows_policy_status.lockout_observation_window_minutes }}</td>
+            <td>{{ report.windows_audit_summary.windows_policy_status.computer_role }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Domain policy context:</strong> {{ report.windows_audit_summary.windows_policy_status.domain_policy_context_note }}</p>
+      <p><strong>Policy limitations:</strong> {{ report.windows_audit_summary.windows_policy_status.limitations | join("; ") }}</p>
+      {% endif %}
       <p><strong>Findings count:</strong> {{ report.windows_audit_summary.findings_count }}</p>
       <p><strong>Highest Windows risk:</strong> {{ report.windows_audit_summary.highest_windows_risk_score }} ({{ report.windows_audit_summary.highest_windows_risk_label }})</p>
       {% if report.windows_audit_summary.service_statuses %}
@@ -710,7 +741,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information and Firewall/Defender status commands. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information, Firewall/Defender status, and net accounts policy indicator commands. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, password policy changes, account changes, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
     </section>
   </main>
 </body>

@@ -15,6 +15,13 @@ from scanner.credentialed_result import (
     build_error,
 )
 from scanner.finding import Finding, create_finding, finding_to_dict
+from scanner.windows_policy_audit import (
+    EMPTY_WINDOWS_POLICY_STATUS,
+    NET_ACCOUNTS_COMMAND,
+    SOURCE as POLICY_SOURCE,
+    build_windows_policy_findings,
+    parse_net_accounts_output,
+)
 
 
 SOURCE = "windows_audit"
@@ -95,11 +102,14 @@ ERROR_PASSWORD_WITHOUT_USERNAME = "WINDOWS_PASSWORD_WITHOUT_USERNAME"
 ERROR_WINRM_CREDENTIALS_MISSING = "WINRM_CREDENTIALS_MISSING"
 ERROR_WINDOWS_HOST_INFO_PREREQUISITES = "WINDOWS_HOST_INFO_PREREQUISITES_MISSING"
 ERROR_WINDOWS_SECURITY_STATUS_PREREQUISITES = "WINDOWS_SECURITY_STATUS_PREREQUISITES_MISSING"
+ERROR_WINDOWS_POLICY_STATUS_PREREQUISITES = "WINDOWS_POLICY_STATUS_PREREQUISITES_MISSING"
 ERROR_SERVICE_CHECK_FAILED = "WINDOWS_AUDIT_SERVICE_CHECK_FAILED"
 ERROR_WINDOWS_HOST_INFO_FAILED = "WINDOWS_HOST_INFO_FAILED"
 ERROR_WINDOWS_HOST_INFO_TIMEOUT = "WINDOWS_HOST_INFO_TIMEOUT"
 ERROR_WINDOWS_SECURITY_STATUS_FAILED = "WINDOWS_SECURITY_STATUS_FAILED"
 ERROR_WINDOWS_SECURITY_STATUS_TIMEOUT = "WINDOWS_SECURITY_STATUS_TIMEOUT"
+ERROR_WINDOWS_POLICY_STATUS_FAILED = "WINDOWS_POLICY_STATUS_FAILED"
+ERROR_WINDOWS_POLICY_STATUS_TIMEOUT = "WINDOWS_POLICY_STATUS_TIMEOUT"
 WINRM_AUTH_SUCCESS = "WINRM_AUTH_SUCCESS"
 WINRM_AUTH_FAILED = "WINRM_AUTH_FAILED"
 WINRM_NOT_REACHABLE = "WINRM_NOT_REACHABLE"
@@ -163,6 +173,7 @@ def validate_windows_audit_options(
     windows_auth_method: str,
     windows_host_info: bool = False,
     windows_security_status: bool = False,
+    windows_policy_status: bool = False,
 ) -> str:
     """Validate Windows audit options without exposing credential values."""
     normalized_method = (windows_auth_method or "none").strip().lower()
@@ -182,6 +193,11 @@ def validate_windows_audit_options(
             raise WindowsAuditConfigurationError(
                 "--windows-security-status requires --windows-audit.",
                 ERROR_WINDOWS_SECURITY_STATUS_PREREQUISITES,
+            )
+        if windows_policy_status:
+            raise WindowsAuditConfigurationError(
+                "--windows-policy-status requires --windows-audit.",
+                ERROR_WINDOWS_POLICY_STATUS_PREREQUISITES,
             )
         return normalized_method
     if windows_password and not (windows_user and windows_user.strip()):
@@ -206,6 +222,11 @@ def validate_windows_audit_options(
             "--windows-security-status requires --windows-auth-method winrm.",
             ERROR_WINDOWS_SECURITY_STATUS_PREREQUISITES,
         )
+    if windows_policy_status and normalized_method != "winrm":
+        raise WindowsAuditConfigurationError(
+            "--windows-policy-status requires --windows-auth-method winrm.",
+            ERROR_WINDOWS_POLICY_STATUS_PREREQUISITES,
+        )
     return normalized_method
 
 
@@ -219,6 +240,7 @@ def audit_windows_host(
     auth_method: str = "none",
     collect_host_info: bool = False,
     collect_security_status: bool = False,
+    collect_policy_status: bool = False,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Run safe Windows service reachability checks and optional single WinRM auth validation."""
@@ -231,6 +253,7 @@ def audit_windows_host(
         windows_auth_method=auth_method,
         windows_host_info=collect_host_info,
         windows_security_status=collect_security_status,
+        windows_policy_status=collect_policy_status,
     )
 
     service_statuses = [
@@ -246,6 +269,7 @@ def audit_windows_host(
             service_statuses=service_statuses,
             collect_host_info=collect_host_info,
             collect_security_status=collect_security_status,
+            collect_policy_status=collect_policy_status,
             timeout=timeout,
         )
     findings = _build_windows_findings(target, service_statuses)
@@ -255,6 +279,8 @@ def audit_windows_host(
         findings.extend(_host_info_findings(target, winrm_auth))
     if collect_security_status:
         findings.extend(_security_status_findings(target, winrm_auth))
+    if collect_policy_status and winrm_auth.get("authenticated"):
+        findings.extend(build_windows_policy_findings(target, winrm_auth.get("policy_status") or {}))
     findings.append(_completed_finding(target, service_statuses, winrm_auth, normalized_method))
     checks_failed = sum(1 for status in service_statuses if status.get("error_code"))
     if winrm_auth["attempted"] and winrm_auth["status"] != "authenticated":
@@ -263,6 +289,8 @@ def audit_windows_host(
         checks_failed += 1
     if collect_security_status and winrm_auth.get("security_status_status") in {"failed", "partial"}:
         checks_failed += 1
+    if collect_policy_status and winrm_auth.get("policy_status_status") in {"failed", "partial"}:
+        checks_failed += 1
     status = (
         "partial"
         if (
@@ -270,6 +298,7 @@ def audit_windows_host(
             and (
                 (collect_host_info and winrm_auth.get("host_info_status") == "failed")
                 or (collect_security_status and winrm_auth.get("security_status_status") in {"failed", "partial"})
+                or (collect_policy_status and winrm_auth.get("policy_status_status") in {"failed", "partial"})
             )
         )
         else _audit_status(checks_failed=checks_failed)
@@ -326,6 +355,20 @@ def audit_windows_host(
         )
         if security_status_error:
             errors.append(security_status_error)
+    if collect_policy_status and winrm_auth.get("policy_status_status") in {"failed", "partial"}:
+        policy_status_error = build_error(
+            error_code=winrm_auth.get("policy_status_error_code") or ERROR_WINDOWS_POLICY_STATUS_FAILED,
+            message=str(
+                winrm_auth.get("policy_status_error_message")
+                or "Windows local security policy indicator collection failed."
+            ),
+            source=POLICY_SOURCE,
+            check_name="Windows local security policy indicators",
+            severity="error",
+            safe_detail=str(winrm_auth.get("policy_status_safe_detail") or ""),
+        )
+        if policy_status_error:
+            errors.append(policy_status_error)
     summary = _build_summary(
         target=target,
         username=username,
@@ -458,6 +501,13 @@ def _initial_winrm_auth_result() -> dict[str, Any]:
         "security_status_safe_detail": "",
         "security_status": dict(EMPTY_WINDOWS_SECURITY_STATUS),
         "security_status_commands_completed": 0,
+        "policy_status_requested": False,
+        "policy_status_status": "skipped",
+        "policy_status_error_code": "",
+        "policy_status_error_message": "",
+        "policy_status_safe_detail": "",
+        "policy_status": dict(EMPTY_WINDOWS_POLICY_STATUS),
+        "policy_status_commands_completed": 0,
     }
 
 
@@ -470,6 +520,7 @@ def _perform_winrm_auth_check(
     service_statuses: list[dict[str, Any]],
     collect_host_info: bool,
     collect_security_status: bool,
+    collect_policy_status: bool,
     timeout: float,
 ) -> dict[str, Any]:
     started = perf_counter()
@@ -483,6 +534,7 @@ def _perform_winrm_auth_check(
             limitations="WinRM may be disabled, filtered by a firewall, or intentionally unavailable.",
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
+            policy_status_requested=collect_policy_status,
         )
 
     try:
@@ -498,6 +550,7 @@ def _perform_winrm_auth_check(
             limitations="Install pywinrm in the VulScan virtual environment to enable this check.",
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
+            policy_status_requested=collect_policy_status,
         )
 
     endpoint_url = str(endpoint["url"])
@@ -528,6 +581,7 @@ def _perform_winrm_auth_check(
             limitations=limitations,
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
+            policy_status_requested=collect_policy_status,
         )
     except Exception as exc:  # pywinrm exposes transport/auth failures through several exception classes.
         error_code = _classify_winrm_exception(exc)
@@ -542,6 +596,7 @@ def _perform_winrm_auth_check(
             limitations=limitations,
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
+            policy_status_requested=collect_policy_status,
         )
 
     status_code = int(getattr(response, "status_code", 1) or 0)
@@ -553,6 +608,11 @@ def _perform_winrm_auth_check(
             _collect_windows_security_status(session)
             if collect_security_status
             else _initial_security_status_result(False)
+        )
+        policy_status_result = (
+            _collect_windows_policy_status(session)
+            if collect_policy_status
+            else _initial_policy_status_result(False)
         )
         return _winrm_auth_result(
             started=started,
@@ -568,6 +628,8 @@ def _perform_winrm_auth_check(
             host_info_result=host_info_result,
             security_status_requested=collect_security_status,
             security_status_result=security_status_result,
+            policy_status_requested=collect_policy_status,
+            policy_status_result=policy_status_result,
         )
 
     return _winrm_auth_result(
@@ -581,6 +643,7 @@ def _perform_winrm_auth_check(
         limitations=limitations,
         host_info_requested=collect_host_info,
         security_status_requested=collect_security_status,
+        policy_status_requested=collect_policy_status,
     )
 
 
@@ -838,6 +901,102 @@ def _initial_security_status_result(requested: bool) -> dict[str, Any]:
     }
 
 
+def _collect_windows_policy_status(session: Any) -> dict[str, Any]:
+    completed = 0
+    try:
+        output = _run_safe_cmd(session, NET_ACCOUNTS_COMMAND)
+        completed += 1
+    except TimeoutError as exc:
+        return _policy_status_error(ERROR_WINDOWS_POLICY_STATUS_TIMEOUT, exc, completed)
+    except Exception as exc:
+        return _policy_status_error(ERROR_WINDOWS_POLICY_STATUS_FAILED, exc, completed)
+
+    policy_status = parse_net_accounts_output(output)
+    has_core_data = any(
+        policy_status.get(key) is not None
+        for key in (
+            "minimum_password_length",
+            "maximum_password_age_days",
+            "password_history_length",
+            "lockout_threshold",
+        )
+    )
+    has_incomplete_values = any(
+        policy_status.get(key) is None
+        for key in (
+            "minimum_password_age_days",
+            "maximum_password_age_days",
+            "minimum_password_length",
+            "password_history_length",
+            "lockout_threshold",
+            "lockout_duration_minutes",
+            "lockout_observation_window_minutes",
+        )
+    )
+    status = "partial" if has_core_data and has_incomplete_values else "checked" if has_core_data else "failed"
+    result = _initial_policy_status_result(True)
+    result.update(
+        {
+            "status": status,
+            "policy_status": policy_status,
+            "commands_completed": completed,
+            "error_code": "" if status == "checked" else ERROR_WINDOWS_POLICY_STATUS_FAILED,
+            "error_message": ""
+            if status == "checked"
+            else "Windows local security policy indicators returned incomplete data.",
+        }
+    )
+    return result
+
+
+def _run_safe_cmd(session: Any, command: str) -> str:
+    if command == NET_ACCOUNTS_COMMAND:
+        try:
+            response = session.run_cmd("net", ["accounts"])
+        except TypeError:
+            response = session.run_cmd(command)
+    else:
+        response = session.run_cmd(command)
+    status_code = int(getattr(response, "status_code", 1) or 0)
+    if status_code != 0:
+        raise RuntimeError(f"command_status_{status_code}")
+    return _safe_multiline_output_text(getattr(response, "std_out", b""))
+
+
+def _safe_multiline_output_text(value: Any) -> str:
+    if isinstance(value, bytes):
+        text = value.decode("utf-8", errors="replace")
+    else:
+        text = str(value or "")
+    return "\n".join(line.rstrip() for line in text.splitlines())
+
+
+def _policy_status_error(error_code: str, exc: Exception, commands_completed: int) -> dict[str, Any]:
+    result = _initial_policy_status_result(True)
+    result.update(
+        {
+            "status": "failed",
+            "error_code": error_code,
+            "error_message": "Windows local security policy indicator collection failed.",
+            "safe_detail": exc.__class__.__name__,
+            "commands_completed": commands_completed,
+        }
+    )
+    return result
+
+
+def _initial_policy_status_result(requested: bool) -> dict[str, Any]:
+    return {
+        "requested": requested,
+        "status": "skipped",
+        "error_code": "",
+        "error_message": "",
+        "safe_detail": "",
+        "policy_status": dict(EMPTY_WINDOWS_POLICY_STATUS),
+        "commands_completed": 0,
+    }
+
+
 def _firewall_profiles_from_output(value: str) -> list[dict[str, str]]:
     parsed = _json_value(value)
     items = parsed if isinstance(parsed, list) else [parsed]
@@ -925,9 +1084,12 @@ def _winrm_auth_result(
     host_info_result: dict[str, Any] | None = None,
     security_status_requested: bool = False,
     security_status_result: dict[str, Any] | None = None,
+    policy_status_requested: bool = False,
+    policy_status_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     host_result = host_info_result or _initial_host_info_result(host_info_requested)
     security_result = security_status_result or _initial_security_status_result(security_status_requested)
+    policy_result = policy_status_result or _initial_policy_status_result(policy_status_requested)
     return {
         "attempted": True,
         "status": status,
@@ -955,6 +1117,13 @@ def _winrm_auth_result(
         "security_status_safe_detail": security_result.get("safe_detail") or "",
         "security_status": security_result.get("security_status") or dict(EMPTY_WINDOWS_SECURITY_STATUS),
         "security_status_commands_completed": int(security_result.get("commands_completed") or 0),
+        "policy_status_requested": bool(policy_result.get("requested")),
+        "policy_status_status": policy_result.get("status") or "skipped",
+        "policy_status_error_code": policy_result.get("error_code") or "",
+        "policy_status_error_message": policy_result.get("error_message") or "",
+        "policy_status_safe_detail": policy_result.get("safe_detail") or "",
+        "policy_status": policy_result.get("policy_status") or dict(EMPTY_WINDOWS_POLICY_STATUS),
+        "policy_status_commands_completed": int(policy_result.get("commands_completed") or 0),
     }
 
 
@@ -1305,10 +1474,11 @@ def _build_summary(
         + (1 if winrm_auth.get("attempted") else 0)
         + int(winrm_auth.get("host_info_commands_completed") or 0)
         + int(winrm_auth.get("security_status_commands_completed") or 0)
+        + int(winrm_auth.get("policy_status_commands_completed") or 0)
     )
     limitations = [
-        "Version 12.3 performs socket reachability checks, one safe WinRM authentication validation when requested, optional read-only host information collection, and optional read-only firewall and Defender status collection.",
-        "It does not enumerate shares, query the registry, query security policy, list users, list groups, list files, list processes, dump credentials, change firewall or Defender settings, exploit, brute force, or modify systems.",
+        "Version 12.5 performs socket reachability checks, one safe WinRM authentication validation when requested, optional read-only host information collection, optional read-only firewall and Defender status collection, and optional net accounts local security policy indicators.",
+        "It does not enumerate shares, query the registry, export security policy, list users, list groups, list files, list processes, dump credentials, change password or lockout policy, change firewall or Defender settings, exploit, brute force, or modify systems.",
     ]
     if winrm_auth.get("limitations"):
         limitations.append(str(winrm_auth["limitations"]))
@@ -1351,6 +1521,11 @@ def _build_summary(
         "windows_security_status_status": winrm_auth.get("security_status_status") or "skipped",
         "windows_security_status_error_code": winrm_auth.get("security_status_error_code") or "",
         "windows_security_status_error_message": winrm_auth.get("security_status_error_message") or "",
+        "windows_policy_status_checked": winrm_auth.get("policy_status_status") in {"checked", "partial"},
+        "windows_policy_status": winrm_auth.get("policy_status") or dict(EMPTY_WINDOWS_POLICY_STATUS),
+        "windows_policy_status_status": winrm_auth.get("policy_status_status") or "skipped",
+        "windows_policy_status_error_code": winrm_auth.get("policy_status_error_code") or "",
+        "windows_policy_status_error_message": winrm_auth.get("policy_status_error_message") or "",
         "limitations": limitations,
     }
 
@@ -1439,6 +1614,28 @@ def _build_credentialed_audit(
                 else "Windows security status collection failed.",
             ).to_dict()
         )
+    policy_status = dict(summary.get("windows_policy_status") or {})
+    if summary.get("windows_policy_status_checked") or summary.get("windows_policy_status_status") == "failed":
+        checks.append(
+            CredentialedCheckResult(
+                check_id="windows-local-security-policy-indicators",
+                check_name="Windows local security policy indicators",
+                source=POLICY_SOURCE,
+                status="partial"
+                if summary.get("windows_policy_status_status") == "partial"
+                else "success"
+                if summary.get("windows_policy_status_checked")
+                else "failed",
+                command_name=NET_ACCOUNTS_COMMAND,
+                duration_seconds=0.0,
+                findings_count=1,
+                error_code=str(summary.get("windows_policy_status_error_code") or "") or None,
+                error_message=str(summary.get("windows_policy_status_error_message") or ""),
+                evidence_summary="Windows local security policy indicators collected."
+                if summary.get("windows_policy_status_checked")
+                else "Windows local security policy indicator collection failed.",
+            ).to_dict()
+        )
     domain_or_workgroup = host_info.get("domain") or host_info.get("workgroup") or ""
     firewall_profiles = list(security_status.get("firewall_profiles") or [])
     defender_status = dict(security_status.get("defender_status") or {})
@@ -1457,6 +1654,10 @@ def _build_credentialed_audit(
             "firewall_disabled_profiles_count": sum(
                 1 for profile in firewall_profiles if str(profile.get("enabled") or "").lower() == "false"
             ),
+            "minimum_password_length": policy_status.get("minimum_password_length"),
+            "maximum_password_age_days": policy_status.get("maximum_password_age_days"),
+            "password_history_length": policy_status.get("password_history_length"),
+            "lockout_threshold": policy_status.get("lockout_threshold"),
         }
     )
     audit = CredentialedAuditResult(
@@ -1491,6 +1692,7 @@ def _build_credentialed_audit(
             "winrm_transport": summary.get("winrm_transport") or "",
             "windows_host_info": host_info,
             "windows_security_status": security_status,
+            "windows_policy_status": policy_status,
             "checks": checks,
         },
     )

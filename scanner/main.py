@@ -165,6 +165,20 @@ def scan(
             help="Collect Windows Firewall and Microsoft Defender status using safe read-only WinRM commands after successful authentication.",
         ),
     ] = False,
+    windows_patch_status: Annotated[
+        bool,
+        typer.Option(
+            "--windows-patch-status",
+            help="Reserved Windows patch/update indicator flag for existing 12.4-compatible command lines.",
+        ),
+    ] = False,
+    windows_policy_status: Annotated[
+        bool,
+        typer.Option(
+            "--windows-policy-status",
+            help="Collect Windows local security policy indicators using the read-only net accounts command after successful WinRM authentication.",
+        ),
+    ] = False,
     ssh_audit: Annotated[
         bool,
         typer.Option(
@@ -278,6 +292,7 @@ def scan(
             windows_auth_method=windows_auth_method,
             windows_host_info=windows_host_info,
             windows_security_status=windows_security_status,
+            windows_policy_status=windows_policy_status,
         )
     except WindowsAuditConfigurationError as exc:
         console.print(f"[red]Windows audit configuration error:[/red] {exc}")
@@ -320,6 +335,7 @@ def scan(
                 auth_method=selected_windows_auth_method,
                 collect_host_info=windows_host_info,
                 collect_security_status=windows_security_status,
+                collect_policy_status=windows_policy_status,
             )
             scan_result["windows_audit"] = windows_result
             findings.extend(windows_result.get("findings", []))
@@ -1018,6 +1034,8 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         ("Windows host info status", summary.get("windows_host_info_status")),
         ("Windows security status checked", summary.get("windows_security_status_checked")),
         ("Windows security status", summary.get("windows_security_status_status")),
+        ("Windows policy status checked", summary.get("windows_policy_status_checked")),
+        ("Windows policy status", summary.get("windows_policy_status_status")),
         ("Findings count", summary.get("findings_count")),
         (
             "Highest Windows risk",
@@ -1073,11 +1091,30 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         limitations = security_status.get("security_status_limitations")
         if limitations:
             console.print(f"[yellow]Windows security status limitations:[/yellow] {_format_summary_list(limitations)}")
+    policy_status = summary.get("windows_policy_status") or {}
+    if summary.get("windows_policy_status_checked") and policy_status:
+        policy_table = Table(title="Windows Local Security Policy Indicators")
+        policy_table.add_column("Field")
+        policy_table.add_column("Value")
+        policy_rows = [
+            ("Minimum password length", policy_status.get("minimum_password_length")),
+            ("Maximum password age", policy_status.get("maximum_password_age_days")),
+            ("Password history length", policy_status.get("password_history_length")),
+            ("Lockout threshold", policy_status.get("lockout_threshold")),
+            ("Lockout duration", policy_status.get("lockout_duration_minutes")),
+            ("Lockout observation window", policy_status.get("lockout_observation_window_minutes")),
+            ("Computer role", policy_status.get("computer_role")),
+            ("Domain policy context note", policy_status.get("domain_policy_context_note")),
+            ("Limitations", _format_summary_list(policy_status.get("limitations"))),
+        ]
+        for label, value in policy_rows:
+            policy_table.add_row(label, "" if value is None else str(value))
+        console.print(policy_table)
     limitations = summary.get("limitations")
     if limitations:
         console.print(f"[yellow]Windows audit limitations:[/yellow] {_format_summary_list(limitations)}")
     console.print(
-        "[yellow]Windows audit uses safe reachability checks, one WinRM authentication validation command when requested, and optional read-only host information commands. It does not enumerate shares, exploit, brute force, dump credentials, or modify systems.[/yellow]"
+        "[yellow]Windows audit uses safe reachability checks, one WinRM authentication validation command when requested, and optional read-only host information, security status, and local policy indicator commands. It does not enumerate shares, exploit, brute force, dump credentials, change policy, or modify systems.[/yellow]"
     )
 
 
@@ -1138,7 +1175,11 @@ def _is_ssh_related_finding(finding: dict[str, Any]) -> bool:
 
 
 def _is_windows_related_finding(finding: dict[str, Any]) -> bool:
-    return str(finding.get("source") or "") in {"windows_audit", "windows_security_audit"}
+    return str(finding.get("source") or "") in {
+        "windows_audit",
+        "windows_security_audit",
+        "windows_policy_audit",
+    }
 
 
 def _build_ssh_audit_summary(
@@ -1262,6 +1303,7 @@ def _build_windows_credentialed_audits(
     credentialed_summary = dict(windows_summary)
     host_info = dict(windows_summary.get("windows_host_info") or {})
     security_status = dict(windows_summary.get("windows_security_status") or {})
+    policy_status = dict(windows_summary.get("windows_policy_status") or {})
     firewall_profiles = list(security_status.get("firewall_profiles") or [])
     defender_status = dict(security_status.get("defender_status") or {})
     credentialed_summary.update(
@@ -1278,12 +1320,17 @@ def _build_windows_credentialed_audits(
             "firewall_disabled_profiles_count": sum(
                 1 for profile in firewall_profiles if str(profile.get("enabled") or "").lower() == "false"
             ),
+            "minimum_password_length": policy_status.get("minimum_password_length"),
+            "maximum_password_age_days": policy_status.get("maximum_password_age_days"),
+            "password_history_length": policy_status.get("password_history_length"),
+            "lockout_threshold": policy_status.get("lockout_threshold"),
         }
     )
     credentialed_audit["summary"] = credentialed_summary
     metadata = dict(credentialed_audit.get("metadata") or {})
     metadata["windows_host_info"] = host_info
     metadata["windows_security_status"] = security_status
+    metadata["windows_policy_status"] = policy_status
     credentialed_audit["metadata"] = metadata
     return [credentialed_audit]
 
