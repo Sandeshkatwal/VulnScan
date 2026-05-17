@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from scanner.evidence import redact_nested
 from scanner.finding import SEVERITY_ORDER, findings_to_dicts
 
 
@@ -55,6 +56,7 @@ def save_json_report(
         "windows_findings": scan_result.get("windows_findings", []),
         "summary": build_summary(scan_result),
     }
+    report = redact_nested(report)
 
     report_path = reports_dir / _build_report_filename(target, scan_start_time)
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")

@@ -128,3 +128,59 @@ def test_html_report_renders_credentialed_audit_modules(tmp_path) -> None:
     assert "Windows Security Status" in html
     assert "Running" in html
     assert "SENSITIVE_VALUE" not in html
+
+
+def test_html_report_redacts_windows_evidence_secrets(tmp_path) -> None:
+    scan_result = {
+        "host": "127.0.0.1",
+        "resolved_ip": "127.0.0.1",
+        "scan_mode": "safe",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "findings": [
+            {
+                "id": "FINDING-0001",
+                "title": "Windows Test",
+                "severity": "Informational",
+                "category": "Windows Audit",
+                "affected_host": "127.0.0.1",
+                "affected_port": None,
+                "affected_url": None,
+                "service": "winrm",
+                "evidence": "Observed Password=Secret123",
+                "evidence_details": {"source": "unit", "observed_value": "Authorization: Basic dXNlcjpwYXNz"},
+                "confidence": "High",
+                "impact": "None.",
+                "recommendation": "None.",
+                "verification": "Unit test.",
+                "limitation": "None.",
+                "source": "windows_audit",
+                "risk_score": 0,
+                "risk_label": "Informational",
+                "fix_priority": "Document and monitor",
+                "created_at": "2026-05-16T10:00:00+00:00",
+            }
+        ],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": True, "status": "success", "safe_detail": "AccessToken=HiddenValue"},
+        "credentialed_audits": [],
+    }
+
+    path = save_html_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+
+    html = path.read_text(encoding="utf-8")
+    assert "Secret123" not in html
+    assert "dXNlcjpwYXNz" not in html
+    assert "HiddenValue" not in html

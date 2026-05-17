@@ -309,6 +309,7 @@
               <div class="label">Source: {{ finding.evidence_details.source }}</div>
               {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
               {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% if finding.evidence_details.limitation %}<div>Limitation: {{ finding.evidence_details.limitation }}</div>{% endif %}
               {% endif %}
             </td>
             <td>{{ finding.impact }}</td>
@@ -354,6 +355,7 @@
               <div class="label">Source: {{ finding.evidence_details.source }}</div>
               {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
               {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% if finding.evidence_details.limitation %}<div>Limitation: {{ finding.evidence_details.limitation }}</div>{% endif %}
               {% endif %}
             </td>
             <td>{{ finding.confidence }}</td>
@@ -401,6 +403,7 @@
               <div class="label">Source: {{ finding.evidence_details.source }}</div>
               {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
               {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% if finding.evidence_details.limitation %}<div>Limitation: {{ finding.evidence_details.limitation }}</div>{% endif %}
               {% endif %}
             </td>
             <td>{{ finding.confidence }}</td>
@@ -756,6 +759,7 @@
               <div class="label">Source: {{ finding.evidence_details.source }}</div>
               {% if finding.evidence_details.observed_value %}<div>Observed: {{ finding.evidence_details.observed_value }}</div>{% endif %}
               {% if finding.evidence_details.expected_value %}<div>Expected: {{ finding.evidence_details.expected_value }}</div>{% endif %}
+              {% if finding.evidence_details.limitation %}<div>Limitation: {{ finding.evidence_details.limitation }}</div>{% endif %}
               {% endif %}
             </td>
             <td>{{ finding.confidence }}</td>

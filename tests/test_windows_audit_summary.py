@@ -119,6 +119,28 @@ def test_windows_summary_does_not_include_password() -> None:
     assert summary["username_used"] == "auditor"
 
 
+def test_windows_audit_summary_redacts_secret_like_values() -> None:
+    scan_result = {
+        "host": "192.0.2.50",
+        "windows_audit": {
+            "status": "partial",
+            "summary": {
+                "enabled": True,
+                "status": "partial",
+                "safe_detail": "Password=Secret123",
+                "windows_security_status_error_message": "Authorization: Bearer fake-token",
+            },
+        },
+        "windows_findings": [],
+    }
+
+    summary = _build_windows_audit_summary(scan_result)
+
+    assert "Secret123" not in str(summary)
+    assert "fake-token" not in str(summary)
+    assert "[REDACTED]" in str(summary)
+
+
 def test_windows_credentialed_audit_summary_includes_host_info_fields() -> None:
     windows_result = {
         "credentialed_audit": {

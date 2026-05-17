@@ -19,6 +19,7 @@ from scanner.assets import get_asset_services, get_assets
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
 from scanner.database import database_exists, get_missing_required_tables
 from scanner.diff import compare_latest_two_scans
+from scanner.evidence import redact_nested
 from scanner.exporter import (
     export_assets,
     export_findings,
@@ -1302,7 +1303,7 @@ def _build_windows_audit_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
             "highest_windows_risk_label": str(highest.get("risk_label") or "Informational"),
         }
     )
-    return base_summary
+    return redact_nested(base_summary)
 
 
 def _build_credentialed_audits(
@@ -1367,14 +1368,14 @@ def _build_windows_credentialed_audits(
             "registry_checks_with_findings": registry_audit.get("checks_with_findings") or 0,
         }
     )
-    credentialed_audit["summary"] = credentialed_summary
+    credentialed_audit["summary"] = redact_nested(credentialed_summary)
     metadata = dict(credentialed_audit.get("metadata") or {})
     metadata["windows_host_info"] = host_info
     metadata["windows_security_status"] = security_status
     metadata["windows_policy_status"] = policy_status
     metadata["windows_registry_audit"] = registry_audit
-    credentialed_audit["metadata"] = metadata
-    return [credentialed_audit]
+    credentialed_audit["metadata"] = redact_nested(metadata)
+    return [redact_nested(credentialed_audit)]
 
 
 def _first_credentialed_audit(scan_result: dict[str, Any], source: str) -> dict[str, Any]:

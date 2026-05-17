@@ -139,3 +139,59 @@ def test_json_report_includes_credentialed_audits_and_findings(tmp_path) -> None
     assert report["windows_audit_summary"]["windows_host_info"]["hostname"] == "LABHOST"
     assert report["windows_audit_summary"]["windows_security_status"]["defender_service"]["status"] == "Running"
     assert report["findings"][0]["title"] == "SSH Login Successful"
+
+
+def test_json_report_redacts_windows_evidence_secrets(tmp_path) -> None:
+    scan_result = {
+        "host": "127.0.0.1",
+        "resolved_ip": "127.0.0.1",
+        "scan_mode": "safe",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "findings": [
+            {
+                "id": "FINDING-0001",
+                "title": "Windows Test",
+                "severity": "Informational",
+                "category": "Windows Audit",
+                "affected_host": "127.0.0.1",
+                "affected_port": None,
+                "affected_url": None,
+                "service": "winrm",
+                "evidence": "Observed Password=Secret123",
+                "evidence_details": {"source": "unit", "observed_value": "Authorization: Bearer fake-token"},
+                "confidence": "High",
+                "impact": "None.",
+                "recommendation": "None.",
+                "verification": "Unit test.",
+                "limitation": "None.",
+                "source": "windows_audit",
+                "risk_score": 0,
+                "risk_label": "Informational",
+                "fix_priority": "Document and monitor",
+                "created_at": "2026-05-16T10:00:00+00:00",
+            }
+        ],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": True, "status": "success", "safe_detail": "pwd=HiddenValue"},
+        "credentialed_audits": [],
+    }
+
+    path = save_json_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+
+    serialized = path.read_text(encoding="utf-8")
+    assert "Secret123" not in serialized
+    assert "fake-token" not in serialized
+    assert "HiddenValue" not in serialized

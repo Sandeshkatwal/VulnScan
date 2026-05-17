@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from scanner.evidence import redact_nested
+
 
 DB_PATH = Path("data") / "vulscan.db"
 EXPORTS_DIR = Path("exports")
@@ -196,7 +198,7 @@ def _export_rows(
             "message": f"Table '{table_name}' does not exist. Run a scan with --save-db first.",
         }
 
-    rows = _fetch_rows(query, parameters)
+    rows = [redact_nested(row) for row in _fetch_rows(query, parameters)]
     if not rows:
         return {
             "status": "no_records",

@@ -15,6 +15,7 @@ from scanner.credentialed_result import (
     CredentialedCheckResult,
     build_error,
 )
+from scanner.evidence import build_evidence, evidence_summary, redact_nested
 from scanner.finding import Finding, create_finding, finding_to_dict
 from scanner.windows_policy_audit import (
     EMPTY_WINDOWS_POLICY_STATUS,
@@ -1351,6 +1352,14 @@ def _service_finding(
 ) -> Finding:
     port = int(status["port"])
     service = str(status["service"]).lower().replace(" ", "_").replace("/", "_")
+    details = _windows_evidence(
+        summary=str(status["evidence"]),
+        source="tcp-connect",
+        command_name="tcp-connect",
+        observed_value=f"TCP port {port} reachable",
+        expected_value="Restricted to authorised networks when required",
+        limitation=str(status["limitation"]),
+    )
     return create_finding(
         title=title,
         severity=severity,  # type: ignore[arg-type]
@@ -1358,7 +1367,8 @@ def _service_finding(
         affected_host=target,
         affected_port=port,
         service=service,
-        evidence=str(status["evidence"]),
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="High",
         impact=f"{status['service']} is reachable from the scanned network.",
         recommendation=str(status["recommendation"]),
@@ -1371,13 +1381,22 @@ def _service_finding(
 def _winrm_auth_finding(target: str, winrm_auth: dict[str, Any]) -> Finding:
     status = str(winrm_auth.get("status") or "")
     if status == "authenticated":
+        details = _windows_evidence(
+            summary="WinRM authentication succeeded and safe validation command completed.",
+            source=SAFE_WINRM_VALIDATION_COMMAND,
+            command_name=SAFE_WINRM_VALIDATION_COMMAND,
+            observed_value="Authentication succeeded",
+            expected_value="Single authorised WinRM authentication attempt",
+            limitation="Authentication success does not indicate vulnerability.",
+        )
         return create_finding(
             title="WinRM Authentication Successful",
             severity="Informational",
             category="Windows Credentialed Access",
             affected_host=target,
             service="winrm",
-            evidence="WinRM authentication succeeded and a safe read-only validation command completed.",
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence="High",
             impact="Credentialed Windows auditing can be performed in later versions.",
             recommendation="Use least-privilege accounts and restrict WinRM to trusted networks.",
@@ -1386,13 +1405,22 @@ def _winrm_auth_finding(target: str, winrm_auth: dict[str, Any]) -> Finding:
             source=SOURCE,
         )
     if status == "not_reachable":
+        details = _windows_evidence(
+            summary="TCP connection to WinRM ports failed or endpoint was unavailable.",
+            source="tcp-connect",
+            command_name="tcp-connect",
+            observed_value="WinRM not reachable",
+            expected_value="Reachable only when authorised and required",
+            limitation="Unreachable WinRM may be expected in hardened environments.",
+        )
         return create_finding(
             title="WinRM Not Reachable",
             severity="Informational",
             category="Windows Remote Management",
             affected_host=target,
             service="winrm",
-            evidence="TCP connection to 5985 and 5986 failed or WinRM endpoint unavailable.",
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence="High",
             impact="WinRM authentication could not be validated because WinRM was not reachable.",
             recommendation="Verify WinRM is enabled and reachable only if required.",
@@ -1401,13 +1429,22 @@ def _winrm_auth_finding(target: str, winrm_auth: dict[str, Any]) -> Finding:
             source=SOURCE,
         )
     if status == "dependency_missing":
+        details = _windows_evidence(
+            summary="pywinrm dependency is not installed.",
+            source="local dependency check",
+            command_name="import winrm",
+            observed_value="pywinrm missing",
+            expected_value="pywinrm available for WinRM checks",
+            limitation="VulScan cannot perform WinRM authentication without this dependency.",
+        )
         return create_finding(
             title="WinRM Dependency Missing",
             severity="Informational",
             category="Tool Configuration",
             affected_host=target,
             service="winrm",
-            evidence="pywinrm is not installed.",
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence="High",
             impact="VulScan cannot perform WinRM authentication checks without pywinrm.",
             recommendation="Install pywinrm in the VulScan virtual environment to enable WinRM authentication checks.",
@@ -1415,13 +1452,22 @@ def _winrm_auth_finding(target: str, winrm_auth: dict[str, Any]) -> Finding:
             limitation="VulScan cannot perform WinRM authentication without this dependency.",
             source=SOURCE,
         )
+    details = _windows_evidence(
+        summary="WinRM authentication attempt failed.",
+        source=SAFE_WINRM_VALIDATION_COMMAND,
+        command_name=SAFE_WINRM_VALIDATION_COMMAND,
+        observed_value=str(winrm_auth.get("status") or "failed"),
+        expected_value="Single authorised WinRM authentication attempt succeeds",
+        limitation="Failure may be caused by credentials, policy, firewall, certificate, or WinRM configuration.",
+    )
     return create_finding(
         title="WinRM Authentication Failed",
         severity="Informational",
         category="Windows Credentialed Access",
         affected_host=target,
         service="winrm",
-        evidence="WinRM authentication attempt failed.",
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="Medium",
         impact="Credentialed Windows auditing could not be validated.",
         recommendation="Verify username, password, domain, and WinRM configuration.",
@@ -1439,6 +1485,16 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
     host_info = dict(winrm_auth.get("host_info") or {})
     status = str(winrm_auth.get("host_info_status") or "")
     if status == "collected":
+        os_name = host_info.get("os_name") or host_info.get("caption") or "unknown"
+        build_number = host_info.get("build_number") or host_info.get("build") or "unknown"
+        details = _windows_evidence(
+            summary=f"Windows host information collected using read-only WinRM commands. OS: {os_name}, Build: {build_number}.",
+            source="Win32_OperatingSystem",
+            command_name="safe-winrm-host-info",
+            observed_value=f"OS={os_name}; Build={build_number}",
+            expected_value="Read-only host inventory fields",
+            limitation="Host information alone does not confirm vulnerabilities.",
+        )
         findings.append(
             create_finding(
                 title="Windows Host Information Collected",
@@ -1446,7 +1502,8 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
                 category="Windows Host Information",
                 affected_host=target,
                 service="winrm",
-                evidence="Basic Windows host information collected using read-only WinRM commands.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="High",
                 impact="Host information improves asset inventory, reporting, and future vulnerability correlation.",
                 recommendation="Use this information to support asset management and patch review.",
@@ -1457,6 +1514,14 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
         )
         part_of_domain = str(host_info.get("part_of_domain") or "").lower()
         if part_of_domain == "true" and host_info.get("domain"):
+            domain_details = _windows_evidence(
+                summary="PartOfDomain=True and a domain value was reported.",
+                source="Win32_ComputerSystem",
+                command_name="safe-winrm-host-info",
+                observed_value=f"PartOfDomain=True; Domain={host_info.get('domain')}",
+                expected_value="Interpret with domain policy context",
+                limitation="Domain membership does not indicate insecure configuration.",
+            )
             findings.append(
                 create_finding(
                     title="Windows System Appears Domain Joined",
@@ -1464,7 +1529,8 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
                     category="Windows Host Information",
                     affected_host=target,
                     service="winrm",
-                    evidence="PartOfDomain is true and a domain value was reported.",
+                    evidence=evidence_summary(domain_details),
+                    evidence_details=domain_details,
                     confidence="Medium",
                     impact="Domain context may affect interpretation of future Windows policy checks.",
                     recommendation="Consider domain policy context when interpreting future local policy checks.",
@@ -1474,6 +1540,14 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
                 )
             )
         elif part_of_domain == "false" or host_info.get("workgroup"):
+            workgroup_details = _windows_evidence(
+                summary="PartOfDomain=False or a workgroup value was reported.",
+                source="Win32_ComputerSystem",
+                command_name="safe-winrm-host-info",
+                observed_value=f"PartOfDomain={part_of_domain or 'unknown'}; Workgroup={host_info.get('workgroup') or ''}",
+                expected_value="Interpret local policy context",
+                limitation="Workgroup membership does not indicate vulnerability.",
+            )
             findings.append(
                 create_finding(
                     title="Windows System Appears Workgroup Joined",
@@ -1481,7 +1555,8 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
                     category="Windows Host Information",
                     affected_host=target,
                     service="winrm",
-                    evidence="PartOfDomain is false or a workgroup value was reported.",
+                    evidence=evidence_summary(workgroup_details),
+                    evidence_details=workgroup_details,
                     confidence="Medium",
                     impact="Local security configuration may be more important when domain policy does not apply.",
                     recommendation="Review local security configuration directly because domain policy may not apply.",
@@ -1492,6 +1567,14 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
             )
         return findings
 
+    details = _windows_evidence(
+        summary="Safe read-only host information command failed or returned incomplete data.",
+        source="safe-winrm-host-info",
+        command_name="safe-winrm-host-info",
+        observed_value=str(winrm_auth.get("host_info_status") or "failed"),
+        expected_value="Read-only host information collected",
+        limitation="Missing host info may be caused by permissions, policy, or WinRM configuration.",
+    )
     return [
         create_finding(
             title="Windows Host Information Collection Failed",
@@ -1499,7 +1582,8 @@ def _host_info_findings(target: str, winrm_auth: dict[str, Any]) -> list[Finding
             category="Windows Host Information",
             affected_host=target,
             service="winrm",
-            evidence="Safe read-only host information command failed or returned incomplete data.",
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence="Medium",
             impact="Windows host information could not be used for reporting or future correlation.",
             recommendation="Verify WinRM permissions and target configuration.",
@@ -1524,6 +1608,15 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
         profile for profile in firewall_profiles if str(profile.get("enabled") or "").lower() == "false"
     ]
     if disabled_profiles:
+        profile_name = disabled_profiles[0].get("name") or "Unknown"
+        details = _windows_evidence(
+            summary=f"Firewall {profile_name} profile observed Enabled=False; expected Enabled=True.",
+            source="Get-NetFirewallProfile",
+            command_name="Get-NetFirewallProfile",
+            observed_value=f"{profile_name}.Enabled=False",
+            expected_value="Enabled=True",
+            limitation="Firewall status should be interpreted with domain policy and third-party firewall controls.",
+        )
         findings.append(
             create_finding(
                 title="Windows Firewall Profile Disabled",
@@ -1531,7 +1624,8 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
                 category="Windows Firewall",
                 affected_host=target,
                 service="winrm",
-                evidence="One or more Windows Firewall profiles reported Enabled=False.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Disabled firewall profiles may allow unwanted inbound network access.",
                 recommendation="Enable Windows Firewall profiles unless a documented compensating control exists.",
@@ -1541,6 +1635,14 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
             )
         )
     if firewall_profiles:
+        details = _windows_evidence(
+            summary="Firewall profiles reviewed using Get-NetFirewallProfile.",
+            source="Get-NetFirewallProfile",
+            command_name="Get-NetFirewallProfile",
+            observed_value=f"{len(firewall_profiles)} profile(s) reviewed",
+            expected_value="Profile status available",
+            limitation="This check does not enumerate individual firewall rules.",
+        )
         findings.append(
             create_finding(
                 title="Windows Firewall Status Reviewed",
@@ -1548,7 +1650,8 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
                 category="Windows Firewall",
                 affected_host=target,
                 service="winrm",
-                evidence="Firewall profile status was collected using read-only PowerShell.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="High",
                 impact="Firewall status supports host exposure review.",
                 recommendation="Review firewall profile settings according to organisational policy.",
@@ -1559,6 +1662,15 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
         )
 
     if defender_service and str(defender_service.get("status") or "").lower() not in {"", "running"}:
+        service_status = defender_service.get("status") or "unknown"
+        details = _windows_evidence(
+            summary=f"WinDefend service observed Status={service_status}; expected Running.",
+            source="Get-Service WinDefend",
+            command_name="Get-Service WinDefend",
+            observed_value=f"Status={service_status}",
+            expected_value="Running",
+            limitation="Third-party antivirus may be used instead of Defender.",
+        )
         findings.append(
             create_finding(
                 title="Microsoft Defender Service Not Running",
@@ -1566,7 +1678,8 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
                 category="Endpoint Protection",
                 affected_host=target,
                 service="windefend",
-                evidence="WinDefend service status is not Running.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Endpoint protection may not be active.",
                 recommendation="Verify Microsoft Defender or approved alternative endpoint protection is active.",
@@ -1576,6 +1689,14 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
             )
         )
     if str(defender_status.get("real_time_protection_enabled") or "").lower() == "false":
+        details = _windows_evidence(
+            summary="RealTimeProtectionEnabled=False; expected True.",
+            source="Get-MpComputerStatus",
+            command_name="Get-MpComputerStatus",
+            observed_value="RealTimeProtectionEnabled=False",
+            expected_value="True",
+            limitation="Some enterprise policies or third-party EDR solutions may change Defender behaviour.",
+        )
         findings.append(
             create_finding(
                 title="Microsoft Defender Real-Time Protection Disabled",
@@ -1583,7 +1704,8 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
                 category="Endpoint Protection",
                 affected_host=target,
                 service="defender",
-                evidence="RealTimeProtectionEnabled=False from Get-MpComputerStatus.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Malware protection may be reduced.",
                 recommendation="Enable real-time protection or verify approved compensating controls.",
@@ -1593,6 +1715,14 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
             )
         )
     if any(defender_status.values()):
+        details = _windows_evidence(
+            summary="Defender status reviewed using Get-MpComputerStatus.",
+            source="Get-MpComputerStatus",
+            command_name="Get-MpComputerStatus",
+            observed_value="Defender status fields available",
+            expected_value="Endpoint protection status available",
+            limitation="Get-MpComputerStatus may be unavailable or restricted on some systems.",
+        )
         findings.append(
             create_finding(
                 title="Microsoft Defender Status Reviewed",
@@ -1600,7 +1730,8 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
                 category="Endpoint Protection",
                 affected_host=target,
                 service="defender",
-                evidence="Defender status was collected using read-only PowerShell.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="High",
                 impact="Endpoint protection status supports security posture review.",
                 recommendation="Review Defender/EDR posture according to organisational policy.",
@@ -1610,6 +1741,14 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
             )
         )
     if winrm_auth.get("security_status_status") == "failed" or security_status.get("security_status_limitations"):
+        details = _windows_evidence(
+            summary="One or more read-only Windows security status commands failed or returned incomplete data.",
+            source="Windows security status",
+            command_name="safe-winrm-security-status",
+            observed_value=str(winrm_auth.get("security_status_status") or "failed"),
+            expected_value="Firewall and Defender status collected",
+            limitation="Command availability and permissions vary by Windows version and policy.",
+        )
         findings.append(
             create_finding(
                 title="Windows Security Status Collection Failed",
@@ -1617,7 +1756,8 @@ def _security_status_findings(target: str, winrm_auth: dict[str, Any]) -> list[F
                 category="Windows Security Status",
                 affected_host=target,
                 service="winrm",
-                evidence="One or more read-only Windows security status commands failed or returned incomplete data.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="VulScan could not fully confirm firewall or Defender status.",
                 recommendation="Verify manually with appropriate permissions.",
@@ -1636,12 +1776,21 @@ def _completed_finding(
     auth_method: str,
 ) -> Finding:
     if auth_method == "winrm":
+        details = _windows_evidence(
+            summary=f"WinRM authentication check completed with status: {winrm_auth.get('status')}.",
+            source=SAFE_WINRM_VALIDATION_COMMAND,
+            command_name=SAFE_WINRM_VALIDATION_COMMAND,
+            observed_value=str(winrm_auth.get("status") or "skipped"),
+            expected_value="Single authorised WinRM authentication validation completed",
+            limitation="Version 12.8 improves evidence quality only and does not add intrusive Windows checks.",
+        )
         return create_finding(
             title="Windows WinRM Authentication Check Completed",
             severity="Informational",
             category="Windows Audit",
             affected_host=target,
-            evidence=f"WinRM authentication check completed with status: {winrm_auth.get('status')}.",
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence="High",
             impact="A safe single-attempt WinRM authentication validation was completed.",
             recommendation="Use later authenticated Windows audit modules for deeper read-only checks.",
@@ -1652,18 +1801,48 @@ def _completed_finding(
 
     reachable = [f"{item['service']}:{item['port']}" for item in service_statuses if item.get("reachable")]
     observed = ", ".join(reachable) if reachable else "no Windows management services reachable"
+    details = _windows_evidence(
+        summary=f"Windows service reachability checks completed; {observed}.",
+        source="tcp-connect",
+        command_name="tcp-connect",
+        observed_value=observed,
+        expected_value="Only authorised management services reachable",
+        limitation="Reachability checks do not confirm insecure configuration.",
+    )
     return create_finding(
         title="Windows Audit Foundation Completed",
         severity="Informational",
         category="Windows Audit",
         affected_host=target,
-        evidence=f"Windows service reachability checks completed; {observed}.",
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="High",
         impact="Foundation-level Windows service exposure indicators were collected.",
         recommendation="Use authenticated Windows audit in later versions for deeper checks.",
         verification="Re-run VulScan with --windows-audit.",
         limitation="Version 12.2 performs foundation-level reachability checks unless WinRM authentication or host information collection is explicitly requested.",
         source=SOURCE,
+    )
+
+
+def _windows_evidence(
+    *,
+    summary: str,
+    source: str,
+    command_name: str,
+    observed_value: Any,
+    expected_value: Any,
+    limitation: str,
+) -> dict[str, Any]:
+    return build_evidence(
+        summary=summary,
+        source=source,
+        command_name=command_name,
+        command_used_safe_label=command_name,
+        observed_value=observed_value,
+        expected_value=expected_value,
+        limitation=limitation,
+        raw_output_included=False,
     )
 
 
@@ -1694,7 +1873,7 @@ def _build_summary(
     ]
     if winrm_auth.get("limitations"):
         limitations.append(str(winrm_auth["limitations"]))
-    return {
+    return redact_nested({
         "enabled": True,
         "status": status,
         "target": target,
@@ -1744,7 +1923,7 @@ def _build_summary(
         "windows_registry_audit_error_code": winrm_auth.get("registry_audit_error_code") or "",
         "windows_registry_audit_error_message": winrm_auth.get("registry_audit_error_message") or "",
         "limitations": limitations,
-    }
+    })
 
 
 def _build_credentialed_audit(

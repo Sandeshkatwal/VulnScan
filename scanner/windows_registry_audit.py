@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from scanner.evidence import build_evidence, evidence_summary
 from scanner.finding import Finding, create_finding
 
 
@@ -147,6 +148,12 @@ def evaluate_registry_audit(template: dict[str, Any], observed_by_check_id: dict
 def build_registry_findings(target: str, registry_audit: dict[str, Any]) -> list[Finding]:
     findings: list[Finding] = []
     if not registry_audit.get("checks_total") and registry_audit.get("limitations"):
+        details = _registry_evidence(
+            "Windows registry audit template did not execute any checks.",
+            observed_value="No registry checks executed",
+            expected_value="Template-defined exact registry checks",
+            limitation="Version 12.6 performs narrow template-based registry checks only.",
+        )
         findings.append(
             create_finding(
                 title="Windows Registry Audit Collection Failed",
@@ -154,7 +161,8 @@ def build_registry_findings(target: str, registry_audit: dict[str, Any]) -> list
                 category="Windows Registry Audit",
                 affected_host=target,
                 service="winrm",
-                evidence="Windows registry audit template did not execute any checks.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Registry indicators could not be reviewed.",
                 recommendation="Verify the registry audit template path and contents.",
@@ -166,6 +174,13 @@ def build_registry_findings(target: str, registry_audit: dict[str, Any]) -> list
     for result in registry_audit.get("check_results") or []:
         if not result.get("finding_created"):
             continue
+        limitation = f"{result.get('limitation') or ''} {REGISTRY_LIMITATION}".strip()
+        details = _registry_evidence(
+            str(result.get("evidence_summary") or ""),
+            observed_value=result.get("observed_value"),
+            expected_value=result.get("expected_value"),
+            limitation=limitation,
+        )
         findings.append(
             create_finding(
                 title=str(result.get("title") or "Windows Registry Indicator Mismatch"),
@@ -173,16 +188,31 @@ def build_registry_findings(target: str, registry_audit: dict[str, Any]) -> list
                 category=str(result.get("category") or "Windows Registry Security Indicator"),
                 affected_host=target,
                 service="winrm",
-                evidence=str(result.get("evidence_summary") or ""),
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Registry security indicator differs from the template expectation.",
                 recommendation=str(result.get("recommendation") or "Review the registry indicator in context."),
                 verification="Review the exact registry value manually with authorised administrative tools.",
-                limitation=f"{result.get('limitation') or ''} {REGISTRY_LIMITATION}".strip(),
+                limitation=limitation,
                 source=SOURCE,
             )
         )
 
+    completed_details = _registry_evidence(
+        (
+            f"Template executed with {registry_audit.get('checks_executed', 0)} checks, "
+            f"{registry_audit.get('checks_passed', 0)} passed, "
+            f"{registry_audit.get('checks_with_findings', 0)} findings."
+        ),
+        observed_value=(
+            f"executed={registry_audit.get('checks_executed', 0)}, "
+            f"passed={registry_audit.get('checks_passed', 0)}, "
+            f"findings={registry_audit.get('checks_with_findings', 0)}"
+        ),
+        expected_value="Narrow template-defined registry indicators reviewed",
+        limitation="Version 12.6 performs narrow template-based registry checks only.",
+    )
     findings.append(
         create_finding(
             title="Windows Registry Audit Template Completed",
@@ -190,11 +220,8 @@ def build_registry_findings(target: str, registry_audit: dict[str, Any]) -> list
             category="Windows Registry Audit",
             affected_host=target,
             service="winrm",
-            evidence=(
-                f"Template executed with {registry_audit.get('checks_executed', 0)} checks, "
-                f"{registry_audit.get('checks_passed', 0)} passed, "
-                f"{registry_audit.get('checks_with_findings', 0)} findings."
-            ),
+            evidence=evidence_summary(completed_details),
+            evidence_details=completed_details,
             confidence="High",
             impact="Registry indicators support Windows configuration review.",
             recommendation="Review registry indicators in context with service exposure and policy.",
@@ -204,6 +231,25 @@ def build_registry_findings(target: str, registry_audit: dict[str, Any]) -> list
         )
     )
     return findings
+
+
+def _registry_evidence(
+    summary: str,
+    *,
+    observed_value: Any,
+    expected_value: Any,
+    limitation: str,
+) -> dict[str, Any]:
+    return build_evidence(
+        summary=summary,
+        source="Registry template",
+        command_name="Get-ItemProperty",
+        command_used_safe_label="Exact HKLM registry value read from template",
+        observed_value=observed_value,
+        expected_value=expected_value,
+        limitation=limitation,
+        raw_output_included=False,
+    )
 
 
 def _parse_check(item: Any) -> RegistryCheck:

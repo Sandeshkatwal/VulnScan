@@ -9,6 +9,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from scanner.evidence import redact_nested
 from scanner.finding import findings_to_dicts
 from scanner.report_json import build_summary, credentialed_audits_to_dicts
 
@@ -58,6 +59,7 @@ def save_html_report(
         "windows_findings": scan_result.get("windows_findings", []),
         "summary": build_summary(scan_result),
     }
+    report = redact_nested(report)
 
     environment = Environment(
         loader=FileSystemLoader(TEMPLATES_DIR),

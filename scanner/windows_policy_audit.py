@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from scanner.evidence import build_evidence, evidence_summary
 from scanner.finding import Finding, create_finding
 
 
@@ -67,6 +68,12 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
         findings.append(_collection_failed(target))
         return findings
 
+    details = _policy_evidence(
+        "Windows local security policy indicators collected using net accounts.",
+        observed_value="net accounts completed",
+        expected_value="Read-only policy indicator output",
+        limitation="net accounts is an indicator and may not reflect all Group Policy or identity provider controls.",
+    )
     findings.append(
         create_finding(
             title="Windows Local Security Policy Reviewed",
@@ -74,7 +81,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
             category=CATEGORY,
             affected_host=target,
             service="winrm",
-            evidence="net accounts output was collected and parsed using read-only WinRM command.",
+            evidence=evidence_summary(details),
+            evidence_details=details,
             confidence="High",
             impact="Local password and lockout indicators support account security review.",
             recommendation="Review values against organisational policy and domain policy context.",
@@ -86,6 +94,12 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
 
     minimum_length = policy_status.get("minimum_password_length")
     if isinstance(minimum_length, int) and minimum_length < 12:
+        details = _policy_evidence(
+            f"Minimum password length observed {minimum_length}; expected at least 12.",
+            observed_value=f"Minimum password length={minimum_length}",
+            expected_value="At least 12",
+            limitation="Password policy may be enforced by domain or identity provider controls.",
+        )
         findings.append(
             create_finding(
                 title="Windows Minimum Password Length May Be Weak",
@@ -93,7 +107,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                 category=CATEGORY,
                 affected_host=target,
                 service="winrm",
-                evidence="Minimum password length is below 12.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Shorter passwords can reduce resistance to guessing or cracking.",
                 recommendation="Set minimum password length to at least 12 or according to organisational policy.",
@@ -105,6 +120,13 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
 
     maximum_age = policy_status.get("maximum_password_age_days")
     if maximum_age == 0 or (isinstance(maximum_age, int) and maximum_age > 365):
+        observed_age = "unlimited" if maximum_age == 0 else f"{maximum_age} days"
+        details = _policy_evidence(
+            f"Maximum password age observed {observed_age}; expected 365 days or less unless policy exception applies.",
+            observed_value=f"Maximum password age={observed_age}",
+            expected_value="365 days or less unless policy exception applies",
+            limitation="Modern guidance may vary depending on MFA/passwordless strategy.",
+        )
         findings.append(
             create_finding(
                 title="Windows Maximum Password Age May Be Weak",
@@ -112,7 +134,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                 category=CATEGORY,
                 affected_host=target,
                 service="winrm",
-                evidence="Maximum password age is unlimited or greater than 365 days.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Stale credentials may remain valid for extended periods.",
                 recommendation="Review password ageing policy in context of MFA, passwordless, and enterprise controls.",
@@ -124,6 +147,12 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
 
     history_length = policy_status.get("password_history_length")
     if isinstance(history_length, int) and history_length < 5:
+        details = _policy_evidence(
+            f"Password history length observed {history_length}; expected at least 5.",
+            observed_value=f"Password history length={history_length}",
+            expected_value="At least 5",
+            limitation="Domain or identity provider policies may override local values.",
+        )
         findings.append(
             create_finding(
                 title="Windows Password History Requirement May Be Weak",
@@ -131,7 +160,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                 category=CATEGORY,
                 affected_host=target,
                 service="winrm",
-                evidence="Password history length is less than 5.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Users may be able to reuse recent passwords too quickly.",
                 recommendation="Configure password history according to organisational policy.",
@@ -143,6 +173,12 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
 
     threshold = policy_status.get("lockout_threshold")
     if threshold == 0:
+        details = _policy_evidence(
+            "Lockout threshold observed 0; expected a configured threshold.",
+            observed_value="Lockout threshold=0",
+            expected_value="Configured threshold",
+            limitation="Account lockout should be balanced against denial-of-service risk and MFA controls.",
+        )
         findings.append(
             create_finding(
                 title="Windows Account Lockout Threshold Not Configured",
@@ -150,7 +186,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                 category=CATEGORY,
                 affected_host=target,
                 service="winrm",
-                evidence="Lockout threshold is 0, Never, or not configured.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Accounts may be more exposed to repeated password attempts.",
                 recommendation="Configure account lockout policy according to organisational policy.",
@@ -162,6 +199,13 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
 
     if isinstance(threshold, int) and threshold > 0:
         if not policy_status.get("lockout_duration_minutes"):
+            duration = policy_status.get("lockout_duration_minutes")
+            details = _policy_evidence(
+                f"Lockout duration observed {duration}; expected a configured duration while threshold is enabled.",
+                observed_value=f"Lockout duration={duration}",
+                expected_value="Configured duration",
+                limitation="Lockout policy interpretation depends on organisational risk appetite.",
+            )
             findings.append(
                 create_finding(
                     title="Windows Account Lockout Duration May Be Weak",
@@ -169,7 +213,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                     category=CATEGORY,
                     affected_host=target,
                     service="winrm",
-                    evidence="Lockout duration appears weak or unavailable while lockout threshold is configured.",
+                    evidence=evidence_summary(details),
+                    evidence_details=details,
                     confidence="Medium",
                     impact="Weak lockout duration may reduce account lockout effectiveness.",
                     recommendation="Review lockout duration policy according to organisational standards.",
@@ -179,6 +224,13 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                 )
             )
         if not policy_status.get("lockout_observation_window_minutes"):
+            window = policy_status.get("lockout_observation_window_minutes")
+            details = _policy_evidence(
+                f"Lockout observation window observed {window}; expected a configured window while threshold is enabled.",
+                observed_value=f"Lockout observation window={window}",
+                expected_value="Configured observation window",
+                limitation="Domain policy and identity provider controls may affect interpretation.",
+            )
             findings.append(
                 create_finding(
                     title="Windows Lockout Observation Window May Be Weak",
@@ -186,7 +238,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                     category=CATEGORY,
                     affected_host=target,
                     service="winrm",
-                    evidence="Lockout observation window appears weak or unavailable while lockout threshold is configured.",
+                    evidence=evidence_summary(details),
+                    evidence_details=details,
                     confidence="Medium",
                     impact="A weak reset counter window may reduce account lockout effectiveness.",
                     recommendation="Review reset counter / observation window policy.",
@@ -197,6 +250,13 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
             )
 
     if _appears_domain_context(policy_status.get("computer_role")):
+        computer_role = policy_status.get("computer_role") or ""
+        details = _policy_evidence(
+            f"Computer role observed {computer_role}; policy may be managed centrally.",
+            observed_value=f"Computer role={computer_role}",
+            expected_value="Interpret with domain policy context",
+            limitation="VulScan 12.5 does not perform full Group Policy analysis.",
+        )
         findings.append(
             create_finding(
                 title="Windows Policy May Be Controlled by Domain",
@@ -204,7 +264,8 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
                 category=CATEGORY,
                 affected_host=target,
                 service="winrm",
-                evidence="Computer role or domain context suggests policy may be managed centrally.",
+                evidence=evidence_summary(details),
+                evidence_details=details,
                 confidence="Medium",
                 impact="Local indicators may not fully describe effective account policy.",
                 recommendation="Interpret local policy indicators in the context of Group Policy or enterprise identity controls.",
@@ -221,19 +282,45 @@ def build_windows_policy_findings(target: str, policy_status: dict[str, Any]) ->
 
 
 def _collection_failed(target: str) -> Finding:
+    details = _policy_evidence(
+        "net accounts command failed or returned incomplete data.",
+        observed_value="Incomplete or unavailable net accounts indicators",
+        expected_value="Parsable net accounts indicators",
+        limitation="Command output can vary by Windows version, language, policy, or permissions.",
+    )
     return create_finding(
         title="Windows Local Security Policy Collection Failed",
         severity="Informational",
         category=CATEGORY,
         affected_host=target,
         service="winrm",
-        evidence="net accounts command failed or returned incomplete data.",
+        evidence=evidence_summary(details),
+        evidence_details=details,
         confidence="Medium",
         impact="Windows local security policy indicators could not be fully reviewed.",
         recommendation="Verify permissions and run net accounts manually.",
         verification="Run net accounts manually.",
         limitation="Command output can vary by Windows version, language, policy, or permissions.",
         source=SOURCE,
+    )
+
+
+def _policy_evidence(
+    summary: str,
+    *,
+    observed_value: Any,
+    expected_value: Any,
+    limitation: str,
+) -> dict[str, Any]:
+    return build_evidence(
+        summary=summary,
+        source=NET_ACCOUNTS_COMMAND,
+        command_name=NET_ACCOUNTS_COMMAND,
+        command_used_safe_label=NET_ACCOUNTS_COMMAND,
+        observed_value=observed_value,
+        expected_value=expected_value,
+        limitation=limitation,
+        raw_output_included=False,
     )
 
 

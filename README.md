@@ -54,7 +54,7 @@ Credentialed SSH audit output includes a sanitized summary in terminal, JSON, an
 
 SSH audit timeout options are `--ssh-timeout`, `--ssh-command-timeout`, and `--ssh-audit-timeout`. SSH audit error handling reports safe status and error-code fields for authentication failures, timeouts, missing key files, unsupported targets, partial command failures, and audit budget exhaustion. Partial results keep completed findings and count skipped checks. Tests use fake fixtures and mocked SSH behavior; they do not require a live SSH server or real credentials.
 
-Credentialed audit findings store concise evidence summaries, not full raw SSH output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values in JSON and HTML reports where useful, and redacts values that look like passwords, tokens, private keys, authorization headers, or secrets.
+Credentialed audit findings store concise evidence summaries, not full raw SSH or PowerShell output by default. Evidence is designed for reporting and remediation, includes safe observed/expected values in JSON and HTML reports where useful, and redacts values that look like passwords, tokens, private keys, authorization headers, hashes, or credential-like strings. JSON, HTML, and export paths apply redaction before writing reports; users should still avoid placing real credentials in command history where possible.
 
 Credentialed audit results are normalised internally under `credentialed_audits` in JSON and HTML reports. Existing SSH summaries remain available, and existing commands are unchanged. The normalised model avoids storing passwords, private key contents, or private key paths and prepares VulScan for future Windows SMB/WinRM audit modules.
 

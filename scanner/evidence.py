@@ -9,6 +9,10 @@ from typing import Any
 SUMMARY_MAX_CHARS = 300
 STDERR_MAX_CHARS = 200
 SAMPLE_MAX_ITEMS = 10
+WINDOWS_SAMPLE_MAX_ITEMS = 5
+OBSERVED_MAX_CHARS = 150
+EXPECTED_MAX_CHARS = 150
+SAFE_DETAIL_MAX_CHARS = 300
 REDACTION_TOKEN = "[REDACTED]"
 
 _PRIVATE_KEY_BLOCK_RE = re.compile(
@@ -16,11 +20,23 @@ _PRIVATE_KEY_BLOCK_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _ASSIGNMENT_SECRET_RE = re.compile(
-    r"\b(password|passwd|token|api_key|apikey|secret)\s*=\s*([^\s;&]+)",
+    r"\b(password|passwd|pwd|token|api_key|apikey|secret|access_token|refresh_token|accesstoken|refreshtoken)\s*=\s*([^\s;&]+)",
     re.IGNORECASE,
 )
+_AUTH_HEADER_RE = re.compile(
+    r"\b(Authorization\s*:\s*)(Bearer|Basic|NTLM)\s+[^\s;&]+",
+    re.IGNORECASE,
+)
+_AUTH_SCHEME_RE = re.compile(r"\b(Bearer|Basic|NTLM)\s+[A-Za-z0-9._~+/=-]{8,}", re.IGNORECASE)
+_POWERSHELL_SECRET_RE = re.compile(
+    r"^.*(?:SecureString|PSCredential|ConvertTo-SecureString).*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_CREDENTIAL_VALUE_RE = re.compile(r"\b(Credential\s*[:=]\s*)([^\r\n]+)", re.IGNORECASE)
+_HASH_VALUE_RE = re.compile(r"\b(LMHASH|NTHASH)\s*[:=]\s*([A-Fa-f0-9]{32,})", re.IGNORECASE)
+_NTLM_HASH_PAIR_RE = re.compile(r"\b[A-Fa-f0-9]{32}:[A-Fa-f0-9]{32}\b")
 _SECRET_LINE_RE = re.compile(
-    r"^.*(?:BEGIN OPENSSH PRIVATE KEY|BEGIN RSA PRIVATE KEY|SECRET|Authorization:).*$",
+    r"^.*(?:BEGIN OPENSSH PRIVATE KEY|BEGIN RSA PRIVATE KEY|PRIVATE KEY).*$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -35,7 +51,37 @@ def redact_secrets(value: Any) -> tuple[str, bool]:
         redacted = True
     text = updated
 
+    updated = _AUTH_HEADER_RE.sub(lambda match: f"{match.group(1)}{match.group(2)} {REDACTION_TOKEN}", text)
+    if updated != text:
+        redacted = True
+    text = updated
+
+    updated = _AUTH_SCHEME_RE.sub(lambda match: f"{match.group(1)} {REDACTION_TOKEN}", text)
+    if updated != text:
+        redacted = True
+    text = updated
+
     updated = _ASSIGNMENT_SECRET_RE.sub(lambda match: f"{match.group(1)}={REDACTION_TOKEN}", text)
+    if updated != text:
+        redacted = True
+    text = updated
+
+    updated = _CREDENTIAL_VALUE_RE.sub(lambda match: f"{match.group(1)}{REDACTION_TOKEN}", text)
+    if updated != text:
+        redacted = True
+    text = updated
+
+    updated = _HASH_VALUE_RE.sub(lambda match: f"{match.group(1)}={REDACTION_TOKEN}", text)
+    if updated != text:
+        redacted = True
+    text = updated
+
+    updated = _NTLM_HASH_PAIR_RE.sub(REDACTION_TOKEN, text)
+    if updated != text:
+        redacted = True
+    text = updated
+
+    updated = _POWERSHELL_SECRET_RE.sub(REDACTION_TOKEN, text)
     if updated != text:
         redacted = True
     text = updated
@@ -74,33 +120,37 @@ def build_evidence(
     limitation: str | None = None,
     raw_output_included: bool = False,
     max_summary_chars: int = SUMMARY_MAX_CHARS,
+    sample_limit: int = SAMPLE_MAX_ITEMS,
 ) -> dict[str, Any]:
     """Build a compact report-safe evidence details dictionary."""
     safe_summary, redacted = redact_secrets(summary)
+    safe_source, source_redacted = redact_secrets(source)
+    safe_command_name, command_name_redacted = redact_secrets(command_name or "")
+    safe_command_label, command_label_redacted = redact_secrets(command_used_safe_label or command_name or "")
     details: dict[str, Any] = {
         "summary": safe_truncate(safe_summary, max_chars=max_summary_chars),
-        "source": source,
-        "command_name": command_name or "",
-        "command_used_safe_label": command_used_safe_label or command_name or "",
+        "source": safe_truncate(safe_source, max_chars=SAFE_DETAIL_MAX_CHARS),
+        "command_name": safe_truncate(safe_command_name, max_chars=SAFE_DETAIL_MAX_CHARS),
+        "command_used_safe_label": safe_truncate(safe_command_label, max_chars=SAFE_DETAIL_MAX_CHARS),
         "observed_value": "",
         "expected_value": "",
         "sample": [],
-        "confidence_reason": confidence_reason or "",
+        "confidence_reason": safe_truncate(confidence_reason or "", max_chars=SAFE_DETAIL_MAX_CHARS),
         "raw_output_included": raw_output_included,
-        "redacted": redacted,
-        "limitation": limitation or "",
+        "redacted": bool(redacted or source_redacted or command_name_redacted or command_label_redacted),
+        "limitation": safe_truncate(limitation or "", max_chars=SAFE_DETAIL_MAX_CHARS),
     }
 
     if observed_value is not None:
         observed, observed_redacted = redact_secrets(observed_value)
-        details["observed_value"] = safe_truncate(observed, max_chars=160)
+        details["observed_value"] = safe_truncate(observed, max_chars=OBSERVED_MAX_CHARS)
         details["redacted"] = bool(details["redacted"] or observed_redacted)
     if expected_value is not None:
         expected, expected_redacted = redact_secrets(expected_value)
-        details["expected_value"] = safe_truncate(expected, max_chars=160)
+        details["expected_value"] = safe_truncate(expected, max_chars=EXPECTED_MAX_CHARS)
         details["redacted"] = bool(details["redacted"] or expected_redacted)
     if sample:
-        details["sample"] = limited_sample(sample)
+        details["sample"] = limited_sample(sample, limit=sample_limit)
 
     return details
 
@@ -108,3 +158,16 @@ def build_evidence(
 def evidence_summary(details: dict[str, Any]) -> str:
     """Return the backward-compatible short evidence string."""
     return str(details.get("summary") or "")
+
+
+def redact_nested(value: Any) -> Any:
+    """Recursively redact strings inside report/export containers."""
+    if isinstance(value, dict):
+        return {key: redact_nested(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [redact_nested(item) for item in value]
+    if isinstance(value, tuple):
+        return [redact_nested(item) for item in value]
+    if isinstance(value, str):
+        return redact_secrets(value)[0]
+    return value
