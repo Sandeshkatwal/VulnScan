@@ -351,6 +351,27 @@ def test_json_report_includes_web_dast_fields(tmp_path) -> None:
             "duration_seconds": 0.2,
             "limitations": ["GET-only crawler foundation."],
         },
+        "web_header_summary": {
+            "enabled": True,
+            "pages_checked": 1,
+            "headers_checked": ["Content-Security-Policy"],
+            "missing_header_counts": {"Content-Security-Policy": 1},
+            "disclosure_header_counts": {},
+            "cookie_issue_counts": {},
+            "cookie_issues_count": 0,
+            "findings_count": 1,
+            "limitations": ["Passive header checks only."],
+        },
+        "web_header_results": [
+            {
+                "url": "https://example.test/",
+                "status_code": 200,
+                "headers_checked": ["Content-Security-Policy"],
+                "missing_headers": ["Content-Security-Policy"],
+                "disclosure_headers": [],
+                "cookie_issues": [],
+            }
+        ],
         "crawled_pages": [
             {
                 "url": "https://example.test/",
@@ -395,4 +416,6 @@ def test_json_report_includes_web_dast_fields(tmp_path) -> None:
     assert report["crawled_pages"][0]["title"] == "Home"
     assert report["discovered_forms"][0]["has_password_field"] is True
     assert report["web_findings"][0]["source"] == "web_crawler"
+    assert report["web_header_summary"]["missing_header_counts"]["Content-Security-Policy"] == 1
+    assert report["web_header_results"][0]["missing_headers"] == ["Content-Security-Policy"]
     assert report["summary"]["total_web_findings"] == 1

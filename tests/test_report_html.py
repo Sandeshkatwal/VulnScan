@@ -355,6 +355,18 @@ def test_html_report_renders_web_dast_section(tmp_path) -> None:
             "duration_seconds": 0.2,
             "limitations": ["Version 13.0 does not submit forms."],
         },
+        "web_header_summary": {
+            "enabled": True,
+            "pages_checked": 1,
+            "headers_checked": ["Content-Security-Policy"],
+            "missing_header_counts": {"Content-Security-Policy": 1},
+            "disclosure_header_counts": {},
+            "cookie_issue_counts": {"Cookie Missing SameSite Flag": 1},
+            "cookie_issues_count": 1,
+            "findings_count": 1,
+            "limitations": ["Passive header checks only."],
+        },
+        "web_header_results": [],
         "crawled_pages": [
             {
                 "url": "https://example.test/",
@@ -395,3 +407,6 @@ def test_html_report_renders_web_dast_section(tmp_path) -> None:
     assert "https://example.test/" in html
     assert "Password Form Discovered" in html
     assert "Version 13.0 does not submit forms." in html
+    assert "Web Header Audit" in html
+    assert "Content-Security-Policy" in html
+    assert "Cookie Missing SameSite Flag" in html

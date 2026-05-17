@@ -18,10 +18,13 @@ class FakeResponse:
     text: str
     status_code: int = 200
     content_type: str = "text/html; charset=utf-8"
+    extra_headers: dict[str, str] | None = None
 
     @property
     def headers(self) -> dict[str, str]:
-        return {"Content-Type": self.content_type}
+        headers = {"Content-Type": self.content_type}
+        headers.update(self.extra_headers or {})
+        return headers
 
 
 class FakeSession:
@@ -94,7 +97,26 @@ def test_crawler_extracts_title_links_and_forms_without_submitting() -> None:
     assert form["input_names"] == ["username", "password", "avatar"]
     assert form["has_password_field"] is True
     assert form["has_file_upload"] is True
+    assert page["response_headers"]["Content-Type"] == "text/html; charset=utf-8"
     assert session.post_calls == []
+
+
+def test_crawler_records_cookie_flag_metadata_without_cookie_values() -> None:
+    session = FakeSession(
+        {
+            "https://example.test/": FakeResponse(
+                "<title>Home</title>",
+                content_type="text/html",
+                extra_headers={"Set-Cookie": "sessionid=fake; Path=/; HttpOnly"},
+            ),
+        }
+    )
+
+    result = crawl_web(start_url="https://example.test/", max_pages=1, session=session)
+    page = result["crawled_pages"][0]
+
+    assert page["response_headers"]["Set-Cookie"] == "[set-cookie present]"
+    assert page["cookie_flags"] == [{"secure": False, "httponly": True, "samesite": False}]
 
 
 def test_crawler_skips_external_domains() -> None:

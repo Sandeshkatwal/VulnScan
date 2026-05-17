@@ -58,6 +58,11 @@ def save_json_report(
             "web_scan_summary",
             {"enabled": False, "status": "skipped"},
         ),
+        "web_header_summary": scan_result.get(
+            "web_header_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "web_header_results": scan_result.get("web_header_results", []),
         "crawled_pages": scan_result.get("crawled_pages", []),
         "discovered_forms": scan_result.get("discovered_forms", []),
         "web_findings": findings_to_dicts(scan_result.get("web_findings", [])),
@@ -91,7 +96,7 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
     if scan_result.get("web_scan_summary", {}).get("enabled"):
         notes = (
             "Web DAST crawler foundation only. Review discovered pages and forms before deeper testing; "
-            "Version 13.0 does not submit forms or test injection vulnerabilities."
+            "header checks are passive when enabled, and VulScan does not submit forms or test injection vulnerabilities."
         )
 
     return {

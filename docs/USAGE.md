@@ -227,6 +227,15 @@ Crawler options:
 
 The crawler only follows same-host links by default, ignores fragments, skips unsafe schemes such as `mailto:`, `tel:`, `javascript:`, `data:`, and `file:`, and skips common static/binary files. Reports include `web_scan_summary`, `crawled_pages`, `discovered_forms`, and standard findings. Forms are discovered and reported, but never submitted.
 
+Version 13.1 adds passive header checks to `web-scan` with `--headers`:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --headers
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --max-pages 10 --max-depth 1 --json --html
+```
+
+When `--headers` is used with crawling, VulScan checks each crawled same-host page. When `--headers` is used with `--no-crawl`, VulScan checks only the start URL. Header checks are passive and review response headers already collected by the crawler. They check for common browser security headers, `Server` and `X-Powered-By` disclosure, and cookie Secure/HttpOnly/SameSite flag indicators. Missing headers are configuration indicators, not proof of exploitability.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.

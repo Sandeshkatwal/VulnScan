@@ -464,6 +464,73 @@
       </table>
       <p><strong>Limitations:</strong> {{ report.web_scan_summary.limitations | join("; ") }}</p>
 
+      <h3>Web Header Audit</h3>
+      {% if report.web_header_summary.enabled %}
+      <table>
+        <thead>
+          <tr>
+            <th>Pages checked</th>
+            <th>Headers checked</th>
+            <th>Cookie issues</th>
+            <th>Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_header_summary.pages_checked }}</td>
+            <td>{{ report.web_header_summary.headers_checked | join(", ") }}</td>
+            <td>{{ report.web_header_summary.cookie_issues_count }}</td>
+            <td>{{ report.web_header_summary.findings_count }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Missing Header Counts</h3>
+      {% if report.web_header_summary.missing_header_counts %}
+      <table>
+        <thead>
+          <tr>
+            <th>Header</th>
+            <th>Affected pages</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for header, count in report.web_header_summary.missing_header_counts.items() %}
+          <tr>
+            <td>{{ header }}</td>
+            <td>{{ count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No missing security headers were recorded.</p>
+      {% endif %}
+      <h3>Cookie Issue Counts</h3>
+      {% if report.web_header_summary.cookie_issue_counts %}
+      <table>
+        <thead>
+          <tr>
+            <th>Issue</th>
+            <th>Affected pages</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for issue, count in report.web_header_summary.cookie_issue_counts.items() %}
+          <tr>
+            <td>{{ issue }}</td>
+            <td>{{ count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No cookie flag issues were recorded.</p>
+      {% endif %}
+      <p><strong>Header audit limitations:</strong> {{ report.web_header_summary.limitations | join("; ") }}</p>
+      {% else %}
+      <p class="empty">Web header audit was not requested. Run web-scan with --headers to check passive security headers.</p>
+      {% endif %}
+
       <h3>Crawled Pages</h3>
       {% if report.crawled_pages %}
       <table>
@@ -1020,7 +1087,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional Web DAST crawling sends bounded same-host GET requests only, does not submit forms, does not authenticate, does not crawl external domains by default, and does not test SQL injection or XSS in Version 13.0. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information, Firewall/Defender status, net accounts policy indicator commands, and exact template-defined registry value checks. It does not install, update, or modify packages or files. It does not perform fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, password policy changes, account changes, registry value changes, broad registry tree queries, registry hive exports, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional Web DAST crawling sends bounded same-host GET requests only, can passively review response security headers when requested, does not submit forms, does not authenticate, does not crawl external domains by default, and does not test SQL injection or XSS. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information, Firewall/Defender status, net accounts policy indicator commands, and exact template-defined registry value checks. It does not install, update, or modify packages or files. It does not perform fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, password policy changes, account changes, registry value changes, broad registry tree queries, registry hive exports, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
     </section>
   </main>
 </body>

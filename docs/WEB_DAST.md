@@ -2,6 +2,8 @@
 
 Version 13.0 starts VulScan's Web DAST Engine with a safe crawler foundation.
 
+Version 13.1 adds passive security header checks to the same `web-scan` workflow.
+
 Use it only on web applications you own or have explicit permission to assess.
 
 ## What It Does
@@ -16,6 +18,7 @@ Use it only on web applications you own or have explicit permission to assess.
 - Discovers links and forms.
 - Records password fields and file-upload fields as review indicators.
 - Writes JSON and HTML report sections for crawl summary, pages, forms, and web findings.
+- Optionally checks passive security header indicators with `--headers`.
 
 ## What It Does Not Do
 
@@ -51,6 +54,18 @@ Disable link-following and fetch only the start URL:
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --no-crawl
 ```
 
+Run passive header checks against crawled pages:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers
+```
+
+Run passive header checks against only the start URL:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --no-crawl --headers
+```
+
 ## Report Fields
 
 JSON and HTML reports include:
@@ -59,6 +74,8 @@ JSON and HTML reports include:
 - `crawled_pages`
 - `discovered_forms`
 - `web_findings`
+- `web_header_summary` when `--headers` is used
+- `web_header_results` when `--headers` is used
 - top-level `findings`
 
 Each page result includes URL, method, status code, content type, title, depth, response time, link count, form count, internal links, external links, and forms.
@@ -74,6 +91,18 @@ The crawler emits standard VulScan findings for:
 - File-upload form discovery.
 - External links discovered but not crawled.
 - Crawl errors.
+
+With `--headers`, VulScan also emits deduplicated findings for:
+
+- Missing `Strict-Transport-Security` on HTTPS responses.
+- Missing `Content-Security-Policy`.
+- Missing `X-Frame-Options`.
+- Missing `X-Content-Type-Options`.
+- Missing `Referrer-Policy`.
+- Missing `Permissions-Policy`.
+- `Server` header disclosure.
+- `X-Powered-By` header disclosure.
+- Cookies missing Secure, HttpOnly, or SameSite flags.
 
 These findings are discovery and review indicators. They do not prove a vulnerability by themselves.
 

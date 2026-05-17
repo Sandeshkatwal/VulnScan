@@ -1,5 +1,6 @@
 """Command-line entry point for VulScan."""
 
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
@@ -49,6 +50,7 @@ from scanner.ssh_audit import (
 )
 from scanner.tls_audit import audit_tls_services
 from scanner.web_crawler import DEFAULT_USER_AGENT, crawl_web
+from scanner.web_header_audit import audit_web_headers
 from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
 from scanner.windows_audit_profiles import (
     WindowsAuditProfileError,
@@ -668,6 +670,13 @@ def web_scan(
             help="User-Agent header for safe crawler requests.",
         ),
     ] = DEFAULT_USER_AGENT,
+    headers: Annotated[
+        bool,
+        typer.Option(
+            "--headers",
+            help="Run passive security header checks for crawled pages or the start URL.",
+        ),
+    ] = False,
     json_report: Annotated[
         bool,
         typer.Option(
@@ -683,7 +692,7 @@ def web_scan(
         ),
     ] = False,
 ) -> None:
-    """Run the Version 13.0 safe Web DAST crawler foundation."""
+    """Run the safe Web DAST crawler foundation."""
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
     console.print("[bold]Web DAST Crawler[/bold]")
     console.print(f"[bold]Start URL:[/bold] {url}")
@@ -691,20 +700,33 @@ def web_scan(
         "[yellow]Safe usage warning:[/yellow] Only crawl web applications you own or have explicit permission to assess."
     )
     console.print(
-        "[yellow]Version 13.0:[/yellow] GET-only crawler foundation. Forms are discovered but never submitted."
+        "[yellow]Web DAST safety:[/yellow] GET-only crawling. Forms are discovered but never submitted."
     )
 
     try:
         scan_start_time = datetime.now().astimezone()
+        crawl_requested = _effective_web_crawl(crawl=crawl, headers=headers)
         web_result = crawl_web(
             start_url=url,
-            crawl=crawl,
+            crawl=crawl_requested,
             max_pages=max_pages,
             max_depth=max_depth,
             timeout=timeout,
             user_agent=user_agent,
         )
-        web_findings = assign_sequential_finding_ids(web_result.get("findings", []))
+        web_header_result = (
+            audit_web_headers(web_result.get("crawled_pages", []))
+            if headers
+            else {
+                "enabled": False,
+                "status": "skipped",
+                "web_header_summary": {"enabled": False, "status": "skipped"},
+                "web_header_results": [],
+                "findings": [],
+            }
+        )
+        all_web_findings = list(web_result.get("findings", [])) + list(web_header_result.get("findings", []))
+        web_findings = assign_sequential_finding_ids(all_web_findings)
         scan_end_time = datetime.now().astimezone()
     except ValueError as exc:
         console.print(f"[red]Web DAST configuration error:[/red] {exc}")
@@ -731,6 +753,8 @@ def web_scan(
         "windows_findings": [],
         "web_scan": web_result,
         "web_scan_summary": summary,
+        "web_header_summary": web_header_result["web_header_summary"],
+        "web_header_results": web_header_result["web_header_results"],
         "crawled_pages": web_result["crawled_pages"],
         "discovered_forms": web_result["discovered_forms"],
         "web_findings": web_findings,
@@ -741,6 +765,8 @@ def web_scan(
     }
 
     _print_web_scan_summary(summary)
+    if headers:
+        _print_web_header_summary(scan_result["web_header_summary"])
     _print_findings(scan_result["findings"])
 
     if json_report or html_report:
@@ -1201,6 +1227,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "http_audit",
         "tls_audit",
         "web_crawler",
+        "web_header_audit",
         "ssh_audit",
         "package_audit",
         "ssh_hardening",
@@ -1259,6 +1286,35 @@ def _print_web_scan_summary(summary: dict[str, Any]) -> None:
         ("File upload forms", str(summary.get("file_upload_forms_discovered") or 0)),
         ("External links", str(summary.get("unique_external_links") or 0)),
         ("Duration", f"{summary.get('duration_seconds') or 0} seconds"),
+    ]
+    for label, value in rows:
+        table.add_row(label, value)
+    console.print(table)
+
+
+def _effective_web_crawl(*, crawl: bool, headers: bool) -> bool:
+    if not headers:
+        return crawl
+    args = {arg.lower() for arg in sys.argv[1:]}
+    if "--crawl" in args:
+        return True
+    if "--no-crawl" in args:
+        return False
+    return False
+
+
+def _print_web_header_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+    table = Table(title="Web Header Audit Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Pages checked", str(summary.get("pages_checked") or 0)),
+        ("Missing headers", str(sum((summary.get("missing_header_counts") or {}).values()))),
+        ("Disclosure headers", str(sum((summary.get("disclosure_header_counts") or {}).values()))),
+        ("Cookie issues", str(summary.get("cookie_issues_count") or 0)),
+        ("Findings", str(summary.get("findings_count") or 0)),
     ]
     for label, value in rows:
         table.add_row(label, value)

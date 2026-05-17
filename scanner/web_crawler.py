@@ -73,6 +73,8 @@ class WebPageResult:
     internal_links: list[str] = field(default_factory=list)
     external_links: list[str] = field(default_factory=list)
     forms: list[dict[str, Any]] = field(default_factory=list)
+    response_headers: dict[str, str] = field(default_factory=dict)
+    cookie_flags: list[dict[str, bool]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -165,6 +167,8 @@ def crawl_web(
             continue
 
         content_type = str(response.headers.get("Content-Type") or response.headers.get("content-type") or "")
+        response_headers = _safe_response_headers(response.headers)
+        cookie_flags = _cookie_flags(response.headers)
         html = str(response.text or "") if _is_html(content_type) else ""
         parsed = _parse_html(current_url, html) if html else {"title": "", "internal_links": [], "external_links": [], "forms": []}
         page_forms = parsed["forms"]
@@ -188,6 +192,8 @@ def crawl_web(
                 internal_links=internal_links,
                 external_links=external_links,
                 forms=page_forms,
+                response_headers=response_headers,
+                cookie_flags=cookie_flags,
             ).to_dict()
         )
 
@@ -390,3 +396,45 @@ def _parse_form(page_url: str, form: Any) -> WebFormResult:
 def _is_html(content_type: str) -> bool:
     lowered = content_type.lower()
     return "text/html" in lowered or "application/xhtml+xml" in lowered or not lowered
+
+
+def _safe_response_headers(headers: Any) -> dict[str, str]:
+    safe_headers: dict[str, str] = {}
+    for key, value in dict(headers or {}).items():
+        name = str(key)
+        if name.lower() == "set-cookie":
+            safe_headers[name] = "[set-cookie present]"
+            continue
+        safe_headers[name] = str(value)[:300]
+    return safe_headers
+
+
+def _cookie_flags(headers: Any) -> list[dict[str, bool]]:
+    cookie_values = _header_values(headers, "Set-Cookie")
+    flags: list[dict[str, bool]] = []
+    for cookie_value in cookie_values:
+        lowered = str(cookie_value).lower()
+        flags.append(
+            {
+                "secure": "secure" in {part.strip().lower() for part in lowered.split(";")},
+                "httponly": "httponly" in {part.strip().lower() for part in lowered.split(";")},
+                "samesite": any(part.strip().lower().startswith("samesite=") for part in lowered.split(";")),
+            }
+        )
+    return flags
+
+
+def _header_values(headers: Any, header_name: str) -> list[str]:
+    if headers is None:
+        return []
+    get_all = getattr(headers, "get_all", None)
+    if callable(get_all):
+        return [str(value) for value in get_all(header_name) or []]
+    getlist = getattr(headers, "getlist", None)
+    if callable(getlist):
+        return [str(value) for value in getlist(header_name) or []]
+    values: list[str] = []
+    for key, value in dict(headers or {}).items():
+        if str(key).lower() == header_name.lower():
+            values.append(str(value))
+    return values
