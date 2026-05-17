@@ -63,6 +63,11 @@ def save_json_report(
             {"enabled": False, "status": "skipped"},
         ),
         "web_header_results": scan_result.get("web_header_results", []),
+        "web_cookie_summary": scan_result.get(
+            "web_cookie_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "web_cookie_results": scan_result.get("web_cookie_results", []),
         "crawled_pages": scan_result.get("crawled_pages", []),
         "discovered_forms": scan_result.get("discovered_forms", []),
         "web_findings": findings_to_dicts(scan_result.get("web_findings", [])),

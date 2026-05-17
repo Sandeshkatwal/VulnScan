@@ -361,12 +361,41 @@ def test_html_report_renders_web_dast_section(tmp_path) -> None:
             "headers_checked": ["Content-Security-Policy"],
             "missing_header_counts": {"Content-Security-Policy": 1},
             "disclosure_header_counts": {},
-            "cookie_issue_counts": {"Cookie Missing SameSite Flag": 1},
-            "cookie_issues_count": 1,
+            "cookie_issue_counts": {},
+            "cookie_issues_count": 0,
             "findings_count": 1,
             "limitations": ["Passive header checks only."],
         },
         "web_header_results": [],
+        "web_cookie_summary": {
+            "enabled": True,
+            "pages_checked": 1,
+            "cookies_observed": 1,
+            "unique_cookie_names": 1,
+            "cookies_missing_secure": 0,
+            "cookies_missing_httponly": 0,
+            "cookies_missing_samesite": 1,
+            "samesite_none_without_secure": 0,
+            "persistent_cookie_issues": 0,
+            "findings_count": 1,
+            "limitations": ["Cookie values are not stored."],
+        },
+        "web_cookie_results": [
+            {
+                "cookie_name": "SESSIONID",
+                "source_url": "https://example.test/",
+                "secure": True,
+                "httponly": True,
+                "samesite": "",
+                "path": "/",
+                "domain": "",
+                "expires_present": False,
+                "max_age_present": False,
+                "is_session_cookie": True,
+                "is_https_context": True,
+                "issues": ["Cookie Missing SameSite Attribute"],
+            }
+        ],
         "crawled_pages": [
             {
                 "url": "https://example.test/",
@@ -409,4 +438,5 @@ def test_html_report_renders_web_dast_section(tmp_path) -> None:
     assert "Version 13.0 does not submit forms." in html
     assert "Web Header Audit" in html
     assert "Content-Security-Policy" in html
-    assert "Cookie Missing SameSite Flag" in html
+    assert "Web Cookie Audit" in html
+    assert "Cookie Missing SameSite Attribute" in html

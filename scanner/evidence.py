@@ -20,14 +20,19 @@ _PRIVATE_KEY_BLOCK_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _ASSIGNMENT_SECRET_RE = re.compile(
-    r"\b(password|passwd|pwd|token|api_key|apikey|secret|access_token|refresh_token|accesstoken|refreshtoken)\s*=\s*([^\s;&]+)",
+    r"\b(password|passwd|pwd|token|api_key|apikey|secret|auth|session|sessionid|access_token|refresh_token|accesstoken|refreshtoken)\s*=\s*([^\s;&]+)",
     re.IGNORECASE,
 )
+_SET_COOKIE_RE = re.compile(r"\b(Set-Cookie\s*:\s*[^=;\s]+)=([^;\r\n]+)", re.IGNORECASE)
 _AUTH_HEADER_RE = re.compile(
     r"\b(Authorization\s*:\s*)(Bearer|Basic|NTLM)\s+[^\s;&]+",
     re.IGNORECASE,
 )
 _AUTH_SCHEME_RE = re.compile(r"\b(Bearer|Basic|NTLM)\s+[A-Za-z0-9._~+/=-]{8,}", re.IGNORECASE)
+_JWT_LIKE_RE = re.compile(
+    r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b",
+    re.IGNORECASE,
+)
 _POWERSHELL_SECRET_RE = re.compile(
     r"^.*(?:SecureString|PSCredential|ConvertTo-SecureString).*$",
     re.IGNORECASE | re.MULTILINE,
@@ -56,7 +61,17 @@ def redact_secrets(value: Any) -> tuple[str, bool]:
         redacted = True
     text = updated
 
+    updated = _SET_COOKIE_RE.sub(lambda match: f"{match.group(1)}={REDACTION_TOKEN}", text)
+    if updated != text:
+        redacted = True
+    text = updated
+
     updated = _AUTH_SCHEME_RE.sub(lambda match: f"{match.group(1)} {REDACTION_TOKEN}", text)
+    if updated != text:
+        redacted = True
+    text = updated
+
+    updated = _JWT_LIKE_RE.sub(REDACTION_TOKEN, text)
     if updated != text:
         redacted = True
     text = updated

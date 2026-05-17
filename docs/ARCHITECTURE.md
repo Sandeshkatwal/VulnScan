@@ -53,6 +53,7 @@ Vulnerability Scanner
 - Optional HTTP security header audit using one normal GET request to `/`.
 - Web DAST crawler foundation using bounded same-host GET requests only.
 - Passive Web DAST security header checks for crawled pages.
+- Value-free Web DAST cookie attribute audit.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -137,5 +138,7 @@ Version 12.12 adds `scanner.windows_demo`, a fake-data Windows audit generator f
 Version 13.0 adds the first Web DAST Engine component in `scanner.web_crawler`. The new `web-scan` command normalises a start URL, restricts crawling to the same host by default, respects maximum page and depth limits, skips unsafe schemes and common static/binary files, and records pages, links, forms, response timing, and crawl limitations. Forms are parsed for input names, input types, password fields, and file-upload fields, but are never submitted. Findings use the existing standard finding model and flow into JSON and HTML reports alongside `web_scan_summary`, `crawled_pages`, `discovered_forms`, and `web_findings`. Version 13.0 deliberately does not fuzz, authenticate, test SQL injection, test XSS, submit forms, or crawl external domains by default. Future Web DAST work can integrate header checks, cookie audit, and safe opt-in checks on top of this bounded crawl data.
 
 Version 13.1 adds `scanner.web_header_audit`, a passive header checker integrated into `web-scan --headers`. It consumes response header metadata already collected by the crawler, checks common browser security headers, disclosure headers, and cookie flag indicators, and deduplicates findings by issue type with affected-page counts. It adds `web_header_summary` and `web_header_results` to JSON and HTML reports. It does not send additional payloads, submit forms, authenticate, crawl external domains, or perform SQL injection or XSS testing.
+
+Version 13.2 adds `scanner.web_cookie_audit`, a dedicated cookie attribute parser and audit layer. The crawler extracts `Set-Cookie` metadata into value-free cookie records, storing names and attributes only. Cookie values, session IDs, and tokens are not stored or printed. `web-scan --cookies` checks only the start URL unless `--crawl` is explicitly provided, while `--headers` also runs cookie auditing because cookies are part of passive header analysis. Cookie findings are deduplicated by cookie name, issue type, host, and scheme, and the report adds `web_cookie_summary` and `web_cookie_results`.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

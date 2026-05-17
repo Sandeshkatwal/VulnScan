@@ -117,6 +117,8 @@ def test_crawler_records_cookie_flag_metadata_without_cookie_values() -> None:
 
     assert page["response_headers"]["Set-Cookie"] == "[set-cookie present]"
     assert page["cookie_flags"] == [{"secure": False, "httponly": True, "samesite": False}]
+    assert page["cookies"][0]["name"] == "sessionid"
+    assert "fake" not in str(page["cookies"])
 
 
 def test_crawler_skips_external_domains() -> None:

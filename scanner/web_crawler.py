@@ -13,6 +13,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from scanner.finding import Finding, create_finding
+from scanner.web_cookie_audit import parse_set_cookie_headers
 
 
 SOURCE = "web_crawler"
@@ -75,6 +76,7 @@ class WebPageResult:
     forms: list[dict[str, Any]] = field(default_factory=list)
     response_headers: dict[str, str] = field(default_factory=dict)
     cookie_flags: list[dict[str, bool]] = field(default_factory=list)
+    cookies: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -168,7 +170,15 @@ def crawl_web(
 
         content_type = str(response.headers.get("Content-Type") or response.headers.get("content-type") or "")
         response_headers = _safe_response_headers(response.headers)
-        cookie_flags = _cookie_flags(response.headers)
+        cookies = parse_set_cookie_headers(_header_values(response.headers, "Set-Cookie"), current_url)
+        cookie_flags = [
+            {
+                "secure": bool(cookie.get("secure")),
+                "httponly": bool(cookie.get("httponly")),
+                "samesite": bool(cookie.get("samesite")),
+            }
+            for cookie in cookies
+        ]
         html = str(response.text or "") if _is_html(content_type) else ""
         parsed = _parse_html(current_url, html) if html else {"title": "", "internal_links": [], "external_links": [], "forms": []}
         page_forms = parsed["forms"]
@@ -194,6 +204,7 @@ def crawl_web(
                 forms=page_forms,
                 response_headers=response_headers,
                 cookie_flags=cookie_flags,
+                cookies=cookies,
             ).to_dict()
         )
 
@@ -407,21 +418,6 @@ def _safe_response_headers(headers: Any) -> dict[str, str]:
             continue
         safe_headers[name] = str(value)[:300]
     return safe_headers
-
-
-def _cookie_flags(headers: Any) -> list[dict[str, bool]]:
-    cookie_values = _header_values(headers, "Set-Cookie")
-    flags: list[dict[str, bool]] = []
-    for cookie_value in cookie_values:
-        lowered = str(cookie_value).lower()
-        flags.append(
-            {
-                "secure": "secure" in {part.strip().lower() for part in lowered.split(";")},
-                "httponly": "httponly" in {part.strip().lower() for part in lowered.split(";")},
-                "samesite": any(part.strip().lower().startswith("samesite=") for part in lowered.split(";")),
-            }
-        )
-    return flags
 
 
 def _header_values(headers: Any, header_name: str) -> list[str]:

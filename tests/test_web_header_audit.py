@@ -49,30 +49,6 @@ def test_detects_x_powered_by_disclosure() -> None:
     assert finding.severity == "Low"
 
 
-def test_detects_cookie_missing_secure_on_https() -> None:
-    result = audit_web_headers(
-        [_page("https://example.test/", cookie_flags=[{"secure": False, "httponly": True, "samesite": True}])]
-    )
-
-    assert any(finding.title == "Cookie Missing Secure Flag" for finding in result["findings"])
-
-
-def test_detects_cookie_missing_httponly() -> None:
-    result = audit_web_headers(
-        [_page("https://example.test/", cookie_flags=[{"secure": True, "httponly": False, "samesite": True}])]
-    )
-
-    assert any(finding.title == "Cookie Missing HttpOnly Flag" for finding in result["findings"])
-
-
-def test_detects_cookie_missing_samesite() -> None:
-    result = audit_web_headers(
-        [_page("https://example.test/", cookie_flags=[{"secure": True, "httponly": True, "samesite": False}])]
-    )
-
-    assert any(finding.title == "Cookie Missing SameSite Flag" for finding in result["findings"])
-
-
 def test_deduplicates_missing_header_findings_across_pages() -> None:
     result = audit_web_headers(
         [

@@ -234,7 +234,17 @@ Version 13.1 adds passive header checks to `web-scan` with `--headers`:
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --max-pages 10 --max-depth 1 --json --html
 ```
 
-When `--headers` is used with crawling, VulScan checks each crawled same-host page. When `--headers` is used with `--no-crawl`, VulScan checks only the start URL. Header checks are passive and review response headers already collected by the crawler. They check for common browser security headers, `Server` and `X-Powered-By` disclosure, and cookie Secure/HttpOnly/SameSite flag indicators. Missing headers are configuration indicators, not proof of exploitability.
+When `--headers` is used with crawling, VulScan checks each crawled same-host page. When `--headers` is used with `--no-crawl`, VulScan checks only the start URL. Header checks are passive and review response headers already collected by the crawler. They check for common browser security headers plus `Server` and `X-Powered-By` disclosure. Missing headers are configuration indicators, not proof of exploitability. Cookie attribute analysis is reported separately under the Web Cookie Audit section.
+
+Version 13.2 adds focused cookie auditing with `--cookies`:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --cookies
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --cookies --max-pages 10 --max-depth 1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --max-pages 10 --max-depth 1 --json --html
+```
+
+Cookie audit parses `Set-Cookie` headers and stores only cookie names and attributes. It does not store cookie values, session IDs, or tokens. It checks Secure, HttpOnly, SameSite, SameSite=None with Secure, and persistent cookie indicators. When `--cookies` is used without explicit `--crawl`, VulScan checks only the start URL. Cookie findings are indicators and should be reviewed in application context.
 
 ## Authenticated SSH Audit
 

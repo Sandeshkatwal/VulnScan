@@ -84,12 +84,15 @@ Version 12.12 adds Windows demo mode with `--windows-demo`. Demo mode uses fake 
 
 Version 13.0 starts the Web DAST Engine with a safe crawler foundation. It sends bounded same-host GET requests, discovers pages, links, and forms, and reports password/file-upload form indicators without submitting forms or testing SQL injection, XSS, or other payload-based checks. See `docs\WEB_DAST.md`.
 
-Version 13.1 integrates passive Web DAST security header checks with `--headers`. Header checks assess crawled pages or the start URL for common security headers, disclosure headers, and cookie flag indicators. They are configuration indicators only and do not submit forms, fuzz, test SQL injection, or test XSS.
+Version 13.1 integrates passive Web DAST security header checks with `--headers`. Header checks assess crawled pages or the start URL for common security headers and disclosure headers. They are configuration indicators only and do not submit forms, fuzz, test SQL injection, or test XSS.
+
+Version 13.2 improves cookie auditing with `--cookies`. Cookie values are not stored or printed; VulScan records only cookie names and attributes such as Secure, HttpOnly, SameSite, path, domain, Expires, and Max-Age. Cookie findings are duplicate-safe indicators for authorised review.
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl --max-pages 10 --max-depth 1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --max-pages 10 --max-depth 1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --cookies
 ```
 
 You can also use the helper script:

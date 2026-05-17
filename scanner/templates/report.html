@@ -471,7 +471,6 @@
           <tr>
             <th>Pages checked</th>
             <th>Headers checked</th>
-            <th>Cookie issues</th>
             <th>Findings</th>
           </tr>
         </thead>
@@ -479,7 +478,6 @@
           <tr>
             <td>{{ report.web_header_summary.pages_checked }}</td>
             <td>{{ report.web_header_summary.headers_checked | join(", ") }}</td>
-            <td>{{ report.web_header_summary.cookie_issues_count }}</td>
             <td>{{ report.web_header_summary.findings_count }}</td>
           </tr>
         </tbody>
@@ -505,30 +503,85 @@
       {% else %}
       <p class="empty">No missing security headers were recorded.</p>
       {% endif %}
-      <h3>Cookie Issue Counts</h3>
-      {% if report.web_header_summary.cookie_issue_counts %}
+      <p><strong>Header audit limitations:</strong> {{ report.web_header_summary.limitations | join("; ") }}</p>
+      {% else %}
+      <p class="empty">Web header audit was not requested. Run web-scan with --headers to check passive security headers.</p>
+      {% endif %}
+
+      <h3>Web Cookie Audit</h3>
+      {% if report.web_cookie_summary.enabled %}
       <table>
         <thead>
           <tr>
-            <th>Issue</th>
-            <th>Affected pages</th>
+            <th>Pages checked</th>
+            <th>Cookies observed</th>
+            <th>Unique names</th>
+            <th>Missing Secure</th>
+            <th>Missing HttpOnly</th>
+            <th>Missing SameSite</th>
+            <th>SameSite=None without Secure</th>
+            <th>Persistent issues</th>
+            <th>Findings</th>
           </tr>
         </thead>
         <tbody>
-          {% for issue, count in report.web_header_summary.cookie_issue_counts.items() %}
           <tr>
-            <td>{{ issue }}</td>
-            <td>{{ count }}</td>
+            <td>{{ report.web_cookie_summary.pages_checked }}</td>
+            <td>{{ report.web_cookie_summary.cookies_observed }}</td>
+            <td>{{ report.web_cookie_summary.unique_cookie_names }}</td>
+            <td>{{ report.web_cookie_summary.cookies_missing_secure }}</td>
+            <td>{{ report.web_cookie_summary.cookies_missing_httponly }}</td>
+            <td>{{ report.web_cookie_summary.cookies_missing_samesite }}</td>
+            <td>{{ report.web_cookie_summary.samesite_none_without_secure }}</td>
+            <td>{{ report.web_cookie_summary.persistent_cookie_issues }}</td>
+            <td>{{ report.web_cookie_summary.findings_count }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Cookie Results</h3>
+      {% if report.web_cookie_results %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Source URL</th>
+            <th>Secure</th>
+            <th>HttpOnly</th>
+            <th>SameSite</th>
+            <th>Path</th>
+            <th>Domain</th>
+            <th>Expires</th>
+            <th>Max-Age</th>
+            <th>Session cookie</th>
+            <th>HTTPS context</th>
+            <th>Issues</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cookie in report.web_cookie_results %}
+          <tr>
+            <td>{{ cookie.cookie_name or cookie.name }}</td>
+            <td>{{ cookie.source_url }}</td>
+            <td>{{ cookie.secure }}</td>
+            <td>{{ cookie.httponly }}</td>
+            <td>{{ cookie.samesite }}</td>
+            <td>{{ cookie.path }}</td>
+            <td>{{ cookie.domain }}</td>
+            <td>{{ cookie.expires_present }}</td>
+            <td>{{ cookie.max_age_present }}</td>
+            <td>{{ cookie.is_session_cookie }}</td>
+            <td>{{ cookie.is_https_context }}</td>
+            <td>{{ cookie.issues | join(", ") }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
       {% else %}
-      <p class="empty">No cookie flag issues were recorded.</p>
+      <p class="empty">No Set-Cookie headers were observed.</p>
       {% endif %}
-      <p><strong>Header audit limitations:</strong> {{ report.web_header_summary.limitations | join("; ") }}</p>
+      <p><strong>Cookie audit limitations:</strong> {{ report.web_cookie_summary.limitations | join("; ") }}</p>
       {% else %}
-      <p class="empty">Web header audit was not requested. Run web-scan with --headers to check passive security headers.</p>
+      <p class="empty">Web cookie audit was not requested. Run web-scan with --cookies or --headers to check cookie attributes.</p>
       {% endif %}
 
       <h3>Crawled Pages</h3>
