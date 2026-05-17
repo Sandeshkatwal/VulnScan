@@ -555,6 +555,51 @@
       <p><strong>Domain policy context:</strong> {{ report.windows_audit_summary.windows_policy_status.domain_policy_context_note }}</p>
       <p><strong>Policy limitations:</strong> {{ report.windows_audit_summary.windows_policy_status.limitations | join("; ") }}</p>
       {% endif %}
+      <h3>Windows Registry Audit</h3>
+      <p><strong>Checked:</strong> {{ report.windows_audit_summary.windows_registry_audit_checked }}</p>
+      <p><strong>Status:</strong> {{ report.windows_audit_summary.windows_registry_audit_status or "" }}</p>
+      {% if (report.windows_audit_summary.windows_registry_audit_checked or report.windows_audit_summary.windows_registry_audit_status == "failed") and report.windows_audit_summary.windows_registry_audit %}
+      <p><strong>Template:</strong> {{ report.windows_audit_summary.windows_registry_audit.template_name }} {{ report.windows_audit_summary.windows_registry_audit.template_version }}</p>
+      <p><strong>Checks executed:</strong> {{ report.windows_audit_summary.windows_registry_audit.checks_executed }}</p>
+      <p><strong>Passed:</strong> {{ report.windows_audit_summary.windows_registry_audit.checks_passed }}</p>
+      <p><strong>Findings:</strong> {{ report.windows_audit_summary.windows_registry_audit.checks_with_findings }}</p>
+      <p><strong>Failed/errors:</strong> {{ report.windows_audit_summary.windows_registry_audit.checks_failed }}</p>
+      {% if report.windows_audit_summary.windows_registry_audit.check_results %}
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Path</th>
+            <th>Value</th>
+            <th>Observed</th>
+            <th>Expected</th>
+            <th>Operator</th>
+            <th>Finding</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for check in report.windows_audit_summary.windows_registry_audit.check_results %}
+          <tr>
+            <td>{{ check.id }}</td>
+            <td>{{ check.title }}</td>
+            <td>{{ check.status }}</td>
+            <td>{{ check.hive }}\{{ check.path }}</td>
+            <td>{{ check.value_name }}</td>
+            <td>{{ check.observed_value }}</td>
+            <td>{{ check.expected_value }}</td>
+            <td>{{ check.operator }}</td>
+            <td>{{ check.finding_created }}</td>
+            <td>{{ check.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      <p><strong>Registry audit limitations:</strong> {{ report.windows_audit_summary.windows_registry_audit.limitations | join("; ") }}</p>
+      {% endif %}
       <p><strong>Findings count:</strong> {{ report.windows_audit_summary.findings_count }}</p>
       <p><strong>Highest Windows risk:</strong> {{ report.windows_audit_summary.highest_windows_risk_score }} ({{ report.windows_audit_summary.highest_windows_risk_label }})</p>
       {% if report.windows_audit_summary.service_statuses %}
@@ -741,7 +786,7 @@
 
     <section>
       <h2>Limitations</h2>
-      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information, Firewall/Defender status, and net accounts policy indicator commands. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, password policy changes, account changes, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
+      <p>This scan uses TCP connect checks against a fixed list of common ports. Optional HTTP auditing sends only a normal GET request to the root path of detected web services. Optional TLS auditing performs only a normal TLS handshake and certificate inspection against detected HTTPS services. Optional SSH auditing attempts one authenticated login with explicitly provided credentials and runs read-only Linux inspection commands only, including read-only package manager and configuration indicator checks where available. Optional Windows auditing performs safe reachability checks and, when WinRM authentication is explicitly requested, one harmless validation command plus optional read-only host information, Firewall/Defender status, net accounts policy indicator commands, and exact template-defined registry value checks. It does not install, update, or modify packages or files. It does not perform crawling, fuzzing, SYN scanning, UDP scanning, stealth scanning, exploitation, brute forcing, credential attacks, password guessing, payload attacks, destructive checks, password policy changes, account changes, registry value changes, broad registry tree queries, registry hive exports, firewall rule changes, Defender setting changes, service restarts, firewall bypassing, cipher probing, protocol downgrade testing, registry enumeration, share enumeration, credential dumping, or CVE validation.</p>
     </section>
   </main>
 </body>

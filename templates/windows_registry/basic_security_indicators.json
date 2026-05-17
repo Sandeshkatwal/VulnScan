@@ -1,0 +1,77 @@
+{
+  "template_name": "Windows Basic Security Indicators",
+  "template_version": "1.0",
+  "description": "Narrow read-only Windows registry checks for basic security indicators.",
+  "checks": [
+    {
+      "id": "WIN-REG-001",
+      "title": "Remote Desktop NLA Setting Indicator",
+      "enabled": true,
+      "hive": "HKLM",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp",
+      "value_name": "UserAuthentication",
+      "expected": 1,
+      "operator": "equals",
+      "severity_if_mismatch": "Medium",
+      "category": "Windows Registry Security Indicator",
+      "recommendation": "Require Network Level Authentication for RDP where RDP is enabled.",
+      "limitation": "This registry value is an indicator and should be interpreted with RDP exposure and policy context."
+    },
+    {
+      "id": "WIN-REG-002",
+      "title": "Remote Desktop Disabled Indicator",
+      "enabled": true,
+      "hive": "HKLM",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Terminal Server",
+      "value_name": "fDenyTSConnections",
+      "expected": 1,
+      "operator": "equals",
+      "severity_if_mismatch": "Medium",
+      "category": "Windows Registry Security Indicator",
+      "recommendation": "Disable RDP where it is not required and restrict access where it is approved.",
+      "limitation": "This registry value is an indicator; RDP service exposure should also be checked through port 3389."
+    },
+    {
+      "id": "WIN-REG-003",
+      "title": "SMBv1 Server Disabled Indicator",
+      "enabled": true,
+      "hive": "HKLM",
+      "path": "SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters",
+      "value_name": "SMB1",
+      "expected": 0,
+      "operator": "equals",
+      "severity_if_mismatch": "High",
+      "category": "Windows Registry Security Indicator",
+      "recommendation": "Disable SMBv1 server support unless a documented business exception exists.",
+      "limitation": "Missing value may require contextual interpretation depending on Windows version."
+    },
+    {
+      "id": "WIN-REG-004",
+      "title": "Local Security Authority Protection Indicator",
+      "enabled": true,
+      "hive": "HKLM",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Lsa",
+      "value_name": "RunAsPPL",
+      "expected": 1,
+      "operator": "equals",
+      "severity_if_mismatch": "Medium",
+      "category": "Windows Registry Security Indicator",
+      "recommendation": "Enable LSA protection where supported and validated by organisational policy.",
+      "limitation": "Availability depends on Windows version and enterprise policy."
+    },
+    {
+      "id": "WIN-REG-005",
+      "title": "WDigest UseLogonCredential Indicator",
+      "enabled": true,
+      "hive": "HKLM",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\SecurityProviders\\WDigest",
+      "value_name": "UseLogonCredential",
+      "expected": 0,
+      "operator": "equals",
+      "severity_if_mismatch": "High",
+      "category": "Windows Registry Security Indicator",
+      "recommendation": "Keep WDigest UseLogonCredential disabled unless a documented exception exists.",
+      "limitation": "Missing value may indicate default secure behaviour on modern Windows."
+    }
+  ]
+}

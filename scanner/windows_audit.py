@@ -6,6 +6,7 @@ import importlib
 import json
 import socket
 from datetime import datetime, timezone
+from pathlib import Path
 from time import perf_counter
 from typing import Any
 
@@ -21,6 +22,16 @@ from scanner.windows_policy_audit import (
     SOURCE as POLICY_SOURCE,
     build_windows_policy_findings,
     parse_net_accounts_output,
+)
+from scanner.windows_registry_audit import (
+    DEFAULT_WINDOWS_REGISTRY_TEMPLATE,
+    SOURCE as REGISTRY_SOURCE,
+    WindowsRegistryTemplateError,
+    build_registry_findings,
+    build_registry_query_command,
+    empty_registry_audit,
+    evaluate_registry_audit,
+    load_registry_template,
 )
 
 
@@ -103,6 +114,8 @@ ERROR_WINRM_CREDENTIALS_MISSING = "WINRM_CREDENTIALS_MISSING"
 ERROR_WINDOWS_HOST_INFO_PREREQUISITES = "WINDOWS_HOST_INFO_PREREQUISITES_MISSING"
 ERROR_WINDOWS_SECURITY_STATUS_PREREQUISITES = "WINDOWS_SECURITY_STATUS_PREREQUISITES_MISSING"
 ERROR_WINDOWS_POLICY_STATUS_PREREQUISITES = "WINDOWS_POLICY_STATUS_PREREQUISITES_MISSING"
+ERROR_WINDOWS_REGISTRY_AUDIT_PREREQUISITES = "WINDOWS_REGISTRY_AUDIT_PREREQUISITES_MISSING"
+ERROR_WINDOWS_REGISTRY_TEMPLATE_WITHOUT_AUDIT = "WINDOWS_REGISTRY_TEMPLATE_WITHOUT_AUDIT"
 ERROR_SERVICE_CHECK_FAILED = "WINDOWS_AUDIT_SERVICE_CHECK_FAILED"
 ERROR_WINDOWS_HOST_INFO_FAILED = "WINDOWS_HOST_INFO_FAILED"
 ERROR_WINDOWS_HOST_INFO_TIMEOUT = "WINDOWS_HOST_INFO_TIMEOUT"
@@ -110,6 +123,8 @@ ERROR_WINDOWS_SECURITY_STATUS_FAILED = "WINDOWS_SECURITY_STATUS_FAILED"
 ERROR_WINDOWS_SECURITY_STATUS_TIMEOUT = "WINDOWS_SECURITY_STATUS_TIMEOUT"
 ERROR_WINDOWS_POLICY_STATUS_FAILED = "WINDOWS_POLICY_STATUS_FAILED"
 ERROR_WINDOWS_POLICY_STATUS_TIMEOUT = "WINDOWS_POLICY_STATUS_TIMEOUT"
+ERROR_WINDOWS_REGISTRY_AUDIT_FAILED = "WINDOWS_REGISTRY_AUDIT_FAILED"
+ERROR_WINDOWS_REGISTRY_AUDIT_TIMEOUT = "WINDOWS_REGISTRY_AUDIT_TIMEOUT"
 WINRM_AUTH_SUCCESS = "WINRM_AUTH_SUCCESS"
 WINRM_AUTH_FAILED = "WINRM_AUTH_FAILED"
 WINRM_NOT_REACHABLE = "WINRM_NOT_REACHABLE"
@@ -174,6 +189,8 @@ def validate_windows_audit_options(
     windows_host_info: bool = False,
     windows_security_status: bool = False,
     windows_policy_status: bool = False,
+    windows_registry_audit: bool = False,
+    windows_registry_template: str | Path | None = None,
 ) -> str:
     """Validate Windows audit options without exposing credential values."""
     normalized_method = (windows_auth_method or "none").strip().lower()
@@ -198,6 +215,16 @@ def validate_windows_audit_options(
             raise WindowsAuditConfigurationError(
                 "--windows-policy-status requires --windows-audit.",
                 ERROR_WINDOWS_POLICY_STATUS_PREREQUISITES,
+            )
+        if windows_registry_audit:
+            raise WindowsAuditConfigurationError(
+                "--windows-registry-audit requires --windows-audit.",
+                ERROR_WINDOWS_REGISTRY_AUDIT_PREREQUISITES,
+            )
+        if windows_registry_template:
+            raise WindowsAuditConfigurationError(
+                "--windows-registry-template applies only when --windows-registry-audit is enabled.",
+                ERROR_WINDOWS_REGISTRY_TEMPLATE_WITHOUT_AUDIT,
             )
         return normalized_method
     if windows_password and not (windows_user and windows_user.strip()):
@@ -227,6 +254,23 @@ def validate_windows_audit_options(
             "--windows-policy-status requires --windows-auth-method winrm.",
             ERROR_WINDOWS_POLICY_STATUS_PREREQUISITES,
         )
+    if windows_registry_audit and normalized_method != "winrm":
+        raise WindowsAuditConfigurationError(
+            "--windows-registry-audit requires --windows-auth-method winrm.",
+            ERROR_WINDOWS_REGISTRY_AUDIT_PREREQUISITES,
+        )
+    if windows_registry_template and not windows_registry_audit:
+        raise WindowsAuditConfigurationError(
+            "--windows-registry-template applies only when --windows-registry-audit is enabled.",
+            ERROR_WINDOWS_REGISTRY_TEMPLATE_WITHOUT_AUDIT,
+        )
+    if windows_registry_audit:
+        effective_template = Path(windows_registry_template or DEFAULT_WINDOWS_REGISTRY_TEMPLATE)
+        if not effective_template.exists():
+            raise WindowsAuditConfigurationError(
+                f"Windows registry template was not found: {effective_template}",
+                "WINDOWS_REGISTRY_TEMPLATE_NOT_FOUND",
+            )
     return normalized_method
 
 
@@ -241,6 +285,8 @@ def audit_windows_host(
     collect_host_info: bool = False,
     collect_security_status: bool = False,
     collect_policy_status: bool = False,
+    collect_registry_audit: bool = False,
+    registry_template_path: str | Path | None = None,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Run safe Windows service reachability checks and optional single WinRM auth validation."""
@@ -254,6 +300,8 @@ def audit_windows_host(
         windows_host_info=collect_host_info,
         windows_security_status=collect_security_status,
         windows_policy_status=collect_policy_status,
+        windows_registry_audit=collect_registry_audit,
+        windows_registry_template=registry_template_path,
     )
 
     service_statuses = [
@@ -270,6 +318,8 @@ def audit_windows_host(
             collect_host_info=collect_host_info,
             collect_security_status=collect_security_status,
             collect_policy_status=collect_policy_status,
+            collect_registry_audit=collect_registry_audit,
+            registry_template_path=registry_template_path,
             timeout=timeout,
         )
     findings = _build_windows_findings(target, service_statuses)
@@ -281,6 +331,8 @@ def audit_windows_host(
         findings.extend(_security_status_findings(target, winrm_auth))
     if collect_policy_status and winrm_auth.get("authenticated"):
         findings.extend(build_windows_policy_findings(target, winrm_auth.get("policy_status") or {}))
+    if collect_registry_audit and winrm_auth.get("authenticated"):
+        findings.extend(build_registry_findings(target, winrm_auth.get("registry_audit") or {}))
     findings.append(_completed_finding(target, service_statuses, winrm_auth, normalized_method))
     checks_failed = sum(1 for status in service_statuses if status.get("error_code"))
     if winrm_auth["attempted"] and winrm_auth["status"] != "authenticated":
@@ -291,6 +343,8 @@ def audit_windows_host(
         checks_failed += 1
     if collect_policy_status and winrm_auth.get("policy_status_status") in {"failed", "partial"}:
         checks_failed += 1
+    if collect_registry_audit and winrm_auth.get("registry_audit_status") in {"failed", "partial"}:
+        checks_failed += 1
     status = (
         "partial"
         if (
@@ -299,6 +353,7 @@ def audit_windows_host(
                 (collect_host_info and winrm_auth.get("host_info_status") == "failed")
                 or (collect_security_status and winrm_auth.get("security_status_status") in {"failed", "partial"})
                 or (collect_policy_status and winrm_auth.get("policy_status_status") in {"failed", "partial"})
+                or (collect_registry_audit and winrm_auth.get("registry_audit_status") in {"failed", "partial"})
             )
         )
         else _audit_status(checks_failed=checks_failed)
@@ -369,6 +424,17 @@ def audit_windows_host(
         )
         if policy_status_error:
             errors.append(policy_status_error)
+    if collect_registry_audit and winrm_auth.get("registry_audit_status") in {"failed", "partial"}:
+        registry_error = build_error(
+            error_code=winrm_auth.get("registry_audit_error_code") or ERROR_WINDOWS_REGISTRY_AUDIT_FAILED,
+            message=str(winrm_auth.get("registry_audit_error_message") or "Windows registry audit failed."),
+            source=REGISTRY_SOURCE,
+            check_name="Windows registry audit",
+            severity="error",
+            safe_detail=str(winrm_auth.get("registry_audit_safe_detail") or ""),
+        )
+        if registry_error:
+            errors.append(registry_error)
     summary = _build_summary(
         target=target,
         username=username,
@@ -508,6 +574,13 @@ def _initial_winrm_auth_result() -> dict[str, Any]:
         "policy_status_safe_detail": "",
         "policy_status": dict(EMPTY_WINDOWS_POLICY_STATUS),
         "policy_status_commands_completed": 0,
+        "registry_audit_requested": False,
+        "registry_audit_status": "skipped",
+        "registry_audit_error_code": "",
+        "registry_audit_error_message": "",
+        "registry_audit_safe_detail": "",
+        "registry_audit": empty_registry_audit(),
+        "registry_audit_commands_completed": 0,
     }
 
 
@@ -521,6 +594,8 @@ def _perform_winrm_auth_check(
     collect_host_info: bool,
     collect_security_status: bool,
     collect_policy_status: bool,
+    collect_registry_audit: bool,
+    registry_template_path: str | Path | None,
     timeout: float,
 ) -> dict[str, Any]:
     started = perf_counter()
@@ -535,6 +610,8 @@ def _perform_winrm_auth_check(
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
             policy_status_requested=collect_policy_status,
+            registry_audit_requested=collect_registry_audit,
+            registry_audit_template_path=registry_template_path,
         )
 
     try:
@@ -551,6 +628,8 @@ def _perform_winrm_auth_check(
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
             policy_status_requested=collect_policy_status,
+            registry_audit_requested=collect_registry_audit,
+            registry_audit_template_path=registry_template_path,
         )
 
     endpoint_url = str(endpoint["url"])
@@ -582,6 +661,8 @@ def _perform_winrm_auth_check(
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
             policy_status_requested=collect_policy_status,
+            registry_audit_requested=collect_registry_audit,
+            registry_audit_template_path=registry_template_path,
         )
     except Exception as exc:  # pywinrm exposes transport/auth failures through several exception classes.
         error_code = _classify_winrm_exception(exc)
@@ -597,6 +678,8 @@ def _perform_winrm_auth_check(
             host_info_requested=collect_host_info,
             security_status_requested=collect_security_status,
             policy_status_requested=collect_policy_status,
+            registry_audit_requested=collect_registry_audit,
+            registry_audit_template_path=registry_template_path,
         )
 
     status_code = int(getattr(response, "status_code", 1) or 0)
@@ -614,6 +697,11 @@ def _perform_winrm_auth_check(
             if collect_policy_status
             else _initial_policy_status_result(False)
         )
+        registry_audit_result = (
+            _collect_windows_registry_audit(session, registry_template_path)
+            if collect_registry_audit
+            else _initial_registry_audit_result(False, registry_template_path)
+        )
         return _winrm_auth_result(
             started=started,
             status="authenticated",
@@ -630,6 +718,9 @@ def _perform_winrm_auth_check(
             security_status_result=security_status_result,
             policy_status_requested=collect_policy_status,
             policy_status_result=policy_status_result,
+            registry_audit_requested=collect_registry_audit,
+            registry_audit_template_path=registry_template_path,
+            registry_audit_result=registry_audit_result,
         )
 
     return _winrm_auth_result(
@@ -644,6 +735,8 @@ def _perform_winrm_auth_check(
         host_info_requested=collect_host_info,
         security_status_requested=collect_security_status,
         policy_status_requested=collect_policy_status,
+        registry_audit_requested=collect_registry_audit,
+        registry_audit_template_path=registry_template_path,
     )
 
 
@@ -997,6 +1090,110 @@ def _initial_policy_status_result(requested: bool) -> dict[str, Any]:
     }
 
 
+def _collect_windows_registry_audit(session: Any, template_path: str | Path | None) -> dict[str, Any]:
+    completed = 0
+    effective_template_path = template_path or DEFAULT_WINDOWS_REGISTRY_TEMPLATE
+    try:
+        template = load_registry_template(effective_template_path)
+    except WindowsRegistryTemplateError as exc:
+        result = _initial_registry_audit_result(True, effective_template_path)
+        registry_audit = empty_registry_audit(effective_template_path)
+        registry_audit["limitations"] = [
+            str(exc),
+            "Windows registry audit did not run because the template could not be loaded safely.",
+        ]
+        result.update(
+            {
+                "status": "failed",
+                "error_code": exc.error_code,
+                "error_message": str(exc),
+                "safe_detail": exc.error_code,
+                "registry_audit": registry_audit,
+            }
+        )
+        return result
+
+    observed_by_check_id: dict[str, dict[str, Any]] = {}
+    for check in template.get("checks") or []:
+        if not getattr(check, "enabled", False):
+            continue
+        try:
+            raw_output = _run_safe_ps(session, build_registry_query_command(check))
+            completed += 1
+            value_data = _json_object(raw_output)
+            observed_by_check_id[check.id] = {
+                "present": bool(value_data.get("Present")),
+                "observed_value": value_data.get("Value"),
+            }
+        except TimeoutError as exc:
+            return _registry_audit_error(ERROR_WINDOWS_REGISTRY_AUDIT_TIMEOUT, exc, completed, effective_template_path)
+        except Exception as exc:
+            completed += 1
+            observed_by_check_id[check.id] = {
+                "status": "unknown",
+                "error_code": ERROR_WINDOWS_REGISTRY_AUDIT_FAILED,
+                "evidence_summary": (
+                    f"Registry value {check.hive}\\{check.path}\\{check.value_name} was not present "
+                    f"or could not be read using the exact template-defined path."
+                ),
+                "observed_value": "",
+                "safe_detail": exc.__class__.__name__,
+            }
+
+    registry_audit = evaluate_registry_audit(template, observed_by_check_id)
+    unknown_or_error = any(item.get("status") in {"unknown", "error"} for item in registry_audit["check_results"])
+    status = "partial" if unknown_or_error else "checked"
+    result = _initial_registry_audit_result(True, effective_template_path)
+    result.update(
+        {
+            "status": status,
+            "registry_audit": registry_audit,
+            "commands_completed": completed,
+            "error_code": "" if status == "checked" else ERROR_WINDOWS_REGISTRY_AUDIT_FAILED,
+            "error_message": "" if status == "checked" else "One or more registry indicators could not be read.",
+            "safe_detail": "",
+        }
+    )
+    return result
+
+
+def _registry_audit_error(
+    error_code: str,
+    exc: Exception,
+    commands_completed: int,
+    template_path: str | Path | None,
+) -> dict[str, Any]:
+    result = _initial_registry_audit_result(True, template_path)
+    registry_audit = empty_registry_audit(template_path or DEFAULT_WINDOWS_REGISTRY_TEMPLATE)
+    registry_audit["limitations"] = [
+        "Windows registry audit command execution failed.",
+        "Version 12.6 performs narrow template-based registry checks only.",
+    ]
+    result.update(
+        {
+            "status": "failed",
+            "error_code": error_code,
+            "error_message": "Windows registry audit failed.",
+            "safe_detail": exc.__class__.__name__,
+            "registry_audit": registry_audit,
+            "commands_completed": commands_completed,
+        }
+    )
+    return result
+
+
+def _initial_registry_audit_result(requested: bool, template_path: str | Path | None) -> dict[str, Any]:
+    return {
+        "requested": requested,
+        "status": "skipped",
+        "error_code": "",
+        "error_message": "",
+        "safe_detail": "",
+        "registry_audit": empty_registry_audit(template_path or DEFAULT_WINDOWS_REGISTRY_TEMPLATE),
+        "commands_completed": 0,
+    }
+
+
 def _firewall_profiles_from_output(value: str) -> list[dict[str, str]]:
     parsed = _json_value(value)
     items = parsed if isinstance(parsed, list) else [parsed]
@@ -1086,10 +1283,17 @@ def _winrm_auth_result(
     security_status_result: dict[str, Any] | None = None,
     policy_status_requested: bool = False,
     policy_status_result: dict[str, Any] | None = None,
+    registry_audit_requested: bool = False,
+    registry_audit_template_path: str | Path | None = None,
+    registry_audit_result: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     host_result = host_info_result or _initial_host_info_result(host_info_requested)
     security_result = security_status_result or _initial_security_status_result(security_status_requested)
     policy_result = policy_status_result or _initial_policy_status_result(policy_status_requested)
+    registry_result = registry_audit_result or _initial_registry_audit_result(
+        registry_audit_requested,
+        registry_audit_template_path,
+    )
     return {
         "attempted": True,
         "status": status,
@@ -1124,6 +1328,13 @@ def _winrm_auth_result(
         "policy_status_safe_detail": policy_result.get("safe_detail") or "",
         "policy_status": policy_result.get("policy_status") or dict(EMPTY_WINDOWS_POLICY_STATUS),
         "policy_status_commands_completed": int(policy_result.get("commands_completed") or 0),
+        "registry_audit_requested": bool(registry_result.get("requested")),
+        "registry_audit_status": registry_result.get("status") or "skipped",
+        "registry_audit_error_code": registry_result.get("error_code") or "",
+        "registry_audit_error_message": registry_result.get("error_message") or "",
+        "registry_audit_safe_detail": registry_result.get("safe_detail") or "",
+        "registry_audit": registry_result.get("registry_audit") or empty_registry_audit(registry_audit_template_path),
+        "registry_audit_commands_completed": int(registry_result.get("commands_completed") or 0),
     }
 
 
@@ -1475,10 +1686,11 @@ def _build_summary(
         + int(winrm_auth.get("host_info_commands_completed") or 0)
         + int(winrm_auth.get("security_status_commands_completed") or 0)
         + int(winrm_auth.get("policy_status_commands_completed") or 0)
+        + int(winrm_auth.get("registry_audit_commands_completed") or 0)
     )
     limitations = [
-        "Version 12.5 performs socket reachability checks, one safe WinRM authentication validation when requested, optional read-only host information collection, optional read-only firewall and Defender status collection, and optional net accounts local security policy indicators.",
-        "It does not enumerate shares, query the registry, export security policy, list users, list groups, list files, list processes, dump credentials, change password or lockout policy, change firewall or Defender settings, exploit, brute force, or modify systems.",
+        "Version 12.6 performs socket reachability checks, one safe WinRM authentication validation when requested, optional read-only host information collection, optional read-only firewall and Defender status collection, optional net accounts local security policy indicators, and optional narrow template-based registry indicators.",
+        "It does not enumerate shares, query broad registry trees, export registry hives, export security policy, list users, list groups, list files, list processes, dump credentials, change registry values, change password or lockout policy, change firewall or Defender settings, exploit, brute force, or modify systems.",
     ]
     if winrm_auth.get("limitations"):
         limitations.append(str(winrm_auth["limitations"]))
@@ -1526,6 +1738,11 @@ def _build_summary(
         "windows_policy_status_status": winrm_auth.get("policy_status_status") or "skipped",
         "windows_policy_status_error_code": winrm_auth.get("policy_status_error_code") or "",
         "windows_policy_status_error_message": winrm_auth.get("policy_status_error_message") or "",
+        "windows_registry_audit_checked": winrm_auth.get("registry_audit_status") in {"checked", "partial"},
+        "windows_registry_audit": winrm_auth.get("registry_audit") or empty_registry_audit(),
+        "windows_registry_audit_status": winrm_auth.get("registry_audit_status") or "skipped",
+        "windows_registry_audit_error_code": winrm_auth.get("registry_audit_error_code") or "",
+        "windows_registry_audit_error_message": winrm_auth.get("registry_audit_error_message") or "",
         "limitations": limitations,
     }
 
@@ -1636,6 +1853,29 @@ def _build_credentialed_audit(
                 else "Windows local security policy indicator collection failed.",
             ).to_dict()
         )
+    registry_audit = dict(summary.get("windows_registry_audit") or {})
+    if summary.get("windows_registry_audit_checked") or summary.get("windows_registry_audit_status") == "failed":
+        checks.append(
+            CredentialedCheckResult(
+                check_id="windows-registry-audit-template",
+                check_name="Windows registry audit template",
+                source=REGISTRY_SOURCE,
+                status="partial"
+                if summary.get("windows_registry_audit_status") == "partial"
+                else "success"
+                if summary.get("windows_registry_audit_checked")
+                else "failed",
+                command_name="safe-winrm-registry-template",
+                duration_seconds=0.0,
+                findings_count=int(registry_audit.get("checks_with_findings") or 0),
+                error_code=str(summary.get("windows_registry_audit_error_code") or "") or None,
+                error_message=str(summary.get("windows_registry_audit_error_message") or ""),
+                evidence_summary=(
+                    f"Windows registry audit template executed with "
+                    f"{registry_audit.get('checks_executed', 0)} checks."
+                ),
+            ).to_dict()
+        )
     domain_or_workgroup = host_info.get("domain") or host_info.get("workgroup") or ""
     firewall_profiles = list(security_status.get("firewall_profiles") or [])
     defender_status = dict(security_status.get("defender_status") or {})
@@ -1658,6 +1898,9 @@ def _build_credentialed_audit(
             "maximum_password_age_days": policy_status.get("maximum_password_age_days"),
             "password_history_length": policy_status.get("password_history_length"),
             "lockout_threshold": policy_status.get("lockout_threshold"),
+            "registry_template_name": registry_audit.get("template_name") or "",
+            "registry_checks_executed": registry_audit.get("checks_executed") or 0,
+            "registry_checks_with_findings": registry_audit.get("checks_with_findings") or 0,
         }
     )
     audit = CredentialedAuditResult(
@@ -1693,6 +1936,7 @@ def _build_credentialed_audit(
             "windows_host_info": host_info,
             "windows_security_status": security_status,
             "windows_policy_status": policy_status,
+            "windows_registry_audit": registry_audit,
             "checks": checks,
         },
     )

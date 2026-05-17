@@ -176,3 +176,38 @@ def test_windows_credentialed_audit_summary_includes_host_info_fields() -> None:
     assert summary["defender_realtime_enabled"] == "False"
     assert audits[0]["metadata"]["windows_host_info"]["os_build"] == "20348"
     assert audits[0]["metadata"]["windows_security_status"]["firewall_profiles"][1]["enabled"] == "False"
+
+
+def test_windows_audit_summary_includes_registry_audit() -> None:
+    scan_result = {
+        "host": "192.0.2.50",
+        "windows_audit": {
+            "status": "success",
+            "summary": {
+                "enabled": True,
+                "status": "success",
+                "windows_registry_audit_checked": True,
+                "windows_registry_audit": {
+                    "template_name": "Windows Basic Security Indicators",
+                    "checks_executed": 5,
+                    "checks_passed": 4,
+                    "checks_with_findings": 1,
+                },
+            },
+        },
+        "windows_findings": [
+            {
+                "title": "Remote Desktop NLA Setting Indicator",
+                "risk_score": 45,
+                "risk_label": "Medium priority",
+                "source": "windows_registry_audit",
+            }
+        ],
+    }
+
+    summary = _build_windows_audit_summary(scan_result)
+
+    assert summary["windows_registry_audit_checked"] is True
+    assert summary["windows_registry_audit"]["checks_executed"] == 5
+    assert summary["highest_windows_risk_score"] == 45
+    assert "SENSITIVE_VALUE" not in str(summary)

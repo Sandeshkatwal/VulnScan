@@ -179,6 +179,20 @@ def scan(
             help="Collect Windows local security policy indicators using the read-only net accounts command after successful WinRM authentication.",
         ),
     ] = False,
+    windows_registry_audit: Annotated[
+        bool,
+        typer.Option(
+            "--windows-registry-audit",
+            help="Run narrow read-only Windows registry checks from an explicit template after successful WinRM authentication.",
+        ),
+    ] = False,
+    windows_registry_template: Annotated[
+        Path | None,
+        typer.Option(
+            "--windows-registry-template",
+            help="Path to a Windows registry audit template JSON file. Applies only with --windows-registry-audit.",
+        ),
+    ] = None,
     ssh_audit: Annotated[
         bool,
         typer.Option(
@@ -293,6 +307,8 @@ def scan(
             windows_host_info=windows_host_info,
             windows_security_status=windows_security_status,
             windows_policy_status=windows_policy_status,
+            windows_registry_audit=windows_registry_audit,
+            windows_registry_template=windows_registry_template,
         )
     except WindowsAuditConfigurationError as exc:
         console.print(f"[red]Windows audit configuration error:[/red] {exc}")
@@ -336,6 +352,8 @@ def scan(
                 collect_host_info=windows_host_info,
                 collect_security_status=windows_security_status,
                 collect_policy_status=windows_policy_status,
+                collect_registry_audit=windows_registry_audit,
+                registry_template_path=windows_registry_template,
             )
             scan_result["windows_audit"] = windows_result
             findings.extend(windows_result.get("findings", []))
@@ -1036,6 +1054,8 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         ("Windows security status", summary.get("windows_security_status_status")),
         ("Windows policy status checked", summary.get("windows_policy_status_checked")),
         ("Windows policy status", summary.get("windows_policy_status_status")),
+        ("Windows registry audit checked", summary.get("windows_registry_audit_checked")),
+        ("Windows registry audit status", summary.get("windows_registry_audit_status")),
         ("Findings count", summary.get("findings_count")),
         (
             "Highest Windows risk",
@@ -1110,11 +1130,27 @@ def _print_windows_audit_summary(summary: dict[str, Any]) -> None:
         for label, value in policy_rows:
             policy_table.add_row(label, "" if value is None else str(value))
         console.print(policy_table)
+    registry_audit = summary.get("windows_registry_audit") or {}
+    if (summary.get("windows_registry_audit_checked") or summary.get("windows_registry_audit_status") == "failed") and registry_audit:
+        registry_table = Table(title="Windows Registry Audit")
+        registry_table.add_column("Field")
+        registry_table.add_column("Value")
+        registry_rows = [
+            ("Template name", registry_audit.get("template_name")),
+            ("Checks executed", registry_audit.get("checks_executed")),
+            ("Passed", registry_audit.get("checks_passed")),
+            ("Findings", registry_audit.get("checks_with_findings")),
+            ("Failed/errors", registry_audit.get("checks_failed")),
+            ("Limitations", _format_summary_list(registry_audit.get("limitations"))),
+        ]
+        for label, value in registry_rows:
+            registry_table.add_row(label, "" if value is None else str(value))
+        console.print(registry_table)
     limitations = summary.get("limitations")
     if limitations:
         console.print(f"[yellow]Windows audit limitations:[/yellow] {_format_summary_list(limitations)}")
     console.print(
-        "[yellow]Windows audit uses safe reachability checks, one WinRM authentication validation command when requested, and optional read-only host information, security status, and local policy indicator commands. It does not enumerate shares, exploit, brute force, dump credentials, change policy, or modify systems.[/yellow]"
+        "[yellow]Windows audit uses safe reachability checks, one WinRM authentication validation command when requested, and optional read-only host information, security status, local policy, and exact template-based registry indicator commands. It does not enumerate shares, exploit, brute force, dump credentials, change registry values, change policy, or modify systems.[/yellow]"
     )
 
 
@@ -1179,6 +1215,7 @@ def _is_windows_related_finding(finding: dict[str, Any]) -> bool:
         "windows_audit",
         "windows_security_audit",
         "windows_policy_audit",
+        "windows_registry_audit",
     }
 
 
@@ -1304,6 +1341,7 @@ def _build_windows_credentialed_audits(
     host_info = dict(windows_summary.get("windows_host_info") or {})
     security_status = dict(windows_summary.get("windows_security_status") or {})
     policy_status = dict(windows_summary.get("windows_policy_status") or {})
+    registry_audit = dict(windows_summary.get("windows_registry_audit") or {})
     firewall_profiles = list(security_status.get("firewall_profiles") or [])
     defender_status = dict(security_status.get("defender_status") or {})
     credentialed_summary.update(
@@ -1324,6 +1362,9 @@ def _build_windows_credentialed_audits(
             "maximum_password_age_days": policy_status.get("maximum_password_age_days"),
             "password_history_length": policy_status.get("password_history_length"),
             "lockout_threshold": policy_status.get("lockout_threshold"),
+            "registry_template_name": registry_audit.get("template_name") or "",
+            "registry_checks_executed": registry_audit.get("checks_executed") or 0,
+            "registry_checks_with_findings": registry_audit.get("checks_with_findings") or 0,
         }
     )
     credentialed_audit["summary"] = credentialed_summary
@@ -1331,6 +1372,7 @@ def _build_windows_credentialed_audits(
     metadata["windows_host_info"] = host_info
     metadata["windows_security_status"] = security_status
     metadata["windows_policy_status"] = policy_status
+    metadata["windows_registry_audit"] = registry_audit
     credentialed_audit["metadata"] = metadata
     return [credentialed_audit]
 
