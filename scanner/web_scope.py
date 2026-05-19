@@ -22,6 +22,7 @@ SKIP_REASONS = {
     "skipped_duplicate",
     "skipped_depth_limit",
     "skipped_page_limit",
+    "skipped_by_robots",
 }
 LIMITATIONS = [
     "Scope controls depend on URL parsing and configured allow/deny rules.",
@@ -131,6 +132,7 @@ class WebScope:
             "skipped_duplicates_count": self.skipped_counts["skipped_duplicate"],
             "skipped_depth_limit_count": self.skipped_counts["skipped_depth_limit"],
             "skipped_page_limit_count": self.skipped_counts["skipped_page_limit"],
+            "skipped_by_robots_count": self.skipped_counts["skipped_by_robots"],
             "total_skipped_urls": total_skipped,
             "limitations": list(LIMITATIONS),
         }

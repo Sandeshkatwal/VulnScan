@@ -14,6 +14,10 @@ Version 13.5 adds web scope and allowlist controls for crawler and passive check
 
 Version 13.6 adds rate limiting, retry limits, backoff, Retry-After handling, and max-error politeness controls.
 
+Version 13.7 adds robots.txt awareness for fetching, reporting, and optionally respecting crawl guidance.
+
+Version 13.8 adds passive sitemap discovery and optional sitemap-assisted crawling within configured scope.
+
 Use it only on web applications you own or have explicit permission to assess.
 
 ## What It Does
@@ -37,6 +41,8 @@ Use it only on web applications you own or have explicit permission to assess.
 - Applies explicit scope controls for allowed hosts, denied hosts, allowed paths, denied paths, and subdomain inclusion.
 - Applies request pacing and request-per-minute limits to Web DAST HTTP requests.
 - Reuses fetched page data for header, cookie, form, and passive summary analysis.
+- Optionally fetches and reports robots.txt guidance with `--robots`.
+- Optionally discovers, parses, and reports XML sitemaps with `--sitemap`.
 
 ## What It Does Not Do
 
@@ -52,6 +58,9 @@ Current Web DAST passive checks do not:
 - Send attack payloads.
 - Perform exploitation or destructive checks.
 - Prove exploitability from passive indicators.
+- Treat robots.txt as authorisation to scan.
+- Treat sitemap discovery as authorisation to scan.
+- Bypass scope, robots, rate limits, max pages, or max depth when using sitemap URLs.
 
 ## Commands
 
@@ -149,6 +158,23 @@ Use Version 13.6 politeness controls:
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --request-delay 1 --json --html
 ```
 
+Use Version 13.7 robots.txt awareness:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --robots
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --respect-robots --max-pages 10 --max-depth 1
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --no-respect-robots --headers --cookies --forms --passive-summary --json --html
+```
+
+Use Version 13.8 sitemap discovery:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --sitemap
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --robots --sitemap
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --sitemap --sitemap-url https://example.com/sitemap.xml
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --sitemap --use-sitemap-for-crawl --max-pages 20 --max-depth 1 --json --html
+```
+
 ## Report Fields
 
 JSON and HTML reports include:
@@ -168,6 +194,8 @@ JSON and HTML reports include:
 - `skipped_url_samples`
 - `web_politeness_summary`
 - `request_error_samples`
+- `web_robots_summary` when `--robots` is used
+- `web_sitemap_summary`, `web_sitemap_results`, and `web_sitemap_url_samples` when `--sitemap` is used
 - top-level `findings`
 
 Each page result includes URL, method, status code, content type, title, depth, response time, link count, form count, internal links, external links, and forms.
@@ -222,6 +250,10 @@ With Version 13.5 scope controls, VulScan emits concise scope findings for scope
 
 With Version 13.6 politeness controls, VulScan emits concise findings for applied rate limits, maximum-error stops, and observed Retry-After handling. It does not emit one finding per request.
 
+With Version 13.7 robots awareness, VulScan emits concise findings for robots.txt reviewed, not found, URLs skipped due to robots.txt, sitemap references, and rules not enforced when `--no-respect-robots` is used. It does not treat robots.txt as a vulnerability source.
+
+With Version 13.8 sitemap discovery, VulScan emits concise findings for discovery completion, out-of-scope sitemap URLs, failed sitemap fetch or parse events, and sitemap URLs added to the crawl queue when `--use-sitemap-for-crawl` is enabled. It does not emit one finding per sitemap URL.
+
 These findings are discovery and review indicators. They do not prove a vulnerability by themselves.
 
 ## Passive Risk Summary
@@ -241,6 +273,18 @@ Scope decisions are recorded in `web_scope_summary`, including counts for extern
 Version 13.6 defaults to a 0.5 second delay between Web DAST HTTP requests and a maximum of 60 requests per minute. Use `--request-delay` and `--max-requests-per-minute` to tune request volume according to written permission and target capacity. `--retry-limit` controls bounded safe GET retries, `--retry-backoff` controls retry delay, and `--max-errors` stops crawling when too many request errors occur.
 
 `--respect-retry-after` is enabled by default. When a target returns `Retry-After` with a retryable response such as HTTP 429 or 503, VulScan waits up to a safe cap before retrying. Politeness runtime data is recorded in `web_politeness_summary`, and up to 20 request error samples are included as `request_error_samples`. This remains passive scanning only.
+
+## Robots.txt Awareness
+
+Version 13.7 fetches `robots.txt` once from the start URL origin when `--robots` is used. `--respect-robots` is the default in that mode, so URLs disallowed for the configured robots user-agent or wildcard user-agent are not crawled. Use `--no-respect-robots` only when written authorisation explicitly permits ignoring robots guidance.
+
+The robots summary records fetch status, HTTP status, user-agents seen, allow/disallow counts, crawl-delay, sitemap URLs, samples, and the number of URLs skipped by robots.txt. robots.txt is advisory, not authorisation, and sitemap URLs must still remain within configured scope and written permission. No active vulnerability testing is added in Version 13.7.
+
+## Sitemap Discovery
+
+Version 13.8 discovers sitemap URLs from robots.txt `Sitemap` lines, common same-origin paths such as `/sitemap.xml`, `/sitemap_index.xml`, and `/sitemap-index.xml`, and repeated `--sitemap-url` values. Sitemap files are fetched through the existing safe request wrapper and rate limiter, parsed with the Python standard library XML parser, and bounded by `--max-sitemap-urls` and `--max-sitemap-depth`.
+
+Sitemaps are passive discovery sources and do not grant authorisation. Every sitemap file and URL entry is filtered through scope rules; robots rules are also respected when `--robots --respect-robots` is enabled. Sitemap-assisted crawling is off by default. `--use-sitemap-for-crawl` must be explicitly enabled, and even then in-scope sitemap URLs still respect max pages, max depth, scope, robots, static-file skips, duplicate handling, and rate limits. No active vulnerability testing is added in Version 13.8.
 
 ## Cookie Value Handling
 

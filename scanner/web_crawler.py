@@ -139,6 +139,8 @@ def crawl_web(
     session: Any | None = None,
     scope: Any | None = None,
     rate_limiter: Any | None = None,
+    robots_policy: Any | None = None,
+    seed_urls: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run a safe same-host GET-only crawl."""
     started = perf_counter()
@@ -163,12 +165,16 @@ def crawl_web(
     if not start_allowed:
         scope.record_skip(url=normalized_start, reason=start_reason, source_url="", depth=0)
         raise ValueError(f"Start URL is outside the configured Web DAST scope: {start_reason}.")
+    start_disallowed_by_robots = robots_policy is not None and not robots_policy.can_fetch(normalized_start)
+    if start_disallowed_by_robots:
+        robots_policy.record_skip(normalized_start)
+        scope.record_skip(url=normalized_start, reason="skipped_by_robots", source_url="", depth=0)
 
     allowed_host = parsed_start.netloc.lower()
     client = session or requests.Session()
     headers = {"User-Agent": user_agent}
-    queue: deque[tuple[str, int]] = deque([(normalized_start, 0)])
-    queued = {normalized_start}
+    queue: deque[tuple[str, int]] = deque([] if start_disallowed_by_robots else [(normalized_start, 0)])
+    queued = set() if start_disallowed_by_robots else {normalized_start}
     visited: set[str] = set()
     pages: list[dict[str, Any]] = []
     forms: list[dict[str, Any]] = []
@@ -178,6 +184,24 @@ def crawl_web(
 
     page_limit = max(1, int(max_pages))
     depth_limit = int(max_depth)
+    for seed_url in seed_urls or []:
+        allowed, reason, normalized_seed = scope.decide_url(str(seed_url), normalized_start)
+        if not allowed:
+            scope.record_skip(url=normalized_seed, reason=reason, source_url="sitemap", depth=1)
+            continue
+        if robots_policy is not None and not robots_policy.can_fetch(normalized_seed):
+            robots_policy.record_skip(normalized_seed)
+            scope.record_skip(url=normalized_seed, reason="skipped_by_robots", source_url="sitemap", depth=1)
+            continue
+        if len(queued) >= page_limit:
+            scope.record_skip(url=normalized_seed, reason="skipped_page_limit", source_url="sitemap", depth=1)
+            continue
+        if normalized_seed in queued or normalized_seed in visited:
+            scope.record_skip(url=normalized_seed, reason="skipped_duplicate", source_url="sitemap", depth=1)
+            continue
+        queue.append((normalized_seed, 1))
+        queued.add(normalized_seed)
+
     while queue and len(pages) < page_limit:
         current_url, depth = queue.popleft()
         if current_url in visited:
@@ -246,6 +270,15 @@ def crawl_web(
         for link in parsed.get("links") or []:
             allowed, reason, normalized_link = scope.decide_url(str(link), current_url)
             if allowed:
+                if robots_policy is not None and not robots_policy.can_fetch(normalized_link):
+                    robots_policy.record_skip(normalized_link)
+                    scope.record_skip(
+                        url=normalized_link,
+                        reason="skipped_by_robots",
+                        source_url=current_url,
+                        depth=depth + 1,
+                    )
+                    continue
                 if normalized_link not in internal_links:
                     internal_links.append(normalized_link)
                 unique_internal_links.add(normalized_link)

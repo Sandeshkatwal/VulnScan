@@ -481,6 +481,7 @@
             <th>Duplicates</th>
             <th>Depth limit</th>
             <th>Page limit</th>
+            <th>Robots</th>
             <th>Total skipped</th>
           </tr>
         </thead>
@@ -495,6 +496,7 @@
             <td>{{ report.web_scope_summary.skipped_duplicates_count }}</td>
             <td>{{ report.web_scope_summary.skipped_depth_limit_count }}</td>
             <td>{{ report.web_scope_summary.skipped_page_limit_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_by_robots_count }}</td>
             <td>{{ report.web_scope_summary.total_skipped_urls }}</td>
           </tr>
         </tbody>
@@ -652,6 +654,211 @@
       <p class="empty">No politeness findings were recorded.</p>
       {% endif %}
       <p><strong>Politeness limitations:</strong> {{ report.web_politeness_summary.limitations | join("; ") }}</p>
+      {% endif %}
+      {% if report.web_robots_summary.enabled %}
+      <h3>Robots.txt Awareness</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Robots URL</th>
+            <th>Fetch status</th>
+            <th>HTTP status</th>
+            <th>Found</th>
+            <th>Respect robots</th>
+            <th>User-agent</th>
+            <th>Disallow rules</th>
+            <th>Allow rules</th>
+            <th>Crawl-delay</th>
+            <th>Sitemaps</th>
+            <th>Skipped by robots</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_robots_summary.robots_url }}</td>
+            <td>{{ report.web_robots_summary.fetch_status }}</td>
+            <td>{{ report.web_robots_summary.http_status_code }}</td>
+            <td>{{ report.web_robots_summary.robots_found }}</td>
+            <td>{{ report.web_robots_summary.respect_robots }}</td>
+            <td>{{ report.web_robots_summary.robots_user_agent }}</td>
+            <td>{{ report.web_robots_summary.disallow_rules_count }}</td>
+            <td>{{ report.web_robots_summary.allow_rules_count }}</td>
+            <td>{{ report.web_robots_summary.crawl_delay or "" }}</td>
+            <td>{{ report.web_robots_summary.sitemap_urls | length }}</td>
+            <td>{{ report.web_robots_summary.urls_skipped_by_robots }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>robots.txt Rules And Sitemaps</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>User-agents seen</th>
+            <th>Disallowed samples</th>
+            <th>Allowed samples</th>
+            <th>Sitemap URLs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_robots_summary.user_agents_seen | join(", ") }}</td>
+            <td>{{ report.web_robots_summary.disallowed_samples | join(", ") }}</td>
+            <td>{{ report.web_robots_summary.allowed_samples | join(", ") }}</td>
+            <td>{{ report.web_robots_summary.sitemap_urls | join(", ") }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Robots Findings</h3>
+      {% set robots_findings = report.web_findings | selectattr("source", "equalto", "web_robots") | list %}
+      {% if robots_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Evidence</th>
+            <th>Recommendation</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in robots_findings %}
+          <tr>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.recommendation }}</td>
+            <td>{{ finding.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No robots.txt findings were recorded.</p>
+      {% endif %}
+      <p><strong>Robots limitations:</strong> {{ report.web_robots_summary.robots_limitations | join("; ") }}</p>
+      {% endif %}
+      {% if report.web_sitemap_summary.enabled %}
+      <h3>Web Sitemap Discovery</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Files fetched</th>
+            <th>Indexes found</th>
+            <th>URL entries</th>
+            <th>In scope</th>
+            <th>Out of scope</th>
+            <th>Added to crawl</th>
+            <th>Failed</th>
+            <th>Use for crawl</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_sitemap_summary.sitemap_urls_fetched }}</td>
+            <td>{{ report.web_sitemap_summary.sitemap_indexes_found }}</td>
+            <td>{{ report.web_sitemap_summary.url_entries_found }}</td>
+            <td>{{ report.web_sitemap_summary.in_scope_urls }}</td>
+            <td>{{ report.web_sitemap_summary.out_of_scope_urls }}</td>
+            <td>{{ report.web_sitemap_summary.urls_added_to_crawl }}</td>
+            <td>{{ report.web_sitemap_summary.sitemap_urls_failed }}</td>
+            <td>{{ report.web_sitemap_summary.use_sitemap_for_crawl }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Sitemap Files</h3>
+      {% if report.web_sitemap_results %}
+      <table>
+        <thead>
+          <tr>
+            <th>Sitemap URL</th>
+            <th>Fetch status</th>
+            <th>HTTP status</th>
+            <th>Type</th>
+            <th>URLs found</th>
+            <th>In scope</th>
+            <th>Out of scope</th>
+            <th>Nested sitemaps</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in report.web_sitemap_results %}
+          <tr>
+            <td>{{ item.sitemap_url }}</td>
+            <td>{{ item.fetch_status }}</td>
+            <td>{{ item.http_status_code }}</td>
+            <td>{{ item.sitemap_type }}</td>
+            <td>{{ item.urls_found_count }}</td>
+            <td>{{ item.in_scope_count }}</td>
+            <td>{{ item.out_of_scope_count }}</td>
+            <td>{{ item.nested_sitemaps_found }}</td>
+            <td>{{ item.error_code }} {{ item.error_message }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No sitemap file results were recorded.</p>
+      {% endif %}
+      <h3>Sitemap URL Samples</h3>
+      {% if report.web_sitemap_url_samples %}
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Source sitemap</th>
+            <th>In scope</th>
+            <th>Skipped reason</th>
+            <th>Last modified</th>
+            <th>Change frequency</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in report.web_sitemap_url_samples %}
+          <tr>
+            <td>{{ item.url }}</td>
+            <td>{{ item.source_sitemap }}</td>
+            <td>{{ item.in_scope }}</td>
+            <td>{{ item.skipped_reason }}</td>
+            <td>{{ item.lastmod }}</td>
+            <td>{{ item.changefreq }}</td>
+            <td>{{ item.priority }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No sitemap URL samples were recorded.</p>
+      {% endif %}
+      <h3>Sitemap Findings</h3>
+      {% set sitemap_findings = report.web_findings | selectattr("source", "equalto", "web_sitemap") | list %}
+      {% if sitemap_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Evidence</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in sitemap_findings %}
+          <tr>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.recommendation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No sitemap findings were recorded.</p>
+      {% endif %}
+      <p><strong>Sitemap limitations:</strong> {{ report.web_sitemap_summary.limitations | join("; ") }}</p>
       {% endif %}
       {% if report.web_passive_summary.enabled %}
       <h3>Web Passive Risk Overview</h3>

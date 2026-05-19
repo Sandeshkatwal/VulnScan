@@ -87,6 +87,16 @@ def save_html_report(
             "web_politeness_summary",
             {"enabled": False, "status": "skipped"},
         ),
+        "web_robots_summary": scan_result.get(
+            "web_robots_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "web_sitemap_summary": scan_result.get(
+            "web_sitemap_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "web_sitemap_results": scan_result.get("web_sitemap_results", []),
+        "web_sitemap_url_samples": scan_result.get("web_sitemap_url_samples", []),
         "skipped_url_samples": scan_result.get("skipped_url_samples", []),
         "request_error_samples": scan_result.get("request_error_samples", []),
         "crawled_pages": scan_result.get("crawled_pages", []),

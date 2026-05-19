@@ -63,7 +63,13 @@ from scanner.web_rate_limit import (
     build_web_rate_limiter,
     validate_web_politeness_options,
 )
+from scanner.web_robots import (
+    DEFAULT_ROBOTS_USER_AGENT,
+    build_robots_findings,
+    fetch_robots_policy,
+)
 from scanner.web_scope import build_scope_findings, build_web_scope
+from scanner.web_sitemap import discover_sitemaps
 from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
 from scanner.windows_audit_profiles import (
     WindowsAuditProfileError,
@@ -725,6 +731,64 @@ def web_scan(
             help="User-Agent header for safe crawler requests.",
         ),
     ] = DEFAULT_USER_AGENT,
+    robots: Annotated[
+        bool,
+        typer.Option(
+            "--robots",
+            help="Fetch and report robots.txt guidance for the start URL origin.",
+        ),
+    ] = False,
+    respect_robots: Annotated[
+        bool,
+        typer.Option(
+            "--respect-robots/--no-respect-robots",
+            help="Respect robots.txt disallow rules when --robots is enabled.",
+        ),
+    ] = True,
+    robots_user_agent: Annotated[
+        str,
+        typer.Option(
+            "--robots-user-agent",
+            help="User-agent used when evaluating robots.txt rules.",
+        ),
+    ] = DEFAULT_ROBOTS_USER_AGENT,
+    sitemap: Annotated[
+        bool,
+        typer.Option(
+            "--sitemap",
+            help="Discover and report in-scope XML sitemaps.",
+        ),
+    ] = False,
+    sitemap_url: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--sitemap-url",
+            help="Explicit sitemap URL to fetch. Can be repeated.",
+        ),
+    ] = None,
+    use_sitemap_for_crawl: Annotated[
+        bool,
+        typer.Option(
+            "--use-sitemap-for-crawl",
+            help="Add in-scope sitemap URL entries to the crawl queue.",
+        ),
+    ] = False,
+    max_sitemap_urls: Annotated[
+        int,
+        typer.Option(
+            "--max-sitemap-urls",
+            min=1,
+            help="Maximum sitemap URL entries to parse and store.",
+        ),
+    ] = 100,
+    max_sitemap_depth: Annotated[
+        int,
+        typer.Option(
+            "--max-sitemap-depth",
+            min=0,
+            help="Maximum nested sitemap index depth to follow.",
+        ),
+    ] = 2,
     headers: Annotated[
         bool,
         typer.Option(
@@ -863,6 +927,46 @@ def web_scan(
             max_errors=max_errors,
             respect_retry_after=respect_retry_after,
         )
+        robots_policy = fetch_robots_policy(
+            start_url=scope.start_url,
+            session=None,
+            headers={"User-Agent": user_agent},
+            timeout=timeout,
+            limiter=rate_limiter,
+            enabled=False,
+            respect_robots=respect_robots,
+            robots_user_agent=robots_user_agent,
+        )
+        client_session = None
+        if robots or sitemap:
+            import requests
+
+            client_session = requests.Session()
+        if robots:
+            robots_policy = fetch_robots_policy(
+                start_url=scope.start_url,
+                session=client_session,
+                headers={"User-Agent": user_agent},
+                timeout=timeout,
+                limiter=rate_limiter,
+                enabled=True,
+                respect_robots=respect_robots,
+                robots_user_agent=robots_user_agent,
+            )
+        web_sitemap_result = discover_sitemaps(
+            start_url=scope.start_url,
+            session=client_session,
+            headers={"User-Agent": user_agent},
+            timeout=timeout,
+            limiter=rate_limiter,
+            scope=scope,
+            robots_policy=robots_policy if robots else None,
+            explicit_sitemap_urls=sitemap_url,
+            enabled=sitemap,
+            use_sitemap_for_crawl=use_sitemap_for_crawl,
+            max_sitemap_urls=max_sitemap_urls,
+            max_sitemap_depth=max_sitemap_depth,
+        )
         passive_summary_only = passive_summary and not _any_explicit_web_module_flag()
         effective_headers = headers or passive_summary_only
         effective_cookies = cookies or passive_summary_only
@@ -880,8 +984,11 @@ def web_scan(
             max_depth=max_depth,
             timeout=timeout,
             user_agent=user_agent,
+            session=client_session,
             scope=scope,
             rate_limiter=rate_limiter,
+            robots_policy=robots_policy if robots else None,
+            seed_urls=web_sitemap_result.get("crawl_urls", []),
         )
         web_header_result = (
             audit_web_headers(web_result.get("crawled_pages", []))
@@ -921,13 +1028,19 @@ def web_scan(
             + list(web_header_result.get("findings", []))
             + list(web_cookie_result.get("findings", []))
             + list(web_form_result.get("findings", []))
+            + list(web_sitemap_result.get("findings", []))
         )
         web_scope_summary = web_result.get("web_scope_summary", scope.summary())
         web_politeness_summary = web_result.get("web_politeness_summary", rate_limiter.summary())
+        web_robots_summary = robots_policy.summary()
+        web_sitemap_summary = web_sitemap_result.get("web_sitemap_summary", {"enabled": False, "status": "skipped"})
+        web_sitemap_results = list(web_sitemap_result.get("web_sitemap_results", []))
+        web_sitemap_url_samples = list(web_sitemap_result.get("web_sitemap_url_samples", []))
         skipped_url_samples = list(web_result.get("skipped_url_samples", []))
         request_error_samples = list(web_result.get("request_error_samples", []))
         all_web_findings.extend(build_scope_findings(web_scope_summary, skipped_url_samples))
         all_web_findings.extend(build_politeness_findings(web_politeness_summary))
+        all_web_findings.extend(build_robots_findings(web_robots_summary))
         web_passive_summary = {"enabled": False, "status": "skipped"}
         if passive_summary:
             web_passive_summary = build_web_passive_summary(
@@ -980,6 +1093,10 @@ def web_scan(
         "web_passive_summary": web_passive_summary,
         "web_scope_summary": web_scope_summary,
         "web_politeness_summary": web_politeness_summary,
+        "web_robots_summary": web_robots_summary,
+        "web_sitemap_summary": web_sitemap_summary,
+        "web_sitemap_results": web_sitemap_results,
+        "web_sitemap_url_samples": web_sitemap_url_samples,
         "skipped_url_samples": skipped_url_samples,
         "request_error_samples": request_error_samples,
         "crawled_pages": web_result["crawled_pages"],
@@ -994,6 +1111,10 @@ def web_scan(
     _print_web_scan_summary(summary)
     _print_web_scope_summary(scan_result["web_scope_summary"])
     _print_web_politeness_summary(scan_result["web_politeness_summary"])
+    if robots:
+        _print_web_robots_summary(scan_result["web_robots_summary"])
+    if sitemap:
+        _print_web_sitemap_summary(scan_result["web_sitemap_summary"])
     if effective_headers:
         _print_web_header_summary(scan_result["web_header_summary"])
     if effective_headers or effective_cookies:
@@ -1552,6 +1673,7 @@ def _print_web_scope_summary(summary: dict[str, Any]) -> None:
         ("Skipped duplicates", str(summary.get("skipped_duplicates_count") or 0)),
         ("Skipped depth limit", str(summary.get("skipped_depth_limit_count") or 0)),
         ("Skipped page limit", str(summary.get("skipped_page_limit_count") or 0)),
+        ("Skipped by robots", str(summary.get("skipped_by_robots_count") or 0)),
         ("Total skipped URLs", str(summary.get("total_skipped_urls") or 0)),
     ]
     for label, value in rows:
@@ -1581,6 +1703,31 @@ def _print_web_politeness_summary(summary: dict[str, Any]) -> None:
     console.print(table)
 
 
+def _print_web_robots_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+    table = Table(title="Robots.txt Awareness")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Robots URL", str(summary.get("robots_url") or "")),
+        ("Found", str(summary.get("robots_found"))),
+        ("Fetch status", str(summary.get("fetch_status") or "")),
+        ("HTTP status", str(summary.get("http_status_code") or 0)),
+        ("Respect robots", str(summary.get("respect_robots"))),
+        ("User-agent", str(summary.get("robots_user_agent") or "")),
+        ("Disallow rules", str(summary.get("disallow_rules_count") or 0)),
+        ("Allow rules", str(summary.get("allow_rules_count") or 0)),
+        ("Crawl-delay", "" if summary.get("crawl_delay") is None else str(summary.get("crawl_delay"))),
+        ("Sitemaps", str(len(summary.get("sitemap_urls") or []))),
+        ("URLs skipped by robots", str(summary.get("urls_skipped_by_robots") or 0)),
+        ("Limitations", "; ".join(str(item) for item in summary.get("robots_limitations") or [])),
+    ]
+    for label, value in rows:
+        table.add_row(label, value)
+    console.print(table)
+
+
 def _effective_web_crawl(*, crawl: bool, headers: bool, cookies: bool, forms: bool) -> bool:
     if not headers and not cookies and not forms:
         return crawl
@@ -1594,7 +1741,7 @@ def _effective_web_crawl(*, crawl: bool, headers: bool, cookies: bool, forms: bo
 
 def _any_explicit_web_module_flag() -> bool:
     args = {arg.lower() for arg in sys.argv[1:]}
-    return bool(args & {"--crawl", "--no-crawl", "--headers", "--cookies", "--forms"})
+    return bool(args & {"--crawl", "--no-crawl", "--headers", "--cookies", "--forms", "--robots", "--sitemap"})
 
 
 def _print_web_header_summary(summary: dict[str, Any]) -> None:
@@ -1630,6 +1777,28 @@ def _print_web_cookie_summary(summary: dict[str, Any]) -> None:
         ("SameSite=None without Secure", str(summary.get("samesite_none_without_secure") or 0)),
         ("Persistent cookie issues", str(summary.get("persistent_cookie_issues") or 0)),
         ("Findings", str(summary.get("findings_count") or 0)),
+    ]
+    for label, value in rows:
+        table.add_row(label, value)
+    console.print(table)
+
+
+def _print_web_sitemap_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+    table = Table(title="Web Sitemap Discovery")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Enabled", str(summary.get("enabled"))),
+        ("Sitemap files fetched", str(summary.get("sitemap_urls_fetched") or 0)),
+        ("Sitemap indexes found", str(summary.get("sitemap_indexes_found") or 0)),
+        ("URL entries found", str(summary.get("url_entries_found") or 0)),
+        ("In-scope URLs", str(summary.get("in_scope_urls") or 0)),
+        ("Out-of-scope URLs", str(summary.get("out_of_scope_urls") or 0)),
+        ("URLs added to crawl", str(summary.get("urls_added_to_crawl") or 0)),
+        ("Failed sitemaps", str(summary.get("sitemap_urls_failed") or 0)),
+        ("Limitations", "; ".join(str(item) for item in summary.get("limitations") or [])),
     ]
     for label, value in rows:
         table.add_row(label, value)

@@ -118,10 +118,12 @@ def test_ignores_url_fragments() -> None:
 def test_tracks_skipped_reason_counts() -> None:
     scope = build_web_scope(start_url="https://example.test/")
     scope.record_skip(url="https://other.test/", reason="skipped_external_host", source_url="https://example.test/", depth=1)
+    scope.record_skip(url="https://example.test/private", reason="skipped_by_robots", source_url="https://example.test/", depth=1)
     summary = scope.summary()
 
     assert summary["skipped_external_hosts_count"] == 1
-    assert summary["total_skipped_urls"] == 1
+    assert summary["skipped_by_robots_count"] == 1
+    assert summary["total_skipped_urls"] == 2
     assert scope.skipped_url_samples[0]["reason"] == "skipped_external_host"
 
 

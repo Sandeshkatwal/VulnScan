@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, and rate limiting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, and sitemap discovery, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 Version 12.6 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, opt-in Windows Firewall and Microsoft Defender status collection, opt-in local security policy indicators from `net accounts`, and narrow template-based registry indicators using explicitly provided credentials.
 
 ## Requirements
@@ -96,6 +96,10 @@ Version 13.5 adds Web DAST scope and allowlist controls. Same-host crawling rema
 
 Version 13.6 adds rate limiting and politeness controls. The default request delay is `0.5` seconds, `Retry-After` is respected by default, and VulScan stops crawling after too many request errors. Reports include `web_politeness_summary` and capped request error samples. This remains passive scanning only.
 
+Version 13.7 adds robots.txt awareness with `--robots`. robots.txt is advisory and is not authorisation to scan. `--respect-robots` is the default when robots awareness is enabled; use `--no-respect-robots` only when written permission explicitly allows it. Sitemaps found in robots.txt must still remain within configured scope.
+
+Version 13.8 adds sitemap discovery with `--sitemap`. Sitemap discovery is passive and does not grant authorisation. VulScan can parse robots.txt sitemap references, common same-origin sitemap paths, and explicit `--sitemap-url` values, but all sitemap URLs are filtered by scope and robots controls when enabled. Sitemap-assisted crawling is off by default and requires `--use-sitemap-for-crawl`; max pages, max depth, scope, robots, and rate limits still apply.
+
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl --max-pages 10 --max-depth 1 --json --html
@@ -110,6 +114,13 @@ Version 13.6 adds rate limiting and politeness controls. The default request del
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --request-delay 1
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --max-requests-per-minute 30 --retry-limit 1 --max-errors 5
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --request-delay 1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --robots
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --respect-robots --max-pages 10 --max-depth 1
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --no-respect-robots --headers --cookies --forms --passive-summary --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --sitemap
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --robots --sitemap
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --sitemap --sitemap-url https://example.com/sitemap.xml
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --sitemap --use-sitemap-for-crawl --max-pages 20 --max-depth 1 --json --html
 ```
 
 You can also use the helper script:

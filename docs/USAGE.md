@@ -285,6 +285,27 @@ Version 13.6 adds Web DAST rate limiting and politeness controls:
 
 The default request delay is `0.5` seconds and the default cap is `60` requests per minute. `--retry-limit` defaults to `1`, `--retry-backoff` defaults to `2.0`, and `--max-errors` defaults to `10`. VulScan respects `Retry-After` by default and records `web_politeness_summary` plus capped `request_error_samples` in JSON and HTML reports. This is still passive scanning only; tune limits only within written authorisation.
 
+Version 13.7 adds robots.txt awareness:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --robots
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --respect-robots --max-pages 10 --max-depth 1
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --no-respect-robots --headers --cookies --forms --passive-summary --json --html
+```
+
+When `--robots` is enabled, VulScan fetches `robots.txt` once from the start URL origin and reports `web_robots_summary`. `--respect-robots` is the default, so disallowed URLs are skipped and counted in scope data. `--no-respect-robots` reports robots guidance without enforcing it and should be used only when written authorisation explicitly allows it. robots.txt is advisory, is not authorisation, and sitemap URLs must still remain in scope.
+
+Version 13.8 adds passive sitemap discovery:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --sitemap
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --robots --sitemap
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --sitemap --sitemap-url https://example.com/sitemap.xml
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --sitemap --use-sitemap-for-crawl --max-pages 20 --max-depth 1 --json --html
+```
+
+Sitemap discovery checks robots.txt sitemap references, common same-origin sitemap paths, and explicit `--sitemap-url` values. Sitemaps do not grant authorisation; all sitemap files and URL entries are filtered by scope, and robots rules still apply when enabled. Sitemap-assisted crawling is off by default and requires `--use-sitemap-for-crawl`. It remains passive discovery only and does not add SQL injection, XSS, form submission, authentication, fuzzing, or exploitability testing.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.

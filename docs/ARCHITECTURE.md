@@ -21,7 +21,9 @@ Vulnerability Scanner
 │   ├── Cookie checker
 │   ├── Passive risk summary
 │   ├── Scope controls
-│   └── Rate limiting and politeness
+│   ├── Rate limiting and politeness
+│   ├── robots.txt awareness
+│   └── Sitemap discovery
 ├── Vulnerability Intelligence Engine
 │   ├── CVE database
 │   ├── CVSS score
@@ -61,6 +63,8 @@ Vulnerability Scanner
 - Consolidated passive Web DAST risk summary.
 - Web DAST scope and allowlist controls.
 - Web DAST rate limiting, retry limits, Retry-After handling, and max-error controls.
+- Web DAST robots.txt awareness.
+- Web DAST sitemap discovery.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -155,5 +159,9 @@ Version 13.4 adds `scanner.web_passive_summary`, a consolidated passive Web DAST
 Version 13.5 adds `scanner.web_scope`, a scope decision layer used by the Web DAST crawler and passive checks. Same-host scope remains the default, external domains are skipped unless explicitly allowed, and users can configure repeated `--allow-host`, `--deny-host`, `--allow-path`, and `--deny-path` rules plus opt-in `--include-subdomains`. The crawler records skipped URL counts and capped samples under `web_scope_summary` and `skipped_url_samples`, and emits concise standard findings with source `web_scope`. Scope controls are intended to make authorised boundaries explicit before future active testing; they do not add exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
 
 Version 13.6 adds `scanner.web_rate_limit`, a shared polite request layer for Web DAST. It validates request delay, request-per-minute, retry, backoff, and maximum-error settings; applies pacing before each safe GET request; retries only bounded safe GET failures for timeout, connection error, HTTP 429, and HTTP 503; respects `Retry-After` by default; and stops the crawl when the configured error threshold is reached. Results are reported under `web_politeness_summary` and capped `request_error_samples`, with concise standard findings using source `web_rate_limit`. Header, cookie, form, and passive summary analysis continue to reuse crawler page data and do not add extra requests.
+
+Version 13.7 adds `scanner.web_robots`, an advisory robots.txt awareness layer. When `web-scan --robots` is used, VulScan fetches `/robots.txt` once from the start URL origin through the existing safe request wrapper, parses it with standard-library robot parsing plus safe summary extraction, and reports `web_robots_summary`. `--respect-robots` is the default when enabled, so disallowed URLs are skipped and counted as `skipped_by_robots` in the scope summary. `--no-respect-robots` reports robots guidance without enforcing it and emits a standard informational finding. robots.txt is never treated as authorisation and does not add active testing, exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
+
+Version 13.8 adds `scanner.web_sitemap`, a passive sitemap discovery layer. When `web-scan --sitemap` is used, VulScan discovers sitemap files from robots.txt `Sitemap` lines, common same-origin sitemap paths, and repeated `--sitemap-url` values. Sitemap fetches use the shared safe request wrapper and rate limiter, XML parsing uses the Python standard library, and nested sitemap indexes are bounded by `--max-sitemap-depth` and `--max-sitemap-urls`. Sitemap URLs are never treated as authorisation; sitemap files and URL entries are filtered through `scanner.web_scope`, robots rules are respected when enabled, and sitemap-assisted crawling is disabled unless `--use-sitemap-for-crawl` is explicitly provided. Reports include `web_sitemap_summary`, `web_sitemap_results`, `web_sitemap_url_samples`, and concise standard findings with source `web_sitemap`. Version 13.8 does not add active testing, exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.
