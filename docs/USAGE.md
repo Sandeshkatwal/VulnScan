@@ -275,6 +275,16 @@ Version 13.5 adds Web DAST scope and allowlist controls:
 
 Same-host crawling remains the default. External domains are skipped unless explicitly allowed with `--allow-host` or, where authorised, `--include-subdomains`. `--deny-host` blocks specific hosts, `--allow-path` limits crawling and passive checks to path prefixes, and `--deny-path` blocks path prefixes. JSON and HTML reports include `web_scope_summary` and capped `skipped_url_samples`. Scope rules should be reviewed before deeper authorised testing.
 
+Version 13.6 adds Web DAST rate limiting and politeness controls:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --request-delay 1
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --max-requests-per-minute 30 --retry-limit 1 --max-errors 5
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --request-delay 1 --json --html
+```
+
+The default request delay is `0.5` seconds and the default cap is `60` requests per minute. `--retry-limit` defaults to `1`, `--retry-backoff` defaults to `2.0`, and `--max-errors` defaults to `10`. VulScan respects `Retry-After` by default and records `web_politeness_summary` plus capped `request_error_samples` in JSON and HTML reports. This is still passive scanning only; tune limits only within written authorisation.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.

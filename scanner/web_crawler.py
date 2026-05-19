@@ -138,6 +138,7 @@ def crawl_web(
     user_agent: str = DEFAULT_USER_AGENT,
     session: Any | None = None,
     scope: Any | None = None,
+    rate_limiter: Any | None = None,
 ) -> dict[str, Any]:
     """Run a safe same-host GET-only crawl."""
     started = perf_counter()
@@ -154,6 +155,10 @@ def crawl_web(
             max_pages=max_pages,
             max_depth=max_depth,
         )
+    if rate_limiter is None:
+        from scanner.web_rate_limit import build_web_rate_limiter
+
+        rate_limiter = build_web_rate_limiter()
     start_allowed, start_reason, normalized_start = scope.decide_url(normalized_start)
     if not start_allowed:
         scope.record_skip(url=normalized_start, reason=start_reason, source_url="", depth=0)
@@ -184,14 +189,15 @@ def crawl_web(
             continue
 
         try:
-            response_started = perf_counter()
-            response = client.get(
-                current_url,
+            from scanner.web_rate_limit import safe_get
+
+            request_result = safe_get(
+                session=client,
+                url=current_url,
                 headers=headers,
                 timeout=timeout,
-                allow_redirects=False,
+                limiter=rate_limiter,
             )
-            response_time = round(perf_counter() - response_started, 3)
         except Exception as exc:
             errors.append(
                 {
@@ -202,10 +208,27 @@ def crawl_web(
                 }
             )
             continue
+        if not request_result.get("success"):
+            errors.append(
+                {
+                    "url": current_url,
+                    "depth": depth,
+                    "error": request_result.get("error_code") or "WEB_HTTP_ERROR",
+                    "message": str(request_result.get("error_message") or "")[:200],
+                    "status_code": int(request_result.get("status_code") or 0),
+                    "retries_attempted": int(request_result.get("retries_attempted") or 0),
+                    "retry_after_observed": bool(request_result.get("retry_after_observed")),
+                }
+            )
+            if rate_limiter.max_errors_reached:
+                break
+            continue
 
-        content_type = str(response.headers.get("Content-Type") or response.headers.get("content-type") or "")
-        response_headers = _safe_response_headers(response.headers)
-        cookies = parse_set_cookie_headers(_header_values(response.headers, "Set-Cookie"), current_url)
+        response_time = float(request_result.get("elapsed_seconds") or 0.0)
+        raw_headers = request_result.get("headers") or {}
+        content_type = str(request_result.get("content_type") or raw_headers.get("Content-Type") or raw_headers.get("content-type") or "")
+        response_headers = _safe_response_headers(raw_headers)
+        cookies = parse_set_cookie_headers(_header_values(raw_headers, "Set-Cookie"), current_url)
         cookie_flags = [
             {
                 "secure": bool(cookie.get("secure")),
@@ -214,7 +237,7 @@ def crawl_web(
             }
             for cookie in cookies
         ]
-        html = str(response.text or "") if _is_html(content_type) else ""
+        html = str(request_result.get("text") or "") if _is_html(content_type) else ""
         parsed = _parse_html(current_url, html) if html else {"title": "", "links": [], "forms": []}
         page_forms = parsed["forms"]
         forms.extend(page_forms)
@@ -241,7 +264,7 @@ def crawl_web(
             WebPageResult(
                 url=current_url,
                 method="GET",
-                status_code=int(getattr(response, "status_code", 0) or 0),
+                status_code=int(request_result.get("status_code") or 0),
                 content_type=content_type,
                 title=str(parsed["title"]),
                 depth=depth,
@@ -278,6 +301,7 @@ def crawl_web(
         scope.record_skip(url=queued_url, reason="skipped_page_limit", source_url="", depth=queued_depth)
 
     scope_summary = scope.summary()
+    politeness_summary = rate_limiter.summary()
     summary = {
         "enabled": True,
         "start_url": start_url,
@@ -303,7 +327,9 @@ def crawl_web(
         "status": "success" if not errors else "partial",
         "web_scan_summary": summary,
         "web_scope_summary": scope_summary,
+        "web_politeness_summary": politeness_summary,
         "skipped_url_samples": list(scope.skipped_url_samples),
+        "request_error_samples": list(rate_limiter.request_error_samples),
         "crawled_pages": pages,
         "discovered_forms": forms,
         "errors": errors,

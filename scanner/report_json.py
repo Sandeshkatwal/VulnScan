@@ -81,7 +81,12 @@ def save_json_report(
             "web_scope_summary",
             {"enabled": False, "status": "skipped"},
         ),
+        "web_politeness_summary": scan_result.get(
+            "web_politeness_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
         "skipped_url_samples": scan_result.get("skipped_url_samples", []),
+        "request_error_samples": scan_result.get("request_error_samples", []),
         "crawled_pages": scan_result.get("crawled_pages", []),
         "discovered_forms": scan_result.get("discovered_forms", []),
         "web_findings": findings_to_dicts(scan_result.get("web_findings", [])),

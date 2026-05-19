@@ -554,6 +554,105 @@
       {% endif %}
       <p><strong>Scope limitations:</strong> {{ report.web_scope_summary.limitations | join("; ") }}</p>
       {% endif %}
+      {% if report.web_politeness_summary.enabled %}
+      <h3>Web DAST Politeness</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Request delay</th>
+            <th>Max requests/min</th>
+            <th>Retry limit</th>
+            <th>Retry backoff</th>
+            <th>Max errors</th>
+            <th>Respect Retry-After</th>
+            <th>Total requests</th>
+            <th>Retries</th>
+            <th>Throttled</th>
+            <th>Retry-After events</th>
+            <th>Errors</th>
+            <th>Max errors reached</th>
+            <th>Total sleep</th>
+            <th>Average interval</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_politeness_summary.request_delay_seconds }} seconds</td>
+            <td>{{ report.web_politeness_summary.max_requests_per_minute }}</td>
+            <td>{{ report.web_politeness_summary.retry_limit }}</td>
+            <td>{{ report.web_politeness_summary.retry_backoff }}</td>
+            <td>{{ report.web_politeness_summary.max_errors }}</td>
+            <td>{{ report.web_politeness_summary.respect_retry_after }}</td>
+            <td>{{ report.web_politeness_summary.total_requests }}</td>
+            <td>{{ report.web_politeness_summary.retries_attempted }}</td>
+            <td>{{ report.web_politeness_summary.throttled_requests }}</td>
+            <td>{{ report.web_politeness_summary.retry_after_events }}</td>
+            <td>{{ report.web_politeness_summary.request_errors }}</td>
+            <td>{{ report.web_politeness_summary.max_errors_reached }}</td>
+            <td>{{ report.web_politeness_summary.total_sleep_time_seconds }} seconds</td>
+            <td>{{ report.web_politeness_summary.average_request_interval_seconds }} seconds</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Request Error Samples</h3>
+      {% if report.request_error_samples %}
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Status</th>
+            <th>Error code</th>
+            <th>Error message</th>
+            <th>Retries</th>
+            <th>Retry-After</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sample in report.request_error_samples %}
+          <tr>
+            <td>{{ sample.url }}</td>
+            <td>{{ sample.status_code }}</td>
+            <td>{{ sample.error_code }}</td>
+            <td>{{ sample.error_message }}</td>
+            <td>{{ sample.retries_attempted }}</td>
+            <td>{{ sample.retry_after_observed }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No request error samples were recorded.</p>
+      {% endif %}
+      <h3>Politeness Findings</h3>
+      {% set politeness_findings = report.web_findings | selectattr("source", "equalto", "web_rate_limit") | list %}
+      {% if politeness_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Evidence</th>
+            <th>Recommendation</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in politeness_findings %}
+          <tr>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.recommendation }}</td>
+            <td>{{ finding.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No politeness findings were recorded.</p>
+      {% endif %}
+      <p><strong>Politeness limitations:</strong> {{ report.web_politeness_summary.limitations | join("; ") }}</p>
+      {% endif %}
       {% if report.web_passive_summary.enabled %}
       <h3>Web Passive Risk Overview</h3>
       <div class="risk-card">

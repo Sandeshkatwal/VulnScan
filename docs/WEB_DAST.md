@@ -12,6 +12,8 @@ Version 13.4 adds a passive web risk summary that consolidates crawler, header, 
 
 Version 13.5 adds web scope and allowlist controls for crawler and passive checks.
 
+Version 13.6 adds rate limiting, retry limits, backoff, Retry-After handling, and max-error politeness controls.
+
 Use it only on web applications you own or have explicit permission to assess.
 
 ## What It Does
@@ -33,6 +35,8 @@ Use it only on web applications you own or have explicit permission to assess.
 - Stores input names and types only, never input values or hidden values.
 - Optionally builds a consolidated passive risk overview with `--passive-summary`.
 - Applies explicit scope controls for allowed hosts, denied hosts, allowed paths, denied paths, and subdomain inclusion.
+- Applies request pacing and request-per-minute limits to Web DAST HTTP requests.
+- Reuses fetched page data for header, cookie, form, and passive summary analysis.
 
 ## What It Does Not Do
 
@@ -137,6 +141,14 @@ Restrict crawling and passive checks to authorised path prefixes while denying s
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --allow-path /docs --deny-path /logout --headers --cookies --forms --passive-summary --json --html
 ```
 
+Use Version 13.6 politeness controls:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --request-delay 1
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --max-requests-per-minute 30 --retry-limit 1 --max-errors 5
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --request-delay 1 --json --html
+```
+
 ## Report Fields
 
 JSON and HTML reports include:
@@ -154,6 +166,8 @@ JSON and HTML reports include:
 - `web_passive_summary` when `--passive-summary` is used
 - `web_scope_summary`
 - `skipped_url_samples`
+- `web_politeness_summary`
+- `request_error_samples`
 - top-level `findings`
 
 Each page result includes URL, method, status code, content type, title, depth, response time, link count, form count, internal links, external links, and forms.
@@ -206,6 +220,8 @@ With `--passive-summary`, VulScan emits a standard informational finding for sum
 
 With Version 13.5 scope controls, VulScan emits concise scope findings for scope application, external URLs skipped by default, and URLs skipped by deny rules. It does not emit one finding per skipped URL.
 
+With Version 13.6 politeness controls, VulScan emits concise findings for applied rate limits, maximum-error stops, and observed Retry-After handling. It does not emit one finding per request.
+
 These findings are discovery and review indicators. They do not prove a vulnerability by themselves.
 
 ## Passive Risk Summary
@@ -219,6 +235,12 @@ The rating is High when any high web finding exists, Medium when no high exists 
 Version 13.5 keeps the start URL host in scope by default and skips external domains unless explicitly authorised. `--same-host-only` is true by default. Use `--allow-host` to add specific authorised hosts, `--deny-host` to block specific hosts, `--allow-path` to limit crawling and passive checks to path prefixes, and `--deny-path` to block path prefixes such as logout or destructive administrative routes. Use `--include-subdomains` only when subdomains of the start domain are in scope.
 
 Scope decisions are recorded in `web_scope_summary`, including counts for external hosts, denied hosts, denied paths, paths outside allow rules, static files, unsupported schemes, duplicates, depth limits, and page limits. Up to 100 skipped URL samples are stored for review. Scope controls are required before any future active testing and must reflect explicit authorisation.
+
+## Rate Limiting And Politeness
+
+Version 13.6 defaults to a 0.5 second delay between Web DAST HTTP requests and a maximum of 60 requests per minute. Use `--request-delay` and `--max-requests-per-minute` to tune request volume according to written permission and target capacity. `--retry-limit` controls bounded safe GET retries, `--retry-backoff` controls retry delay, and `--max-errors` stops crawling when too many request errors occur.
+
+`--respect-retry-after` is enabled by default. When a target returns `Retry-After` with a retryable response such as HTTP 429 or 503, VulScan waits up to a safe cap before retrying. Politeness runtime data is recorded in `web_politeness_summary`, and up to 20 request error samples are included as `request_error_samples`. This remains passive scanning only.
 
 ## Cookie Value Handling
 

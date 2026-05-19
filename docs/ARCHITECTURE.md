@@ -20,7 +20,8 @@ Vulnerability Scanner
 │   ├── Form discovery
 │   ├── Cookie checker
 │   ├── Passive risk summary
-│   └── Scope controls
+│   ├── Scope controls
+│   └── Rate limiting and politeness
 ├── Vulnerability Intelligence Engine
 │   ├── CVE database
 │   ├── CVSS score
@@ -59,6 +60,7 @@ Vulnerability Scanner
 - Passive Web DAST form discovery and classification.
 - Consolidated passive Web DAST risk summary.
 - Web DAST scope and allowlist controls.
+- Web DAST rate limiting, retry limits, Retry-After handling, and max-error controls.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -151,5 +153,7 @@ Version 13.3 adds `scanner.web_form_audit`, an enhanced form discovery layer ove
 Version 13.4 adds `scanner.web_passive_summary`, a consolidated passive Web DAST overview. `web-scan --passive-summary` combines available crawler, header, cookie, and form indicators into `web_passive_summary`, grouped severity indicators, a highest web risk, passive risk rating, recommended next steps, and limitations. When used alone it fetches only the start URL and runs safe passive checks for headers, cookies, and basic form discovery. It does not crawl beyond the start URL unless `--crawl` is provided, submit forms, authenticate, send payloads, fuzz, test SQL injection, test XSS, or prove exploitability.
 
 Version 13.5 adds `scanner.web_scope`, a scope decision layer used by the Web DAST crawler and passive checks. Same-host scope remains the default, external domains are skipped unless explicitly allowed, and users can configure repeated `--allow-host`, `--deny-host`, `--allow-path`, and `--deny-path` rules plus opt-in `--include-subdomains`. The crawler records skipped URL counts and capped samples under `web_scope_summary` and `skipped_url_samples`, and emits concise standard findings with source `web_scope`. Scope controls are intended to make authorised boundaries explicit before future active testing; they do not add exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
+
+Version 13.6 adds `scanner.web_rate_limit`, a shared polite request layer for Web DAST. It validates request delay, request-per-minute, retry, backoff, and maximum-error settings; applies pacing before each safe GET request; retries only bounded safe GET failures for timeout, connection error, HTTP 429, and HTTP 503; respects `Retry-After` by default; and stops the crawl when the configured error threshold is reached. Results are reported under `web_politeness_summary` and capped `request_error_samples`, with concise standard findings using source `web_rate_limit`. Header, cookie, form, and passive summary analysis continue to reuse crawler page data and do not add extra requests.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

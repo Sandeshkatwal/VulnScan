@@ -15,6 +15,8 @@ WEB_SOURCES = {
     "web_header_audit",
     "web_cookie_audit",
     "web_form_audit",
+    "web_scope",
+    "web_rate_limit",
     SOURCE,
 }
 SUMMARY_LIMITATIONS = [

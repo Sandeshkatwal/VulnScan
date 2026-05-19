@@ -57,6 +57,12 @@ from scanner.web_passive_summary import (
     build_web_passive_summary,
     build_web_passive_summary_findings,
 )
+from scanner.web_rate_limit import (
+    WebRateLimitConfigurationError,
+    build_politeness_findings,
+    build_web_rate_limiter,
+    validate_web_politeness_options,
+)
 from scanner.web_scope import build_scope_findings, build_web_scope
 from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
 from scanner.windows_audit_profiles import (
@@ -670,6 +676,48 @@ def web_scan(
             help="Per-request timeout in seconds.",
         ),
     ] = 10.0,
+    request_delay: Annotated[
+        float,
+        typer.Option(
+            "--request-delay",
+            help="Seconds to wait between HTTP requests. Valid range: 0 to 30.",
+        ),
+    ] = 0.5,
+    max_requests_per_minute: Annotated[
+        int,
+        typer.Option(
+            "--max-requests-per-minute",
+            help="Maximum Web DAST HTTP requests per minute. Valid range: 1 to 600.",
+        ),
+    ] = 60,
+    retry_limit: Annotated[
+        int,
+        typer.Option(
+            "--retry-limit",
+            help="Number of safe retries for transient GET request errors. Valid range: 0 to 5.",
+        ),
+    ] = 1,
+    retry_backoff: Annotated[
+        float,
+        typer.Option(
+            "--retry-backoff",
+            help="Seconds multiplier used for retry delay. Valid range: 0 to 60.",
+        ),
+    ] = 2.0,
+    max_errors: Annotated[
+        int,
+        typer.Option(
+            "--max-errors",
+            help="Stop the web crawl when this many request errors occur. Valid range: 1 to 100.",
+        ),
+    ] = 10,
+    respect_retry_after: Annotated[
+        bool,
+        typer.Option(
+            "--respect-retry-after/--no-respect-retry-after",
+            help="Respect Retry-After headers when retrying throttled responses.",
+        ),
+    ] = True,
     user_agent: Annotated[
         str,
         typer.Option(
@@ -781,6 +829,18 @@ def web_scan(
     )
 
     try:
+        validate_web_politeness_options(
+            request_delay=request_delay,
+            max_requests_per_minute=max_requests_per_minute,
+            retry_limit=retry_limit,
+            retry_backoff=retry_backoff,
+            max_errors=max_errors,
+        )
+    except WebRateLimitConfigurationError as exc:
+        console.print(f"[red]Web DAST politeness configuration error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    try:
         scan_start_time = datetime.now().astimezone()
         scope = build_web_scope(
             start_url=url,
@@ -795,6 +855,14 @@ def web_scan(
         )
         if show_scope:
             _print_web_scope_summary(scope.summary())
+        rate_limiter = build_web_rate_limiter(
+            request_delay=request_delay,
+            max_requests_per_minute=max_requests_per_minute,
+            retry_limit=retry_limit,
+            retry_backoff=retry_backoff,
+            max_errors=max_errors,
+            respect_retry_after=respect_retry_after,
+        )
         passive_summary_only = passive_summary and not _any_explicit_web_module_flag()
         effective_headers = headers or passive_summary_only
         effective_cookies = cookies or passive_summary_only
@@ -813,6 +881,7 @@ def web_scan(
             timeout=timeout,
             user_agent=user_agent,
             scope=scope,
+            rate_limiter=rate_limiter,
         )
         web_header_result = (
             audit_web_headers(web_result.get("crawled_pages", []))
@@ -854,8 +923,11 @@ def web_scan(
             + list(web_form_result.get("findings", []))
         )
         web_scope_summary = web_result.get("web_scope_summary", scope.summary())
+        web_politeness_summary = web_result.get("web_politeness_summary", rate_limiter.summary())
         skipped_url_samples = list(web_result.get("skipped_url_samples", []))
+        request_error_samples = list(web_result.get("request_error_samples", []))
         all_web_findings.extend(build_scope_findings(web_scope_summary, skipped_url_samples))
+        all_web_findings.extend(build_politeness_findings(web_politeness_summary))
         web_passive_summary = {"enabled": False, "status": "skipped"}
         if passive_summary:
             web_passive_summary = build_web_passive_summary(
@@ -907,7 +979,9 @@ def web_scan(
         "web_form_results": web_form_result["web_form_results"],
         "web_passive_summary": web_passive_summary,
         "web_scope_summary": web_scope_summary,
+        "web_politeness_summary": web_politeness_summary,
         "skipped_url_samples": skipped_url_samples,
+        "request_error_samples": request_error_samples,
         "crawled_pages": web_result["crawled_pages"],
         "discovered_forms": web_result["discovered_forms"],
         "web_findings": web_findings,
@@ -919,6 +993,7 @@ def web_scan(
 
     _print_web_scan_summary(summary)
     _print_web_scope_summary(scan_result["web_scope_summary"])
+    _print_web_politeness_summary(scan_result["web_politeness_summary"])
     if effective_headers:
         _print_web_header_summary(scan_result["web_header_summary"])
     if effective_headers or effective_cookies:
@@ -1478,6 +1553,28 @@ def _print_web_scope_summary(summary: dict[str, Any]) -> None:
         ("Skipped depth limit", str(summary.get("skipped_depth_limit_count") or 0)),
         ("Skipped page limit", str(summary.get("skipped_page_limit_count") or 0)),
         ("Total skipped URLs", str(summary.get("total_skipped_urls") or 0)),
+    ]
+    for label, value in rows:
+        table.add_row(label, value)
+    console.print(table)
+
+
+def _print_web_politeness_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+    table = Table(title="Web DAST Politeness")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Request delay", f"{summary.get('request_delay_seconds') or 0} seconds"),
+        ("Max requests per minute", str(summary.get("max_requests_per_minute") or 0)),
+        ("Total requests", str(summary.get("total_requests") or 0)),
+        ("Retries attempted", str(summary.get("retries_attempted") or 0)),
+        ("Throttled requests", str(summary.get("throttled_requests") or 0)),
+        ("Request errors", str(summary.get("request_errors") or 0)),
+        ("Max errors reached", str(summary.get("max_errors_reached"))),
+        ("Total sleep time", f"{summary.get('total_sleep_time_seconds') or 0} seconds"),
+        ("Retry-After events", str(summary.get("retry_after_events") or 0)),
     ]
     for label, value in rows:
         table.add_row(label, value)
