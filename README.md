@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, and risk summary, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, and scope controls, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 Version 12.6 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, opt-in Windows Firewall and Microsoft Defender status collection, opt-in local security policy indicators from `net accounts`, and narrow template-based registry indicators using explicitly provided credentials.
 
 ## Requirements
@@ -92,6 +92,8 @@ Version 13.3 improves form discovery with `--forms`. Forms are mapped and classi
 
 Version 13.4 adds `--passive-summary`, which consolidates crawler, header, cookie, and form indicators into a passive web risk overview. Used alone, it fetches only the start URL and runs safe passive header, cookie, and basic form discovery checks. It does not submit forms, authenticate, test SQL injection, test XSS, send payloads, fuzz, crawl external domains, or prove exploitability.
 
+Version 13.5 adds Web DAST scope and allowlist controls. Same-host crawling remains the default, external domains are skipped unless explicitly allowed, and reports include `web_scope_summary` plus capped skipped URL samples. Use `--allow-host`, `--deny-host`, `--allow-path`, `--deny-path`, `--include-subdomains`, and `--show-scope` to make authorised boundaries explicit before deeper testing.
+
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl --max-pages 10 --max-depth 1 --json --html
@@ -100,6 +102,9 @@ Version 13.4 adds `--passive-summary`, which consolidates crawler, header, cooki
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --passive-summary
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --max-pages 10 --max-depth 1 --json --html
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --show-scope
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --allow-host www.example.com --max-pages 10
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --allow-path /docs --deny-path /logout --headers --cookies --forms --passive-summary --json --html
 ```
 
 You can also use the helper script:

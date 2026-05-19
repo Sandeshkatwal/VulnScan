@@ -137,6 +137,7 @@ def crawl_web(
     timeout: float = 10.0,
     user_agent: str = DEFAULT_USER_AGENT,
     session: Any | None = None,
+    scope: Any | None = None,
 ) -> dict[str, Any]:
     """Run a safe same-host GET-only crawl."""
     started = perf_counter()
@@ -145,26 +146,41 @@ def crawl_web(
     if parsed_start.scheme not in {"http", "https"} or not parsed_start.netloc:
         raise ValueError("--url must be an absolute http or https URL.")
 
+    if scope is None:
+        from scanner.web_scope import build_web_scope
+
+        scope = build_web_scope(
+            start_url=normalized_start,
+            max_pages=max_pages,
+            max_depth=max_depth,
+        )
+    start_allowed, start_reason, normalized_start = scope.decide_url(normalized_start)
+    if not start_allowed:
+        scope.record_skip(url=normalized_start, reason=start_reason, source_url="", depth=0)
+        raise ValueError(f"Start URL is outside the configured Web DAST scope: {start_reason}.")
+
     allowed_host = parsed_start.netloc.lower()
     client = session or requests.Session()
     headers = {"User-Agent": user_agent}
     queue: deque[tuple[str, int]] = deque([(normalized_start, 0)])
     queued = {normalized_start}
     visited: set[str] = set()
-    skipped: set[str] = set()
     pages: list[dict[str, Any]] = []
     forms: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
     unique_internal_links: set[str] = set()
     unique_external_links: set[str] = set()
 
-    while queue and len(pages) < max(1, int(max_pages)):
+    page_limit = max(1, int(max_pages))
+    depth_limit = int(max_depth)
+    while queue and len(pages) < page_limit:
         current_url, depth = queue.popleft()
         if current_url in visited:
+            scope.record_skip(url=current_url, reason="skipped_duplicate", source_url=current_url, depth=depth)
             continue
         visited.add(current_url)
-        if depth > max_depth:
-            skipped.add(current_url)
+        if depth > depth_limit:
+            scope.record_skip(url=current_url, reason="skipped_depth_limit", source_url=current_url, depth=depth)
             continue
 
         try:
@@ -199,13 +215,27 @@ def crawl_web(
             for cookie in cookies
         ]
         html = str(response.text or "") if _is_html(content_type) else ""
-        parsed = _parse_html(current_url, html) if html else {"title": "", "internal_links": [], "external_links": [], "forms": []}
+        parsed = _parse_html(current_url, html) if html else {"title": "", "links": [], "forms": []}
         page_forms = parsed["forms"]
         forms.extend(page_forms)
-        internal_links = list(parsed["internal_links"])
-        external_links = list(parsed["external_links"])
-        unique_internal_links.update(internal_links)
-        unique_external_links.update(external_links)
+        internal_links: list[str] = []
+        external_links: list[str] = []
+        for link in parsed.get("links") or []:
+            allowed, reason, normalized_link = scope.decide_url(str(link), current_url)
+            if allowed:
+                if normalized_link not in internal_links:
+                    internal_links.append(normalized_link)
+                unique_internal_links.add(normalized_link)
+                continue
+            scope.record_skip(
+                url=normalized_link,
+                reason=reason,
+                source_url=current_url,
+                depth=depth + 1,
+            )
+            if reason == "skipped_external_host" and normalized_link not in external_links:
+                external_links.append(normalized_link)
+                unique_external_links.add(normalized_link)
 
         pages.append(
             WebPageResult(
@@ -227,16 +257,27 @@ def crawl_web(
             ).to_dict()
         )
 
-        if not crawl or depth >= max_depth:
+        if not crawl:
+            continue
+        if depth >= depth_limit:
+            for link in internal_links:
+                scope.record_skip(url=link, reason="skipped_depth_limit", source_url=current_url, depth=depth + 1)
             continue
         for link in internal_links:
-            if len(queued) >= max_pages:
-                skipped.add(link)
+            if len(queued) >= page_limit:
+                scope.record_skip(url=link, reason="skipped_page_limit", source_url=current_url, depth=depth + 1)
                 continue
             if link not in queued and link not in visited:
                 queue.append((link, depth + 1))
                 queued.add(link)
+            else:
+                scope.record_skip(url=link, reason="skipped_duplicate", source_url=current_url, depth=depth + 1)
 
+    while queue:
+        queued_url, queued_depth = queue.popleft()
+        scope.record_skip(url=queued_url, reason="skipped_page_limit", source_url="", depth=queued_depth)
+
+    scope_summary = scope.summary()
     summary = {
         "enabled": True,
         "start_url": start_url,
@@ -245,7 +286,7 @@ def crawl_web(
         "max_pages": int(max_pages),
         "max_depth": int(max_depth),
         "pages_crawled": len(pages),
-        "pages_skipped": len(skipped),
+        "pages_skipped": int(scope_summary.get("total_skipped_urls") or 0),
         "unique_internal_links": len(unique_internal_links),
         "unique_external_links": len(unique_external_links),
         "forms_discovered": len(forms),
@@ -261,6 +302,8 @@ def crawl_web(
         "source": SOURCE,
         "status": "success" if not errors else "partial",
         "web_scan_summary": summary,
+        "web_scope_summary": scope_summary,
+        "skipped_url_samples": list(scope.skipped_url_samples),
         "crawled_pages": pages,
         "discovered_forms": forms,
         "errors": errors,
@@ -368,32 +411,21 @@ def _parse_html(page_url: str, html: str) -> dict[str, Any]:
     soup = BeautifulSoup(html, "html.parser")
     title_node = soup.find("title")
     title = " ".join(title_node.get_text(" ", strip=True).split()) if title_node else ""
-    internal_links: list[str] = []
-    external_links: list[str] = []
-    allowed_host = urlsplit(page_url).netloc.lower()
+    links: list[str] = []
     for anchor in soup.find_all("a"):
         href = str(anchor.get("href") or "").strip()
         if not href:
             continue
         normalized = normalize_url(href, page_url)
-        if should_skip_url(normalized):
-            continue
-        parts = urlsplit(normalized)
-        if parts.scheme not in {"http", "https"} or not parts.netloc:
-            continue
-        if parts.netloc.lower() == allowed_host:
-            if normalized not in internal_links:
-                internal_links.append(normalized)
-        elif normalized not in external_links:
-            external_links.append(normalized)
+        if normalized not in links:
+            links.append(normalized)
     forms = [
         _parse_form(page_url, form, page_title=title, index=index).to_dict()
         for index, form in enumerate(soup.find_all("form"), start=1)
     ]
     return {
         "title": title,
-        "internal_links": internal_links,
-        "external_links": external_links,
+        "links": links,
         "forms": forms,
     }
 

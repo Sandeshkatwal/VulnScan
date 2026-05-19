@@ -11,6 +11,8 @@ from scanner.web_crawler import (
     normalize_url,
     should_skip_url,
 )
+from scanner.web_header_audit import audit_web_headers
+from scanner.web_scope import build_web_scope
 
 
 @dataclass
@@ -151,6 +153,7 @@ def test_crawler_respects_max_pages() -> None:
 
     assert result["web_scan_summary"]["pages_crawled"] == 2
     assert len(session.get_calls) == 2
+    assert result["web_scope_summary"]["skipped_page_limit_count"] >= 1
 
 
 def test_crawler_respects_max_depth() -> None:
@@ -166,6 +169,55 @@ def test_crawler_respects_max_depth() -> None:
 
     assert "https://example.test/two" not in session.get_calls
     assert result["web_scan_summary"]["pages_crawled"] == 2
+    assert result["web_scope_summary"]["skipped_depth_limit_count"] >= 1
+
+
+def test_crawler_does_not_fetch_out_of_scope_urls() -> None:
+    session = FakeSession(
+        {
+            "https://example.test/docs": FakeResponse(
+                '<a href="/docs/page">Docs</a><a href="/admin">Admin</a><a href="https://other.test/page">Other</a>'
+            ),
+            "https://example.test/docs/page": FakeResponse("<title>Docs</title>"),
+        }
+    )
+    scope = build_web_scope(start_url="https://example.test/docs", allow_paths=["/docs"])
+
+    result = crawl_web(
+        start_url="https://example.test/docs",
+        max_pages=5,
+        max_depth=1,
+        session=session,
+        scope=scope,
+    )
+
+    assert "https://example.test/admin" not in session.get_calls
+    assert "https://other.test/page" not in session.get_calls
+    assert "https://example.test/docs/page" in session.get_calls
+    assert result["web_scope_summary"]["skipped_not_allowed_paths_count"] == 1
+    assert result["web_scope_summary"]["skipped_external_hosts_count"] == 1
+
+
+def test_passive_checks_use_only_in_scope_pages() -> None:
+    session = FakeSession(
+        {
+            "https://example.test/docs": FakeResponse('<a href="/docs/page">Docs</a><a href="/admin">Admin</a>'),
+            "https://example.test/docs/page": FakeResponse("<title>Docs</title>"),
+        }
+    )
+    scope = build_web_scope(start_url="https://example.test/docs", allow_paths=["/docs"])
+    crawl = crawl_web(
+        start_url="https://example.test/docs",
+        max_pages=5,
+        max_depth=1,
+        session=session,
+        scope=scope,
+    )
+
+    header_result = audit_web_headers(crawl["crawled_pages"])
+    checked_urls = {result["url"] for result in header_result["web_header_results"]}
+
+    assert checked_urls == {"https://example.test/docs", "https://example.test/docs/page"}
 
 
 def test_crawler_requires_absolute_http_url() -> None:

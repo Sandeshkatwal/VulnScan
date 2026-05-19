@@ -79,6 +79,11 @@ def save_html_report(
             "web_passive_summary",
             {"enabled": False, "status": "skipped"},
         ),
+        "web_scope_summary": scan_result.get(
+            "web_scope_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "skipped_url_samples": scan_result.get("skipped_url_samples", []),
         "crawled_pages": scan_result.get("crawled_pages", []),
         "discovered_forms": scan_result.get("discovered_forms", []),
         "web_findings": findings_to_dicts(scan_result.get("web_findings", [])),

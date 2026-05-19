@@ -438,6 +438,122 @@
 
     <section>
       <h2>Web DAST Report</h2>
+      {% if report.web_scope_summary.enabled %}
+      <h3>Web DAST Scope</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Start host</th>
+            <th>Same-host only</th>
+            <th>Include subdomains</th>
+            <th>Allowed hosts</th>
+            <th>Denied hosts</th>
+            <th>Allowed paths</th>
+            <th>Denied paths</th>
+            <th>Max pages</th>
+            <th>Max depth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_scope_summary.start_host }}</td>
+            <td>{{ report.web_scope_summary.same_host_only }}</td>
+            <td>{{ report.web_scope_summary.include_subdomains }}</td>
+            <td>{{ report.web_scope_summary.allowed_hosts | join(", ") }}</td>
+            <td>{{ report.web_scope_summary.denied_hosts | join(", ") }}</td>
+            <td>{{ report.web_scope_summary.allowed_paths | join(", ") }}</td>
+            <td>{{ report.web_scope_summary.denied_paths | join(", ") }}</td>
+            <td>{{ report.web_scope_summary.max_pages }}</td>
+            <td>{{ report.web_scope_summary.max_depth }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Skipped URL Counts</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>External hosts</th>
+            <th>Denied hosts</th>
+            <th>Denied paths</th>
+            <th>Not allowed paths</th>
+            <th>Static files</th>
+            <th>Unsupported schemes</th>
+            <th>Duplicates</th>
+            <th>Depth limit</th>
+            <th>Page limit</th>
+            <th>Total skipped</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_scope_summary.skipped_external_hosts_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_denied_hosts_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_denied_paths_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_not_allowed_paths_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_static_files_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_unsupported_schemes_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_duplicates_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_depth_limit_count }}</td>
+            <td>{{ report.web_scope_summary.skipped_page_limit_count }}</td>
+            <td>{{ report.web_scope_summary.total_skipped_urls }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Skipped URL Samples</h3>
+      {% if report.skipped_url_samples %}
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Reason</th>
+            <th>Source URL</th>
+            <th>Depth</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sample in report.skipped_url_samples %}
+          <tr>
+            <td>{{ sample.url }}</td>
+            <td>{{ sample.reason }}</td>
+            <td>{{ sample.source_url }}</td>
+            <td>{{ sample.depth }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No skipped URL samples were recorded.</p>
+      {% endif %}
+      <h3>Scope Findings</h3>
+      {% set scope_findings = report.web_findings | selectattr("source", "equalto", "web_scope") | list %}
+      {% if scope_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Evidence</th>
+            <th>Recommendation</th>
+            <th>Limitation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in scope_findings %}
+          <tr>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.evidence }}</td>
+            <td>{{ finding.recommendation }}</td>
+            <td>{{ finding.limitation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No scope findings were recorded.</p>
+      {% endif %}
+      <p><strong>Scope limitations:</strong> {{ report.web_scope_summary.limitations | join("; ") }}</p>
+      {% endif %}
       {% if report.web_passive_summary.enabled %}
       <h3>Web Passive Risk Overview</h3>
       <div class="risk-card">

@@ -265,6 +265,16 @@ Version 13.4 adds a consolidated passive web risk summary with `--passive-summar
 
 The summary combines available crawler, header, cookie, and form indicators into `web_passive_summary` and a Web Passive Risk Overview in HTML reports. If `--passive-summary` is used alone, VulScan fetches only the start URL, runs passive header and cookie checks, and performs basic form discovery on that page only. It does not submit forms, authenticate, test SQL injection, test XSS, send payloads, fuzz, crawl external domains, or prove exploitability. Use it to plan authorised deeper testing where in scope.
 
+Version 13.5 adds Web DAST scope and allowlist controls:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --show-scope
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --allow-host www.example.com --max-pages 10
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --allow-path /docs --deny-path /logout --headers --cookies --forms --passive-summary --json --html
+```
+
+Same-host crawling remains the default. External domains are skipped unless explicitly allowed with `--allow-host` or, where authorised, `--include-subdomains`. `--deny-host` blocks specific hosts, `--allow-path` limits crawling and passive checks to path prefixes, and `--deny-path` blocks path prefixes. JSON and HTML reports include `web_scope_summary` and capped `skipped_url_samples`. Scope rules should be reviewed before deeper authorised testing.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.

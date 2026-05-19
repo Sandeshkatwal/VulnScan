@@ -19,7 +19,8 @@ Vulnerability Scanner
 │   ├── Header checker
 │   ├── Form discovery
 │   ├── Cookie checker
-│   └── Passive risk summary
+│   ├── Passive risk summary
+│   └── Scope controls
 ├── Vulnerability Intelligence Engine
 │   ├── CVE database
 │   ├── CVSS score
@@ -57,6 +58,7 @@ Vulnerability Scanner
 - Value-free Web DAST cookie attribute audit.
 - Passive Web DAST form discovery and classification.
 - Consolidated passive Web DAST risk summary.
+- Web DAST scope and allowlist controls.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -147,5 +149,7 @@ Version 13.2 adds `scanner.web_cookie_audit`, a dedicated cookie attribute parse
 Version 13.3 adds `scanner.web_form_audit`, an enhanced form discovery layer over the crawler's parsed HTML form metadata. The crawler records form IDs, methods, action URLs, action hosts, HTTPS-to-HTTP submission indicators, input names/types, counts, CSRF-like field names, and sensitive-looking field-name indicators without storing input values or hidden values. `web-scan --forms` checks only the start URL unless `--crawl` is explicitly provided. Form findings are passive indicators for human review and do not submit forms, authenticate, send payloads, fuzz, or test SQL injection or XSS.
 
 Version 13.4 adds `scanner.web_passive_summary`, a consolidated passive Web DAST overview. `web-scan --passive-summary` combines available crawler, header, cookie, and form indicators into `web_passive_summary`, grouped severity indicators, a highest web risk, passive risk rating, recommended next steps, and limitations. When used alone it fetches only the start URL and runs safe passive checks for headers, cookies, and basic form discovery. It does not crawl beyond the start URL unless `--crawl` is provided, submit forms, authenticate, send payloads, fuzz, test SQL injection, test XSS, or prove exploitability.
+
+Version 13.5 adds `scanner.web_scope`, a scope decision layer used by the Web DAST crawler and passive checks. Same-host scope remains the default, external domains are skipped unless explicitly allowed, and users can configure repeated `--allow-host`, `--deny-host`, `--allow-path`, and `--deny-path` rules plus opt-in `--include-subdomains`. The crawler records skipped URL counts and capped samples under `web_scope_summary` and `skipped_url_samples`, and emits concise standard findings with source `web_scope`. Scope controls are intended to make authorised boundaries explicit before future active testing; they do not add exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.
