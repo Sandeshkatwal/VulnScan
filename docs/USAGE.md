@@ -306,6 +306,14 @@ Version 13.8 adds passive sitemap discovery:
 
 Sitemap discovery checks robots.txt sitemap references, common same-origin sitemap paths, and explicit `--sitemap-url` values. Sitemaps do not grant authorisation; all sitemap files and URL entries are filtered by scope, and robots rules still apply when enabled. Sitemap-assisted crawling is off by default and requires `--use-sitemap-for-crawl`. It remains passive discovery only and does not add SQL injection, XSS, form submission, authentication, fuzzing, or exploitability testing.
 
+Version 13.9 consolidates passive Web DAST reporting:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --sitemap --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --request-delay 1 --show-scope --json --html
+```
+
+The consolidated report adds `web_dast_summary` and `web_dast_sections` while keeping existing web report keys. It combines scope, politeness, robots, sitemap, crawler, headers, cookies, forms, and passive risk indicators into compact terminal, JSON, and HTML output. It does not add active vulnerability testing, does not submit forms, does not authenticate, does not test SQL injection or XSS, and does not prove exploitability. Written authorisation is still required before scanning or deeper testing.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.

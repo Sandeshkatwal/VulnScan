@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, and sitemap discovery, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, sitemap discovery, and consolidated passive Web DAST reporting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 Version 12.6 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, opt-in Windows Firewall and Microsoft Defender status collection, opt-in local security policy indicators from `net accounts`, and narrow template-based registry indicators using explicitly provided credentials.
 
 ## Requirements
@@ -100,6 +100,8 @@ Version 13.7 adds robots.txt awareness with `--robots`. robots.txt is advisory a
 
 Version 13.8 adds sitemap discovery with `--sitemap`. Sitemap discovery is passive and does not grant authorisation. VulScan can parse robots.txt sitemap references, common same-origin sitemap paths, and explicit `--sitemap-url` values, but all sitemap URLs are filtered by scope and robots controls when enabled. Sitemap-assisted crawling is off by default and requires `--use-sitemap-for-crawl`; max pages, max depth, scope, robots, and rate limits still apply.
 
+Version 13.9 consolidates passive Web DAST reporting into `web_dast_summary`, `web_dast_sections`, terminal output, JSON, and HTML. It combines scope, politeness, robots, sitemap, crawler, headers, cookies, forms, and passive risk indicators without adding active vulnerability testing. Passive findings are indicators, not proof of exploitability, and written authorisation is still required. Future safe active checks should only be added after scope and report controls remain stable.
+
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl --max-pages 10 --max-depth 1 --json --html
@@ -121,6 +123,7 @@ Version 13.8 adds sitemap discovery with `--sitemap`. Sitemap discovery is passi
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --robots --sitemap
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --sitemap --sitemap-url https://example.com/sitemap.xml
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --sitemap --use-sitemap-for-crawl --max-pages 20 --max-depth 1 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --sitemap --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --request-delay 1 --show-scope --json --html
 ```
 
 You can also use the helper script:

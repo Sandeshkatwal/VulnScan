@@ -328,6 +328,44 @@ def test_json_report_includes_web_dast_fields(tmp_path) -> None:
                 "created_at": "2026-05-18T10:00:00+00:00",
             }
         ],
+        "web_dast_summary": {
+            "enabled": True,
+            "mode": "passive",
+            "start_url": "https://example.test/",
+            "normalized_start_url": "https://example.test/",
+            "allowed_host": "example.test",
+            "scan_profile": "passive",
+            "sections_enabled": ["web_crawler", "web_headers"],
+            "sections_completed": ["web_crawler", "web_headers"],
+            "sections_partial": [],
+            "sections_failed": [],
+            "total_duration_seconds": 0.2,
+            "total_requests": 1,
+            "pages_crawled": 1,
+            "forms_discovered": 1,
+            "cookies_observed": 0,
+            "sitemap_urls_found": 0,
+            "robots_found": "unknown",
+            "total_web_findings": 1,
+            "highest_web_risk_score": 0,
+            "highest_web_risk_label": "Informational",
+            "passive_risk_rating": "Informational",
+            "recommended_next_steps": ["Review and implement missing security headers."],
+            "limitations": ["Passive only."],
+        },
+        "web_dast_sections": [
+            {
+                "section_id": "web_headers",
+                "section_name": "Web Header Audit",
+                "source": "web_header_audit",
+                "status": "success",
+                "enabled": True,
+                "key_metrics": {"pages_checked": 1, "missing_headers": 1},
+                "findings_count": 1,
+                "duration_seconds": 0.0,
+                "limitations": ["Passive header checks only."],
+            }
+        ],
         "ssh_audit": {"enabled": False, "status": "skipped"},
         "ssh_audit_summary": {"enabled": False, "status": "skipped"},
         "windows_audit_summary": {"enabled": False, "status": "skipped"},
@@ -416,6 +454,8 @@ def test_json_report_includes_web_dast_fields(tmp_path) -> None:
     assert report["crawled_pages"][0]["title"] == "Home"
     assert report["discovered_forms"][0]["has_password_field"] is True
     assert report["web_findings"][0]["source"] == "web_crawler"
+    assert report["web_dast_summary"]["mode"] == "passive"
+    assert report["web_dast_sections"][0]["section_id"] == "web_headers"
     assert report["web_header_summary"]["missing_header_counts"]["Content-Security-Policy"] == 1
     assert report["web_header_results"][0]["missing_headers"] == ["Content-Security-Policy"]
     assert report["summary"]["total_web_findings"] == 1

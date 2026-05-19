@@ -436,6 +436,191 @@
       {% endif %}
     </section>
 
+    {% if report.web_dast_summary.enabled %}
+    <section>
+      <h2>Web DAST Passive Report</h2>
+      <h3>Web DAST Overview</h3>
+      <div class="risk-card">
+        <p><strong>Risk rating:</strong> {{ report.web_dast_summary.passive_risk_rating }}</p>
+        <p><strong>Start URL:</strong> {{ report.web_dast_summary.start_url }}</p>
+        <p><strong>Pages crawled:</strong> {{ report.web_dast_summary.pages_crawled }}</p>
+        <p><strong>Findings count:</strong> {{ report.web_dast_summary.total_web_findings }}</p>
+        <p><strong>Highest web risk:</strong> {{ report.web_dast_summary.highest_web_risk_score }} ({{ report.web_dast_summary.highest_web_risk_label }})</p>
+        <p><strong>Total requests:</strong> {{ report.web_dast_summary.total_requests }}</p>
+      </div>
+
+      <h3>Scope and Safety Controls</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Section</th>
+            <th>Status</th>
+            <th>Enabled</th>
+            <th>Key metrics</th>
+            <th>Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for section in report.web_dast_sections if section.section_id in ["web_scope", "web_politeness", "web_robots"] %}
+          <tr>
+            <td>{{ section.section_name }}</td>
+            <td>{{ section.status }}</td>
+            <td>{{ section.enabled }}</td>
+            <td>
+              {% for key, value in section.key_metrics.items() %}
+              <div><strong>{{ key | replace("_", " ") }}:</strong> {% if value is iterable and value is not string %}{{ value | join(", ") }}{% else %}{{ value }}{% endif %}</div>
+              {% endfor %}
+            </td>
+            <td>{{ section.findings_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3>Discovery Results</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Section</th>
+            <th>Status</th>
+            <th>Key metrics</th>
+            <th>Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for section in report.web_dast_sections if section.section_id in ["web_sitemap", "web_crawler"] %}
+          <tr>
+            <td>{{ section.section_name }}</td>
+            <td>{{ section.status }}</td>
+            <td>
+              {% for key, value in section.key_metrics.items() %}
+              <div><strong>{{ key | replace("_", " ") }}:</strong> {% if value is iterable and value is not string %}{{ value | join(", ") }}{% else %}{{ value }}{% endif %}</div>
+              {% endfor %}
+            </td>
+            <td>{{ section.findings_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if report.crawled_pages %}
+      <h3>Crawled Pages</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Status</th>
+            <th>Depth</th>
+            <th>Content type</th>
+            <th>Forms</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for page in report.crawled_pages[:20] %}
+          <tr>
+            <td>{{ page.url }}</td>
+            <td>{{ page.status_code }}</td>
+            <td>{{ page.depth }}</td>
+            <td>{{ page.content_type }}</td>
+            <td>{{ page.forms_found_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      {% if report.skipped_url_samples %}
+      <h3>Skipped URL Samples</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Reason</th>
+            <th>Source URL</th>
+            <th>Depth</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sample in report.skipped_url_samples[:20] %}
+          <tr>
+            <td>{{ sample.url }}</td>
+            <td>{{ sample.reason }}</td>
+            <td>{{ sample.source_url }}</td>
+            <td>{{ sample.depth }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      <h3>Passive Security Indicators</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Section</th>
+            <th>Status</th>
+            <th>Key metrics</th>
+            <th>Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for section in report.web_dast_sections if section.section_id in ["web_headers", "web_cookies", "web_forms"] %}
+          <tr>
+            <td>{{ section.section_name }}</td>
+            <td>{{ section.status }}</td>
+            <td>
+              {% for key, value in section.key_metrics.items() %}
+              <div><strong>{{ key | replace("_", " ") }}:</strong> {% if value is iterable and value is not string %}{{ value | join(", ") }}{% else %}{{ value }}{% endif %}</div>
+              {% endfor %}
+            </td>
+            <td>{{ section.findings_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3>Passive Risk Summary</h3>
+      <p><strong>Sections completed:</strong> {{ report.web_dast_summary.sections_completed | join(", ") }}</p>
+      <p><strong>Sections partial:</strong> {{ report.web_dast_summary.sections_partial | join(", ") }}</p>
+      <p><strong>Sections failed:</strong> {{ report.web_dast_summary.sections_failed | join(", ") }}</p>
+      <p><strong>Recommended next steps:</strong></p>
+      <ul>
+        {% for step in report.web_dast_summary.recommended_next_steps %}
+        <li>{{ step }}</li>
+        {% endfor %}
+      </ul>
+      <p><strong>Limitations:</strong> {{ report.web_dast_summary.limitations | join("; ") }}</p>
+
+      {% if report.web_findings %}
+      <h3>Web Findings</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Risk</th>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in report.web_findings %}
+          <tr>
+            <td>{{ finding.source }}</td>
+            <td>{{ finding.risk_score }} ({{ finding.risk_label }})</td>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.category }}</td>
+            <td>{{ finding.recommendation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </section>
+    {% endif %}
+
     <section>
       <h2>Web DAST Report</h2>
       {% if report.web_scope_summary.enabled %}

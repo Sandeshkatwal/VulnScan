@@ -54,6 +54,11 @@ def save_json_report(
         ),
         "windows_audit_sections": scan_result.get("windows_audit_sections", []),
         "windows_audit_consolidated_summary": _windows_consolidated_summary(scan_result),
+        "web_dast_summary": scan_result.get(
+            "web_dast_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "web_dast_sections": scan_result.get("web_dast_sections", []),
         "web_scan_summary": scan_result.get(
             "web_scan_summary",
             {"enabled": False, "status": "skipped"},
@@ -136,6 +141,12 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         notes = (
             "Web DAST passive risk summary consolidates crawler, header, cookie, and form indicators. "
             "It does not submit forms, authenticate, test SQL injection or XSS, or prove exploitability."
+        )
+    if scan_result.get("web_dast_summary", {}).get("enabled"):
+        notes = (
+            "Web DAST passive report consolidates scope, politeness, robots, sitemap, crawler, "
+            "header, cookie, form, and passive risk indicators. It does not add active vulnerability testing "
+            "or prove exploitability."
         )
 
     return {

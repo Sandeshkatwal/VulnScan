@@ -336,6 +336,66 @@ def test_html_report_renders_web_dast_section(tmp_path) -> None:
                 "created_at": "2026-05-18T10:00:00+00:00",
             }
         ],
+        "web_dast_summary": {
+            "enabled": True,
+            "mode": "passive",
+            "start_url": "https://example.test/",
+            "normalized_start_url": "https://example.test/",
+            "allowed_host": "example.test",
+            "scan_profile": "passive",
+            "sections_enabled": ["web_crawler", "web_headers", "web_cookies"],
+            "sections_completed": ["web_crawler", "web_headers", "web_cookies"],
+            "sections_partial": [],
+            "sections_failed": [],
+            "total_duration_seconds": 0.2,
+            "total_requests": 1,
+            "pages_crawled": 1,
+            "forms_discovered": 1,
+            "cookies_observed": 1,
+            "sitemap_urls_found": 0,
+            "robots_found": "unknown",
+            "total_web_findings": 1,
+            "highest_web_risk_score": 0,
+            "highest_web_risk_label": "Informational",
+            "passive_risk_rating": "Informational",
+            "recommended_next_steps": ["Review cookie flags for sensitive/session cookies."],
+            "limitations": ["Passive only."],
+        },
+        "web_dast_sections": [
+            {
+                "section_id": "web_crawler",
+                "section_name": "Web Crawler",
+                "source": "web_crawler",
+                "status": "success",
+                "enabled": True,
+                "key_metrics": {"pages_crawled": 1, "forms_found": 1, "external_links": 1},
+                "findings_count": 1,
+                "duration_seconds": 0.2,
+                "limitations": ["GET-only crawler."],
+            },
+            {
+                "section_id": "web_headers",
+                "section_name": "Web Header Audit",
+                "source": "web_header_audit",
+                "status": "success",
+                "enabled": True,
+                "key_metrics": {"pages_checked": 1, "missing_headers": 1},
+                "findings_count": 1,
+                "duration_seconds": 0.0,
+                "limitations": ["Passive header checks only."],
+            },
+            {
+                "section_id": "web_cookies",
+                "section_name": "Web Cookie Audit",
+                "source": "web_cookie_audit",
+                "status": "success",
+                "enabled": True,
+                "key_metrics": {"cookies_observed": 1, "missing_samesite": 1},
+                "findings_count": 1,
+                "duration_seconds": 0.0,
+                "limitations": ["Cookie values are not stored."],
+            },
+        ],
         "ssh_audit": {"enabled": False, "status": "skipped"},
         "ssh_audit_summary": {"enabled": False, "status": "skipped"},
         "windows_audit_summary": {"enabled": False, "status": "skipped"},
@@ -432,6 +492,8 @@ def test_html_report_renders_web_dast_section(tmp_path) -> None:
     html = path.read_text(encoding="utf-8")
 
     assert "Web DAST Report" in html
+    assert "Web DAST Passive Report" in html
+    assert "Scope and Safety Controls" in html
     assert "Crawl Summary" in html
     assert "https://example.test/" in html
     assert "Password Form Discovered" in html
@@ -440,3 +502,54 @@ def test_html_report_renders_web_dast_section(tmp_path) -> None:
     assert "Content-Security-Policy" in html
     assert "Web Cookie Audit" in html
     assert "Cookie Missing SameSite Attribute" in html
+
+
+def test_html_report_renders_partial_web_dast_summary(tmp_path) -> None:
+    scan_result = {
+        "host": "example.test",
+        "resolved_ip": "",
+        "scan_mode": "web-dast",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "web_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+        "web_dast_summary": {
+            "enabled": True,
+            "mode": "passive",
+            "start_url": "https://example.test/",
+            "pages_crawled": 0,
+            "total_requests": 0,
+            "total_web_findings": 0,
+            "highest_web_risk_score": 0,
+            "highest_web_risk_label": "Informational",
+            "passive_risk_rating": "None",
+            "sections_completed": [],
+            "sections_partial": [],
+            "sections_failed": [],
+            "recommended_next_steps": ["Continue with authorised deeper testing if in scope."],
+            "limitations": ["Passive only."],
+        },
+        "web_dast_sections": [],
+    }
+
+    path = save_html_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    html = path.read_text(encoding="utf-8")
+
+    assert "Web DAST Passive Report" in html
+    assert "Continue with authorised deeper testing if in scope." in html

@@ -18,6 +18,8 @@ Version 13.7 adds robots.txt awareness for fetching, reporting, and optionally r
 
 Version 13.8 adds passive sitemap discovery and optional sitemap-assisted crawling within configured scope.
 
+Version 13.9 consolidates passive Web DAST reporting across scope, politeness, robots, sitemap, crawler, headers, cookies, forms, and passive risk indicators.
+
 Use it only on web applications you own or have explicit permission to assess.
 
 ## What It Does
@@ -43,6 +45,7 @@ Use it only on web applications you own or have explicit permission to assess.
 - Reuses fetched page data for header, cookie, form, and passive summary analysis.
 - Optionally fetches and reports robots.txt guidance with `--robots`.
 - Optionally discovers, parses, and reports XML sitemaps with `--sitemap`.
+- Builds a consolidated `web_dast_summary` and `web_dast_sections` report view for passive Web DAST output.
 
 ## What It Does Not Do
 
@@ -61,6 +64,7 @@ Current Web DAST passive checks do not:
 - Treat robots.txt as authorisation to scan.
 - Treat sitemap discovery as authorisation to scan.
 - Bypass scope, robots, rate limits, max pages, or max depth when using sitemap URLs.
+- Add active vulnerability testing through the consolidated report view.
 
 ## Commands
 
@@ -175,6 +179,12 @@ Use Version 13.8 sitemap discovery:
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --sitemap --use-sitemap-for-crawl --max-pages 20 --max-depth 1 --json --html
 ```
 
+Recommended full passive report command:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --robots --sitemap --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --request-delay 1 --show-scope --json --html
+```
+
 ## Report Fields
 
 JSON and HTML reports include:
@@ -196,6 +206,7 @@ JSON and HTML reports include:
 - `request_error_samples`
 - `web_robots_summary` when `--robots` is used
 - `web_sitemap_summary`, `web_sitemap_results`, and `web_sitemap_url_samples` when `--sitemap` is used
+- `web_dast_summary` and `web_dast_sections` for the consolidated passive Web DAST report
 - top-level `findings`
 
 Each page result includes URL, method, status code, content type, title, depth, response time, link count, form count, internal links, external links, and forms.
@@ -285,6 +296,14 @@ The robots summary records fetch status, HTTP status, user-agents seen, allow/di
 Version 13.8 discovers sitemap URLs from robots.txt `Sitemap` lines, common same-origin paths such as `/sitemap.xml`, `/sitemap_index.xml`, and `/sitemap-index.xml`, and repeated `--sitemap-url` values. Sitemap files are fetched through the existing safe request wrapper and rate limiter, parsed with the Python standard library XML parser, and bounded by `--max-sitemap-urls` and `--max-sitemap-depth`.
 
 Sitemaps are passive discovery sources and do not grant authorisation. Every sitemap file and URL entry is filtered through scope rules; robots rules are also respected when `--robots --respect-robots` is enabled. Sitemap-assisted crawling is off by default. `--use-sitemap-for-crawl` must be explicitly enabled, and even then in-scope sitemap URLs still respect max pages, max depth, scope, robots, static-file skips, duplicate handling, and rate limits. No active vulnerability testing is added in Version 13.8.
+
+## Passive Report Consolidation
+
+Version 13.9 adds `scanner.web_report_summary` and consolidates passive Web DAST output into `web_dast_summary`, `web_dast_sections`, terminal output, JSON reports, and HTML reports. The consolidated report combines scope, politeness, robots, sitemap, crawler, headers, cookies, forms, and passive risk data while keeping the older module-specific report keys for compatibility.
+
+The consolidated report does not add active vulnerability testing. Passive findings are indicators for authorised review, not proof of exploitability. Written authorisation is still required, and VulScan still does not submit forms, authenticate, fuzz, test SQL injection, test XSS, send payloads, or crawl external domains by default.
+
+Future Web DAST versions can add safe active checks only after scope and report controls remain stable.
 
 ## Cookie Value Handling
 

@@ -63,6 +63,11 @@ from scanner.web_rate_limit import (
     build_web_rate_limiter,
     validate_web_politeness_options,
 )
+from scanner.web_report_summary import (
+    build_web_dast_sections,
+    build_web_dast_summary,
+    build_web_report_consolidation_finding,
+)
 from scanner.web_robots import (
     DEFAULT_ROBOTS_USER_AGENT,
     build_robots_findings,
@@ -1057,7 +1062,36 @@ def web_scan(
                     existing_findings=all_web_findings,
                 )
             )
+        all_web_findings.extend(
+            build_web_report_consolidation_finding(existing_findings=all_web_findings)
+        )
         web_findings = assign_sequential_finding_ids(all_web_findings)
+        web_dast_sections = build_web_dast_sections(
+            web_scope_summary=web_scope_summary,
+            web_politeness_summary=web_politeness_summary,
+            web_robots_summary=web_robots_summary,
+            web_sitemap_summary=web_sitemap_summary,
+            web_scan_summary=web_result.get("web_scan_summary", {}),
+            web_header_summary=web_header_result.get("web_header_summary", {}),
+            web_cookie_summary=web_cookie_result.get("web_cookie_summary", {}),
+            web_form_summary=web_form_result.get("web_form_summary", {}),
+            web_passive_summary=web_passive_summary,
+            findings=web_findings,
+        )
+        web_dast_summary = build_web_dast_summary(
+            start_url=url,
+            web_dast_sections=web_dast_sections,
+            web_scope_summary=web_scope_summary,
+            web_politeness_summary=web_politeness_summary,
+            web_robots_summary=web_robots_summary,
+            web_sitemap_summary=web_sitemap_summary,
+            web_scan_summary=web_result.get("web_scan_summary", {}),
+            web_header_summary=web_header_result.get("web_header_summary", {}),
+            web_cookie_summary=web_cookie_result.get("web_cookie_summary", {}),
+            web_form_summary=web_form_result.get("web_form_summary", {}),
+            web_passive_summary=web_passive_summary,
+            findings=web_findings,
+        )
         scan_end_time = datetime.now().astimezone()
     except ValueError as exc:
         console.print(f"[red]Web DAST configuration error:[/red] {exc}")
@@ -1102,27 +1136,15 @@ def web_scan(
         "crawled_pages": web_result["crawled_pages"],
         "discovered_forms": web_result["discovered_forms"],
         "web_findings": web_findings,
+        "web_dast_summary": web_dast_summary,
+        "web_dast_sections": web_dast_sections,
         "demo_mode": False,
         "demo_notice": "",
         "scan_start_time": scan_start_time.isoformat(timespec="seconds"),
         "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
     }
 
-    _print_web_scan_summary(summary)
-    _print_web_scope_summary(scan_result["web_scope_summary"])
-    _print_web_politeness_summary(scan_result["web_politeness_summary"])
-    if robots:
-        _print_web_robots_summary(scan_result["web_robots_summary"])
-    if sitemap:
-        _print_web_sitemap_summary(scan_result["web_sitemap_summary"])
-    if effective_headers:
-        _print_web_header_summary(scan_result["web_header_summary"])
-    if effective_headers or effective_cookies:
-        _print_web_cookie_summary(scan_result["web_cookie_summary"])
-    if effective_forms:
-        _print_web_form_summary(scan_result["web_form_summary"])
-    if passive_summary:
-        _print_web_passive_summary(scan_result["web_passive_summary"])
+    _print_web_dast_report(scan_result["web_dast_summary"], scan_result["web_dast_sections"])
     _print_findings(scan_result["findings"])
 
     if json_report or html_report:
@@ -1586,6 +1608,11 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "web_header_audit",
         "web_cookie_audit",
         "web_form_audit",
+        "web_scope",
+        "web_rate_limit",
+        "web_robots",
+        "web_sitemap",
+        "web_passive_summary",
         "ssh_audit",
         "package_audit",
         "ssh_hardening",
@@ -1629,6 +1656,77 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
             )
 
         console.print(table)
+
+
+def _print_web_dast_report(summary: dict[str, Any], sections: list[dict[str, Any]]) -> None:
+    if not summary.get("enabled"):
+        return
+
+    console.print(Panel.fit("Web DAST Passive Report", style="bold cyan"))
+
+    overview = Table(title="1. Overview")
+    overview.add_column("Field")
+    overview.add_column("Value")
+    overview_rows = [
+        ("Start URL", str(summary.get("start_url") or "")),
+        ("Mode", str(summary.get("mode") or "passive")),
+        ("Pages crawled", str(summary.get("pages_crawled") or 0)),
+        ("Total requests", str(summary.get("total_requests") or 0)),
+        ("Total web findings", str(summary.get("total_web_findings") or 0)),
+        (
+            "Highest web risk",
+            f"{summary.get('highest_web_risk_score') or 0} ({summary.get('highest_web_risk_label') or 'Informational'})",
+        ),
+        ("Passive risk rating", str(summary.get("passive_risk_rating") or "None")),
+    ]
+    for label, value in overview_rows:
+        overview.add_row(label, value)
+    console.print(overview)
+
+    section_map = {str(section.get("section_id")): section for section in sections}
+    section_table = Table(title="2-9. Passive Web Sections")
+    section_table.add_column("Section")
+    section_table.add_column("Status")
+    section_table.add_column("Key metrics")
+    section_table.add_column("Findings", justify="right")
+    for section_id, title in [
+        ("web_scope", "2. Scope"),
+        ("web_politeness", "3. Politeness"),
+        ("web_robots", "4. Robots.txt"),
+        ("web_sitemap", "5. Sitemap"),
+        ("web_crawler", "6. Crawl"),
+        ("web_headers", "7. Headers"),
+        ("web_cookies", "8. Cookies"),
+        ("web_forms", "9. Forms"),
+    ]:
+        section = section_map.get(section_id, {})
+        section_table.add_row(
+            title,
+            str(section.get("status") or "skipped"),
+            _format_web_section_metrics(section.get("key_metrics") or {}),
+            str(section.get("findings_count") or 0),
+        )
+    console.print(section_table)
+
+    next_steps = Table(title="10. Recommended Next Steps")
+    next_steps.add_column("Step")
+    for step in summary.get("recommended_next_steps") or []:
+        next_steps.add_row(str(step))
+    console.print(next_steps)
+
+
+def _format_web_section_metrics(metrics: dict[str, Any]) -> str:
+    if not metrics:
+        return "None"
+    parts: list[str] = []
+    for key, value in metrics.items():
+        label = str(key).replace("_", " ")
+        if isinstance(value, list):
+            rendered = ", ".join(str(item) for item in value) if value else "None"
+        else:
+            rendered = str(value)
+        parts.append(f"{label}: {rendered}")
+    return "; ".join(parts)
 
 
 def _print_web_scan_summary(summary: dict[str, Any]) -> None:

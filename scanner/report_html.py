@@ -56,6 +56,11 @@ def save_html_report(
         ),
         "windows_audit_sections": scan_result.get("windows_audit_sections", []),
         "windows_audit_consolidated_summary": _windows_consolidated_summary(scan_result),
+        "web_dast_summary": scan_result.get(
+            "web_dast_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
+        "web_dast_sections": scan_result.get("web_dast_sections", []),
         "web_scan_summary": scan_result.get(
             "web_scan_summary",
             {"enabled": False, "status": "skipped"},
