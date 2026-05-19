@@ -8,6 +8,8 @@ Version 13.2 improves cookie auditing with value-free Set-Cookie parsing.
 
 Version 13.3 improves passive form discovery and reporting.
 
+Version 13.4 adds a passive web risk summary that consolidates crawler, header, cookie, and form indicators.
+
 Use it only on web applications you own or have explicit permission to assess.
 
 ## What It Does
@@ -27,10 +29,11 @@ Use it only on web applications you own or have explicit permission to assess.
 - Stores cookie names and attributes only, never cookie values.
 - Optionally maps and classifies forms with `--forms` without submitting them.
 - Stores input names and types only, never input values or hidden values.
+- Optionally builds a consolidated passive risk overview with `--passive-summary`.
 
 ## What It Does Not Do
 
-Version 13.0 does not:
+Current Web DAST passive checks do not:
 
 - Submit forms.
 - Authenticate.
@@ -41,6 +44,7 @@ Version 13.0 does not:
 - Test XSS.
 - Send attack payloads.
 - Perform exploitation or destructive checks.
+- Prove exploitability from passive indicators.
 
 ## Commands
 
@@ -98,6 +102,20 @@ Run enhanced form discovery across crawled same-host pages:
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --forms --max-pages 10 --max-depth 1 --json --html
 ```
 
+Run the Version 13.4 passive summary against only the start URL:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --passive-summary
+```
+
+Run all passive web modules and include the consolidated summary:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --json --html
+```
+
+When `--passive-summary` is used alone, VulScan fetches the start URL, checks headers and cookies from that response, and performs basic form discovery on that page only. It does not crawl beyond the start URL unless `--crawl` is explicitly provided.
+
 ## Report Fields
 
 JSON and HTML reports include:
@@ -112,6 +130,7 @@ JSON and HTML reports include:
 - `web_cookie_results` when `--headers` or `--cookies` is used
 - `web_form_summary` when `--forms` is used
 - `web_form_results` when `--forms` is used
+- `web_passive_summary` when `--passive-summary` is used
 - top-level `findings`
 
 Each page result includes URL, method, status code, content type, title, depth, response time, link count, form count, internal links, external links, and forms.
@@ -160,7 +179,15 @@ With `--forms`, VulScan emits passive form findings for:
 - External form action discovered.
 - Web form discovery completed.
 
+With `--passive-summary`, VulScan emits a standard informational finding for summary completion and, when medium or high passive indicators exist, a single review recommendation finding. It does not duplicate every underlying web finding.
+
 These findings are discovery and review indicators. They do not prove a vulnerability by themselves.
+
+## Passive Risk Summary
+
+Version 13.4 `web_passive_summary` combines available crawler, header, cookie, and form data into one overview with pages crawled, page errors, forms, login forms, upload forms, observed cookies, cookie issues, missing security headers, disclosure headers, external links, external form actions, grouped indicators by severity, highest web risk, passive risk rating, recommended next steps, and limitations.
+
+The rating is High when any high web finding exists, Medium when no high exists but a medium finding exists, Low when only low findings exist, Informational when only informational findings exist, and None when there are no web findings. The summary helps plan authorised deeper testing but does not submit forms, authenticate, test SQL injection, test XSS, send payloads, fuzz, or prove exploitability.
 
 ## Cookie Value Handling
 

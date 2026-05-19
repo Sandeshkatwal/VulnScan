@@ -17,8 +17,9 @@ Vulnerability Scanner
 ├── Web DAST Engine
 │   ├── Crawler
 │   ├── Header checker
-│   ├── Injection tester
-│   └── Cookie checker
+│   ├── Form discovery
+│   ├── Cookie checker
+│   └── Passive risk summary
 ├── Vulnerability Intelligence Engine
 │   ├── CVE database
 │   ├── CVSS score
@@ -55,6 +56,7 @@ Vulnerability Scanner
 - Passive Web DAST security header checks for crawled pages.
 - Value-free Web DAST cookie attribute audit.
 - Passive Web DAST form discovery and classification.
+- Consolidated passive Web DAST risk summary.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -143,5 +145,7 @@ Version 13.1 adds `scanner.web_header_audit`, a passive header checker integrate
 Version 13.2 adds `scanner.web_cookie_audit`, a dedicated cookie attribute parser and audit layer. The crawler extracts `Set-Cookie` metadata into value-free cookie records, storing names and attributes only. Cookie values, session IDs, and tokens are not stored or printed. `web-scan --cookies` checks only the start URL unless `--crawl` is explicitly provided, while `--headers` also runs cookie auditing because cookies are part of passive header analysis. Cookie findings are deduplicated by cookie name, issue type, host, and scheme, and the report adds `web_cookie_summary` and `web_cookie_results`.
 
 Version 13.3 adds `scanner.web_form_audit`, an enhanced form discovery layer over the crawler's parsed HTML form metadata. The crawler records form IDs, methods, action URLs, action hosts, HTTPS-to-HTTP submission indicators, input names/types, counts, CSRF-like field names, and sensitive-looking field-name indicators without storing input values or hidden values. `web-scan --forms` checks only the start URL unless `--crawl` is explicitly provided. Form findings are passive indicators for human review and do not submit forms, authenticate, send payloads, fuzz, or test SQL injection or XSS.
+
+Version 13.4 adds `scanner.web_passive_summary`, a consolidated passive Web DAST overview. `web-scan --passive-summary` combines available crawler, header, cookie, and form indicators into `web_passive_summary`, grouped severity indicators, a highest web risk, passive risk rating, recommended next steps, and limitations. When used alone it fetches only the start URL and runs safe passive checks for headers, cookies, and basic form discovery. It does not crawl beyond the start URL unless `--crawl` is provided, submit forms, authenticate, send payloads, fuzz, test SQL injection, test XSS, or prove exploitability.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

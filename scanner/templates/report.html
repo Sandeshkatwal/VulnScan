@@ -159,6 +159,14 @@
       padding: 12px;
     }
 
+    .risk-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      margin: 12px 0;
+      background: #f8fafc;
+    }
+
     @media (max-width: 760px) {
       .page {
         padding: 20px 14px 32px;
@@ -430,6 +438,75 @@
 
     <section>
       <h2>Web DAST Report</h2>
+      {% if report.web_passive_summary.enabled %}
+      <h3>Web Passive Risk Overview</h3>
+      <div class="risk-card">
+        <div class="label">Passive Risk Rating</div>
+        <div class="value">{{ report.web_passive_summary.passive_risk_rating }}</div>
+        <p><strong>Highest web risk:</strong> {{ report.web_passive_summary.highest_web_risk_score }} ({{ report.web_passive_summary.highest_web_risk_label }})</p>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Start URL</th>
+            <th>Pages</th>
+            <th>Errors</th>
+            <th>Forms</th>
+            <th>Login</th>
+            <th>Uploads</th>
+            <th>Cookies</th>
+            <th>Cookie issues</th>
+            <th>Missing headers</th>
+            <th>External links</th>
+            <th>External form actions</th>
+            <th>Web findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_passive_summary.start_url }}</td>
+            <td>{{ report.web_passive_summary.pages_crawled }}</td>
+            <td>{{ report.web_passive_summary.pages_with_errors }}</td>
+            <td>{{ report.web_passive_summary.forms_discovered }}</td>
+            <td>{{ report.web_passive_summary.login_forms }}</td>
+            <td>{{ report.web_passive_summary.upload_forms }}</td>
+            <td>{{ report.web_passive_summary.cookies_observed }}</td>
+            <td>{{ report.web_passive_summary.cookie_issues }}</td>
+            <td>{{ report.web_passive_summary.missing_security_headers }}</td>
+            <td>{{ report.web_passive_summary.external_links }}</td>
+            <td>{{ report.web_passive_summary.external_form_actions }}</td>
+            <td>{{ report.web_passive_summary.total_web_findings }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Issue Breakdown</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>High</th>
+            <th>Medium</th>
+            <th>Low</th>
+            <th>Informational</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ report.web_passive_summary.high_risk_indicators | join(", ") }}</td>
+            <td>{{ report.web_passive_summary.medium_risk_indicators | join(", ") }}</td>
+            <td>{{ report.web_passive_summary.low_risk_indicators | join(", ") }}</td>
+            <td>{{ report.web_passive_summary.informational_indicators | join(", ") }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>Recommended Next Steps</h3>
+      <ul>
+        {% for step in report.web_passive_summary.recommended_next_steps %}
+        <li>{{ step }}</li>
+        {% endfor %}
+      </ul>
+      <p><strong>Limitations:</strong> {{ report.web_passive_summary.limitations | join("; ") }}</p>
+      <p><strong>Source references:</strong> crawler, headers, cookies, and forms sections below.</p>
+      {% endif %}
       {% if report.web_scan_summary.enabled %}
       <h3>Crawl Summary</h3>
       <table>

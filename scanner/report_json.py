@@ -73,6 +73,10 @@ def save_json_report(
             {"enabled": False, "status": "skipped"},
         ),
         "web_form_results": scan_result.get("web_form_results", []),
+        "web_passive_summary": scan_result.get(
+            "web_passive_summary",
+            {"enabled": False, "status": "skipped"},
+        ),
         "crawled_pages": scan_result.get("crawled_pages", []),
         "discovered_forms": scan_result.get("discovered_forms", []),
         "web_findings": findings_to_dicts(scan_result.get("web_findings", [])),
@@ -107,6 +111,11 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         notes = (
             "Web DAST crawler foundation only. Review discovered pages and forms before deeper testing; "
             "header checks are passive when enabled, and VulScan does not submit forms or test injection vulnerabilities."
+        )
+    if scan_result.get("web_passive_summary", {}).get("enabled"):
+        notes = (
+            "Web DAST passive risk summary consolidates crawler, header, cookie, and form indicators. "
+            "It does not submit forms, authenticate, test SQL injection or XSS, or prove exploitability."
         )
 
     return {

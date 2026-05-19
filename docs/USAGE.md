@@ -256,6 +256,15 @@ Version 13.3 adds enhanced form discovery with `--forms`:
 
 Form discovery maps methods, action URLs, internal/external action hosts, HTTPS-to-HTTP submission indicators, input names and types, CSRF-like field names, and classifications such as login, search, contact, upload, newsletter, or generic forms. Forms are never submitted, no payloads are sent, no SQL injection or XSS testing is performed, and field values or hidden values are not stored.
 
+Version 13.4 adds a consolidated passive web risk summary with `--passive-summary`:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --passive-summary
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url https://example.com --crawl --headers --cookies --forms --passive-summary --max-pages 10 --max-depth 1 --json --html
+```
+
+The summary combines available crawler, header, cookie, and form indicators into `web_passive_summary` and a Web Passive Risk Overview in HTML reports. If `--passive-summary` is used alone, VulScan fetches only the start URL, runs passive header and cookie checks, and performs basic form discovery on that page only. It does not submit forms, authenticate, test SQL injection, test XSS, send payloads, fuzz, crawl external domains, or prove exploitability. Use it to plan authorised deeper testing where in scope.
+
 ## Authenticated SSH Audit
 
 Version 11.5 includes optional authenticated SSH auditing for authorised Linux systems only. It runs only when `--ssh-audit` is provided and requires a username plus either a password or a private key. VulScan does not prompt interactively for passwords.
