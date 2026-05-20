@@ -43,6 +43,7 @@ from scanner.remediation import (
     get_remediation_summary,
     update_remediation_status,
 )
+from scanner.software_inventory import build_software_inventory
 from scanner.ssh_audit import (
     SshAuditConfigurationError,
     audit_ssh_host,
@@ -75,6 +76,12 @@ from scanner.web_robots import (
 )
 from scanner.web_scope import build_scope_findings, build_web_scope
 from scanner.web_sitemap import discover_sitemaps
+from scanner.vuln_intel import (
+    DEFAULT_RULES_PATH,
+    VulnIntelRulesError,
+    disabled_vulnerability_intelligence_summary,
+    run_vulnerability_intelligence,
+)
 from scanner.windows_demo import DEMO_NOTICE, build_demo_scan_result, build_windows_demo_result
 from scanner.windows_audit_profiles import (
     WindowsAuditProfileError,
@@ -352,6 +359,20 @@ def scan(
             help="Save scan results to the local SQLite history database.",
         ),
     ] = False,
+    vuln_intel: Annotated[
+        bool,
+        typer.Option(
+            "--vuln-intel",
+            help="Enable local vulnerability intelligence matching.",
+        ),
+    ] = False,
+    vuln_rules: Annotated[
+        Path,
+        typer.Option(
+            "--vuln-rules",
+            help="Path to a local vulnerability intelligence rules JSON file.",
+        ),
+    ] = DEFAULT_RULES_PATH,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
     if windows_demo and ssh_audit:
@@ -456,6 +477,9 @@ def scan(
         scan_result["windows_audit_summary"] = {"enabled": False, "status": "skipped"}
         scan_result["windows_audit_sections"] = []
         scan_result["windows_audit_consolidated_summary"] = {"enabled": False, "status": "skipped"}
+        scan_result["software_inventory"] = {"items": [], "total_items": 0, "sources_used": [], "limitations": []}
+        scan_result["vulnerability_intelligence"] = disabled_vulnerability_intelligence_summary()
+        scan_result["vuln_intel_findings"] = []
         scan_result["credentialed_audits"] = []
         scan_result["ssh_findings"] = []
         scan_result["windows_findings"] = []
@@ -580,6 +604,57 @@ def scan(
                     windows_summary=scan_result["windows_audit_summary"],
                 )
             )
+        scan_result["software_inventory"] = build_software_inventory(scan_result)
+        if vuln_intel:
+            try:
+                inventory, vulnerability_intelligence, vuln_intel_findings = run_vulnerability_intelligence(
+                    scan_result=scan_result,
+                    rules_path=vuln_rules,
+                )
+            except VulnIntelRulesError as exc:
+                console.print(f"[red]Vulnerability intelligence error:[/red] {exc}")
+                raise typer.Exit(code=1) from exc
+            scan_result["software_inventory"] = inventory
+            scan_result["vulnerability_intelligence"] = vulnerability_intelligence
+            scan_result["vuln_intel_findings"] = vuln_intel_findings
+            findings.extend(vuln_intel_findings)
+        scan_result["findings"] = assign_sequential_finding_ids(findings)
+        scan_result["http_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "http_audit"
+        ]
+        scan_result["tls_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "tls_audit"
+        ]
+        scan_result["ssh_findings"] = [
+            finding
+            for finding in scan_result["findings"]
+            if _is_ssh_related_finding(finding)
+        ]
+        scan_result["windows_findings"] = [
+            finding
+            for finding in scan_result["findings"]
+            if _is_windows_related_finding(finding)
+        ]
+        scan_result["vuln_intel_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "vuln_intel"
+        ]
+        if ssh_audit:
+            scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
+            scan_result["credentialed_audits"] = _build_credentialed_audits(
+                ssh_result=scan_result["ssh_audit"],
+                ssh_findings=scan_result["ssh_findings"],
+            )
+        if windows_audit:
+            scan_result["windows_audit"]["findings"] = scan_result["windows_findings"]
+            if not ssh_audit:
+                scan_result["credentialed_audits"] = []
+            scan_result["credentialed_audits"].extend(
+                _build_windows_credentialed_audits(
+                    windows_result=scan_result["windows_audit"],
+                    windows_findings=scan_result["windows_findings"],
+                    windows_summary=scan_result["windows_audit_summary"],
+                )
+            )
         scan_end_time = datetime.now().astimezone()
         scan_result["scan_start_time"] = scan_start_time.isoformat(timespec="seconds")
         scan_result["scan_end_time"] = scan_end_time.isoformat(timespec="seconds")
@@ -617,6 +692,7 @@ def scan(
     _print_ssh_audit_summary(scan_result.get("ssh_audit_summary", {"enabled": False}))
     _print_windows_audit_summary(scan_result.get("windows_audit_summary", {"enabled": False}))
     _print_credentialed_audit_modules(scan_result.get("credentialed_audits", []))
+    _print_vulnerability_intelligence(scan_result.get("vulnerability_intelligence", {}))
 
     _print_findings(scan_result["findings"])
 
@@ -1613,6 +1689,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "web_robots",
         "web_sitemap",
         "web_passive_summary",
+        "vuln_intel",
         "ssh_audit",
         "package_audit",
         "ssh_hardening",
@@ -1656,6 +1733,63 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
             )
 
         console.print(table)
+
+
+def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
+    if not summary:
+        return
+
+    table = Table(title="Vulnerability Intelligence Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Enabled", summary.get("enabled")),
+        ("Ruleset", f"{summary.get('ruleset_name') or ''} {summary.get('ruleset_version') or ''}".strip()),
+        ("Rules loaded", summary.get("rules_loaded")),
+        ("Inventory items checked", summary.get("inventory_items_checked")),
+        ("Matches found", summary.get("matches_found")),
+        ("CVE matches", summary.get("cve_matches_count")),
+        ("Exploit available count", summary.get("exploit_available_count")),
+        ("Highest CVSS", summary.get("highest_cvss_score")),
+        ("Highest EPSS", summary.get("highest_epss_score")),
+        ("Highest intel risk", summary.get("highest_intel_risk_label")),
+        ("Limitations", _format_summary_list(summary.get("limitations"))),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+    matches = list(summary.get("matches") or [])
+    if not matches:
+        return
+
+    matches_table = Table(title="Vulnerability Intelligence Matches")
+    matches_table.add_column("Rule ID")
+    matches_table.add_column("Title")
+    matches_table.add_column("Service/Product")
+    matches_table.add_column("Port", justify="right")
+    matches_table.add_column("CVE")
+    matches_table.add_column("CVSS")
+    matches_table.add_column("EPSS")
+    matches_table.add_column("Severity")
+    matches_table.add_column("Confidence")
+    for match in matches:
+        item = match.get("matched_item") or {}
+        service_product = str(item.get("service_name") or "")
+        if item.get("product"):
+            service_product = f"{service_product} / {item.get('product')}".strip(" /")
+        matches_table.add_row(
+            str(match.get("rule_id") or ""),
+            str(match.get("title") or ""),
+            service_product,
+            "" if item.get("port") is None else str(item.get("port")),
+            str(match.get("cve") or ""),
+            "" if match.get("cvss_score") is None else str(match.get("cvss_score")),
+            "" if match.get("epss_score") is None else str(match.get("epss_score")),
+            str(match.get("severity") or ""),
+            str(match.get("confidence") or ""),
+        )
+    console.print(matches_table)
 
 
 def _print_web_dast_report(summary: dict[str, Any], sections: list[dict[str, Any]]) -> None:

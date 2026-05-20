@@ -29,6 +29,7 @@ def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
     source = str(finding_dict.get("source") or "")
     severity = str(finding_dict.get("severity") or "")
     confidence = str(finding_dict.get("confidence") or "")
+    evidence_details = finding_dict.get("evidence_details") or {}
 
     if affected_port in SENSITIVE_PORTS:
         score += 10
@@ -42,6 +43,12 @@ def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
         score += 5
     if source == "tls_audit" and severity == "High":
         score += 10
+    if source == "vuln_intel":
+        cvss_score = _safe_float(evidence_details.get("cvss_score"))
+        if cvss_score is not None:
+            score = max(score, int(round(cvss_score * 10)))
+        if evidence_details.get("exploit_available") is True:
+            score += 5
     if confidence == "Low":
         score -= 10
     if confidence == "Medium":
@@ -50,6 +57,15 @@ def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
     score = max(0, min(100, score))
     risk_label = _risk_label(score)
     return score, risk_label, _fix_priority(risk_label)
+
+
+def _safe_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def apply_risk_scores(findings: list[Finding | dict[str, Any]]) -> list[Finding | dict[str, Any]]:

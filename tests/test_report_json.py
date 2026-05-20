@@ -459,3 +459,73 @@ def test_json_report_includes_web_dast_fields(tmp_path) -> None:
     assert report["web_header_summary"]["missing_header_counts"]["Content-Security-Policy"] == 1
     assert report["web_header_results"][0]["missing_headers"] == ["Content-Security-Policy"]
     assert report["summary"]["total_web_findings"] == 1
+
+
+def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> None:
+    scan_result = {
+        "host": "127.0.0.1",
+        "resolved_ip": "127.0.0.1",
+        "scan_mode": "safe",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "software_inventory": {
+            "items": [
+                {
+                    "asset": "127.0.0.1",
+                    "host": "127.0.0.1",
+                    "port": 22,
+                    "protocol": "tcp",
+                    "service_name": "ssh",
+                    "product": None,
+                    "version": None,
+                    "source": "service_detect",
+                    "evidence": "TCP connection successful",
+                    "confidence": "Medium",
+                    "metadata": {},
+                }
+            ],
+            "total_items": 1,
+            "sources_used": ["service_detect"],
+            "limitations": ["Local inventory only."],
+        },
+        "vulnerability_intelligence": {
+            "enabled": True,
+            "ruleset_name": "Unit Rules",
+            "ruleset_version": "1.0",
+            "rules_loaded": 1,
+            "inventory_items_checked": 1,
+            "matches_found": 1,
+            "cve_matches_count": 0,
+            "exploit_available_count": 0,
+            "highest_cvss_score": None,
+            "highest_epss_score": None,
+            "highest_intel_risk_label": "Informational",
+            "limitations": ["Local rules only."],
+            "matches": [{"rule_id": "R1", "title": "SSH", "matched_item": {"service_name": "ssh", "port": 22}}],
+        },
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "vuln_intel_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+    }
+
+    path = save_json_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    report = json.loads(path.read_text(encoding="utf-8"))
+
+    assert report["software_inventory"]["total_items"] == 1
+    assert report["vulnerability_intelligence"]["matches_found"] == 1
+    assert report["summary"]["vulnerability_intelligence_matches"] == 1

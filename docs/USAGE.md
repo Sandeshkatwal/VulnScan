@@ -36,6 +36,21 @@ VulScan reports include a standard top-level `findings` section. Findings includ
 
 Open ports remain in `open_ports` for asset inventory. Open services also create informational service exposure findings.
 
+## Vulnerability Intelligence
+
+Version 14.0 adds optional local vulnerability intelligence matching:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --vuln-rules data\vuln_intel\sample_vuln_rules.json --json --html --save-db
+```
+
+`--vuln-intel` builds a normalised `software_inventory` from discovered open ports, service detection, and available credentialed audit metadata. It then evaluates a local JSON rules file. The default rules file is `data\vuln_intel\sample_vuln_rules.json`.
+
+Version 14.0 uses local rules only. It does not fetch live CVE data, EPSS scores, exploit databases, Metasploit modules, or exploit code. Matches are indicators for prioritised manual validation. Service exposure alone does not confirm a vulnerability, and VulScan does not claim a CVE is confirmed unless the supplied evidence supports that conclusion.
+
+Reports include `software_inventory`, `vulnerability_intelligence`, and standard findings with source `vuln_intel`. See `docs\VULNERABILITY_INTELLIGENCE.md` for the rule format.
+
 ## Risk Scoring
 
 Risk scores are heuristic and range from 0 to 100. They combine severity, confidence, finding source, and exposure context such as sensitive ports or clear-text services.

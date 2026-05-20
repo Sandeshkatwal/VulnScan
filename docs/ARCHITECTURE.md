@@ -25,10 +25,10 @@ Vulnerability Scanner
 │   ├── robots.txt awareness
 │   └── Sitemap discovery
 ├── Vulnerability Intelligence Engine
-│   ├── CVE database
-│   ├── CVSS score
-│   ├── EPSS score
-│   └── Exploit availability
+│   ├── Software/service inventory normalisation
+│   ├── Local ruleset matching
+│   ├── CVE/CVSS/EPSS metadata fields
+│   └── Exploit availability metadata fields
 ├── Prioritisation Engine
 │   ├── Risk scoring
 │   ├── Asset criticality
@@ -65,6 +65,7 @@ Vulnerability Scanner
 - Web DAST rate limiting, retry limits, Retry-After handling, and max-error controls.
 - Web DAST robots.txt awareness.
 - Web DAST sitemap discovery.
+- Local vulnerability intelligence foundation using normalised software/service inventory and local JSON rules only.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -85,7 +86,7 @@ Vulnerability Scanner
 - Windows SMB/WinRM configuration checks.
 - Broader configuration auditing.
 - Web DAST features only when explicitly designed with strict safety controls.
-- CVE, CVSS, EPSS, and exploit-availability enrichment.
+- Live CVE feed ingestion, CVSS enrichment, EPSS scoring, and exploit-availability enrichment.
 - Asset criticality, API access, dashboard views, richer fix-first ranking, and expanded remediation workflow tracking.
 
 ## How Version 8 and 9 Help
@@ -165,5 +166,9 @@ Version 13.7 adds `scanner.web_robots`, an advisory robots.txt awareness layer. 
 Version 13.8 adds `scanner.web_sitemap`, a passive sitemap discovery layer. When `web-scan --sitemap` is used, VulScan discovers sitemap files from robots.txt `Sitemap` lines, common same-origin sitemap paths, and repeated `--sitemap-url` values. Sitemap fetches use the shared safe request wrapper and rate limiter, XML parsing uses the Python standard library, and nested sitemap indexes are bounded by `--max-sitemap-depth` and `--max-sitemap-urls`. Sitemap URLs are never treated as authorisation; sitemap files and URL entries are filtered through `scanner.web_scope`, robots rules are respected when enabled, and sitemap-assisted crawling is disabled unless `--use-sitemap-for-crawl` is explicitly provided. Reports include `web_sitemap_summary`, `web_sitemap_results`, `web_sitemap_url_samples`, and concise standard findings with source `web_sitemap`. Version 13.8 does not add active testing, exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
 
 Version 13.9 adds `scanner.web_report_summary`, a passive report consolidation layer. It builds `web_dast_summary`, `web_dast_sections`, web finding grouping helpers, highest web risk metadata, concise recommended next steps, and a single duplicate-safe consolidation finding. The CLI uses it to print a compact Web DAST Passive Report, and JSON/HTML reports include the consolidated view while preserving existing module-specific keys. Version 13.9 does not add active vulnerability testing; passive findings remain indicators rather than proof of exploitability, and written authorisation remains required before any deeper testing.
+
+Version 14.0 adds the Vulnerability Intelligence Engine foundation. `scanner.software_inventory` normalises open-port, service-detection, SSH audit, and Windows audit evidence into a top-level `software_inventory` structure with product/version left null when VulScan lacks explicit evidence. `scanner.vuln_intel` loads a local JSON ruleset, validates supported match fields, matches rules against inventory items, builds a `vulnerability_intelligence` summary, and emits standard findings with source `vuln_intel`. JSON and HTML reports include inventory and intelligence sections, while SQLite and exports continue to use the existing findings pipeline.
+
+Version 14.0 intentionally uses local rules only. It does not fetch live CVE feeds, EPSS data, Exploit-DB records, Metasploit modules, exploit code, or perform live attack checks. CVE, CVSS, EPSS, and exploit availability fields can be present in local rules as metadata, but matches remain indicators requiring manual validation.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

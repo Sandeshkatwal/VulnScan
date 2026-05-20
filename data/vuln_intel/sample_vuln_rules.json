@@ -1,0 +1,135 @@
+{
+  "ruleset_name": "VulScan Sample Vulnerability Intelligence Rules",
+  "ruleset_version": "1.0",
+  "description": "Small local sample ruleset for VulScan vulnerability intelligence foundation.",
+  "rules": [
+    {
+      "rule_id": "VS-INTEL-SSH-001",
+      "title": "SSH Service Exposed",
+      "match": {
+        "service_name": "ssh"
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "Informational",
+      "category": "Service Exposure",
+      "confidence": "Medium",
+      "recommendation": "Ensure SSH is required, patched, and restricted to trusted networks.",
+      "limitation": "Service exposure alone does not confirm a vulnerability."
+    },
+    {
+      "rule_id": "VS-INTEL-SMB-001",
+      "title": "SMB Service Exposed",
+      "match": {
+        "service_name": "smb",
+        "port": 445
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "Medium",
+      "category": "Service Exposure",
+      "confidence": "Medium",
+      "recommendation": "Restrict SMB to trusted internal networks and block it from untrusted networks.",
+      "limitation": "SMB exposure does not confirm a vulnerability."
+    },
+    {
+      "rule_id": "VS-INTEL-RDP-001",
+      "title": "RDP Service Exposed",
+      "match": {
+        "service_name": "rdp",
+        "port": 3389
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "Medium",
+      "category": "Remote Access Exposure",
+      "confidence": "Medium",
+      "recommendation": "Restrict RDP using VPN, firewall rules, or trusted IP allow lists and ensure hosts are patched.",
+      "limitation": "RDP exposure does not confirm a vulnerability."
+    },
+    {
+      "rule_id": "VS-INTEL-WINRM-001",
+      "title": "WinRM Service Exposed",
+      "match": {
+        "service_name": "winrm",
+        "port": [
+          5985,
+          5986
+        ]
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "Low",
+      "category": "Remote Management Exposure",
+      "confidence": "Medium",
+      "recommendation": "Restrict WinRM to trusted management hosts and use secure authentication and transport settings.",
+      "limitation": "WinRM exposure does not confirm a vulnerability."
+    },
+    {
+      "rule_id": "VS-INTEL-FTP-001",
+      "title": "FTP Service Exposed",
+      "match": {
+        "service_name": "ftp",
+        "port": 21
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "Medium",
+      "category": "Cleartext Service Exposure",
+      "confidence": "Medium",
+      "recommendation": "Disable FTP where possible or replace it with SFTP or FTPS.",
+      "limitation": "FTP exposure indicates cleartext service risk but does not confirm credential exposure."
+    },
+    {
+      "rule_id": "VS-INTEL-TELNET-001",
+      "title": "Telnet Service Exposed",
+      "match": {
+        "service_name": "telnet",
+        "port": 23
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "High",
+      "category": "Cleartext Service Exposure",
+      "confidence": "Medium",
+      "recommendation": "Disable Telnet and use SSH or another encrypted management protocol.",
+      "limitation": "Telnet exposure indicates cleartext management risk but does not confirm active credential compromise."
+    },
+    {
+      "rule_id": "VS-INTEL-HTTP-001",
+      "title": "HTTP Service Detected",
+      "match": {
+        "service_name": "http"
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "Informational",
+      "category": "Web Service Exposure",
+      "confidence": "Medium",
+      "recommendation": "Ensure the HTTP service is intended to be exposed and review passive web security headers where authorised.",
+      "limitation": "HTTP service detection alone does not confirm a vulnerability."
+    },
+    {
+      "rule_id": "VS-INTEL-HTTPS-001",
+      "title": "HTTPS Service Detected",
+      "match": {
+        "service_name": "https"
+      },
+      "cve": null,
+      "cvss_score": null,
+      "epss_score": null,
+      "severity": "Informational",
+      "category": "Web Service Exposure",
+      "confidence": "Medium",
+      "recommendation": "Ensure the HTTPS service is intended to be exposed and validate TLS configuration using authorised checks.",
+      "limitation": "HTTPS service detection alone does not confirm a vulnerability."
+    }
+  ]
+}

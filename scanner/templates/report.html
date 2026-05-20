@@ -229,6 +229,8 @@
       <p><strong>SSH audit findings:</strong> {{ report.summary.total_ssh_findings }}</p>
       <p><strong>Windows audit findings:</strong> {{ report.summary.total_windows_findings }}</p>
       <p><strong>Web DAST findings:</strong> {{ report.summary.total_web_findings }}</p>
+      <p><strong>Vulnerability intelligence findings:</strong> {{ report.summary.total_vuln_intel_findings }}</p>
+      <p><strong>Vulnerability intelligence matches:</strong> {{ report.summary.vulnerability_intelligence_matches }}</p>
       <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
       <p><strong>Scan start:</strong> {{ report.scan_start_time }}</p>
       <p><strong>Scan end:</strong> {{ report.scan_end_time }}</p>
@@ -275,6 +277,98 @@
       </table>
       {% else %}
       <p class="empty">No open TCP ports were found in the default common port list.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Software/Service Inventory</h2>
+      <p><strong>Total inventory items:</strong> {{ report.software_inventory.total_items }}</p>
+      <p><strong>Sources used:</strong> {{ report.software_inventory.sources_used | join(", ") }}</p>
+      {% if report.software_inventory.items %}
+      <table>
+        <thead>
+          <tr>
+            <th>Host</th>
+            <th>Port</th>
+            <th>Protocol</th>
+            <th>Service</th>
+            <th>Product</th>
+            <th>Version</th>
+            <th>Source</th>
+            <th>Confidence</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in report.software_inventory.items %}
+          <tr>
+            <td>{{ item.host }}</td>
+            <td>{{ item.port or "" }}</td>
+            <td>{{ item.protocol }}</td>
+            <td>{{ item.service_name }}</td>
+            <td>{{ item.product or "" }}</td>
+            <td>{{ item.version or "" }}</td>
+            <td>{{ item.source }}</td>
+            <td>{{ item.confidence }}</td>
+            <td>{{ item.evidence }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No software or service inventory items were normalised from this scan.</p>
+      {% endif %}
+      <p><strong>Limitations:</strong> {{ report.software_inventory.limitations | join("; ") }}</p>
+    </section>
+
+    <section>
+      <h2>Vulnerability Intelligence</h2>
+      <p><strong>Enabled:</strong> {{ report.vulnerability_intelligence.enabled }}</p>
+      <p><strong>Ruleset:</strong> {{ report.vulnerability_intelligence.ruleset_name or "" }} {{ report.vulnerability_intelligence.ruleset_version or "" }}</p>
+      <p><strong>Rules loaded:</strong> {{ report.vulnerability_intelligence.rules_loaded or 0 }}</p>
+      <p><strong>Inventory items checked:</strong> {{ report.vulnerability_intelligence.inventory_items_checked or 0 }}</p>
+      <p><strong>Matches found:</strong> {{ report.vulnerability_intelligence.matches_found or 0 }}</p>
+      <p><strong>CVE matches:</strong> {{ report.vulnerability_intelligence.cve_matches_count or 0 }}</p>
+      <p><strong>Exploit available count:</strong> {{ report.vulnerability_intelligence.exploit_available_count or 0 }}</p>
+      <p><strong>Highest CVSS:</strong> {{ report.vulnerability_intelligence.highest_cvss_score or "" }}</p>
+      <p><strong>Highest EPSS:</strong> {{ report.vulnerability_intelligence.highest_epss_score or "" }}</p>
+      <p><strong>Highest intelligence risk:</strong> {{ report.vulnerability_intelligence.highest_intel_risk_label or "Informational" }}</p>
+      <p><strong>Limitations:</strong> {{ report.vulnerability_intelligence.limitations | join("; ") }}</p>
+      {% if report.vulnerability_intelligence.matches %}
+      <table>
+        <thead>
+          <tr>
+            <th>Rule ID</th>
+            <th>Title</th>
+            <th>Service/Product</th>
+            <th>Port</th>
+            <th>CVE</th>
+            <th>CVSS</th>
+            <th>EPSS</th>
+            <th>Severity</th>
+            <th>Confidence</th>
+            <th>Recommendation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for match in report.vulnerability_intelligence.matches %}
+          <tr>
+            <td>{{ match.rule_id }}</td>
+            <td>{{ match.title }}</td>
+            <td>{{ match.matched_item.service_name }}{% if match.matched_item.product %} / {{ match.matched_item.product }}{% endif %}</td>
+            <td>{{ match.matched_item.port or "" }}</td>
+            <td>{{ match.cve or "" }}</td>
+            <td>{{ match.cvss_score or "" }}</td>
+            <td>{{ match.epss_score or "" }}</td>
+            <td>{{ match.severity }}</td>
+            <td>{{ match.confidence }}</td>
+            <td>{{ match.recommendation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No vulnerability intelligence matches were recorded.</p>
       {% endif %}
     </section>
 

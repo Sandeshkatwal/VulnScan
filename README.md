@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, sitemap discovery, and consolidated passive Web DAST reporting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, local vulnerability intelligence matching, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, sitemap discovery, and consolidated passive Web DAST reporting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 Version 12.6 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, opt-in Windows Firewall and Microsoft Defender status collection, opt-in local security policy indicators from `net accounts`, and narrow template-based registry indicators using explicitly provided credentials.
 
 ## Requirements
@@ -37,6 +37,15 @@ From the project root with `.venv311` activated:
 ```powershell
 python -m scanner.main scan --target 127.0.0.1
 ```
+
+Optional local vulnerability intelligence matching:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --vuln-rules data\vuln_intel\sample_vuln_rules.json --json --html --save-db
+```
+
+Version 14.0 adds a local vulnerability intelligence foundation. It normalises discovered services/software into `software_inventory`, evaluates local JSON rules from `data\vuln_intel\sample_vuln_rules.json` by default, and emits `vuln_intel` findings through the standard findings pipeline. It does not fetch live CVE, EPSS, Exploit-DB, or Metasploit data, and intelligence matches are indicators that require validation. See `docs\VULNERABILITY_INTELLIGENCE.md`.
 
 Optional authenticated SSH audit for an authorised Linux system:
 
@@ -101,6 +110,8 @@ Version 13.7 adds robots.txt awareness with `--robots`. robots.txt is advisory a
 Version 13.8 adds sitemap discovery with `--sitemap`. Sitemap discovery is passive and does not grant authorisation. VulScan can parse robots.txt sitemap references, common same-origin sitemap paths, and explicit `--sitemap-url` values, but all sitemap URLs are filtered by scope and robots controls when enabled. Sitemap-assisted crawling is off by default and requires `--use-sitemap-for-crawl`; max pages, max depth, scope, robots, and rate limits still apply.
 
 Version 13.9 consolidates passive Web DAST reporting into `web_dast_summary`, `web_dast_sections`, terminal output, JSON, and HTML. It combines scope, politeness, robots, sitemap, crawler, headers, cookies, forms, and passive risk indicators without adding active vulnerability testing. Passive findings are indicators, not proof of exploitability, and written authorisation is still required. Future safe active checks should only be added after scope and report controls remain stable.
+
+Version 14.0 adds local vulnerability intelligence matching with `--vuln-intel`. Rules are loaded only from local JSON files, matched against normalised service/software inventory, and reported as conservative indicators. Version 14.0 does not download CVE feeds, EPSS data, exploit metadata, exploit code, or live vulnerability checks.
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl

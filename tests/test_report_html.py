@@ -553,3 +553,84 @@ def test_html_report_renders_partial_web_dast_summary(tmp_path) -> None:
 
     assert "Web DAST Passive Report" in html
     assert "Continue with authorised deeper testing if in scope." in html
+
+
+def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> None:
+    scan_result = {
+        "host": "127.0.0.1",
+        "resolved_ip": "127.0.0.1",
+        "scan_mode": "safe",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "software_inventory": {
+            "items": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 22,
+                    "protocol": "tcp",
+                    "service_name": "ssh",
+                    "product": None,
+                    "version": None,
+                    "source": "service_detect",
+                    "evidence": "TCP connection successful",
+                    "confidence": "Medium",
+                }
+            ],
+            "total_items": 1,
+            "sources_used": ["service_detect"],
+            "limitations": ["Local inventory only."],
+        },
+        "vulnerability_intelligence": {
+            "enabled": True,
+            "ruleset_name": "Unit Rules",
+            "ruleset_version": "1.0",
+            "rules_loaded": 1,
+            "inventory_items_checked": 1,
+            "matches_found": 1,
+            "cve_matches_count": 0,
+            "exploit_available_count": 0,
+            "highest_cvss_score": None,
+            "highest_epss_score": None,
+            "highest_intel_risk_label": "Informational",
+            "limitations": ["Local rules only."],
+            "matches": [
+                {
+                    "rule_id": "R1",
+                    "title": "SSH Service Exposed",
+                    "matched_item": {"service_name": "ssh", "port": 22},
+                    "cve": None,
+                    "cvss_score": None,
+                    "epss_score": None,
+                    "severity": "Informational",
+                    "confidence": "Medium",
+                    "recommendation": "Restrict SSH.",
+                }
+            ],
+        },
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "vuln_intel_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+    }
+
+    path = save_html_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    html = path.read_text(encoding="utf-8")
+
+    assert "Software/Service Inventory" in html
+    assert "Vulnerability Intelligence" in html
+    assert "SSH Service Exposed" in html
+    assert "Local rules only." in html

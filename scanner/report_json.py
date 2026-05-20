@@ -40,6 +40,28 @@ def save_json_report(
         "demo_mode": bool(scan_result.get("demo_mode")),
         "demo_notice": scan_result.get("demo_notice") or "",
         "open_ports": scan_result["open_ports"],
+        "software_inventory": scan_result.get(
+            "software_inventory",
+            {"items": [], "total_items": 0, "sources_used": [], "limitations": []},
+        ),
+        "vulnerability_intelligence": scan_result.get(
+            "vulnerability_intelligence",
+            {
+                "enabled": False,
+                "ruleset_name": None,
+                "ruleset_version": None,
+                "rules_loaded": 0,
+                "inventory_items_checked": 0,
+                "matches_found": 0,
+                "cve_matches_count": 0,
+                "exploit_available_count": 0,
+                "highest_cvss_score": None,
+                "highest_epss_score": None,
+                "highest_intel_risk_label": "Informational",
+                "limitations": ["Version 14.0 uses local rules only and does not confirm CVE exploitability."],
+                "matches": [],
+            },
+        ),
         "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),
         "tls_findings": scan_result.get("tls_findings", []),
@@ -110,6 +132,7 @@ def save_json_report(
         ),
         "ssh_findings": scan_result.get("ssh_findings", []),
         "windows_findings": scan_result.get("windows_findings", []),
+        "vuln_intel_findings": findings_to_dicts(scan_result.get("vuln_intel_findings", [])),
         "summary": build_summary(scan_result),
     }
     report = redact_nested(report)
@@ -158,6 +181,10 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "total_ssh_findings": len(scan_result.get("ssh_findings", [])),
         "total_windows_findings": len(scan_result.get("windows_findings", [])),
         "total_web_findings": len(scan_result.get("web_findings", [])),
+        "total_vuln_intel_findings": len(scan_result.get("vuln_intel_findings", [])),
+        "vulnerability_intelligence_matches": int(
+            (scan_result.get("vulnerability_intelligence") or {}).get("matches_found") or 0
+        ),
         "highest_risk_level": _highest_risk_level(findings),
         "notes": notes,
     }
