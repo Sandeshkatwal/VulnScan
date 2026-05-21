@@ -53,7 +53,7 @@ OPTIONAL_INTELLIGENCE_FIELDS = {
     "detection_note",
     "allow_unknown_version",
 }
-VULN_INTEL_LIMITATION = "Version 14.2 uses local rules only and does not perform live CVE feed validation."
+VULN_INTEL_LIMITATION = "Version 14.3 uses local rules and local CVE feed files only; it does not perform live CVE feed validation."
 
 
 class VulnIntelRulesError(ValueError):
@@ -83,12 +83,26 @@ def disabled_vulnerability_intelligence_summary() -> dict[str, Any]:
         "highest_intel_risk_label": "Informational",
         "limitations": [VULN_INTEL_LIMITATION],
         "matches": [],
+        "cve_feed_enabled": False,
+        "cve_feed_name": None,
+        "cve_feed_version": None,
+        "cve_feed_items_loaded": 0,
+        "cve_feed_items_evaluated": 0,
+        "cve_feed_matches_found": 0,
+        "cve_feed_insufficient_evidence_count": 0,
+        "cve_feed_unknown_version_count": 0,
+        "cve_feed_highest_cvss": None,
+        "cve_feed_exploit_available_count": 0,
+        "cve_feed_limitations": [],
+        "cve_feed_matches": [],
     }
 
 
 def run_vulnerability_intelligence(
     scan_result: dict[str, Any],
     rules_path: Path = DEFAULT_RULES_PATH,
+    use_cve_feed: bool = False,
+    cve_feed_path: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[Any]]:
     """Build inventory, match local rules, and generate standard findings."""
     inventory = build_software_inventory(scan_result)
@@ -100,6 +114,37 @@ def run_vulnerability_intelligence(
         matches=matches,
     )
     findings = build_vulnerability_intelligence_findings(matches, summary, scan_result)
+    cve_feed_summary = _disabled_cve_feed_summary()
+    if use_cve_feed:
+        from scanner.cve_feed import (
+            DEFAULT_CVE_FEED_PATH,
+            CveFeedError,
+            build_cve_feed_findings,
+            build_cve_feed_summary,
+            load_cve_feed,
+            match_cve_feed,
+        )
+
+        selected_feed_path = cve_feed_path or DEFAULT_CVE_FEED_PATH
+        try:
+            feed = load_cve_feed(selected_feed_path)
+        except CveFeedError as exc:
+            cve_feed_summary = build_cve_feed_summary(
+                feed=None,
+                matches=[],
+                enabled=True,
+                error=f"Local CVE feed was not loaded: {exc}",
+            )
+        else:
+            cve_matches = match_cve_feed(inventory.get("items", []), feed)
+            cve_feed_summary = build_cve_feed_summary(
+                feed=feed,
+                matches=cve_matches,
+                enabled=True,
+            )
+            findings.extend(build_cve_feed_findings(cve_matches, cve_feed_summary, scan_result))
+    summary.update(cve_feed_summary)
+    _refresh_combined_summary_metrics(summary)
     return inventory, summary, findings
 
 
@@ -212,12 +257,48 @@ def build_vulnerability_intelligence_summary(
         "highest_epss_score": max(epss_scores) if epss_scores else None,
         "highest_intel_risk_label": _highest_severity(finding_matches),
         "limitations": [
-            "Version 14.2 uses local rules only and does not perform live CVE feed validation.",
+            VULN_INTEL_LIMITATION,
             "Version-specific rules require local product and version evidence unless allow_unknown_version is explicitly set.",
             "CVE, CVSS, EPSS, and exploit availability fields are local metadata only.",
         ],
         "matches": matches,
+        **_disabled_cve_feed_summary(),
     }
+
+
+def _disabled_cve_feed_summary() -> dict[str, Any]:
+    return {
+        "cve_feed_enabled": False,
+        "cve_feed_name": None,
+        "cve_feed_version": None,
+        "cve_feed_items_loaded": 0,
+        "cve_feed_items_evaluated": 0,
+        "cve_feed_matches_found": 0,
+        "cve_feed_insufficient_evidence_count": 0,
+        "cve_feed_unknown_version_count": 0,
+        "cve_feed_highest_cvss": None,
+        "cve_feed_exploit_available_count": 0,
+        "cve_feed_limitations": [],
+        "cve_feed_matches": [],
+    }
+
+
+def _refresh_combined_summary_metrics(summary: dict[str, Any]) -> None:
+    """Keep top-level intelligence metrics conservative across rules and feeds."""
+    rule_highest = _as_float(summary.get("highest_cvss_score"))
+    feed_highest = _as_float(summary.get("cve_feed_highest_cvss"))
+    cvss_scores = [score for score in (rule_highest, feed_highest) if score is not None]
+    if cvss_scores:
+        summary["highest_cvss_score"] = max(cvss_scores)
+    summary["exploit_available_count"] = int(summary.get("exploit_available_count") or 0) + int(
+        summary.get("cve_feed_exploit_available_count") or 0
+    )
+    if summary.get("cve_feed_limitations"):
+        limitations = list(summary.get("limitations") or [])
+        for limitation in summary.get("cve_feed_limitations") or []:
+            if limitation not in limitations:
+                limitations.append(limitation)
+        summary["limitations"] = limitations
 
 
 def build_vulnerability_intelligence_findings(
@@ -237,7 +318,7 @@ def build_vulnerability_intelligence_findings(
             impact="Local intelligence matches can help prioritise authorised manual verification and remediation.",
             recommendation="Use intelligence matches to prioritise manual verification and remediation.",
             verification="Review the vulnerability_intelligence section in the report.",
-            limitation="Version 14.2 uses local rules only and does not perform live CVE, EPSS, or exploit lookups.",
+            limitation="Version 14.3 uses local rules and local CVE feed files only and does not perform live CVE, EPSS, or exploit lookups.",
             source="vuln_intel",
             evidence_details={
                 "ruleset_name": summary.get("ruleset_name"),

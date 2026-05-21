@@ -519,6 +519,32 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
                     "fixed_version": "9.6",
                 }
             ],
+            "cve_feed_enabled": True,
+            "cve_feed_name": "Unit CVE Feed",
+            "cve_feed_version": "1.0",
+            "cve_feed_items_loaded": 1,
+            "cve_feed_items_evaluated": 1,
+            "cve_feed_matches_found": 1,
+            "cve_feed_insufficient_evidence_count": 0,
+            "cve_feed_unknown_version_count": 0,
+            "cve_feed_highest_cvss": 7.5,
+            "cve_feed_exploit_available_count": 0,
+            "cve_feed_limitations": ["Local feed only."],
+            "cve_feed_matches": [
+                {
+                    "cve": "LOCAL-CVE-DEMO-0001",
+                    "title": "Demo OpenSSH Version Below Policy Threshold",
+                    "product": "openssh",
+                    "version": "8.9p1",
+                    "affected_condition": {"operator": "less_than", "value": "9.6", "display": "less_than 9.6"},
+                    "fixed_version": "9.6",
+                    "cvss_score": 7.5,
+                    "severity": "High",
+                    "match_status": "matched",
+                    "match_confidence": "High",
+                    "exploit_available": False,
+                }
+            ],
         },
         "findings": [],
         "http_findings": [],
@@ -547,5 +573,8 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
     assert report["vulnerability_intelligence"]["matches_found"] == 1
     assert report["vulnerability_intelligence"]["matches"][0]["match_status"] == "matched"
     assert report["vulnerability_intelligence"]["matches"][0]["version_condition"]["operator"] == "version_less_than"
+    assert report["vulnerability_intelligence"]["cve_feed_matches_found"] == 1
+    assert report["vulnerability_intelligence"]["cve_feed_matches"][0]["cve"] == "LOCAL-CVE-DEMO-0001"
     assert report["summary"]["vulnerability_intelligence_matches"] == 1
     assert report["summary"]["vulnerability_intelligence_version_matches"] == 1
+    assert report["summary"]["vulnerability_intelligence_cve_feed_matches"] == 1

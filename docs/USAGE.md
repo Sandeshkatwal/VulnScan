@@ -38,20 +38,23 @@ Open ports remain in `open_ports` for asset inventory. Open services also create
 
 ## Vulnerability Intelligence
 
-Version 14.2 supports optional local vulnerability intelligence matching:
+Version 14.3 supports optional local vulnerability intelligence matching and local CVE-style feed import:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --vuln-rules data\vuln_intel\sample_vuln_rules.json --json --html --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --use-cve-feed --cve-feed data\cve_feeds\sample_cve_feed.json
 ```
 
 `--vuln-intel` builds a normalised `software_inventory` from discovered open ports, service detection, and available credentialed audit metadata. It then evaluates a local JSON rules file. The default rules file is `data\vuln_intel\sample_vuln_rules.json`.
 
-Version 14.2 uses local rules only. It does not fetch live CVE data, EPSS scores, exploit databases, Metasploit modules, or exploit code. Matches are indicators for prioritised manual validation. Service exposure alone does not confirm a vulnerability, and VulScan does not claim a CVE is confirmed unless supplied product/version evidence supports applicability.
+`--use-cve-feed` requires `--vuln-intel` and imports a local CVE-style JSON file only. The default sample feed is `data\cve_feeds\sample_cve_feed.json`. If `--cve-feed` is provided without `--use-cve-feed`, the feed path is ignored.
+
+Version 14.3 uses local rules and local feed files only. It does not fetch live CVE data, EPSS scores, exploit databases, Metasploit modules, or exploit code. Matches are indicators for prioritised manual validation. Service exposure alone does not confirm a vulnerability, and VulScan does not claim a CVE is confirmed unless supplied product/version evidence supports applicability.
 
 Local rules can include version conditions such as `version_less_than`, `version_greater_than`, and `version_between`. Version-specific rules require local product and version evidence. Unknown versions are not treated as confirmed matches unless the rule explicitly sets `allow_unknown_version: true`, in which case findings are low-confidence indicators.
 
-Reports include `software_inventory`, `vulnerability_intelligence`, and standard findings with source `vuln_intel`. See `docs\VULNERABILITY_INTELLIGENCE.md` for the rule format.
+Reports include `software_inventory`, `vulnerability_intelligence`, local CVE feed fields when enabled, and standard findings with source `vuln_intel` or `cve_feed`. See `docs\VULNERABILITY_INTELLIGENCE.md` for the rule and feed formats.
 
 ## Risk Scoring
 

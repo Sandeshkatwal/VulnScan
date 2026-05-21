@@ -27,6 +27,7 @@ Vulnerability Scanner
 ├── Vulnerability Intelligence Engine
 │   ├── Software/service inventory normalisation
 │   ├── Local ruleset matching
+│   ├── Local CVE-style feed import
 │   ├── CVE/CVSS/EPSS metadata fields
 │   └── Exploit availability metadata fields
 ├── Prioritisation Engine
@@ -65,7 +66,7 @@ Vulnerability Scanner
 - Web DAST rate limiting, retry limits, Retry-After handling, and max-error controls.
 - Web DAST robots.txt awareness.
 - Web DAST sitemap discovery.
-- Local vulnerability intelligence foundation using normalised software/service inventory, service fingerprint metadata, local JSON rules, and local version conditions only.
+- Local vulnerability intelligence foundation using normalised software/service inventory, service fingerprint metadata, local JSON rules, local CVE-style feed files, and local version conditions only.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -86,7 +87,7 @@ Vulnerability Scanner
 - Windows SMB/WinRM configuration checks.
 - Broader configuration auditing.
 - Web DAST features only when explicitly designed with strict safety controls.
-- Live CVE feed ingestion, CVSS enrichment, EPSS scoring, and exploit-availability enrichment.
+- Trusted CVE feed update workflows, CVSS enrichment, EPSS scoring, and exploit-availability enrichment.
 - Asset criticality, API access, dashboard views, richer fix-first ranking, and expanded remediation workflow tracking.
 
 ## How Version 8 and 9 Help
@@ -170,5 +171,7 @@ Version 13.9 adds `scanner.web_report_summary`, a passive report consolidation l
 Version 14.2 extends the Vulnerability Intelligence Engine foundation. `scanner.software_inventory` normalises open-port, service-detection, SSH audit, Windows audit, and local service fingerprint evidence into a top-level `software_inventory` structure with product/version left null when VulScan lacks explicit evidence. `scanner.vuln_intel` loads a local JSON ruleset, validates supported identity and version match fields, evaluates safe version conditions, builds a `vulnerability_intelligence` summary, and emits standard findings with source `vuln_intel`. JSON and HTML reports include inventory and intelligence sections, while SQLite and exports continue to use the existing findings pipeline.
 
 Version 14.2 intentionally uses local rules only. It does not fetch live CVE feeds, EPSS data, Exploit-DB records, Metasploit modules, exploit code, or perform live attack checks. CVE, CVSS, EPSS, affected-version, fixed-version, references, and exploit availability fields can be present in local rules as metadata, but matches remain indicators requiring manual validation. Version-specific rules require product/version evidence unless `allow_unknown_version` is explicitly set, and unknown-version findings are low confidence.
+
+Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan command accepts `--use-cve-feed --cve-feed PATH` only alongside `--vuln-intel`; the importer loads local JSON, validates feed structure, normalises vendor/product/CPE identifiers, evaluates affected version conditions, and merges results into `vulnerability_intelligence.cve_feed_*` fields. Matched feed records create standard findings with source `cve_feed`, while missing or unknown versions are counted as insufficient evidence and do not create confirmed CVE findings. The feature remains offline-only and does not fetch live CVE data, remote references, Exploit-DB, Metasploit, or exploit code.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

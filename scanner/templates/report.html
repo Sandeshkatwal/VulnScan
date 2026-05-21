@@ -329,25 +329,26 @@
 
     <section>
       <h2>Vulnerability Intelligence</h2>
-      <p><strong>Enabled:</strong> {{ report.vulnerability_intelligence.enabled }}</p>
-      <p><strong>Ruleset:</strong> {{ report.vulnerability_intelligence.ruleset_name or "" }} {{ report.vulnerability_intelligence.ruleset_version or "" }}</p>
-      <p><strong>Rules loaded:</strong> {{ report.vulnerability_intelligence.rules_loaded or 0 }}</p>
-      <p><strong>Inventory items checked:</strong> {{ report.vulnerability_intelligence.inventory_items_checked or 0 }}</p>
-        <p><strong>Matches found:</strong> {{ report.vulnerability_intelligence.matches_found or 0 }}</p>
-        <p><strong>CVE matches:</strong> {{ report.vulnerability_intelligence.cve_matches_count or 0 }}</p>
-        <p><strong>Version rules loaded:</strong> {{ report.vulnerability_intelligence.version_rules_loaded or 0 }}</p>
-        <p><strong>Version rules evaluated:</strong> {{ report.vulnerability_intelligence.version_rules_evaluated or 0 }}</p>
-        <p><strong>Version matches found:</strong> {{ report.vulnerability_intelligence.version_matches_found or 0 }}</p>
-        <p><strong>Unknown version count:</strong> {{ report.vulnerability_intelligence.unknown_version_count or 0 }}</p>
-        <p><strong>Insufficient evidence count:</strong> {{ report.vulnerability_intelligence.insufficient_evidence_count or 0 }}</p>
-        <p><strong>Confirmed version matches:</strong> {{ report.vulnerability_intelligence.confirmed_version_match_count or 0 }}</p>
-        <p><strong>Local CVE metadata count:</strong> {{ report.vulnerability_intelligence.local_cve_metadata_count or 0 }}</p>
-        <p><strong>Exploit available count:</strong> {{ report.vulnerability_intelligence.exploit_available_count or 0 }}</p>
-      <p><strong>Highest CVSS:</strong> {{ report.vulnerability_intelligence.highest_cvss_score or "" }}</p>
-      <p><strong>Highest EPSS:</strong> {{ report.vulnerability_intelligence.highest_epss_score or "" }}</p>
-      <p><strong>Highest intelligence risk:</strong> {{ report.vulnerability_intelligence.highest_intel_risk_label or "Informational" }}</p>
-      <p><strong>Limitations:</strong> {{ report.vulnerability_intelligence.limitations | join("; ") }}</p>
-      {% if report.vulnerability_intelligence.matches %}
+      {% set vuln_intel = report.get("vulnerability_intelligence", {}) %}
+      <p><strong>Enabled:</strong> {{ vuln_intel.get("enabled", false) }}</p>
+      <p><strong>Ruleset:</strong> {{ vuln_intel.get("ruleset_name") or "" }} {{ vuln_intel.get("ruleset_version") or "" }}</p>
+      <p><strong>Rules loaded:</strong> {{ vuln_intel.get("rules_loaded", 0) }}</p>
+      <p><strong>Inventory items checked:</strong> {{ vuln_intel.get("inventory_items_checked", 0) }}</p>
+      <p><strong>Matches found:</strong> {{ vuln_intel.get("matches_found", 0) }}</p>
+      <p><strong>CVE matches:</strong> {{ vuln_intel.get("cve_matches_count", 0) }}</p>
+      <p><strong>Version rules loaded:</strong> {{ vuln_intel.get("version_rules_loaded", 0) }}</p>
+      <p><strong>Version rules evaluated:</strong> {{ vuln_intel.get("version_rules_evaluated", 0) }}</p>
+      <p><strong>Version matches found:</strong> {{ vuln_intel.get("version_matches_found", 0) }}</p>
+      <p><strong>Unknown version count:</strong> {{ vuln_intel.get("unknown_version_count", 0) }}</p>
+      <p><strong>Insufficient evidence count:</strong> {{ vuln_intel.get("insufficient_evidence_count", 0) }}</p>
+      <p><strong>Confirmed version matches:</strong> {{ vuln_intel.get("confirmed_version_match_count", 0) }}</p>
+      <p><strong>Local CVE metadata count:</strong> {{ vuln_intel.get("local_cve_metadata_count", 0) }}</p>
+      <p><strong>Exploit available count:</strong> {{ vuln_intel.get("exploit_available_count", 0) }}</p>
+      <p><strong>Highest CVSS:</strong> {{ vuln_intel.get("highest_cvss_score") or "" }}</p>
+      <p><strong>Highest EPSS:</strong> {{ vuln_intel.get("highest_epss_score") or "" }}</p>
+      <p><strong>Highest intelligence risk:</strong> {{ vuln_intel.get("highest_intel_risk_label") or "Informational" }}</p>
+      <p><strong>Limitations:</strong> {{ vuln_intel.get("limitations", []) | join("; ") }}</p>
+      {% if vuln_intel.get("matches", []) %}
       <table>
         <thead>
           <tr>
@@ -366,7 +367,7 @@
             </tr>
         </thead>
         <tbody>
-          {% for match in report.vulnerability_intelligence.matches %}
+          {% for match in vuln_intel.get("matches", []) %}
           <tr>
               <td>{{ match.rule_id }}</td>
               <td>{{ match.title }}</td>
@@ -386,6 +387,56 @@
       </table>
       {% else %}
       <p class="empty">No vulnerability intelligence matches were recorded.</p>
+      {% endif %}
+
+      <h3>Local CVE Feed Matches</h3>
+      <p><strong>CVE feed enabled:</strong> {{ vuln_intel.get("cve_feed_enabled", false) }}</p>
+      <p><strong>Feed:</strong> {{ vuln_intel.get("cve_feed_name") or "" }} {{ vuln_intel.get("cve_feed_version") or "" }}</p>
+      <p><strong>Items loaded:</strong> {{ vuln_intel.get("cve_feed_items_loaded", 0) }}</p>
+      <p><strong>Items evaluated:</strong> {{ vuln_intel.get("cve_feed_items_evaluated", 0) }}</p>
+      <p><strong>Matches found:</strong> {{ vuln_intel.get("cve_feed_matches_found", 0) }}</p>
+      <p><strong>Insufficient evidence:</strong> {{ vuln_intel.get("cve_feed_insufficient_evidence_count", 0) }}</p>
+      <p><strong>Unknown version:</strong> {{ vuln_intel.get("cve_feed_unknown_version_count", 0) }}</p>
+      <p><strong>Highest CVSS:</strong> {{ vuln_intel.get("cve_feed_highest_cvss") or "" }}</p>
+      <p><strong>Exploit available count:</strong> {{ vuln_intel.get("cve_feed_exploit_available_count", 0) }}</p>
+      <p><strong>CVE feed limitations:</strong> {{ vuln_intel.get("cve_feed_limitations", []) | join("; ") }}</p>
+      {% if vuln_intel.get("cve_feed_matches", []) %}
+      <table>
+        <thead>
+          <tr>
+            <th>CVE</th>
+            <th>Title</th>
+            <th>Product</th>
+            <th>Version</th>
+            <th>Affected Condition</th>
+            <th>Fixed Version</th>
+            <th>CVSS</th>
+            <th>Severity</th>
+            <th>Status</th>
+            <th>Confidence</th>
+            <th>Exploit Available</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for match in vuln_intel.get("cve_feed_matches", []) %}
+          <tr>
+            <td>{{ match.cve or "" }}</td>
+            <td>{{ match.title or "" }}</td>
+            <td>{{ match.product or "" }}</td>
+            <td>{{ match.version or "" }}</td>
+            <td>{% if match.affected_condition %}{{ match.affected_condition.display }}{% endif %}</td>
+            <td>{{ match.fixed_version or "" }}</td>
+            <td>{{ match.cvss_score or "" }}</td>
+            <td>{{ match.severity or "" }}</td>
+            <td>{{ match.match_status or "" }}</td>
+            <td>{{ match.match_confidence or "" }}</td>
+            <td>{{ match.exploit_available }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No local CVE feed matches were recorded.</p>
       {% endif %}
     </section>
 

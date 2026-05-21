@@ -3,6 +3,7 @@ from scanner.vuln_intel import (
     build_vulnerability_intelligence_findings,
     build_vulnerability_intelligence_summary,
     match_rules,
+    run_vulnerability_intelligence,
 )
 
 
@@ -234,3 +235,74 @@ def test_unknown_version_finding_does_not_claim_confirmed_vulnerability() -> Non
     assert findings[1].confidence == "Low"
     assert "version was not confirmed" in findings[1].evidence
     assert "confirmed vulnerability" not in findings[1].evidence.lower()
+
+
+def test_run_vulnerability_intelligence_includes_local_cve_feed(tmp_path) -> None:
+    rules_path = tmp_path / "rules.json"
+    rules_path.write_text(
+        """
+        {
+          "ruleset_name": "Unit Rules",
+          "ruleset_version": "1.0",
+          "rules": [
+            {"rule_id": "R1", "title": "SSH", "match": {"service_name": "ssh"}}
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    feed_path = tmp_path / "feed.json"
+    feed_path.write_text(
+        """
+        {
+          "feed_name": "Unit CVE Feed",
+          "feed_version": "1.0",
+          "items": [
+            {
+              "cve": "LOCAL-CVE-DEMO-0001",
+              "title": "Demo OpenSSH Version Below Policy Threshold",
+              "vendor": "openbsd",
+              "product": "openssh",
+              "cpe_prefix": "cpe:2.3:a:openbsd:openssh",
+              "affected_versions": {"less_than": "9.6"},
+              "fixed_version": "9.6",
+              "cvss_score": 7.5,
+              "severity": "High",
+              "exploit_available": false,
+              "references": []
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    scan_result = {
+        "host": "127.0.0.1",
+        "resolved_ip": "127.0.0.1",
+        "open_ports": [
+            {
+                "host": "127.0.0.1",
+                "port": 22,
+                "protocol": "tcp",
+                "service": "ssh",
+                "status": "open",
+                "confidence": "high",
+                "evidence": "SSH-2.0-OpenSSH_8.9p1",
+                "banner": "SSH-2.0-OpenSSH_8.9p1",
+                "metadata": {"vendor": "openbsd", "cpe": "cpe:2.3:a:openbsd:openssh:8.9p1"},
+            }
+        ],
+    }
+
+    inventory, summary, findings = run_vulnerability_intelligence(
+        scan_result=scan_result,
+        rules_path=rules_path,
+        use_cve_feed=True,
+        cve_feed_path=feed_path,
+    )
+
+    assert inventory["items"][0]["product"] == "openssh"
+    assert summary["cve_feed_enabled"] is True
+    assert summary["cve_feed_matches_found"] == 1
+    assert summary["cve_feed_matches"][0]["cve"] == "LOCAL-CVE-DEMO-0001"
+    assert any(finding.source == "cve_feed" for finding in findings)

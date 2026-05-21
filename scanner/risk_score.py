@@ -43,7 +43,7 @@ def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
         score += 5
     if source == "tls_audit" and severity == "High":
         score += 10
-    if source == "vuln_intel":
+    if source in {"vuln_intel", "cve_feed"}:
         cvss_score = _safe_float(evidence_details.get("cvss_score"))
         if cvss_score is not None:
             score = max(score, int(round(cvss_score * 10)))

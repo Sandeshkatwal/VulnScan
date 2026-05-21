@@ -18,6 +18,7 @@ from scanner.audit_profiles import (
 )
 from scanner.assets import get_asset_services, get_assets
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
+from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.database import database_exists, get_missing_required_tables
 from scanner.diff import compare_latest_two_scans
 from scanner.evidence import redact_nested
@@ -373,11 +374,31 @@ def scan(
             help="Path to a local vulnerability intelligence rules JSON file.",
         ),
     ] = DEFAULT_RULES_PATH,
+    use_cve_feed: Annotated[
+        bool,
+        typer.Option(
+            "--use-cve-feed",
+            help="Enable matching against a local CVE-style JSON feed. Requires --vuln-intel.",
+        ),
+    ] = False,
+    cve_feed: Annotated[
+        Path,
+        typer.Option(
+            "--cve-feed",
+            help="Path to a local CVE-style JSON feed file.",
+        ),
+    ] = DEFAULT_CVE_FEED_PATH,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
     if windows_demo and ssh_audit:
         console.print("[red]Windows demo mode cannot be combined with --ssh-audit because demo mode must not connect to any host.[/red]")
         raise typer.Exit(code=1)
+
+    if use_cve_feed and not vuln_intel:
+        console.print("[red]--use-cve-feed requires --vuln-intel because CVE feed matching uses the vulnerability intelligence inventory.[/red]")
+        raise typer.Exit(code=1)
+    if cve_feed != DEFAULT_CVE_FEED_PATH and not use_cve_feed:
+        console.print("[yellow]--cve-feed was provided without --use-cve-feed. The local CVE feed will not be loaded.[/yellow]")
 
     try:
         selected_audit_profile = get_audit_profile(audit_profile)
@@ -610,6 +631,8 @@ def scan(
                 inventory, vulnerability_intelligence, vuln_intel_findings = run_vulnerability_intelligence(
                     scan_result=scan_result,
                     rules_path=vuln_rules,
+                    use_cve_feed=use_cve_feed,
+                    cve_feed_path=cve_feed,
                 )
             except VulnIntelRulesError as exc:
                 console.print(f"[red]Vulnerability intelligence error:[/red] {exc}")
@@ -636,7 +659,7 @@ def scan(
             if _is_windows_related_finding(finding)
         ]
         scan_result["vuln_intel_findings"] = [
-            finding for finding in scan_result["findings"] if finding["source"] == "vuln_intel"
+            finding for finding in scan_result["findings"] if finding["source"] in {"vuln_intel", "cve_feed"}
         ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
@@ -1758,6 +1781,14 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
         ("Highest CVSS", summary.get("highest_cvss_score")),
         ("Highest EPSS", summary.get("highest_epss_score")),
         ("Highest intel risk", summary.get("highest_intel_risk_label")),
+        ("CVE feed enabled", summary.get("cve_feed_enabled")),
+        ("CVE feed", f"{summary.get('cve_feed_name') or ''} {summary.get('cve_feed_version') or ''}".strip()),
+        ("CVE feed items loaded", summary.get("cve_feed_items_loaded")),
+        ("CVE feed matches found", summary.get("cve_feed_matches_found")),
+        ("CVE feed insufficient evidence", summary.get("cve_feed_insufficient_evidence_count")),
+        ("CVE feed unknown version", summary.get("cve_feed_unknown_version_count")),
+        ("CVE feed highest CVSS", summary.get("cve_feed_highest_cvss")),
+        ("CVE feed exploit available", summary.get("cve_feed_exploit_available_count")),
         ("Limitations", _format_summary_list(summary.get("limitations"))),
     ]
     for label, value in rows:
@@ -1765,36 +1796,65 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
     console.print(table)
 
     matches = list(summary.get("matches") or [])
-    if not matches:
+    if matches:
+        matches_table = Table(title="Vulnerability Intelligence Matches")
+        matches_table.add_column("Rule ID")
+        matches_table.add_column("Title")
+        matches_table.add_column("Product")
+        matches_table.add_column("Version")
+        matches_table.add_column("Condition")
+        matches_table.add_column("Status")
+        matches_table.add_column("Confidence")
+        matches_table.add_column("CVE")
+        matches_table.add_column("CVSS")
+        matches_table.add_column("Fixed Version")
+        for match in matches:
+            item = match.get("matched_item") or {}
+            condition = match.get("version_condition") or {}
+            matches_table.add_row(
+                str(match.get("rule_id") or ""),
+                str(match.get("title") or ""),
+                str(item.get("product") or item.get("service_name") or ""),
+                str(item.get("version") or ""),
+                str(condition.get("display") or ""),
+                str(match.get("match_status") or ""),
+                str(match.get("match_confidence") or match.get("confidence") or ""),
+                str(match.get("cve") or ""),
+                "" if match.get("cvss_score") is None else str(match.get("cvss_score")),
+                str(match.get("fixed_version") or ""),
+            )
+        console.print(matches_table)
+
+    cve_feed_matches = list(summary.get("cve_feed_matches") or [])
+    if not cve_feed_matches:
         return
 
-    matches_table = Table(title="Vulnerability Intelligence Matches")
-    matches_table.add_column("Rule ID")
-    matches_table.add_column("Title")
-    matches_table.add_column("Product")
-    matches_table.add_column("Version")
-    matches_table.add_column("Condition")
-    matches_table.add_column("Status")
-    matches_table.add_column("Confidence")
-    matches_table.add_column("CVE")
-    matches_table.add_column("CVSS")
-    matches_table.add_column("Fixed Version")
-    for match in matches:
-        item = match.get("matched_item") or {}
-        condition = match.get("version_condition") or {}
-        matches_table.add_row(
-            str(match.get("rule_id") or ""),
-            str(match.get("title") or ""),
-            str(item.get("product") or item.get("service_name") or ""),
-            str(item.get("version") or ""),
-            str(condition.get("display") or ""),
-            str(match.get("match_status") or ""),
-            str(match.get("match_confidence") or match.get("confidence") or ""),
+    cve_table = Table(title="Local CVE Feed Matches")
+    cve_table.add_column("CVE")
+    cve_table.add_column("Title")
+    cve_table.add_column("Product")
+    cve_table.add_column("Version")
+    cve_table.add_column("Affected Condition")
+    cve_table.add_column("Fixed Version")
+    cve_table.add_column("CVSS")
+    cve_table.add_column("Severity")
+    cve_table.add_column("Confidence")
+    cve_table.add_column("Exploit Available")
+    for match in cve_feed_matches:
+        condition = match.get("affected_condition") or {}
+        cve_table.add_row(
             str(match.get("cve") or ""),
-            "" if match.get("cvss_score") is None else str(match.get("cvss_score")),
+            str(match.get("title") or ""),
+            str(match.get("product") or ""),
+            str(match.get("version") or ""),
+            str(condition.get("display") or ""),
             str(match.get("fixed_version") or ""),
+            "" if match.get("cvss_score") is None else str(match.get("cvss_score")),
+            str(match.get("severity") or ""),
+            str(match.get("match_confidence") or ""),
+            str(match.get("exploit_available") or False),
         )
-    console.print(matches_table)
+    console.print(cve_table)
 
 
 def _print_web_dast_report(summary: dict[str, Any], sections: list[dict[str, Any]]) -> None:

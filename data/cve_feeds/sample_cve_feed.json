@@ -1,0 +1,65 @@
+{
+  "feed_name": "VulScan Local Sample CVE Feed",
+  "feed_version": "1.0",
+  "generated_at": "demo-local",
+  "description": "Small local CVE-style feed for VulScan testing. This is not a live CVE feed.",
+  "items": [
+    {
+      "cve": "LOCAL-CVE-DEMO-0001",
+      "title": "Demo OpenSSH Version Below Policy Threshold",
+      "description": "Demo local CVE-style record for testing version-aware matching.",
+      "vendor": "openbsd",
+      "product": "openssh",
+      "cpe_prefix": "cpe:2.3:a:openbsd:openssh",
+      "affected_versions": {
+        "less_than": "9.6"
+      },
+      "fixed_version": "9.6",
+      "cvss_score": 7.5,
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "severity": "High",
+      "published": "demo-local",
+      "last_modified": "demo-local",
+      "references": [
+        {
+          "label": "Demo local reference",
+          "url": "local-only"
+        }
+      ],
+      "exploit_available": false,
+      "epss_score": null,
+      "epss_percentile": null,
+      "limitation": "Demo local feed item. Not validated against a live CVE source."
+    },
+    {
+      "cve": "LOCAL-CVE-DEMO-0002",
+      "title": "Demo Apache HTTP Server Version Range Indicator",
+      "description": "Demo local CVE-style record for testing affected version ranges.",
+      "vendor": "apache",
+      "product": "apache_http_server",
+      "cpe_prefix": "cpe:2.3:a:apache:http_server",
+      "affected_versions": {
+        "between": [
+          "2.4.0",
+          "2.4.57"
+        ]
+      },
+      "fixed_version": "2.4.58",
+      "cvss_score": 6.5,
+      "cvss_vector": "LOCAL-DEMO",
+      "severity": "Medium",
+      "published": "demo-local",
+      "last_modified": "demo-local",
+      "references": [
+        {
+          "label": "Demo local reference",
+          "url": "local-only"
+        }
+      ],
+      "exploit_available": false,
+      "epss_score": null,
+      "epss_percentile": null,
+      "limitation": "Demo local feed item. Requires confirmed Apache HTTP Server product and version."
+    }
+  ]
+}

@@ -21,6 +21,8 @@ data/*
 !data/.gitkeep
 !data/vuln_intel/
 !data/vuln_intel/sample_vuln_rules.json
+!data/cve_feeds/
+!data/cve_feeds/sample_cve_feed.json
 data/*.db
 data/*cache*.json
 

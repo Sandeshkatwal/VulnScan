@@ -65,8 +65,20 @@ def save_json_report(
                 "highest_cvss_score": None,
                 "highest_epss_score": None,
                 "highest_intel_risk_label": "Informational",
-                "limitations": ["Version 14.2 uses local rules only and does not perform live CVE feed validation."],
+                "limitations": ["Version 14.3 uses local rules and local CVE feed files only; it does not perform live CVE feed validation."],
                 "matches": [],
+                "cve_feed_enabled": False,
+                "cve_feed_name": None,
+                "cve_feed_version": None,
+                "cve_feed_items_loaded": 0,
+                "cve_feed_items_evaluated": 0,
+                "cve_feed_matches_found": 0,
+                "cve_feed_insufficient_evidence_count": 0,
+                "cve_feed_unknown_version_count": 0,
+                "cve_feed_highest_cvss": None,
+                "cve_feed_exploit_available_count": 0,
+                "cve_feed_limitations": [],
+                "cve_feed_matches": [],
             },
         ),
         "findings": findings_to_dicts(scan_result.get("findings", [])),
@@ -194,6 +206,9 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         ),
         "vulnerability_intelligence_version_matches": int(
             (scan_result.get("vulnerability_intelligence") or {}).get("version_matches_found") or 0
+        ),
+        "vulnerability_intelligence_cve_feed_matches": int(
+            (scan_result.get("vulnerability_intelligence") or {}).get("cve_feed_matches_found") or 0
         ),
         "highest_risk_level": _highest_risk_level(findings),
         "notes": notes,
