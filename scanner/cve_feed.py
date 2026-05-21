@@ -12,7 +12,7 @@ from scanner.service_fingerprint import normalise_cpe, normalise_product, normal
 
 
 DEFAULT_CVE_FEED_PATH = Path("data") / "cve_feeds" / "sample_cve_feed.json"
-CVE_FEED_LIMITATION = "Version 14.4 uses local CVE feed and EPSS files only and does not validate against live CVE sources."
+CVE_FEED_LIMITATION = "Version 14.5 uses local CVE feed, EPSS, and exploit metadata files only and does not validate against live CVE sources."
 SUPPORTED_AFFECTED_VERSION_FIELDS = {
     "exact",
     "less_than",
@@ -192,6 +192,12 @@ def build_cve_feed_findings(
                     "epss_source": match.get("epss_source"),
                     "epss_enriched": match.get("epss_enriched"),
                     "exploit_available": match.get("exploit_available"),
+                    "exploit_metadata_source": match.get("exploit_metadata_source"),
+                    "exploit_reference_label": match.get("exploit_reference_label"),
+                    "exploit_reference_url": match.get("exploit_reference_url"),
+                    "exploit_maturity": match.get("exploit_maturity"),
+                    "active_exploitation_reported": match.get("active_exploitation_reported"),
+                    "exploit_metadata_enriched": match.get("exploit_metadata_enriched"),
                     "affected_versions": match.get("affected_versions"),
                     "fixed_version": match.get("fixed_version"),
                     "references": match.get("references") or [],
@@ -412,6 +418,12 @@ def _match_evidence(match: dict[str, Any], product: str, version: Any) -> str:
         evidence += (
             f" Offline EPSS metadata: score {match.get('epss_score')}, "
             f"percentile {match.get('epss_percentile')}."
+        )
+    if match.get("exploit_metadata_enriched") is True:
+        maturity = match.get("exploit_maturity") or "unknown"
+        evidence += (
+            f" Offline exploit metadata indicates availability status {match.get('exploit_available')} "
+            f"with maturity {maturity}. This does not confirm exploitability."
         )
     return evidence
 

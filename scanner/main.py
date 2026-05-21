@@ -20,6 +20,7 @@ from scanner.assets import get_asset_services, get_assets
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
+from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH
 from scanner.database import database_exists, get_missing_required_tables
 from scanner.diff import compare_latest_two_scans
 from scanner.evidence import redact_nested
@@ -403,6 +404,20 @@ def scan(
             help="Path to a local EPSS CSV or JSON metadata file.",
         ),
     ] = DEFAULT_EPSS_PATH,
+    use_exploit_metadata: Annotated[
+        bool,
+        typer.Option(
+            "--use-exploit-metadata",
+            help="Enable offline exploit availability metadata enrichment for local CVE feed matches.",
+        ),
+    ] = False,
+    exploit_metadata_file: Annotated[
+        Path,
+        typer.Option(
+            "--exploit-metadata-file",
+            help="Path to a local exploit availability metadata JSON or CSV file.",
+        ),
+    ] = DEFAULT_EXPLOIT_METADATA_PATH,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
     if windows_demo and ssh_audit:
@@ -415,13 +430,21 @@ def scan(
     if use_epss and not vuln_intel:
         console.print("[red]--use-epss requires --vuln-intel because EPSS enrichment uses vulnerability intelligence CVE matches.[/red]")
         raise typer.Exit(code=1)
+    if use_exploit_metadata and not vuln_intel:
+        console.print("[red]--use-exploit-metadata requires --vuln-intel because exploit metadata enriches vulnerability intelligence CVE matches.[/red]")
+        raise typer.Exit(code=1)
     if use_epss and not use_cve_feed:
         console.print("[red]--use-epss enriches local CVE feed matches, so it requires --use-cve-feed.[/red]")
+        raise typer.Exit(code=1)
+    if use_exploit_metadata and not use_cve_feed:
+        console.print("[red]--use-exploit-metadata enriches local CVE feed matches, so it requires --use-cve-feed.[/red]")
         raise typer.Exit(code=1)
     if cve_feed != DEFAULT_CVE_FEED_PATH and not use_cve_feed:
         console.print("[yellow]--cve-feed was provided without --use-cve-feed. The local CVE feed will not be loaded.[/yellow]")
     if epss_file != DEFAULT_EPSS_PATH and not use_epss:
         console.print("[yellow]--epss-file was provided without --use-epss. The local EPSS file will not be loaded.[/yellow]")
+    if exploit_metadata_file != DEFAULT_EXPLOIT_METADATA_PATH and not use_exploit_metadata:
+        console.print("[yellow]--exploit-metadata-file was provided without --use-exploit-metadata. The local exploit metadata file will not be loaded.[/yellow]")
 
     try:
         selected_audit_profile = get_audit_profile(audit_profile)
@@ -658,6 +681,8 @@ def scan(
                     cve_feed_path=cve_feed,
                     use_epss=use_epss,
                     epss_file=epss_file,
+                    use_exploit_metadata=use_exploit_metadata,
+                    exploit_metadata_file=exploit_metadata_file,
                 )
             except VulnIntelRulesError as exc:
                 console.print(f"[red]Vulnerability intelligence error:[/red] {exc}")
@@ -684,7 +709,9 @@ def scan(
             if _is_windows_related_finding(finding)
         ]
         scan_result["vuln_intel_findings"] = [
-            finding for finding in scan_result["findings"] if finding["source"] in {"vuln_intel", "cve_feed", "epss_importer"}
+            finding
+            for finding in scan_result["findings"]
+            if finding["source"] in {"vuln_intel", "cve_feed", "epss_importer", "exploit_metadata"}
         ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
@@ -1824,6 +1851,14 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
         ("High EPSS count", summary.get("high_epss_count")),
         ("Medium EPSS count", summary.get("medium_epss_count")),
         ("Low EPSS count", summary.get("low_epss_count")),
+        ("Exploit metadata enabled", summary.get("exploit_metadata_enabled")),
+        ("Exploit metadata feed", f"{summary.get('exploit_metadata_feed_name') or ''} {summary.get('exploit_metadata_feed_version') or ''}".strip()),
+        ("Exploit metadata records loaded", summary.get("exploit_metadata_records_loaded")),
+        ("Exploit metadata invalid records", summary.get("exploit_metadata_invalid_records")),
+        ("Exploit metadata unsafe skipped", summary.get("exploit_metadata_unsafe_records_skipped")),
+        ("Exploit metadata enriched matches", summary.get("exploit_metadata_matches_enriched")),
+        ("Active exploitation reported", summary.get("active_exploitation_reported_count")),
+        ("Exploit maturity counts", _format_summary_list(summary.get("exploit_maturity_counts"))),
         ("Limitations", _format_summary_list(summary.get("limitations"))),
     ]
     for label, value in rows:
@@ -1877,6 +1912,8 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
     cve_table.add_column("Severity")
     cve_table.add_column("Confidence")
     cve_table.add_column("Exploit Available")
+    cve_table.add_column("Maturity")
+    cve_table.add_column("Active Reported")
     for match in cve_feed_matches:
         condition = match.get("affected_condition") or {}
         cve_table.add_row(
@@ -1892,6 +1929,8 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
             str(match.get("severity") or ""),
             str(match.get("match_confidence") or ""),
             str(match.get("exploit_available") or False),
+            str(match.get("exploit_maturity") or ""),
+            str(match.get("active_exploitation_reported") or False),
         )
     console.print(cve_table)
 

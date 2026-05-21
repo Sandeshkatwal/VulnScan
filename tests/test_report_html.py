@@ -640,6 +640,12 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
                     "epss_score": 0.72,
                     "epss_percentile": 0.94,
                     "epss_enriched": True,
+                    "exploit_available": True,
+                    "exploit_metadata_enriched": True,
+                    "exploit_maturity": "poc",
+                    "active_exploitation_reported": False,
+                    "exploit_reference_label": "Demo reference",
+                    "exploit_reference_url": "local-only",
                     "severity": "High",
                     "match_status": "matched",
                     "match_confidence": "High",
@@ -658,6 +664,25 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
             "medium_epss_count": 0,
             "low_epss_count": 0,
             "epss_limitations": ["Local EPSS only."],
+            "exploit_metadata_enabled": True,
+            "exploit_metadata_file": "data\\exploit_metadata\\sample_exploit_metadata.json",
+            "exploit_metadata_feed_name": "Unit Exploit Metadata",
+            "exploit_metadata_feed_version": "1.0",
+            "exploit_metadata_records_loaded": 1,
+            "exploit_metadata_invalid_records": 0,
+            "exploit_metadata_unsafe_records_skipped": 0,
+            "exploit_metadata_duplicate_records": 0,
+            "exploit_metadata_matches_enriched": 1,
+            "exploit_metadata_missing_for_cve_count": 0,
+            "active_exploitation_reported_count": 0,
+            "exploit_maturity_counts": {
+                "active_exploitation_reported": 0,
+                "none": 0,
+                "poc": 1,
+                "unknown": 0,
+                "weaponized": 0,
+            },
+            "exploit_metadata_limitations": ["Local exploit metadata only."],
         },
         "findings": [],
         "http_findings": [],
@@ -688,9 +713,11 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
     assert "less than 9.6" in html
     assert "Local CVE Feed Matches" in html
     assert "EPSS Metadata Summary" in html
+    assert "Exploit Availability Metadata Summary" in html
     assert "LOCAL-CVE-DEMO-0001" in html
     assert "0.72" in html
     assert "0.94" in html
+    assert "poc" in html
     assert "Demo OpenSSH Version Below Policy Threshold" in html
     assert "matched" in html
     assert "Local rules only." in html

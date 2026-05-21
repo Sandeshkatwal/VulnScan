@@ -53,7 +53,7 @@ OPTIONAL_INTELLIGENCE_FIELDS = {
     "detection_note",
     "allow_unknown_version",
 }
-VULN_INTEL_LIMITATION = "Version 14.4 uses local rules, local CVE feed files, and local EPSS metadata files only; it does not perform live feed validation."
+VULN_INTEL_LIMITATION = "Version 14.5 uses local rules, local CVE feed files, local EPSS metadata files, and local exploit metadata files only; it does not perform live feed validation."
 
 
 class VulnIntelRulesError(ValueError):
@@ -96,6 +96,7 @@ def disabled_vulnerability_intelligence_summary() -> dict[str, Any]:
         "cve_feed_limitations": [],
         "cve_feed_matches": [],
         **_disabled_epss_summary(),
+        **_disabled_exploit_metadata_summary(),
     }
 
 
@@ -106,6 +107,8 @@ def run_vulnerability_intelligence(
     cve_feed_path: Path | None = None,
     use_epss: bool = False,
     epss_file: Path | None = None,
+    use_exploit_metadata: bool = False,
+    exploit_metadata_file: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[Any]]:
     """Build inventory, match local rules, and generate standard findings."""
     inventory = build_software_inventory(scan_result)
@@ -119,6 +122,7 @@ def run_vulnerability_intelligence(
     findings = build_vulnerability_intelligence_findings(matches, summary, scan_result)
     cve_feed_summary = _disabled_cve_feed_summary()
     epss_summary = _disabled_epss_summary()
+    exploit_metadata_summary = _disabled_exploit_metadata_summary()
     if use_cve_feed:
         from scanner.cve_feed import (
             DEFAULT_CVE_FEED_PATH,
@@ -135,6 +139,14 @@ def run_vulnerability_intelligence(
             build_epss_summary,
             enrich_cve_matches_with_epss,
             load_epss_file,
+        )
+        from scanner.exploit_metadata import (
+            DEFAULT_EXPLOIT_METADATA_PATH,
+            ExploitMetadataError,
+            build_exploit_metadata_import_findings,
+            build_exploit_metadata_summary,
+            enrich_cve_matches_with_exploit_metadata,
+            load_exploit_metadata,
         )
 
         selected_feed_path = cve_feed_path or DEFAULT_CVE_FEED_PATH
@@ -171,6 +183,28 @@ def run_vulnerability_intelligence(
                         epss_data=epss_data,
                         cve_matches=cve_matches,
                     )
+            exploit_metadata_failed = False
+            if use_exploit_metadata:
+                selected_exploit_metadata_path = exploit_metadata_file or DEFAULT_EXPLOIT_METADATA_PATH
+                try:
+                    exploit_metadata = load_exploit_metadata(selected_exploit_metadata_path)
+                except ExploitMetadataError as exc:
+                    exploit_metadata_failed = True
+                    exploit_metadata_summary = build_exploit_metadata_summary(
+                        enabled=True,
+                        metadata_file=selected_exploit_metadata_path,
+                        metadata=None,
+                        cve_matches=cve_matches,
+                        error=f"Local exploit metadata was not loaded: {exc}",
+                    )
+                else:
+                    cve_matches = enrich_cve_matches_with_exploit_metadata(cve_matches, exploit_metadata)
+                    exploit_metadata_summary = build_exploit_metadata_summary(
+                        enabled=True,
+                        metadata_file=selected_exploit_metadata_path,
+                        metadata=exploit_metadata,
+                        cve_matches=cve_matches,
+                    )
             cve_feed_summary = build_cve_feed_summary(
                 feed=feed,
                 matches=cve_matches,
@@ -179,6 +213,14 @@ def run_vulnerability_intelligence(
             findings.extend(build_cve_feed_findings(cve_matches, cve_feed_summary, scan_result))
             if use_epss:
                 findings.extend(build_epss_import_findings(epss_summary, scan_result, failed=epss_failed))
+            if use_exploit_metadata:
+                findings.extend(
+                    build_exploit_metadata_import_findings(
+                        exploit_metadata_summary,
+                        scan_result,
+                        failed=exploit_metadata_failed,
+                    )
+                )
     elif use_epss:
         from scanner.epss_importer import DEFAULT_EPSS_PATH, build_epss_summary
 
@@ -190,8 +232,20 @@ def run_vulnerability_intelligence(
             cve_matches=[],
             error="EPSS enrichment was requested without local CVE feed matching.",
         )
+    elif use_exploit_metadata:
+        from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH, build_exploit_metadata_summary
+
+        selected_exploit_metadata_path = exploit_metadata_file or DEFAULT_EXPLOIT_METADATA_PATH
+        exploit_metadata_summary = build_exploit_metadata_summary(
+            enabled=True,
+            metadata_file=selected_exploit_metadata_path,
+            metadata=None,
+            cve_matches=[],
+            error="Exploit metadata enrichment was requested without local CVE feed matching.",
+        )
     summary.update(cve_feed_summary)
     summary.update(epss_summary)
+    summary.update(exploit_metadata_summary)
     _refresh_combined_summary_metrics(summary)
     return inventory, summary, findings
 
@@ -312,6 +366,7 @@ def build_vulnerability_intelligence_summary(
         "matches": matches,
         **_disabled_cve_feed_summary(),
         **_disabled_epss_summary(),
+        **_disabled_exploit_metadata_summary(),
     }
 
 
@@ -349,6 +404,30 @@ def _disabled_epss_summary() -> dict[str, Any]:
     }
 
 
+def _disabled_exploit_metadata_summary() -> dict[str, Any]:
+    return {
+        "exploit_metadata_enabled": False,
+        "exploit_metadata_file": None,
+        "exploit_metadata_feed_name": None,
+        "exploit_metadata_feed_version": None,
+        "exploit_metadata_records_loaded": 0,
+        "exploit_metadata_invalid_records": 0,
+        "exploit_metadata_unsafe_records_skipped": 0,
+        "exploit_metadata_duplicate_records": 0,
+        "exploit_metadata_matches_enriched": 0,
+        "exploit_metadata_missing_for_cve_count": 0,
+        "active_exploitation_reported_count": 0,
+        "exploit_maturity_counts": {
+            "active_exploitation_reported": 0,
+            "none": 0,
+            "poc": 0,
+            "unknown": 0,
+            "weaponized": 0,
+        },
+        "exploit_metadata_limitations": [],
+    }
+
+
 def _refresh_combined_summary_metrics(summary: dict[str, Any]) -> None:
     """Keep top-level intelligence metrics conservative across rules and feeds."""
     rule_highest = _as_float(summary.get("highest_cvss_score"))
@@ -374,6 +453,12 @@ def _refresh_combined_summary_metrics(summary: dict[str, Any]) -> None:
             if limitation not in limitations:
                 limitations.append(limitation)
         summary["limitations"] = limitations
+    if summary.get("exploit_metadata_limitations"):
+        limitations = list(summary.get("limitations") or [])
+        for limitation in summary.get("exploit_metadata_limitations") or []:
+            if limitation not in limitations:
+                limitations.append(limitation)
+        summary["limitations"] = limitations
 
 
 def build_vulnerability_intelligence_findings(
@@ -393,7 +478,7 @@ def build_vulnerability_intelligence_findings(
             impact="Local intelligence matches can help prioritise authorised manual verification and remediation.",
             recommendation="Use intelligence matches to prioritise manual verification and remediation.",
             verification="Review the vulnerability_intelligence section in the report.",
-            limitation="Version 14.4 uses local rules, local CVE feed files, and local EPSS metadata files only and does not perform live CVE, EPSS, or exploit lookups.",
+            limitation="Version 14.5 uses local rules, local CVE feed files, local EPSS metadata files, and local exploit metadata files only and does not perform live CVE, EPSS, exploit metadata, or exploit lookups.",
             source="vuln_intel",
             evidence_details={
                 "ruleset_name": summary.get("ruleset_name"),

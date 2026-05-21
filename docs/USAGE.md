@@ -38,13 +38,14 @@ Open ports remain in `open_ports` for asset inventory. Open services also create
 
 ## Vulnerability Intelligence
 
-Version 14.4 supports optional local vulnerability intelligence matching, local CVE-style feed import, and offline EPSS metadata enrichment:
+Version 14.5 supports optional local vulnerability intelligence matching, local CVE-style feed import, offline EPSS metadata enrichment, and offline exploit availability metadata enrichment:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --vuln-rules data\vuln_intel\sample_vuln_rules.json --json --html --save-db
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --use-cve-feed --cve-feed data\cve_feeds\sample_cve_feed.json
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --use-cve-feed --use-epss --cve-feed data\cve_feeds\sample_cve_feed.json --epss-file data\epss\sample_epss.csv
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --use-cve-feed --use-exploit-metadata --cve-feed data\cve_feeds\sample_cve_feed.json --exploit-metadata-file data\exploit_metadata\sample_exploit_metadata.json
 ```
 
 `--vuln-intel` builds a normalised `software_inventory` from discovered open ports, service detection, and available credentialed audit metadata. It then evaluates a local JSON rules file. The default rules file is `data\vuln_intel\sample_vuln_rules.json`.
@@ -53,7 +54,9 @@ Version 14.4 supports optional local vulnerability intelligence matching, local 
 
 `--use-epss` requires `--vuln-intel --use-cve-feed` and enriches local CVE feed matches from a local CSV or JSON file only. The default sample file is `data\epss\sample_epss.csv`. If `--epss-file` is provided without `--use-epss`, the file path is ignored.
 
-Version 14.4 uses local rules, local CVE feed files, and local EPSS metadata files only. It does not fetch live CVE data, EPSS scores, exploit databases, Metasploit modules, or exploit code. Matches are indicators for prioritised manual validation. Service exposure alone does not confirm a vulnerability, and VulScan does not claim a CVE is confirmed unless supplied product/version evidence supports applicability. EPSS is a prioritisation signal, not proof of exploitation.
+`--use-exploit-metadata` requires `--vuln-intel --use-cve-feed` and enriches local CVE feed matches from a local JSON or CSV file only. The default sample file is `data\exploit_metadata\sample_exploit_metadata.json`. If `--exploit-metadata-file` is provided without `--use-exploit-metadata`, the file path is ignored.
+
+Version 14.5 uses local rules, local CVE feed files, local EPSS metadata files, and local exploit availability metadata files only. It does not fetch live CVE data, EPSS scores, exploit databases, Metasploit modules, exploit metadata, or exploit code. Matches are indicators for prioritised manual validation. Service exposure alone does not confirm a vulnerability, and VulScan does not claim a CVE is confirmed unless supplied product/version evidence supports applicability. EPSS and exploit availability are prioritisation signals, not proof of exploitation. Unsafe exploit metadata fields are skipped.
 
 Local rules can include version conditions such as `version_less_than`, `version_greater_than`, and `version_between`. Version-specific rules require local product and version evidence. Unknown versions are not treated as confirmed matches unless the rule explicitly sets `allow_unknown_version: true`, in which case findings are low-confidence indicators.
 

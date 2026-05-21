@@ -542,6 +542,12 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
                     "epss_score": 0.72,
                     "epss_percentile": 0.94,
                     "epss_enriched": True,
+                    "exploit_available": True,
+                    "exploit_metadata_enriched": True,
+                    "exploit_maturity": "poc",
+                    "active_exploitation_reported": False,
+                    "exploit_reference_label": "Demo reference",
+                    "exploit_reference_url": "local-only",
                     "severity": "High",
                     "match_status": "matched",
                     "match_confidence": "High",
@@ -560,6 +566,25 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
             "medium_epss_count": 0,
             "low_epss_count": 0,
             "epss_limitations": ["Local EPSS only."],
+            "exploit_metadata_enabled": True,
+            "exploit_metadata_file": "data\\exploit_metadata\\sample_exploit_metadata.json",
+            "exploit_metadata_feed_name": "Unit Exploit Metadata",
+            "exploit_metadata_feed_version": "1.0",
+            "exploit_metadata_records_loaded": 1,
+            "exploit_metadata_invalid_records": 0,
+            "exploit_metadata_unsafe_records_skipped": 0,
+            "exploit_metadata_duplicate_records": 0,
+            "exploit_metadata_matches_enriched": 1,
+            "exploit_metadata_missing_for_cve_count": 0,
+            "active_exploitation_reported_count": 0,
+            "exploit_maturity_counts": {
+                "active_exploitation_reported": 0,
+                "none": 0,
+                "poc": 1,
+                "unknown": 0,
+                "weaponized": 0,
+            },
+            "exploit_metadata_limitations": ["Local exploit metadata only."],
         },
         "findings": [],
         "http_findings": [],
@@ -593,6 +618,8 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
     assert report["vulnerability_intelligence"]["cve_feed_matches"][0]["epss_score"] == 0.72
     assert report["vulnerability_intelligence"]["epss_matches_enriched"] == 1
     assert report["vulnerability_intelligence"]["highest_epss_percentile"] == 0.94
+    assert report["vulnerability_intelligence"]["exploit_metadata_matches_enriched"] == 1
+    assert report["vulnerability_intelligence"]["cve_feed_matches"][0]["exploit_maturity"] == "poc"
     assert report["summary"]["vulnerability_intelligence_matches"] == 1
     assert report["summary"]["vulnerability_intelligence_version_matches"] == 1
     assert report["summary"]["vulnerability_intelligence_cve_feed_matches"] == 1

@@ -55,6 +55,13 @@ def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
                 score += 3
         if evidence_details.get("exploit_available") is True:
             score += 5
+        maturity = str(evidence_details.get("exploit_maturity") or "").lower()
+        if maturity == "poc":
+            score += 5
+        if maturity == "weaponized":
+            score += 10
+        if evidence_details.get("active_exploitation_reported") is True or maturity == "active_exploitation_reported":
+            score += 15
     if confidence == "Low":
         score -= 10
     if confidence == "Medium":

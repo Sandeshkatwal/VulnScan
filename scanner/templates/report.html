@@ -360,6 +360,17 @@
       <p><strong>Highest EPSS percentile:</strong> {{ vuln_intel.get("highest_epss_percentile") or "" }}</p>
       <p><strong>High/Medium/Low EPSS:</strong> {{ vuln_intel.get("high_epss_count", 0) }} / {{ vuln_intel.get("medium_epss_count", 0) }} / {{ vuln_intel.get("low_epss_count", 0) }}</p>
       <p><strong>EPSS limitations:</strong> {{ vuln_intel.get("epss_limitations", []) | join("; ") }}</p>
+      <h3>Exploit Availability Metadata Summary</h3>
+      <p><strong>Exploit metadata enabled:</strong> {{ vuln_intel.get("exploit_metadata_enabled", false) }}</p>
+      <p><strong>Exploit metadata file:</strong> {{ vuln_intel.get("exploit_metadata_file") or "" }}</p>
+      <p><strong>Exploit metadata feed:</strong> {{ vuln_intel.get("exploit_metadata_feed_name") or "" }} {{ vuln_intel.get("exploit_metadata_feed_version") or "" }}</p>
+      <p><strong>Exploit metadata records loaded:</strong> {{ vuln_intel.get("exploit_metadata_records_loaded", 0) }}</p>
+      <p><strong>Exploit metadata invalid records:</strong> {{ vuln_intel.get("exploit_metadata_invalid_records", 0) }}</p>
+      <p><strong>Exploit metadata unsafe records skipped:</strong> {{ vuln_intel.get("exploit_metadata_unsafe_records_skipped", 0) }}</p>
+      <p><strong>Exploit metadata enriched matches:</strong> {{ vuln_intel.get("exploit_metadata_matches_enriched", 0) }}</p>
+      <p><strong>Active exploitation reported count:</strong> {{ vuln_intel.get("active_exploitation_reported_count", 0) }}</p>
+      <p><strong>Exploit maturity counts:</strong> {{ vuln_intel.get("exploit_maturity_counts", {}) }}</p>
+      <p><strong>Exploit metadata limitations:</strong> {{ vuln_intel.get("exploit_metadata_limitations", []) | join("; ") }}</p>
       {% if vuln_intel.get("matches", []) %}
       <table>
         <thead>
@@ -429,6 +440,8 @@
             <th>Status</th>
             <th>Confidence</th>
             <th>Exploit Available</th>
+            <th>Exploit Maturity</th>
+            <th>Active Exploitation Reported</th>
           </tr>
         </thead>
         <tbody>
@@ -447,6 +460,8 @@
             <td>{{ match.match_status or "" }}</td>
             <td>{{ match.match_confidence or "" }}</td>
             <td>{{ match.exploit_available }}</td>
+            <td>{{ match.exploit_maturity or "" }}</td>
+            <td>{{ match.active_exploitation_reported }}</td>
           </tr>
           {% endfor %}
         </tbody>
