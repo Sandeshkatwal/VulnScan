@@ -54,11 +54,18 @@ def save_json_report(
                 "inventory_items_checked": 0,
                 "matches_found": 0,
                 "cve_matches_count": 0,
+                "version_rules_loaded": 0,
+                "version_rules_evaluated": 0,
+                "version_matches_found": 0,
+                "unknown_version_count": 0,
+                "insufficient_evidence_count": 0,
+                "confirmed_version_match_count": 0,
+                "local_cve_metadata_count": 0,
                 "exploit_available_count": 0,
                 "highest_cvss_score": None,
                 "highest_epss_score": None,
                 "highest_intel_risk_label": "Informational",
-                "limitations": ["Version 14.0 uses local rules only and does not confirm CVE exploitability."],
+                "limitations": ["Version 14.2 uses local rules only and does not perform live CVE feed validation."],
                 "matches": [],
             },
         ),
@@ -184,6 +191,9 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "total_vuln_intel_findings": len(scan_result.get("vuln_intel_findings", [])),
         "vulnerability_intelligence_matches": int(
             (scan_result.get("vulnerability_intelligence") or {}).get("matches_found") or 0
+        ),
+        "vulnerability_intelligence_version_matches": int(
+            (scan_result.get("vulnerability_intelligence") or {}).get("version_matches_found") or 0
         ),
         "highest_risk_level": _highest_risk_level(findings),
         "notes": notes,

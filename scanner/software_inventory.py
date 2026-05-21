@@ -4,6 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from scanner.service_fingerprint import (
+    extract_product_version_from_banner,
+    merge_fingerprint_metadata,
+    normalise_cpe,
+    normalise_product,
+    normalise_vendor,
+)
+
 
 INVENTORY_LIMITATIONS = [
     "Service names from port scanning are inferred from common port mappings unless richer module evidence is available.",
@@ -42,6 +50,12 @@ def _inventory_item_from_port(scan_result: dict[str, Any], port_result: dict[str
     confidence = _normalise_confidence(port_result.get("confidence"), default="Medium")
     if port_result.get("status") == "open" and service_name != "unknown":
         confidence = "Medium"
+    fingerprint = merge_fingerprint_metadata(
+        dict(port_result.get("fingerprint") or {}),
+        dict(port_result.get("service_fingerprint") or {}),
+        dict(port_result.get("metadata") or {}),
+        extract_product_version_from_banner(port_result.get("banner") or port_result.get("evidence")),
+    )
 
     return {
         "asset": str(scan_result.get("host") or port_result.get("host") or ""),
@@ -49,8 +63,11 @@ def _inventory_item_from_port(scan_result: dict[str, Any], port_result: dict[str
         "port": _safe_int(port_result.get("port")),
         "protocol": str(port_result.get("protocol") or "tcp").lower(),
         "service_name": service_name,
-        "product": None,
-        "version": None,
+        "vendor": fingerprint.get("vendor"),
+        "product": fingerprint.get("product"),
+        "version": fingerprint.get("version"),
+        "cpe": fingerprint.get("cpe"),
+        "cpe_prefix": fingerprint.get("cpe_prefix"),
         "source": "service_detect" if service_name != "unknown" else "port_scan",
         "evidence": str(port_result.get("evidence") or "TCP port scan result."),
         "confidence": confidence,
@@ -73,8 +90,11 @@ def _inventory_item_from_ssh_audit(scan_result: dict[str, Any]) -> dict[str, Any
         "port": _safe_int(ssh_audit.get("ssh_port") or 22),
         "protocol": "tcp",
         "service_name": "ssh",
-        "product": ssh_audit.get("package_manager") or ssh_audit.get("os_family"),
-        "version": None,
+        "vendor": normalise_vendor(ssh_audit.get("vendor")),
+        "product": normalise_product(ssh_audit.get("product") or ssh_audit.get("ssh_product")),
+        "version": ssh_audit.get("version") or ssh_audit.get("ssh_version"),
+        "cpe": normalise_cpe(ssh_audit.get("cpe")),
+        "cpe_prefix": normalise_cpe(ssh_audit.get("cpe_prefix")),
         "source": "ssh_audit",
         "evidence": "Credentialed SSH audit metadata was available.",
         "confidence": "Medium" if ssh_audit.get("authenticated") else "Low",
@@ -99,8 +119,11 @@ def _inventory_items_from_windows_audit(scan_result: dict[str, Any]) -> list[dic
         "asset": str(scan_result.get("host") or ""),
         "host": str(scan_result.get("host") or ""),
         "protocol": "tcp",
-        "product": host_info.get("os_caption"),
+        "vendor": normalise_vendor("microsoft") if host_info.get("os_caption") else None,
+        "product": normalise_product(host_info.get("product") or host_info.get("os_caption")),
         "version": host_info.get("os_version") or host_info.get("os_build"),
+        "cpe": normalise_cpe(host_info.get("cpe")),
+        "cpe_prefix": normalise_cpe(host_info.get("cpe_prefix")),
         "source": "windows_audit",
         "confidence": "Medium" if summary.get("winrm_authenticated") or summary.get("windows_host_info_collected") else "Low",
         "metadata": {

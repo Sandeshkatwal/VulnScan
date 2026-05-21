@@ -45,7 +45,7 @@ Optional local vulnerability intelligence matching:
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --vuln-rules data\vuln_intel\sample_vuln_rules.json --json --html --save-db
 ```
 
-Version 14.0 adds a local vulnerability intelligence foundation. It normalises discovered services/software into `software_inventory`, evaluates local JSON rules from `data\vuln_intel\sample_vuln_rules.json` by default, and emits `vuln_intel` findings through the standard findings pipeline. It does not fetch live CVE, EPSS, Exploit-DB, or Metasploit data, and intelligence matches are indicators that require validation. See `docs\VULNERABILITY_INTELLIGENCE.md`.
+Version 14.2 adds a local vulnerability intelligence foundation with version-aware rules. It normalises discovered services/software into `software_inventory`, evaluates local JSON rules from `data\vuln_intel\sample_vuln_rules.json` by default, and emits `vuln_intel` findings through the standard findings pipeline. It does not fetch live CVE, EPSS, Exploit-DB, or Metasploit data, and intelligence matches are indicators that require validation. Version-specific rules require local product/version evidence unless explicitly marked as unknown-version indicators. See `docs\VULNERABILITY_INTELLIGENCE.md`.
 
 Optional authenticated SSH audit for an authorised Linux system:
 
@@ -111,7 +111,7 @@ Version 13.8 adds sitemap discovery with `--sitemap`. Sitemap discovery is passi
 
 Version 13.9 consolidates passive Web DAST reporting into `web_dast_summary`, `web_dast_sections`, terminal output, JSON, and HTML. It combines scope, politeness, robots, sitemap, crawler, headers, cookies, forms, and passive risk indicators without adding active vulnerability testing. Passive findings are indicators, not proof of exploitability, and written authorisation is still required. Future safe active checks should only be added after scope and report controls remain stable.
 
-Version 14.0 adds local vulnerability intelligence matching with `--vuln-intel`. Rules are loaded only from local JSON files, matched against normalised service/software inventory, and reported as conservative indicators. Version 14.0 does not download CVE feeds, EPSS data, exploit metadata, exploit code, or live vulnerability checks.
+Version 14.2 adds local vulnerability intelligence matching with `--vuln-intel`. Rules are loaded only from local JSON files, matched against normalised service/software inventory, and reported as conservative indicators. Version-aware rules can use conditions such as `version_less_than`, `version_greater_than`, and `version_between`; unknown versions are not treated as confirmed matches. Version 14.2 does not download CVE feeds, EPSS data, exploit metadata, exploit code, or perform live vulnerability checks.
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://example.com --crawl

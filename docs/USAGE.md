@@ -38,7 +38,7 @@ Open ports remain in `open_ports` for asset inventory. Open services also create
 
 ## Vulnerability Intelligence
 
-Version 14.0 adds optional local vulnerability intelligence matching:
+Version 14.2 supports optional local vulnerability intelligence matching:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel
@@ -47,7 +47,9 @@ Version 14.0 adds optional local vulnerability intelligence matching:
 
 `--vuln-intel` builds a normalised `software_inventory` from discovered open ports, service detection, and available credentialed audit metadata. It then evaluates a local JSON rules file. The default rules file is `data\vuln_intel\sample_vuln_rules.json`.
 
-Version 14.0 uses local rules only. It does not fetch live CVE data, EPSS scores, exploit databases, Metasploit modules, or exploit code. Matches are indicators for prioritised manual validation. Service exposure alone does not confirm a vulnerability, and VulScan does not claim a CVE is confirmed unless the supplied evidence supports that conclusion.
+Version 14.2 uses local rules only. It does not fetch live CVE data, EPSS scores, exploit databases, Metasploit modules, or exploit code. Matches are indicators for prioritised manual validation. Service exposure alone does not confirm a vulnerability, and VulScan does not claim a CVE is confirmed unless supplied product/version evidence supports applicability.
+
+Local rules can include version conditions such as `version_less_than`, `version_greater_than`, and `version_between`. Version-specific rules require local product and version evidence. Unknown versions are not treated as confirmed matches unless the rule explicitly sets `allow_unknown_version: true`, in which case findings are low-confidence indicators.
 
 Reports include `software_inventory`, `vulnerability_intelligence`, and standard findings with source `vuln_intel`. See `docs\VULNERABILITY_INTELLIGENCE.md` for the rule format.
 

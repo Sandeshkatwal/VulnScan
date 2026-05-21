@@ -496,12 +496,29 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
             "inventory_items_checked": 1,
             "matches_found": 1,
             "cve_matches_count": 0,
+            "version_rules_loaded": 1,
+            "version_rules_evaluated": 1,
+            "version_matches_found": 1,
+            "unknown_version_count": 0,
+            "insufficient_evidence_count": 0,
+            "confirmed_version_match_count": 1,
+            "local_cve_metadata_count": 0,
             "exploit_available_count": 0,
             "highest_cvss_score": None,
             "highest_epss_score": None,
             "highest_intel_risk_label": "Informational",
             "limitations": ["Local rules only."],
-            "matches": [{"rule_id": "R1", "title": "SSH", "matched_item": {"service_name": "ssh", "port": 22}}],
+            "matches": [
+                {
+                    "rule_id": "R1",
+                    "title": "SSH",
+                    "matched_item": {"service_name": "ssh", "product": "openssh", "version": "8.9p1", "port": 22},
+                    "match_status": "matched",
+                    "match_confidence": "Medium",
+                    "version_condition": {"operator": "version_less_than", "value": "9.6", "display": "less than 9.6"},
+                    "fixed_version": "9.6",
+                }
+            ],
         },
         "findings": [],
         "http_findings": [],
@@ -528,4 +545,7 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
 
     assert report["software_inventory"]["total_items"] == 1
     assert report["vulnerability_intelligence"]["matches_found"] == 1
+    assert report["vulnerability_intelligence"]["matches"][0]["match_status"] == "matched"
+    assert report["vulnerability_intelligence"]["matches"][0]["version_condition"]["operator"] == "version_less_than"
     assert report["summary"]["vulnerability_intelligence_matches"] == 1
+    assert report["summary"]["vulnerability_intelligence_version_matches"] == 1

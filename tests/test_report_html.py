@@ -588,6 +588,13 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
             "inventory_items_checked": 1,
             "matches_found": 1,
             "cve_matches_count": 0,
+            "version_rules_loaded": 1,
+            "version_rules_evaluated": 1,
+            "version_matches_found": 1,
+            "unknown_version_count": 0,
+            "insufficient_evidence_count": 0,
+            "confirmed_version_match_count": 1,
+            "local_cve_metadata_count": 0,
             "exploit_available_count": 0,
             "highest_cvss_score": None,
             "highest_epss_score": None,
@@ -597,10 +604,14 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
                 {
                     "rule_id": "R1",
                     "title": "SSH Service Exposed",
-                    "matched_item": {"service_name": "ssh", "port": 22},
+                    "matched_item": {"service_name": "ssh", "product": "openssh", "version": "8.9p1", "port": 22},
+                    "match_status": "matched",
+                    "match_confidence": "Medium",
+                    "version_condition": {"operator": "version_less_than", "value": "9.6", "display": "less than 9.6"},
                     "cve": None,
                     "cvss_score": None,
                     "epss_score": None,
+                    "fixed_version": "9.6",
                     "severity": "Informational",
                     "confidence": "Medium",
                     "recommendation": "Restrict SSH.",
@@ -633,4 +644,6 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
     assert "Software/Service Inventory" in html
     assert "Vulnerability Intelligence" in html
     assert "SSH Service Exposed" in html
+    assert "less than 9.6" in html
+    assert "matched" in html
     assert "Local rules only." in html

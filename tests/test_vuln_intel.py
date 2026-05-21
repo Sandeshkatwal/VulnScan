@@ -84,6 +84,56 @@ def test_matches_rule_by_product_and_version_contains() -> None:
     assert matches[0]["matched_item"]["product"] == "ExampleServer"
 
 
+def test_matches_version_less_than() -> None:
+    matches = match_rules(
+        _inventory_items(),
+        [{"rule_id": "RLT", "title": "Old", "match": {"product": "ExampleServer", "version_less_than": "2.5.0"}}],
+    )
+
+    assert matches[0]["match_status"] == "matched"
+    assert matches[0]["version_condition"]["operator"] == "version_less_than"
+
+
+def test_matches_version_greater_than() -> None:
+    matches = match_rules(
+        _inventory_items(),
+        [{"rule_id": "RGT", "title": "New", "match": {"product": "ExampleServer", "version_greater_than": "2.0.0"}}],
+    )
+
+    assert matches[0]["match_status"] == "matched"
+
+
+def test_matches_version_between() -> None:
+    matches = match_rules(
+        _inventory_items(),
+        [{"rule_id": "RB", "title": "Between", "match": {"product": "ExampleServer", "version_between": ["2.4.0", "2.4.99"]}}],
+    )
+
+    assert matches[0]["match_status"] == "matched"
+
+
+def test_version_specific_rule_does_not_create_match_when_version_missing() -> None:
+    items = [{"host": "127.0.0.1", "service_name": "ssh", "product": "openssh", "version": None, "port": 22, "protocol": "tcp"}]
+
+    matches = match_rules(items, [{"rule_id": "RUNK", "title": "Unknown", "match": {"product": "openssh", "version_less_than": "9.6"}}])
+
+    assert matches[0]["match_status"] == "insufficient_evidence"
+
+
+def test_allow_unknown_version_only_when_explicit_and_low_confidence() -> None:
+    items = [{"host": "127.0.0.1", "service_name": "ssh", "version": None, "port": 22, "protocol": "tcp"}]
+
+    no_allow = match_rules(items, [{"rule_id": "R1", "title": "No", "match": {"service_name": "ssh", "version_less_than": "9.6"}}])
+    allow = match_rules(
+        items,
+        [{"rule_id": "R2", "title": "Allow", "match": {"service_name": "ssh", "version_less_than": "9.6"}, "allow_unknown_version": True}],
+    )
+
+    assert no_allow[0]["match_status"] == "insufficient_evidence"
+    assert allow[0]["match_status"] == "unknown_version"
+    assert allow[0]["match_confidence"] == "Low"
+
+
 def test_generates_vulnerability_intelligence_summary() -> None:
     inventory = {"items": _inventory_items(), "total_items": len(_inventory_items())}
     matches = match_rules(inventory["items"], [{"rule_id": "R5", "title": "SSH", "match": {"service_name": "ssh"}}])
@@ -98,6 +148,7 @@ def test_generates_vulnerability_intelligence_summary() -> None:
     assert summary["rules_loaded"] == 1
     assert summary["inventory_items_checked"] == inventory["total_items"]
     assert summary["matches_found"] == 1
+    assert "unknown_version_count" in summary
 
 
 def test_generates_standard_findings_and_conservative_cve_wording() -> None:
@@ -134,5 +185,52 @@ def test_generates_standard_findings_and_conservative_cve_wording() -> None:
     assert cve_finding.source == "vuln_intel"
     assert cve_finding.evidence_details["cve"] == "CVE-2099-0001"
     assert cve_finding.evidence_details["cvss_score"] == 7.5
-    assert "does not confirm vulnerability" in cve_finding.evidence
+    assert "requires validation" in cve_finding.evidence
     assert "confirmed vulnerable" not in cve_finding.evidence.lower()
+
+
+def test_generates_finding_for_confirmed_version_match() -> None:
+    inventory = {"items": _inventory_items(), "total_items": len(_inventory_items())}
+    matches = match_rules(
+        inventory["items"],
+        [
+            {
+                "rule_id": "RV",
+                "title": "Version Match",
+                "match": {"product": "ExampleServer", "version_less_than": "2.5.0"},
+                "fixed_version": "2.5.0",
+                "severity": "Medium",
+                "confidence": "Medium",
+            }
+        ],
+    )
+    summary = build_vulnerability_intelligence_summary(
+        ruleset={"ruleset_name": "Unit", "ruleset_version": "1.0", "rules": [{"rule_id": "RV", "match": {"version_less_than": "2.5.0"}}]},
+        inventory=inventory,
+        matches=matches,
+    )
+
+    findings = build_vulnerability_intelligence_findings(matches, summary, {"host": "127.0.0.1"})
+
+    assert len(findings) == 2
+    assert "version 2.4.58" in findings[1].evidence
+    assert findings[1].evidence_details["fixed_version"] == "2.5.0"
+
+
+def test_unknown_version_finding_does_not_claim_confirmed_vulnerability() -> None:
+    items = [{"host": "127.0.0.1", "service_name": "ssh", "version": None, "port": 22, "protocol": "tcp"}]
+    matches = match_rules(
+        items,
+        [{"rule_id": "RU", "title": "Possible Old SSH", "match": {"service_name": "ssh", "version_less_than": "9.6"}, "allow_unknown_version": True}],
+    )
+    summary = build_vulnerability_intelligence_summary(
+        ruleset={"ruleset_name": "Unit", "ruleset_version": "1.0", "rules": [{"rule_id": "RU", "match": {"version_less_than": "9.6"}}]},
+        inventory={"items": items, "total_items": 1},
+        matches=matches,
+    )
+
+    findings = build_vulnerability_intelligence_findings(matches, summary, {"host": "127.0.0.1"})
+
+    assert findings[1].confidence == "Low"
+    assert "version was not confirmed" in findings[1].evidence
+    assert "confirmed vulnerability" not in findings[1].evidence.lower()

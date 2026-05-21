@@ -66,3 +66,41 @@ def test_rejects_empty_ruleset() -> None:
         validate_ruleset({"ruleset_name": "Empty", "ruleset_version": "1.0", "rules": []})
 
     assert "at least one rule" in str(exc.value)
+
+
+def test_rejects_conflicting_version_conditions() -> None:
+    with pytest.raises(VulnIntelRulesError) as exc:
+        validate_ruleset(
+            {
+                "ruleset_name": "Bad Rules",
+                "ruleset_version": "1.0",
+                "rules": [
+                    {
+                        "rule_id": "BAD-VERSION",
+                        "title": "Bad",
+                        "match": {"product": "openssh", "version_less_than": "9.6", "version_greater_than": "8.0"},
+                    }
+                ],
+            }
+        )
+
+    assert "conflicting version conditions" in str(exc.value)
+
+
+def test_rejects_malformed_version_between() -> None:
+    with pytest.raises(VulnIntelRulesError) as exc:
+        validate_ruleset(
+            {
+                "ruleset_name": "Bad Rules",
+                "ruleset_version": "1.0",
+                "rules": [
+                    {
+                        "rule_id": "BAD-BETWEEN",
+                        "title": "Bad",
+                        "match": {"product": "openssh", "version_between": ["bad", "9.6"]},
+                    }
+                ],
+            }
+        )
+
+    assert "malformed version_between" in str(exc.value)

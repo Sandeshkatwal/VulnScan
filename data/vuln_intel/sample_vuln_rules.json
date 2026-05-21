@@ -1,7 +1,7 @@
 {
   "ruleset_name": "VulScan Sample Vulnerability Intelligence Rules",
-  "ruleset_version": "1.0",
-  "description": "Small local sample ruleset for VulScan vulnerability intelligence foundation.",
+  "ruleset_version": "1.2",
+  "description": "Small local sample ruleset for VulScan vulnerability intelligence foundation with safe version-condition examples.",
   "rules": [
     {
       "rule_id": "VS-INTEL-SSH-001",
@@ -17,6 +17,81 @@
       "confidence": "Medium",
       "recommendation": "Ensure SSH is required, patched, and restricted to trusted networks.",
       "limitation": "Service exposure alone does not confirm a vulnerability."
+    },
+    {
+      "rule_id": "LOCAL-DEMO-OPENSSH-OLD",
+      "title": "OpenSSH Version Below Local Policy Example",
+      "match": {
+        "product": [
+          "openssh",
+          "ssh_server"
+        ],
+        "version_less_than": "9.6"
+      },
+      "cve": null,
+      "cvss_score": 5.0,
+      "cvss_vector": "LOCAL-DEMO",
+      "epss_score": null,
+      "epss_percentile": null,
+      "exploit_available": false,
+      "exploit_reference_label": null,
+      "affected_versions": "OpenSSH versions below 9.6 per local demonstration policy example.",
+      "fixed_version": "9.6",
+      "severity": "Medium",
+      "category": "Local CVE-Style Version Indicator",
+      "confidence": "Medium",
+      "recommendation": "Update OpenSSH according to vendor guidance and local patch policy after confirming product and version.",
+      "limitation": "Local demonstration rule only. Requires confirmed OpenSSH product and version evidence.",
+      "references": [],
+      "detection_note": "This is a local version-condition example and is not a live CVE assertion."
+    },
+    {
+      "rule_id": "LOCAL-DEMO-APACHE-HTTPD-OLD",
+      "title": "Apache HTTP Server Version Below Local Policy Example",
+      "match": {
+        "product": "apache_http_server",
+        "version_less_than": "2.4.58"
+      },
+      "cve": null,
+      "cvss_score": 5.0,
+      "cvss_vector": "LOCAL-DEMO",
+      "epss_score": null,
+      "epss_percentile": null,
+      "exploit_available": false,
+      "exploit_reference_label": null,
+      "affected_versions": "Apache HTTP Server versions below 2.4.58 per local demonstration policy example.",
+      "fixed_version": "2.4.58",
+      "severity": "Medium",
+      "category": "Local CVE-Style Version Indicator",
+      "confidence": "Medium",
+      "recommendation": "Update Apache HTTP Server according to vendor guidance after confirming the exact product and version.",
+      "limitation": "Local demonstration rule only. Requires confirmed Apache HTTP Server version.",
+      "references": [],
+      "detection_note": "This is a local version-condition example and is not a live CVE assertion."
+    },
+    {
+      "rule_id": "LOCAL-DEMO-NGINX-OLD",
+      "title": "Nginx Version Below Local Policy Example",
+      "match": {
+        "product": "nginx",
+        "version_less_than": "1.24.0"
+      },
+      "cve": null,
+      "cvss_score": 5.0,
+      "cvss_vector": "LOCAL-DEMO",
+      "epss_score": null,
+      "epss_percentile": null,
+      "exploit_available": false,
+      "exploit_reference_label": null,
+      "affected_versions": "Nginx versions below 1.24.0 per local demonstration policy example.",
+      "fixed_version": "1.24.0",
+      "severity": "Medium",
+      "category": "Local CVE-Style Version Indicator",
+      "confidence": "Medium",
+      "recommendation": "Update Nginx according to vendor guidance after confirming the exact product and version.",
+      "limitation": "Local demonstration rule only. Requires confirmed Nginx version.",
+      "references": [],
+      "detection_note": "This is a local version-condition example and is not a live CVE assertion."
     },
     {
       "rule_id": "VS-INTEL-SMB-001",

@@ -1749,6 +1749,11 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
         ("Inventory items checked", summary.get("inventory_items_checked")),
         ("Matches found", summary.get("matches_found")),
         ("CVE matches", summary.get("cve_matches_count")),
+        ("Version rules loaded", summary.get("version_rules_loaded")),
+        ("Version matches found", summary.get("version_matches_found")),
+        ("Unknown version count", summary.get("unknown_version_count")),
+        ("Insufficient evidence count", summary.get("insufficient_evidence_count")),
+        ("Confirmed version matches", summary.get("confirmed_version_match_count")),
         ("Exploit available count", summary.get("exploit_available_count")),
         ("Highest CVSS", summary.get("highest_cvss_score")),
         ("Highest EPSS", summary.get("highest_epss_score")),
@@ -1766,28 +1771,28 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
     matches_table = Table(title="Vulnerability Intelligence Matches")
     matches_table.add_column("Rule ID")
     matches_table.add_column("Title")
-    matches_table.add_column("Service/Product")
-    matches_table.add_column("Port", justify="right")
+    matches_table.add_column("Product")
+    matches_table.add_column("Version")
+    matches_table.add_column("Condition")
+    matches_table.add_column("Status")
+    matches_table.add_column("Confidence")
     matches_table.add_column("CVE")
     matches_table.add_column("CVSS")
-    matches_table.add_column("EPSS")
-    matches_table.add_column("Severity")
-    matches_table.add_column("Confidence")
+    matches_table.add_column("Fixed Version")
     for match in matches:
         item = match.get("matched_item") or {}
-        service_product = str(item.get("service_name") or "")
-        if item.get("product"):
-            service_product = f"{service_product} / {item.get('product')}".strip(" /")
+        condition = match.get("version_condition") or {}
         matches_table.add_row(
             str(match.get("rule_id") or ""),
             str(match.get("title") or ""),
-            service_product,
-            "" if item.get("port") is None else str(item.get("port")),
+            str(item.get("product") or item.get("service_name") or ""),
+            str(item.get("version") or ""),
+            str(condition.get("display") or ""),
+            str(match.get("match_status") or ""),
+            str(match.get("match_confidence") or match.get("confidence") or ""),
             str(match.get("cve") or ""),
             "" if match.get("cvss_score") is None else str(match.get("cvss_score")),
-            "" if match.get("epss_score") is None else str(match.get("epss_score")),
-            str(match.get("severity") or ""),
-            str(match.get("confidence") or ""),
+            str(match.get("fixed_version") or ""),
         )
     console.print(matches_table)
 

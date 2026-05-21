@@ -231,6 +231,7 @@
       <p><strong>Web DAST findings:</strong> {{ report.summary.total_web_findings }}</p>
       <p><strong>Vulnerability intelligence findings:</strong> {{ report.summary.total_vuln_intel_findings }}</p>
       <p><strong>Vulnerability intelligence matches:</strong> {{ report.summary.vulnerability_intelligence_matches }}</p>
+      <p><strong>Vulnerability intelligence version matches:</strong> {{ report.summary.vulnerability_intelligence_version_matches }}</p>
       <p><strong>Duration:</strong> {{ report.duration_seconds }} seconds</p>
       <p><strong>Scan start:</strong> {{ report.scan_start_time }}</p>
       <p><strong>Scan end:</strong> {{ report.scan_end_time }}</p>
@@ -291,10 +292,12 @@
             <th>Host</th>
             <th>Port</th>
             <th>Protocol</th>
-            <th>Service</th>
-            <th>Product</th>
-            <th>Version</th>
-            <th>Source</th>
+              <th>Service</th>
+              <th>Vendor</th>
+              <th>Product</th>
+              <th>Version</th>
+              <th>CPE</th>
+              <th>Source</th>
             <th>Confidence</th>
             <th>Evidence</th>
           </tr>
@@ -304,11 +307,13 @@
           <tr>
             <td>{{ item.host }}</td>
             <td>{{ item.port or "" }}</td>
-            <td>{{ item.protocol }}</td>
-            <td>{{ item.service_name }}</td>
-            <td>{{ item.product or "" }}</td>
-            <td>{{ item.version or "" }}</td>
-            <td>{{ item.source }}</td>
+              <td>{{ item.protocol }}</td>
+              <td>{{ item.service_name }}</td>
+              <td>{{ item.vendor or "" }}</td>
+              <td>{{ item.product or "" }}</td>
+              <td>{{ item.version or "" }}</td>
+              <td>{{ item.cpe or "" }}</td>
+              <td>{{ item.source }}</td>
             <td>{{ item.confidence }}</td>
             <td>{{ item.evidence }}</td>
           </tr>
@@ -327,9 +332,16 @@
       <p><strong>Ruleset:</strong> {{ report.vulnerability_intelligence.ruleset_name or "" }} {{ report.vulnerability_intelligence.ruleset_version or "" }}</p>
       <p><strong>Rules loaded:</strong> {{ report.vulnerability_intelligence.rules_loaded or 0 }}</p>
       <p><strong>Inventory items checked:</strong> {{ report.vulnerability_intelligence.inventory_items_checked or 0 }}</p>
-      <p><strong>Matches found:</strong> {{ report.vulnerability_intelligence.matches_found or 0 }}</p>
-      <p><strong>CVE matches:</strong> {{ report.vulnerability_intelligence.cve_matches_count or 0 }}</p>
-      <p><strong>Exploit available count:</strong> {{ report.vulnerability_intelligence.exploit_available_count or 0 }}</p>
+        <p><strong>Matches found:</strong> {{ report.vulnerability_intelligence.matches_found or 0 }}</p>
+        <p><strong>CVE matches:</strong> {{ report.vulnerability_intelligence.cve_matches_count or 0 }}</p>
+        <p><strong>Version rules loaded:</strong> {{ report.vulnerability_intelligence.version_rules_loaded or 0 }}</p>
+        <p><strong>Version rules evaluated:</strong> {{ report.vulnerability_intelligence.version_rules_evaluated or 0 }}</p>
+        <p><strong>Version matches found:</strong> {{ report.vulnerability_intelligence.version_matches_found or 0 }}</p>
+        <p><strong>Unknown version count:</strong> {{ report.vulnerability_intelligence.unknown_version_count or 0 }}</p>
+        <p><strong>Insufficient evidence count:</strong> {{ report.vulnerability_intelligence.insufficient_evidence_count or 0 }}</p>
+        <p><strong>Confirmed version matches:</strong> {{ report.vulnerability_intelligence.confirmed_version_match_count or 0 }}</p>
+        <p><strong>Local CVE metadata count:</strong> {{ report.vulnerability_intelligence.local_cve_metadata_count or 0 }}</p>
+        <p><strong>Exploit available count:</strong> {{ report.vulnerability_intelligence.exploit_available_count or 0 }}</p>
       <p><strong>Highest CVSS:</strong> {{ report.vulnerability_intelligence.highest_cvss_score or "" }}</p>
       <p><strong>Highest EPSS:</strong> {{ report.vulnerability_intelligence.highest_epss_score or "" }}</p>
       <p><strong>Highest intelligence risk:</strong> {{ report.vulnerability_intelligence.highest_intel_risk_label or "Informational" }}</p>
@@ -340,30 +352,34 @@
           <tr>
             <th>Rule ID</th>
             <th>Title</th>
-            <th>Service/Product</th>
-            <th>Port</th>
-            <th>CVE</th>
-            <th>CVSS</th>
-            <th>EPSS</th>
-            <th>Severity</th>
-            <th>Confidence</th>
-            <th>Recommendation</th>
-          </tr>
+              <th>Product</th>
+              <th>Version</th>
+              <th>Condition</th>
+              <th>Match Status</th>
+              <th>Confidence</th>
+              <th>CVE</th>
+              <th>CVSS</th>
+              <th>Fixed Version</th>
+              <th>Severity</th>
+              <th>Recommendation</th>
+            </tr>
         </thead>
         <tbody>
           {% for match in report.vulnerability_intelligence.matches %}
           <tr>
-            <td>{{ match.rule_id }}</td>
-            <td>{{ match.title }}</td>
-            <td>{{ match.matched_item.service_name }}{% if match.matched_item.product %} / {{ match.matched_item.product }}{% endif %}</td>
-            <td>{{ match.matched_item.port or "" }}</td>
-            <td>{{ match.cve or "" }}</td>
-            <td>{{ match.cvss_score or "" }}</td>
-            <td>{{ match.epss_score or "" }}</td>
-            <td>{{ match.severity }}</td>
-            <td>{{ match.confidence }}</td>
-            <td>{{ match.recommendation }}</td>
-          </tr>
+              <td>{{ match.rule_id }}</td>
+              <td>{{ match.title }}</td>
+              <td>{{ match.matched_item.product or match.matched_item.service_name }}</td>
+              <td>{{ match.matched_item.version or "" }}</td>
+              <td>{% if match.version_condition %}{{ match.version_condition.display }}{% endif %}</td>
+              <td>{{ match.match_status }}</td>
+              <td>{{ match.match_confidence or match.confidence }}</td>
+              <td>{{ match.cve or "" }}</td>
+              <td>{{ match.cvss_score or "" }}</td>
+              <td>{{ match.fixed_version or "" }}</td>
+              <td>{{ match.severity }}</td>
+              <td>{{ match.recommendation }}</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
