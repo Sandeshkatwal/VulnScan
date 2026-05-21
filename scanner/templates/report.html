@@ -283,9 +283,10 @@
 
     <section>
       <h2>Software/Service Inventory</h2>
-      <p><strong>Total inventory items:</strong> {{ report.software_inventory.total_items }}</p>
-      <p><strong>Sources used:</strong> {{ report.software_inventory.sources_used | join(", ") }}</p>
-      {% if report.software_inventory.items %}
+      {% set software_inventory = report.get("software_inventory", {}) %}
+      <p><strong>Total inventory items:</strong> {{ software_inventory.get("total_items", 0) }}</p>
+      <p><strong>Sources used:</strong> {{ software_inventory.get("sources_used", []) | join(", ") }}</p>
+      {% if software_inventory.get("items", []) %}
       <table>
         <thead>
           <tr>
@@ -303,7 +304,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for item in report.software_inventory.items %}
+          {% for item in software_inventory.get("items", []) %}
           <tr>
             <td>{{ item.host }}</td>
             <td>{{ item.port or "" }}</td>
@@ -323,7 +324,7 @@
       {% else %}
       <p class="empty">No software or service inventory items were normalised from this scan.</p>
       {% endif %}
-      <p><strong>Limitations:</strong> {{ report.software_inventory.limitations | join("; ") }}</p>
+      <p><strong>Limitations:</strong> {{ software_inventory.get("limitations", []) | join("; ") }}</p>
     </section>
 
     <section>
