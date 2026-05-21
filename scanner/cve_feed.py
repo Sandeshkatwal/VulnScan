@@ -12,7 +12,7 @@ from scanner.service_fingerprint import normalise_cpe, normalise_product, normal
 
 
 DEFAULT_CVE_FEED_PATH = Path("data") / "cve_feeds" / "sample_cve_feed.json"
-CVE_FEED_LIMITATION = "Version 14.3 uses local CVE feed files only and does not validate against live CVE sources."
+CVE_FEED_LIMITATION = "Version 14.4 uses local CVE feed and EPSS files only and does not validate against live CVE sources."
 SUPPORTED_AFFECTED_VERSION_FIELDS = {
     "exact",
     "less_than",
@@ -189,6 +189,8 @@ def build_cve_feed_findings(
                     "cvss_vector": match.get("cvss_vector"),
                     "epss_score": match.get("epss_score"),
                     "epss_percentile": match.get("epss_percentile"),
+                    "epss_source": match.get("epss_source"),
+                    "epss_enriched": match.get("epss_enriched"),
                     "exploit_available": match.get("exploit_available"),
                     "affected_versions": match.get("affected_versions"),
                     "fixed_version": match.get("fixed_version"),
@@ -400,11 +402,18 @@ def _match_evidence(match: dict[str, Any], product: str, version: Any) -> str:
     cve = str(match.get("cve") or "")
     condition = match.get("affected_condition") or {}
     if condition:
-        return (
+        evidence = (
             f"Local CVE feed item {cve} matched product {product} version {version} because affected_versions "
             f"{condition.get('display')}. Matched using local feed metadata."
         )
-    return f"Local CVE feed item {cve} matched product/service identity for {product}. Matched using local feed metadata."
+    else:
+        evidence = f"Local CVE feed item {cve} matched product/service identity for {product}. Matched using local feed metadata."
+    if match.get("epss_enriched") is True:
+        evidence += (
+            f" Offline EPSS metadata: score {match.get('epss_score')}, "
+            f"percentile {match.get('epss_percentile')}."
+        )
+    return evidence
 
 
 def _condition_display(operator: str, value: Any) -> str:

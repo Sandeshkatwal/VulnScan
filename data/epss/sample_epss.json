@@ -1,0 +1,17 @@
+{
+  "feed_name": "VulScan Local Sample EPSS Metadata",
+  "feed_version": "1.0",
+  "generated_at": "demo-local",
+  "items": [
+    {
+      "cve": "LOCAL-CVE-DEMO-0001",
+      "epss": 0.72,
+      "percentile": 0.94
+    },
+    {
+      "cve": "CVE-2023-0000",
+      "epss": 0.12,
+      "percentile": 0.60
+    }
+  ]
+}

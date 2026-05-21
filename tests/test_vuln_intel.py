@@ -306,3 +306,80 @@ def test_run_vulnerability_intelligence_includes_local_cve_feed(tmp_path) -> Non
     assert summary["cve_feed_matches_found"] == 1
     assert summary["cve_feed_matches"][0]["cve"] == "LOCAL-CVE-DEMO-0001"
     assert any(finding.source == "cve_feed" for finding in findings)
+
+
+def test_run_vulnerability_intelligence_enriches_cve_feed_with_epss(tmp_path) -> None:
+    rules_path = tmp_path / "rules.json"
+    rules_path.write_text(
+        """
+        {
+          "ruleset_name": "Unit Rules",
+          "ruleset_version": "1.0",
+          "rules": [
+            {"rule_id": "R1", "title": "SSH", "match": {"service_name": "ssh"}}
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    feed_path = tmp_path / "feed.json"
+    feed_path.write_text(
+        """
+        {
+          "feed_name": "Unit CVE Feed",
+          "feed_version": "1.0",
+          "items": [
+            {
+              "cve": "LOCAL-CVE-DEMO-0001",
+              "title": "Demo OpenSSH Version Below Policy Threshold",
+              "vendor": "openbsd",
+              "product": "openssh",
+              "cpe_prefix": "cpe:2.3:a:openbsd:openssh",
+              "affected_versions": {"less_than": "9.6"},
+              "fixed_version": "9.6",
+              "cvss_score": 7.5,
+              "severity": "High",
+              "exploit_available": false,
+              "references": []
+            }
+          ]
+        }
+        """,
+        encoding="utf-8",
+    )
+    epss_path = tmp_path / "epss.csv"
+    epss_path.write_text("cve,epss,percentile\nLOCAL-CVE-DEMO-0001,0.72,0.94\n", encoding="utf-8")
+    scan_result = {
+        "host": "127.0.0.1",
+        "resolved_ip": "127.0.0.1",
+        "open_ports": [
+            {
+                "host": "127.0.0.1",
+                "port": 22,
+                "protocol": "tcp",
+                "service": "ssh",
+                "status": "open",
+                "confidence": "high",
+                "evidence": "SSH-2.0-OpenSSH_8.9p1",
+                "banner": "SSH-2.0-OpenSSH_8.9p1",
+                "metadata": {"vendor": "openbsd", "cpe": "cpe:2.3:a:openbsd:openssh:8.9p1"},
+            }
+        ],
+    }
+
+    _, summary, findings = run_vulnerability_intelligence(
+        scan_result=scan_result,
+        rules_path=rules_path,
+        use_cve_feed=True,
+        cve_feed_path=feed_path,
+        use_epss=True,
+        epss_file=epss_path,
+    )
+
+    assert summary["epss_enabled"] is True
+    assert summary["epss_records_loaded"] == 1
+    assert summary["epss_matches_enriched"] == 1
+    assert summary["highest_epss_score"] == 0.72
+    assert summary["cve_feed_matches"][0]["epss_enriched"] is True
+    assert summary["cve_feed_matches"][0]["epss_percentile"] == 0.94
+    assert any(finding.source == "epss_importer" for finding in findings)

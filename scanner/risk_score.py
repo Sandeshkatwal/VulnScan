@@ -47,6 +47,12 @@ def score_finding(finding: Finding | dict[str, Any]) -> tuple[int, str, str]:
         cvss_score = _safe_float(evidence_details.get("cvss_score"))
         if cvss_score is not None:
             score = max(score, int(round(cvss_score * 10)))
+        epss_score = _safe_float(evidence_details.get("epss_score"))
+        if epss_score is not None:
+            if epss_score >= 0.7:
+                score += 8
+            elif epss_score >= 0.2:
+                score += 3
         if evidence_details.get("exploit_available") is True:
             score += 5
     if confidence == "Low":

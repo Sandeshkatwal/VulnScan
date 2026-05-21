@@ -637,12 +637,27 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
                     "affected_condition": {"operator": "less_than", "value": "9.6", "display": "less_than 9.6"},
                     "fixed_version": "9.6",
                     "cvss_score": 7.5,
+                    "epss_score": 0.72,
+                    "epss_percentile": 0.94,
+                    "epss_enriched": True,
                     "severity": "High",
                     "match_status": "matched",
                     "match_confidence": "High",
                     "exploit_available": False,
                 }
             ],
+            "epss_enabled": True,
+            "epss_file": "data\\epss\\sample_epss.csv",
+            "epss_records_loaded": 1,
+            "epss_invalid_records": 0,
+            "epss_duplicate_records": 0,
+            "epss_matches_enriched": 1,
+            "epss_missing_for_cve_count": 0,
+            "highest_epss_percentile": 0.94,
+            "high_epss_count": 1,
+            "medium_epss_count": 0,
+            "low_epss_count": 0,
+            "epss_limitations": ["Local EPSS only."],
         },
         "findings": [],
         "http_findings": [],
@@ -672,7 +687,10 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
     assert "SSH Service Exposed" in html
     assert "less than 9.6" in html
     assert "Local CVE Feed Matches" in html
+    assert "EPSS Metadata Summary" in html
     assert "LOCAL-CVE-DEMO-0001" in html
+    assert "0.72" in html
+    assert "0.94" in html
     assert "Demo OpenSSH Version Below Policy Threshold" in html
     assert "matched" in html
     assert "Local rules only." in html

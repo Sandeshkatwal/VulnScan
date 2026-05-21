@@ -28,6 +28,7 @@ Vulnerability Scanner
 │   ├── Software/service inventory normalisation
 │   ├── Local ruleset matching
 │   ├── Local CVE-style feed import
+│   ├── Local EPSS metadata enrichment
 │   ├── CVE/CVSS/EPSS metadata fields
 │   └── Exploit availability metadata fields
 ├── Prioritisation Engine
@@ -66,7 +67,7 @@ Vulnerability Scanner
 - Web DAST rate limiting, retry limits, Retry-After handling, and max-error controls.
 - Web DAST robots.txt awareness.
 - Web DAST sitemap discovery.
-- Local vulnerability intelligence foundation using normalised software/service inventory, service fingerprint metadata, local JSON rules, local CVE-style feed files, and local version conditions only.
+- Local vulnerability intelligence foundation using normalised software/service inventory, service fingerprint metadata, local JSON rules, local CVE-style feed files, local EPSS metadata files, and local version conditions only.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -173,5 +174,7 @@ Version 14.2 extends the Vulnerability Intelligence Engine foundation. `scanner.
 Version 14.2 intentionally uses local rules only. It does not fetch live CVE feeds, EPSS data, Exploit-DB records, Metasploit modules, exploit code, or perform live attack checks. CVE, CVSS, EPSS, affected-version, fixed-version, references, and exploit availability fields can be present in local rules as metadata, but matches remain indicators requiring manual validation. Version-specific rules require product/version evidence unless `allow_unknown_version` is explicitly set, and unknown-version findings are low confidence.
 
 Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan command accepts `--use-cve-feed --cve-feed PATH` only alongside `--vuln-intel`; the importer loads local JSON, validates feed structure, normalises vendor/product/CPE identifiers, evaluates affected version conditions, and merges results into `vulnerability_intelligence.cve_feed_*` fields. Matched feed records create standard findings with source `cve_feed`, while missing or unknown versions are counted as insufficient evidence and do not create confirmed CVE findings. The feature remains offline-only and does not fetch live CVE data, remote references, Exploit-DB, Metasploit, or exploit code.
+
+Version 14.4 adds `scanner.epss_importer`, an offline EPSS metadata importer. The scan command accepts `--use-epss --epss-file PATH` only with `--vuln-intel --use-cve-feed`; EPSS records are loaded from local CSV or JSON files and used only to enrich matched local CVE feed records. The importer skips malformed rows, counts invalid and duplicate records, keeps the last valid duplicate CVE row, and adds `epss_*` summary fields plus one importer status finding. EPSS is used as a conservative prioritisation signal in risk scoring and never creates a vulnerability finding by itself. Version 14.4 does not fetch live EPSS data, CVE data, Exploit-DB, Metasploit, or exploit code.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

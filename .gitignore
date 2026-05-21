@@ -23,6 +23,9 @@ data/*
 !data/vuln_intel/sample_vuln_rules.json
 !data/cve_feeds/
 !data/cve_feeds/sample_cve_feed.json
+!data/epss/
+!data/epss/sample_epss.csv
+!data/epss/sample_epss.json
 data/*.db
 data/*cache*.json
 

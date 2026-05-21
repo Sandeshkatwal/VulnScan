@@ -348,6 +348,18 @@
       <p><strong>Highest EPSS:</strong> {{ vuln_intel.get("highest_epss_score") or "" }}</p>
       <p><strong>Highest intelligence risk:</strong> {{ vuln_intel.get("highest_intel_risk_label") or "Informational" }}</p>
       <p><strong>Limitations:</strong> {{ vuln_intel.get("limitations", []) | join("; ") }}</p>
+      <h3>EPSS Metadata Summary</h3>
+      <p><strong>EPSS enabled:</strong> {{ vuln_intel.get("epss_enabled", false) }}</p>
+      <p><strong>EPSS file:</strong> {{ vuln_intel.get("epss_file") or "" }}</p>
+      <p><strong>EPSS records loaded:</strong> {{ vuln_intel.get("epss_records_loaded", 0) }}</p>
+      <p><strong>EPSS invalid records:</strong> {{ vuln_intel.get("epss_invalid_records", 0) }}</p>
+      <p><strong>EPSS duplicate records:</strong> {{ vuln_intel.get("epss_duplicate_records", 0) }}</p>
+      <p><strong>EPSS enriched matches:</strong> {{ vuln_intel.get("epss_matches_enriched", 0) }}</p>
+      <p><strong>EPSS missing for CVE count:</strong> {{ vuln_intel.get("epss_missing_for_cve_count", 0) }}</p>
+      <p><strong>Highest EPSS score:</strong> {{ vuln_intel.get("highest_epss_score") or "" }}</p>
+      <p><strong>Highest EPSS percentile:</strong> {{ vuln_intel.get("highest_epss_percentile") or "" }}</p>
+      <p><strong>High/Medium/Low EPSS:</strong> {{ vuln_intel.get("high_epss_count", 0) }} / {{ vuln_intel.get("medium_epss_count", 0) }} / {{ vuln_intel.get("low_epss_count", 0) }}</p>
+      <p><strong>EPSS limitations:</strong> {{ vuln_intel.get("epss_limitations", []) | join("; ") }}</p>
       {% if vuln_intel.get("matches", []) %}
       <table>
         <thead>
@@ -411,6 +423,8 @@
             <th>Affected Condition</th>
             <th>Fixed Version</th>
             <th>CVSS</th>
+            <th>EPSS</th>
+            <th>EPSS Percentile</th>
             <th>Severity</th>
             <th>Status</th>
             <th>Confidence</th>
@@ -427,6 +441,8 @@
             <td>{% if match.affected_condition %}{{ match.affected_condition.display }}{% endif %}</td>
             <td>{{ match.fixed_version or "" }}</td>
             <td>{{ match.cvss_score or "" }}</td>
+            <td>{{ match.epss_score or "" }}</td>
+            <td>{{ match.epss_percentile or "" }}</td>
             <td>{{ match.severity or "" }}</td>
             <td>{{ match.match_status or "" }}</td>
             <td>{{ match.match_confidence or "" }}</td>

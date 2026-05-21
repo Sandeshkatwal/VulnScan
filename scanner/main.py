@@ -19,6 +19,7 @@ from scanner.audit_profiles import (
 from scanner.assets import get_asset_services, get_assets
 from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
+from scanner.epss_importer import DEFAULT_EPSS_PATH
 from scanner.database import database_exists, get_missing_required_tables
 from scanner.diff import compare_latest_two_scans
 from scanner.evidence import redact_nested
@@ -388,6 +389,20 @@ def scan(
             help="Path to a local CVE-style JSON feed file.",
         ),
     ] = DEFAULT_CVE_FEED_PATH,
+    use_epss: Annotated[
+        bool,
+        typer.Option(
+            "--use-epss",
+            help="Enable offline EPSS enrichment for local CVE feed matches. Requires --vuln-intel and --use-cve-feed.",
+        ),
+    ] = False,
+    epss_file: Annotated[
+        Path,
+        typer.Option(
+            "--epss-file",
+            help="Path to a local EPSS CSV or JSON metadata file.",
+        ),
+    ] = DEFAULT_EPSS_PATH,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
     if windows_demo and ssh_audit:
@@ -397,8 +412,16 @@ def scan(
     if use_cve_feed and not vuln_intel:
         console.print("[red]--use-cve-feed requires --vuln-intel because CVE feed matching uses the vulnerability intelligence inventory.[/red]")
         raise typer.Exit(code=1)
+    if use_epss and not vuln_intel:
+        console.print("[red]--use-epss requires --vuln-intel because EPSS enrichment uses vulnerability intelligence CVE matches.[/red]")
+        raise typer.Exit(code=1)
+    if use_epss and not use_cve_feed:
+        console.print("[red]--use-epss enriches local CVE feed matches, so it requires --use-cve-feed.[/red]")
+        raise typer.Exit(code=1)
     if cve_feed != DEFAULT_CVE_FEED_PATH and not use_cve_feed:
         console.print("[yellow]--cve-feed was provided without --use-cve-feed. The local CVE feed will not be loaded.[/yellow]")
+    if epss_file != DEFAULT_EPSS_PATH and not use_epss:
+        console.print("[yellow]--epss-file was provided without --use-epss. The local EPSS file will not be loaded.[/yellow]")
 
     try:
         selected_audit_profile = get_audit_profile(audit_profile)
@@ -633,6 +656,8 @@ def scan(
                     rules_path=vuln_rules,
                     use_cve_feed=use_cve_feed,
                     cve_feed_path=cve_feed,
+                    use_epss=use_epss,
+                    epss_file=epss_file,
                 )
             except VulnIntelRulesError as exc:
                 console.print(f"[red]Vulnerability intelligence error:[/red] {exc}")
@@ -659,7 +684,7 @@ def scan(
             if _is_windows_related_finding(finding)
         ]
         scan_result["vuln_intel_findings"] = [
-            finding for finding in scan_result["findings"] if finding["source"] in {"vuln_intel", "cve_feed"}
+            finding for finding in scan_result["findings"] if finding["source"] in {"vuln_intel", "cve_feed", "epss_importer"}
         ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
@@ -1789,6 +1814,16 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
         ("CVE feed unknown version", summary.get("cve_feed_unknown_version_count")),
         ("CVE feed highest CVSS", summary.get("cve_feed_highest_cvss")),
         ("CVE feed exploit available", summary.get("cve_feed_exploit_available_count")),
+        ("EPSS enabled", summary.get("epss_enabled")),
+        ("EPSS records loaded", summary.get("epss_records_loaded")),
+        ("EPSS invalid records", summary.get("epss_invalid_records")),
+        ("EPSS enriched matches", summary.get("epss_matches_enriched")),
+        ("EPSS missing count", summary.get("epss_missing_for_cve_count")),
+        ("Highest EPSS score", summary.get("highest_epss_score")),
+        ("Highest EPSS percentile", summary.get("highest_epss_percentile")),
+        ("High EPSS count", summary.get("high_epss_count")),
+        ("Medium EPSS count", summary.get("medium_epss_count")),
+        ("Low EPSS count", summary.get("low_epss_count")),
         ("Limitations", _format_summary_list(summary.get("limitations"))),
     ]
     for label, value in rows:
@@ -1837,6 +1872,8 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
     cve_table.add_column("Affected Condition")
     cve_table.add_column("Fixed Version")
     cve_table.add_column("CVSS")
+    cve_table.add_column("EPSS")
+    cve_table.add_column("EPSS Percentile")
     cve_table.add_column("Severity")
     cve_table.add_column("Confidence")
     cve_table.add_column("Exploit Available")
@@ -1850,6 +1887,8 @@ def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
             str(condition.get("display") or ""),
             str(match.get("fixed_version") or ""),
             "" if match.get("cvss_score") is None else str(match.get("cvss_score")),
+            "" if match.get("epss_score") is None else str(match.get("epss_score")),
+            "" if match.get("epss_percentile") is None else str(match.get("epss_percentile")),
             str(match.get("severity") or ""),
             str(match.get("match_confidence") or ""),
             str(match.get("exploit_available") or False),

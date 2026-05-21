@@ -539,12 +539,27 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
                     "affected_condition": {"operator": "less_than", "value": "9.6", "display": "less_than 9.6"},
                     "fixed_version": "9.6",
                     "cvss_score": 7.5,
+                    "epss_score": 0.72,
+                    "epss_percentile": 0.94,
+                    "epss_enriched": True,
                     "severity": "High",
                     "match_status": "matched",
                     "match_confidence": "High",
                     "exploit_available": False,
                 }
             ],
+            "epss_enabled": True,
+            "epss_file": "data\\epss\\sample_epss.csv",
+            "epss_records_loaded": 1,
+            "epss_invalid_records": 0,
+            "epss_duplicate_records": 0,
+            "epss_matches_enriched": 1,
+            "epss_missing_for_cve_count": 0,
+            "highest_epss_percentile": 0.94,
+            "high_epss_count": 1,
+            "medium_epss_count": 0,
+            "low_epss_count": 0,
+            "epss_limitations": ["Local EPSS only."],
         },
         "findings": [],
         "http_findings": [],
@@ -575,6 +590,9 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
     assert report["vulnerability_intelligence"]["matches"][0]["version_condition"]["operator"] == "version_less_than"
     assert report["vulnerability_intelligence"]["cve_feed_matches_found"] == 1
     assert report["vulnerability_intelligence"]["cve_feed_matches"][0]["cve"] == "LOCAL-CVE-DEMO-0001"
+    assert report["vulnerability_intelligence"]["cve_feed_matches"][0]["epss_score"] == 0.72
+    assert report["vulnerability_intelligence"]["epss_matches_enriched"] == 1
+    assert report["vulnerability_intelligence"]["highest_epss_percentile"] == 0.94
     assert report["summary"]["vulnerability_intelligence_matches"] == 1
     assert report["summary"]["vulnerability_intelligence_version_matches"] == 1
     assert report["summary"]["vulnerability_intelligence_cve_feed_matches"] == 1

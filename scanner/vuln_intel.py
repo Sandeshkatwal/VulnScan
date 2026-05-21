@@ -53,7 +53,7 @@ OPTIONAL_INTELLIGENCE_FIELDS = {
     "detection_note",
     "allow_unknown_version",
 }
-VULN_INTEL_LIMITATION = "Version 14.3 uses local rules and local CVE feed files only; it does not perform live CVE feed validation."
+VULN_INTEL_LIMITATION = "Version 14.4 uses local rules, local CVE feed files, and local EPSS metadata files only; it does not perform live feed validation."
 
 
 class VulnIntelRulesError(ValueError):
@@ -95,6 +95,7 @@ def disabled_vulnerability_intelligence_summary() -> dict[str, Any]:
         "cve_feed_exploit_available_count": 0,
         "cve_feed_limitations": [],
         "cve_feed_matches": [],
+        **_disabled_epss_summary(),
     }
 
 
@@ -103,6 +104,8 @@ def run_vulnerability_intelligence(
     rules_path: Path = DEFAULT_RULES_PATH,
     use_cve_feed: bool = False,
     cve_feed_path: Path | None = None,
+    use_epss: bool = False,
+    epss_file: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], list[Any]]:
     """Build inventory, match local rules, and generate standard findings."""
     inventory = build_software_inventory(scan_result)
@@ -115,6 +118,7 @@ def run_vulnerability_intelligence(
     )
     findings = build_vulnerability_intelligence_findings(matches, summary, scan_result)
     cve_feed_summary = _disabled_cve_feed_summary()
+    epss_summary = _disabled_epss_summary()
     if use_cve_feed:
         from scanner.cve_feed import (
             DEFAULT_CVE_FEED_PATH,
@@ -123,6 +127,14 @@ def run_vulnerability_intelligence(
             build_cve_feed_summary,
             load_cve_feed,
             match_cve_feed,
+        )
+        from scanner.epss_importer import (
+            DEFAULT_EPSS_PATH,
+            EpssImportError,
+            build_epss_import_findings,
+            build_epss_summary,
+            enrich_cve_matches_with_epss,
+            load_epss_file,
         )
 
         selected_feed_path = cve_feed_path or DEFAULT_CVE_FEED_PATH
@@ -137,13 +149,49 @@ def run_vulnerability_intelligence(
             )
         else:
             cve_matches = match_cve_feed(inventory.get("items", []), feed)
+            epss_failed = False
+            if use_epss:
+                selected_epss_path = epss_file or DEFAULT_EPSS_PATH
+                try:
+                    epss_data = load_epss_file(selected_epss_path)
+                except EpssImportError as exc:
+                    epss_failed = True
+                    epss_summary = build_epss_summary(
+                        enabled=True,
+                        epss_file=selected_epss_path,
+                        epss_data=None,
+                        cve_matches=cve_matches,
+                        error=f"Local EPSS metadata was not loaded: {exc}",
+                    )
+                else:
+                    cve_matches = enrich_cve_matches_with_epss(cve_matches, epss_data)
+                    epss_summary = build_epss_summary(
+                        enabled=True,
+                        epss_file=selected_epss_path,
+                        epss_data=epss_data,
+                        cve_matches=cve_matches,
+                    )
             cve_feed_summary = build_cve_feed_summary(
                 feed=feed,
                 matches=cve_matches,
                 enabled=True,
             )
             findings.extend(build_cve_feed_findings(cve_matches, cve_feed_summary, scan_result))
+            if use_epss:
+                findings.extend(build_epss_import_findings(epss_summary, scan_result, failed=epss_failed))
+    elif use_epss:
+        from scanner.epss_importer import DEFAULT_EPSS_PATH, build_epss_summary
+
+        selected_epss_path = epss_file or DEFAULT_EPSS_PATH
+        epss_summary = build_epss_summary(
+            enabled=True,
+            epss_file=selected_epss_path,
+            epss_data=None,
+            cve_matches=[],
+            error="EPSS enrichment was requested without local CVE feed matching.",
+        )
     summary.update(cve_feed_summary)
+    summary.update(epss_summary)
     _refresh_combined_summary_metrics(summary)
     return inventory, summary, findings
 
@@ -263,6 +311,7 @@ def build_vulnerability_intelligence_summary(
         ],
         "matches": matches,
         **_disabled_cve_feed_summary(),
+        **_disabled_epss_summary(),
     }
 
 
@@ -283,10 +332,28 @@ def _disabled_cve_feed_summary() -> dict[str, Any]:
     }
 
 
+def _disabled_epss_summary() -> dict[str, Any]:
+    return {
+        "epss_enabled": False,
+        "epss_file": None,
+        "epss_records_loaded": 0,
+        "epss_invalid_records": 0,
+        "epss_duplicate_records": 0,
+        "epss_matches_enriched": 0,
+        "epss_missing_for_cve_count": 0,
+        "highest_epss_percentile": None,
+        "high_epss_count": 0,
+        "medium_epss_count": 0,
+        "low_epss_count": 0,
+        "epss_limitations": [],
+    }
+
+
 def _refresh_combined_summary_metrics(summary: dict[str, Any]) -> None:
     """Keep top-level intelligence metrics conservative across rules and feeds."""
     rule_highest = _as_float(summary.get("highest_cvss_score"))
     feed_highest = _as_float(summary.get("cve_feed_highest_cvss"))
+    feed_epss = _as_float(summary.get("highest_epss_score"))
     cvss_scores = [score for score in (rule_highest, feed_highest) if score is not None]
     if cvss_scores:
         summary["highest_cvss_score"] = max(cvss_scores)
@@ -296,6 +363,14 @@ def _refresh_combined_summary_metrics(summary: dict[str, Any]) -> None:
     if summary.get("cve_feed_limitations"):
         limitations = list(summary.get("limitations") or [])
         for limitation in summary.get("cve_feed_limitations") or []:
+            if limitation not in limitations:
+                limitations.append(limitation)
+        summary["limitations"] = limitations
+    if feed_epss is not None:
+        summary["highest_epss_score"] = feed_epss
+    if summary.get("epss_limitations"):
+        limitations = list(summary.get("limitations") or [])
+        for limitation in summary.get("epss_limitations") or []:
             if limitation not in limitations:
                 limitations.append(limitation)
         summary["limitations"] = limitations
@@ -318,7 +393,7 @@ def build_vulnerability_intelligence_findings(
             impact="Local intelligence matches can help prioritise authorised manual verification and remediation.",
             recommendation="Use intelligence matches to prioritise manual verification and remediation.",
             verification="Review the vulnerability_intelligence section in the report.",
-            limitation="Version 14.3 uses local rules and local CVE feed files only and does not perform live CVE, EPSS, or exploit lookups.",
+            limitation="Version 14.4 uses local rules, local CVE feed files, and local EPSS metadata files only and does not perform live CVE, EPSS, or exploit lookups.",
             source="vuln_intel",
             evidence_details={
                 "ruleset_name": summary.get("ruleset_name"),
