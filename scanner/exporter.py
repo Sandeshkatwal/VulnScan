@@ -72,6 +72,28 @@ FINDING_FIELDS = [
     "asset_environment",
     "asset_business_owner",
     "asset_tags",
+    "priority_score",
+    "priority_label",
+    "recommended_action",
+    "sla_hint",
+    "fix_first_rank",
+    "created_at",
+]
+
+PRIORITISATION_FIELDS = [
+    "scan_id",
+    "finding_id",
+    "title",
+    "severity",
+    "source",
+    "risk_score",
+    "risk_label",
+    "priority_score",
+    "priority_label",
+    "asset_criticality",
+    "recommended_action",
+    "sla_hint",
+    "fix_first_rank",
     "created_at",
 ]
 
@@ -148,6 +170,37 @@ def export_findings(format_name: str, target: str | None = None) -> dict[str, An
         export_type="findings",
         table_name="findings",
         fields=FINDING_FIELDS,
+        query=query,
+        parameters=parameters,
+        format_name=format_name,
+        target=target,
+    )
+
+
+def export_prioritisation(format_name: str, target: str | None = None) -> dict[str, Any]:
+    """Export saved prioritisation fields for findings."""
+    if target:
+        query = f"""
+            SELECT f.{", f.".join(PRIORITISATION_FIELDS)}
+            FROM findings f
+            INNER JOIN scans s ON s.scan_id = f.scan_id
+            WHERE s.target = ? AND f.priority_score IS NOT NULL
+            ORDER BY f.priority_score DESC, f.fix_first_rank ASC, f.created_at DESC
+        """
+        parameters: tuple[Any, ...] = (target,)
+    else:
+        query = f"""
+            SELECT {", ".join(PRIORITISATION_FIELDS)}
+            FROM findings
+            WHERE priority_score IS NOT NULL
+            ORDER BY priority_score DESC, fix_first_rank ASC, created_at DESC
+        """
+        parameters = ()
+
+    return _export_rows(
+        export_type="prioritisation",
+        table_name="findings",
+        fields=PRIORITISATION_FIELDS,
         query=query,
         parameters=parameters,
         format_name=format_name,

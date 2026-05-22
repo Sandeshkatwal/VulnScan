@@ -700,3 +700,99 @@ def test_json_report_includes_asset_context_and_prioritisation(tmp_path) -> None
     assert report["asset_context"]["criticality"] == "critical"
     assert report["prioritisation_summary"]["asset_criticality"] == "critical"
     assert report["prioritised_findings"][0]["asset_environment"] == "production"
+
+
+def test_json_report_includes_fix_first_dashboard(tmp_path) -> None:
+    scan_result = {
+        "host": "127.0.0.1",
+        "resolved_ip": "127.0.0.1",
+        "scan_mode": "safe",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "vuln_intel_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+        "fix_first_dashboard": {
+            "enabled": True,
+            "generated_at": "2026-05-22T10:00:00+00:00",
+            "target": "127.0.0.1",
+            "total_findings": 1,
+            "total_prioritised_findings": 1,
+            "fix_first_count": 1,
+            "fix_soon_count": 0,
+            "monitor_count": 0,
+            "informational_count": 0,
+            "highest_priority_score": 95,
+            "highest_priority_title": "Unit Finding",
+            "highest_priority_source": "cve_feed",
+            "critical_asset_findings_count": 1,
+            "high_asset_findings_count": 0,
+            "exploitable_metadata_count": 1,
+            "active_exploitation_reported_count": 0,
+            "high_epss_count": 1,
+            "high_cvss_count": 1,
+            "overdue_remediation_count": 0,
+            "top_recommended_actions": ["Patch."],
+            "dashboard_limitations": ["Human validation required."],
+        },
+        "priority_distribution": {
+            "by_label": {"Fix First": 1, "Fix Soon": 0, "Monitor": 0, "Informational": 0},
+            "by_severity": {"Critical": 0, "High": 1, "Medium": 0, "Low": 0, "Informational": 0},
+            "by_source": {"cve_feed": 1},
+            "by_asset_criticality": {"critical": 1, "high": 0, "medium": 0, "low": 0, "unknown": 0},
+            "by_exploit_maturity": {"none": 0, "unknown": 0, "poc": 1, "weaponized": 0, "active_exploitation_reported": 0},
+        },
+        "top_fix_first_findings": [
+            {
+                "rank": 1,
+                "title": "Unit Finding",
+                "source": "cve_feed",
+                "category": "Unit",
+                "severity": "High",
+                "priority_score": 95,
+                "priority_label": "Fix First",
+                "asset_criticality": "critical",
+                "asset_exposure": "127.0.0.1:22",
+                "cvss_score": 9.8,
+                "epss_score": 0.8,
+                "exploit_available": True,
+                "exploit_maturity": "poc",
+                "active_exploitation_reported": False,
+                "remediation_status": "Open",
+                "recommended_action": "Patch.",
+                "sla_hint": "Review within 24-72 hours.",
+                "priority_reasons": ["Unit reason."],
+                "evidence": "Unit evidence.",
+                "limitation": "Unit limitation.",
+            }
+        ],
+        "remediation_action_plan": {
+            "immediate_actions": [],
+            "planned_actions": [],
+            "monitoring_actions": [],
+            "informational_actions": [],
+        },
+        "executive_summary": "VulScan prioritised 1 findings. Human validation is required.",
+    }
+
+    path = save_json_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    report = json.loads(path.read_text(encoding="utf-8"))
+
+    assert report["fix_first_dashboard"]["enabled"] is True
+    assert report["top_fix_first_findings"][0]["rank"] == 1
+    assert report["executive_summary"].startswith("VulScan prioritised")

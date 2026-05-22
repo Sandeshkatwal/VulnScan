@@ -35,7 +35,8 @@ Vulnerability Scanner
 ├── Prioritisation Engine
 │   ├── Risk scoring
 │   ├── Asset criticality
-│   └── Fix-first ranking
+│   ├── Fix-first ranking
+│   └── Fix-first dashboard reporting
 ├── Storage
 │   ├── Assets
 │   ├── Findings
@@ -77,7 +78,7 @@ Vulnerability Scanner
 - Structured SSH audit status and error-code handling for authentication, timeout, unsupported target, and command-failure paths.
 - Concise, redacted credentialed audit evidence summaries with optional report-only evidence details.
 - Standard finding model with sequential IDs, severity, confidence, evidence, impact, recommendation, verification, limitation, source, and timestamps.
-- Prioritisation Engine risk scoring with heuristic risk score, risk label, fix priority, local asset criticality boosts, `prioritisation_summary`, and `prioritised_findings`.
+- Prioritisation Engine risk scoring with heuristic risk score, risk label, fix priority, local asset criticality boosts, `prioritisation_summary`, `prioritised_findings`, and Version 14.8 fix-first dashboard reporting.
 - Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
 - Scan diffing between the latest two saved scans for a target, including new, fixed, unchanged, and changed-risk finding categories.
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
@@ -182,5 +183,7 @@ Version 14.4 adds `scanner.epss_importer`, an offline EPSS metadata importer. Th
 Version 14.5 adds `scanner.exploit_metadata`, an offline exploit availability metadata importer. The scan command accepts `--use-exploit-metadata --exploit-metadata-file PATH` only with `--vuln-intel --use-cve-feed`; metadata records are loaded from local JSON or CSV files and used only to enrich matched local CVE feed records. The importer validates booleans and maturity values, skips malformed rows, counts duplicates, and rejects unsafe fields or suspicious content such as payload, command, shellcode, or exploit-code fields before reporting. Exploit metadata is a prioritisation signal only and does not trigger active checks, downloads, exploit execution, exploit code generation, or exploitability claims.
 
 Version 14.7 adds `scanner.asset_criticality` and `scanner.prioritisation`. Asset criticality is loaded only from direct CLI input or local JSON files, never from live internet sources. The resolver matches exact IPs, lowercase hostnames, and optional aliases, then emits a top-level `asset_context` object. The prioritisation engine adds a local asset criticality adjustment of `critical +20`, `high +12`, `medium +6`, and `low/unknown +0`, while keeping informational findings capped at `Monitor` unless other strong local signals exist. This does not perform new attack checks, validate exploitability, fetch CVE/EPSS/exploit data, or create vulnerabilities by itself.
+
+Version 14.8 adds `scanner.prioritisation_report`, a reporting-only dashboard layer over existing prioritised findings. It builds `fix_first_dashboard`, `priority_distribution`, `top_fix_first_findings`, `remediation_action_plan`, and `executive_summary` for terminal, JSON, HTML, and prioritisation exports. It does not collect new evidence, perform new attack checks, fetch internet data, or confirm exploitability. SLA hints are generic decision-support metadata and should be customised by the operator.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

@@ -10,6 +10,7 @@ from typing import Any
 
 from scanner.evidence import redact_nested
 from scanner.finding import SEVERITY_ORDER, findings_to_dicts
+from scanner.prioritisation_report import disabled_fix_first_dashboard
 from scanner.windows_result import build_windows_consolidated_summary
 
 
@@ -130,6 +131,23 @@ def save_json_report(
         ),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),
+        "fix_first_dashboard": scan_result.get(
+            "fix_first_dashboard",
+            disabled_fix_first_dashboard(target)["fix_first_dashboard"],
+        ),
+        "priority_distribution": scan_result.get(
+            "priority_distribution",
+            disabled_fix_first_dashboard(target)["priority_distribution"],
+        ),
+        "top_fix_first_findings": scan_result.get("top_fix_first_findings", []),
+        "remediation_action_plan": scan_result.get(
+            "remediation_action_plan",
+            disabled_fix_first_dashboard(target)["remediation_action_plan"],
+        ),
+        "executive_summary": scan_result.get(
+            "executive_summary",
+            disabled_fix_first_dashboard(target)["executive_summary"],
+        ),
         "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),
         "tls_findings": scan_result.get("tls_findings", []),

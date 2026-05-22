@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, local vulnerability intelligence matching, local CVE-style feed import, offline EPSS metadata enrichment, offline exploit availability metadata enrichment, local asset criticality prioritisation, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, sitemap discovery, and consolidated passive Web DAST reporting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, local vulnerability intelligence matching, local CVE-style feed import, offline EPSS metadata enrichment, offline exploit availability metadata enrichment, local asset criticality prioritisation, fix-first dashboard reporting, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, sitemap discovery, and consolidated passive Web DAST reporting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 Version 12.6 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, opt-in Windows Firewall and Microsoft Defender status collection, opt-in local security policy indicators from `net accounts`, and narrow template-based registry indicators using explicitly provided credentials.
 
 ## Requirements
@@ -58,6 +58,14 @@ Version 14.7 adds local asset criticality for prioritisation. Use `--prioritise 
 ```
 
 Allowed values are `critical`, `high`, `medium`, `low`, and `unknown`. Direct CLI criticality overrides file mappings. Asset criticality is business context only; it is not a vulnerability, does not confirm exploitability, and should be reviewed and maintained. See `docs\PRIORITISATION.md`.
+
+Version 14.8 adds a fix-first dashboard for prioritised findings:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --prioritise --fix-first-dashboard
+```
+
+The dashboard adds terminal, JSON, HTML, and export-friendly views for `fix_first_dashboard`, priority distribution, top fix-first findings, a remediation action plan, and an executive summary. It uses existing prioritised findings only; it does not perform new scanning, exploit checks, live attack checks, or internet feed fetching. SLA hints are generic and human validation is still required. See `docs\PRIORITISATION.md`.
 
 Optional authenticated SSH audit for an authorised Linux system:
 

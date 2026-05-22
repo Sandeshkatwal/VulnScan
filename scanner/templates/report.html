@@ -265,6 +265,156 @@
       {% endif %}
     </section>
 
+    {% set dashboard = report.get("fix_first_dashboard", {}) %}
+    {% if dashboard.get("enabled") %}
+    <section>
+      <h2>Fix-First Dashboard</h2>
+      <p>{{ report.get("executive_summary", "") }}</p>
+      <div class="grid">
+        <div class="metric">
+          <div class="label">Fix First</div>
+          <div class="value">{{ dashboard.get("fix_first_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Fix Soon</div>
+          <div class="value">{{ dashboard.get("fix_soon_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Monitor</div>
+          <div class="value">{{ dashboard.get("monitor_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Informational</div>
+          <div class="value">{{ dashboard.get("informational_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Highest Score</div>
+          <div class="value">{{ dashboard.get("highest_priority_score", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">High EPSS</div>
+          <div class="value">{{ dashboard.get("high_epss_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Exploit Metadata</div>
+          <div class="value">{{ dashboard.get("exploitable_metadata_count", 0) }}</div>
+        </div>
+      </div>
+
+      <h3>Priority Distribution</h3>
+      {% set distribution = report.get("priority_distribution", {}) %}
+      <table>
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Count</th>
+            <th>Severity</th>
+            <th>Count</th>
+            <th>Asset Criticality</th>
+            <th>Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set labels = distribution.get("by_label", {}) %}
+          {% set severities = distribution.get("by_severity", {}) %}
+          {% set criticalities = distribution.get("by_asset_criticality", {}) %}
+          {% for label in ["Fix First", "Fix Soon", "Monitor", "Informational"] %}
+          <tr>
+            <td>{{ label }}</td>
+            <td>{{ labels.get(label, 0) }}</td>
+            <td>{{ ["Critical", "High", "Medium", "Low", "Informational"][loop.index0] }}</td>
+            <td>{{ severities.get(["Critical", "High", "Medium", "Low", "Informational"][loop.index0], 0) }}</td>
+            <td>{{ ["critical", "high", "medium", "low", "unknown"][loop.index0] }}</td>
+            <td>{{ criticalities.get(["critical", "high", "medium", "low", "unknown"][loop.index0], 0) }}</td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td></td>
+            <td></td>
+            <td>Informational</td>
+            <td>{{ severities.get("Informational", 0) }}</td>
+            <td>unknown</td>
+            <td>{{ criticalities.get("unknown", 0) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Top Fix-First Findings</h3>
+      {% if report.top_fix_first_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Priority</th>
+            <th>Score</th>
+            <th>Title</th>
+            <th>Severity</th>
+            <th>Source</th>
+            <th>Asset</th>
+            <th>CVSS</th>
+            <th>EPSS</th>
+            <th>Exploit</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in report.top_fix_first_findings %}
+          <tr>
+            <td>{{ finding.rank }}</td>
+            <td>{{ finding.priority_label }}</td>
+            <td>{{ finding.priority_score }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.source }}</td>
+            <td>{{ finding.asset_criticality }}</td>
+            <td>{{ finding.cvss_score or "" }}</td>
+            <td>{{ finding.epss_score or "" }}</td>
+            <td>{{ finding.exploit_available }}</td>
+            <td>{{ finding.recommended_action }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No prioritised findings were available for the dashboard.</p>
+      {% endif %}
+
+      <h3>Remediation Action Plan</h3>
+      {% set action_plan = report.get("remediation_action_plan", {}) %}
+      {% for group_id, group_title in [("immediate_actions", "Immediate actions"), ("planned_actions", "Planned actions"), ("monitoring_actions", "Monitoring actions"), ("informational_actions", "Informational actions")] %}
+      <h3>{{ group_title }}</h3>
+      {% if action_plan.get(group_id, []) %}
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Priority</th>
+            <th>Action</th>
+            <th>SLA Hint</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for action in action_plan.get(group_id, []) %}
+          <tr>
+            <td>{{ action.title }}</td>
+            <td>{{ action.priority_label }}</td>
+            <td>{{ action.recommended_action }}</td>
+            <td>{{ action.sla_hint }}</td>
+            <td>{{ action.remediation_status }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No {{ group_title | lower }} recorded.</p>
+      {% endif %}
+      {% endfor %}
+
+      <p><strong>Dashboard limitations:</strong> {{ dashboard.get("dashboard_limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
     <section>
       <h2>Open Ports</h2>
       {% if report.open_ports %}

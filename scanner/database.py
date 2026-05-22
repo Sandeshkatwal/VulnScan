@@ -113,6 +113,11 @@ def init_db(db_path: Path = DB_PATH) -> None:
                 asset_environment TEXT NULL,
                 asset_business_owner TEXT NULL,
                 asset_tags TEXT NULL,
+                priority_score INTEGER NULL,
+                priority_label TEXT NULL,
+                recommended_action TEXT NULL,
+                sla_hint TEXT NULL,
+                fix_first_rank INTEGER NULL,
                 created_at TEXT
             )
             """
@@ -121,6 +126,11 @@ def init_db(db_path: Path = DB_PATH) -> None:
         _ensure_column(connection, "findings", "asset_environment", "TEXT NULL")
         _ensure_column(connection, "findings", "asset_business_owner", "TEXT NULL")
         _ensure_column(connection, "findings", "asset_tags", "TEXT NULL")
+        _ensure_column(connection, "findings", "priority_score", "INTEGER NULL")
+        _ensure_column(connection, "findings", "priority_label", "TEXT NULL")
+        _ensure_column(connection, "findings", "recommended_action", "TEXT NULL")
+        _ensure_column(connection, "findings", "sla_hint", "TEXT NULL")
+        _ensure_column(connection, "findings", "fix_first_rank", "INTEGER NULL")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS remediation_status (

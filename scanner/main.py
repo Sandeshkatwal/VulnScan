@@ -34,6 +34,7 @@ from scanner.exporter import (
     export_assets,
     export_findings,
     export_history,
+    export_prioritisation,
     export_remediation,
 )
 from scanner.history import (
@@ -47,6 +48,11 @@ from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
 from scanner.report_json import save_json_report
 from scanner.prioritisation import build_prioritisation
+from scanner.prioritisation_report import (
+    build_dashboard_finding,
+    build_fix_first_dashboard,
+    disabled_fix_first_dashboard,
+)
 from scanner.remediation import (
     enrich_findings_with_remediation,
     get_remediation_list,
@@ -376,6 +382,13 @@ def scan(
             help="Build a vulnerability prioritisation view from local scan evidence.",
         ),
     ] = False,
+    fix_first_dashboard: Annotated[
+        bool,
+        typer.Option(
+            "--fix-first-dashboard",
+            help="Generate a fix-first dashboard from prioritised findings.",
+        ),
+    ] = False,
     use_asset_criticality: Annotated[
         bool,
         typer.Option(
@@ -463,6 +476,11 @@ def scan(
     if use_asset_criticality and not prioritise:
         console.print(
             "[yellow]--use-asset-criticality is most useful with --prioritise. Prioritisation has been enabled automatically.[/yellow]"
+        )
+        prioritise = True
+    if fix_first_dashboard and not prioritise:
+        console.print(
+            "[yellow]--fix-first-dashboard requires prioritisation. Prioritisation has been enabled automatically.[/yellow]"
         )
         prioritise = True
 
@@ -599,6 +617,7 @@ def scan(
         scan_result["asset_context"] = disabled_asset_context(target)
         scan_result["prioritisation_summary"] = {"enabled": False}
         scan_result["prioritised_findings"] = []
+        scan_result.update(disabled_fix_first_dashboard(target))
         scan_result["demo_mode"] = bool(windows_demo)
         scan_result["demo_notice"] = DEMO_NOTICE if windows_demo else ""
         findings = [] if windows_demo else create_port_exposure_findings(scan_result["open_ports"])
@@ -785,6 +804,48 @@ def scan(
             )
             scan_result["prioritisation_summary"] = prioritisation_summary
             scan_result["prioritised_findings"] = prioritised_findings
+            scan_result.update(
+                build_fix_first_dashboard(
+                    target=scan_result["host"],
+                    findings=scan_result["findings"],
+                    prioritised_findings=prioritised_findings,
+                )
+            )
+            _apply_dashboard_export_fields(
+                scan_result["findings"],
+                scan_result.get("top_fix_first_findings", []),
+                prioritised_findings,
+            )
+            if not _has_dashboard_finding(scan_result["findings"]):
+                findings.append(build_dashboard_finding())
+                scan_result["findings"] = assign_sequential_finding_ids(findings)
+                _apply_asset_fields_to_findings(scan_result["findings"], scan_result.get("asset_context", {}))
+                _apply_dashboard_export_fields(
+                    scan_result["findings"],
+                    scan_result.get("top_fix_first_findings", []),
+                    prioritised_findings,
+                )
+        scan_result["http_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "http_audit"
+        ]
+        scan_result["tls_findings"] = [
+            finding for finding in scan_result["findings"] if finding["source"] == "tls_audit"
+        ]
+        scan_result["ssh_findings"] = [
+            finding
+            for finding in scan_result["findings"]
+            if _is_ssh_related_finding(finding)
+        ]
+        scan_result["windows_findings"] = [
+            finding
+            for finding in scan_result["findings"]
+            if _is_windows_related_finding(finding)
+        ]
+        scan_result["vuln_intel_findings"] = [
+            finding
+            for finding in scan_result["findings"]
+            if finding["source"] in {"vuln_intel", "cve_feed", "epss_importer", "exploit_metadata"}
+        ]
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
             scan_result["credentialed_audits"] = _build_credentialed_audits(
@@ -844,6 +905,10 @@ def scan(
     _print_prioritisation(
         scan_result.get("prioritisation_summary", {}),
         scan_result.get("prioritised_findings", []),
+    )
+    _print_fix_first_dashboard(
+        scan_result.get("fix_first_dashboard", {}),
+        scan_result.get("top_fix_first_findings", []),
     )
 
     _print_findings(scan_result["findings"])
@@ -1800,6 +1865,29 @@ def export_findings_command(
     _print_export_result(export_findings(format_name=format_name, target=target))
 
 
+@export_app.command("prioritisation")
+def export_prioritisation_command(
+    target: Annotated[
+        str | None,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Optional target to export prioritisation data for.",
+        ),
+    ] = None,
+    format_name: Annotated[
+        str,
+        typer.Option(
+            "--format",
+            "-f",
+            help="Export format: csv or json.",
+        ),
+    ] = "csv",
+) -> None:
+    """Export saved prioritisation dashboard fields."""
+    _print_export_result(export_prioritisation(format_name=format_name, target=target))
+
+
 @export_app.command("remediation")
 def export_remediation_command(
     target: Annotated[
@@ -1843,6 +1931,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "web_passive_summary",
         "vuln_intel",
         "asset_criticality",
+        "prioritisation_report",
         "ssh_audit",
         "package_audit",
         "ssh_hardening",
@@ -1953,6 +2042,68 @@ def _print_prioritisation(
             "; ".join(str(reason) for reason in finding.get("priority_reasons") or []),
         )
     console.print(table)
+
+
+def _print_fix_first_dashboard(
+    dashboard: dict[str, Any],
+    top_findings: list[dict[str, Any]],
+) -> None:
+    if not dashboard or not dashboard.get("enabled"):
+        return
+
+    table = Table(title="Fix-First Dashboard")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Total prioritised findings", dashboard.get("total_prioritised_findings")),
+        ("Fix First", dashboard.get("fix_first_count")),
+        ("Fix Soon", dashboard.get("fix_soon_count")),
+        ("Monitor", dashboard.get("monitor_count")),
+        ("Informational", dashboard.get("informational_count")),
+        (
+            "Highest priority finding",
+            f"{dashboard.get('highest_priority_score')} - {dashboard.get('highest_priority_title') or 'n/a'}",
+        ),
+        ("High CVSS", dashboard.get("high_cvss_count")),
+        ("High EPSS", dashboard.get("high_epss_count")),
+        ("Exploit metadata", dashboard.get("exploitable_metadata_count")),
+        ("Critical asset findings", dashboard.get("critical_asset_findings_count")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+    if not top_findings:
+        console.print("[green]Top Fix-First Findings:[/green] No prioritised findings available.")
+        return
+
+    top_table = Table(title="Top Fix-First Findings")
+    top_table.add_column("Rank", justify="right")
+    top_table.add_column("Priority")
+    top_table.add_column("Score", justify="right")
+    top_table.add_column("Title")
+    top_table.add_column("Severity")
+    top_table.add_column("Source")
+    top_table.add_column("Asset")
+    top_table.add_column("CVSS")
+    top_table.add_column("EPSS")
+    top_table.add_column("Exploit")
+    top_table.add_column("Action")
+    for finding in top_findings:
+        top_table.add_row(
+            str(finding.get("rank") or ""),
+            str(finding.get("priority_label") or ""),
+            str(finding.get("priority_score") or 0),
+            str(finding.get("title") or ""),
+            str(finding.get("severity") or ""),
+            str(finding.get("source") or ""),
+            str(finding.get("asset_criticality") or ""),
+            "" if finding.get("cvss_score") in {None, ""} else str(finding.get("cvss_score")),
+            "" if finding.get("epss_score") in {None, ""} else str(finding.get("epss_score")),
+            str(finding.get("exploit_available") or False),
+            str(finding.get("recommended_action") or "")[:80],
+        )
+    console.print(top_table)
 
 
 def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
@@ -2673,6 +2824,60 @@ def _apply_asset_fields_to_findings(
         finding.setdefault("asset_environment", asset_context.get("environment") or "")
         finding.setdefault("asset_business_owner", asset_context.get("business_owner") or "")
         finding.setdefault("asset_tags", list(asset_context.get("tags") or []))
+
+
+def _has_dashboard_finding(findings: list[dict[str, Any]]) -> bool:
+    return any(str(finding.get("source") or "") == "prioritisation_report" for finding in findings)
+
+
+def _apply_dashboard_export_fields(
+    findings: list[dict[str, Any]],
+    top_findings: list[dict[str, Any]],
+    prioritised_findings: list[dict[str, Any]],
+) -> None:
+    by_title_source = {
+        (str(item.get("title") or ""), str(item.get("source") or "")): item
+        for item in prioritised_findings
+    }
+    ranks = {
+        (str(item.get("title") or ""), str(item.get("source") or "")): item.get("rank")
+        for item in top_findings
+    }
+    top_by_key = {
+        (str(item.get("title") or ""), str(item.get("source") or "")): item
+        for item in top_findings
+    }
+    for finding in findings:
+        key = (str(finding.get("title") or ""), str(finding.get("source") or ""))
+        prioritised = by_title_source.get(key)
+        if not prioritised:
+            continue
+        top_item = top_by_key.get(key, {})
+        finding["priority_score"] = prioritised.get("priority_score")
+        finding["priority_label"] = top_item.get("priority_label") or _dashboard_label_for_export(prioritised)
+        finding["recommended_action"] = top_item.get("recommended_action") or prioritised.get("recommendation") or prioritised.get("recommended_action") or finding.get("recommendation") or ""
+        finding["sla_hint"] = top_item.get("sla_hint") or _sla_hint_for_export(prioritised)
+        finding["fix_first_rank"] = ranks.get(key)
+
+
+def _sla_hint_for_export(finding: dict[str, Any]) -> str:
+    label = str(finding.get("priority_label") or "")
+    if label == "Fix First":
+        return "Review within 24-72 hours; customise to local policy."
+    if label in {"Fix Soon", "Schedule"}:
+        return "Review within 7-14 days; customise to local policy."
+    return "Review during the next routine security cycle."
+
+
+def _dashboard_label_for_export(finding: dict[str, Any]) -> str:
+    if str(finding.get("severity") or "") == "Informational":
+        return "Informational"
+    label = str(finding.get("priority_label") or "")
+    if label == "Fix First":
+        return "Fix First"
+    if label in {"Fix Soon", "Schedule"}:
+        return "Fix Soon"
+    return "Monitor"
 
 
 def _print_credentialed_audit_modules(credentialed_audits: list[dict[str, Any]]) -> None:

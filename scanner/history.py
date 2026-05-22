@@ -92,8 +92,9 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                 evidence, confidence, impact, recommendation, verification,
                 limitation, source, risk_score, risk_label, fix_priority,
                 asset_criticality, asset_environment, asset_business_owner, asset_tags,
+                priority_score, priority_label, recommended_action, sla_hint, fix_first_rank,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -120,6 +121,11 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                     finding.get("asset_environment"),
                     finding.get("asset_business_owner"),
                     json.dumps(finding.get("asset_tags") or []),
+                    finding.get("priority_score"),
+                    finding.get("priority_label"),
+                    finding.get("recommended_action"),
+                    finding.get("sla_hint"),
+                    finding.get("fix_first_rank"),
                     finding.get("created_at"),
                 )
                 for finding in findings
