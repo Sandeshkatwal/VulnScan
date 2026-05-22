@@ -2,7 +2,7 @@
 
 VulScan is an intermediate-level defensive vulnerability scanner and auditing tool for authorised use.
 
-Current capabilities include safe TCP connect scanning, service detection, local vulnerability intelligence matching, local CVE-style feed import, offline EPSS metadata enrichment, offline exploit availability metadata enrichment, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, sitemap discovery, and consolidated passive Web DAST reporting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
+Current capabilities include safe TCP connect scanning, service detection, local vulnerability intelligence matching, local CVE-style feed import, offline EPSS metadata enrichment, offline exploit availability metadata enrichment, local asset criticality prioritisation, JSON and HTML reports, HTTP security header checks, a safe Web DAST crawler foundation with passive headers, cookies, forms, risk summary, scope controls, rate limiting, robots.txt awareness, sitemap discovery, and consolidated passive Web DAST reporting, TLS certificate checks, SQLite history, scan diffing, remediation tracking, asset inventory, exports, and optional authenticated SSH auditing for authorised Linux systems with read-only audit profiles, package checks, and configuration checks.
 Version 12.6 also includes Windows SMB/WinRM audit foundation checks, optional single-attempt WinRM authentication validation, opt-in read-only Windows host information collection, opt-in Windows Firewall and Microsoft Defender status collection, opt-in local security policy indicators from `net accounts`, and narrow template-based registry indicators using explicitly provided credentials.
 
 ## Requirements
@@ -49,6 +49,15 @@ Optional local vulnerability intelligence matching:
 ```
 
 Version 14.5 adds a local vulnerability intelligence foundation with version-aware rules, optional local CVE-style feed import, offline EPSS metadata enrichment, and offline exploit availability metadata enrichment. It normalises discovered services/software into `software_inventory`, evaluates local JSON rules from `data\vuln_intel\sample_vuln_rules.json` by default, can evaluate local feed records from `data\cve_feeds\sample_cve_feed.json`, can enrich matched CVEs from `data\epss\sample_epss.csv` and `data\exploit_metadata\sample_exploit_metadata.json`, and emits `vuln_intel`, `cve_feed`, or importer status findings through the standard findings pipeline. It does not fetch live CVE, EPSS, Exploit-DB, Metasploit, exploit metadata, or exploit code, and intelligence matches are indicators that require validation. Version-specific rules and feed records require local product/version evidence unless explicitly marked as unknown-version indicators. EPSS and exploit availability are prioritisation signals, not proof of exploitation. See `docs\VULNERABILITY_INTELLIGENCE.md`.
+
+Version 14.7 adds local asset criticality for prioritisation. Use `--prioritise --use-asset-criticality` with either direct criticality or a local JSON mapping:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --prioritise --use-asset-criticality --asset-criticality low
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --prioritise --use-asset-criticality --asset-criticality-file data\asset_context\sample_asset_criticality.json --json --html --save-db
+```
+
+Allowed values are `critical`, `high`, `medium`, `low`, and `unknown`. Direct CLI criticality overrides file mappings. Asset criticality is business context only; it is not a vulnerability, does not confirm exploitability, and should be reviewed and maintained. See `docs\PRIORITISATION.md`.
 
 Optional authenticated SSH audit for an authorised Linux system:
 

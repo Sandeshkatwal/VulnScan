@@ -721,3 +721,75 @@ def test_html_report_renders_vulnerability_intelligence_section(tmp_path) -> Non
     assert "Demo OpenSSH Version Below Policy Threshold" in html
     assert "matched" in html
     assert "Local rules only." in html
+
+
+def test_html_report_renders_asset_context_section(tmp_path) -> None:
+    scan_result = {
+        "host": "production-web",
+        "resolved_ip": "production-web",
+        "scan_mode": "safe",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "vuln_intel_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+        "asset_context": {
+            "enabled": True,
+            "target": "production-web",
+            "criticality": "critical",
+            "criticality_source": "direct",
+            "business_owner": "Business Unit",
+            "environment": "production",
+            "tags": ["production", "web"],
+            "notes": "Unit test.",
+            "context_name": "Unit",
+            "context_version": "1.0",
+            "limitations": ["Local context only."],
+        },
+        "prioritisation_summary": {
+            "enabled": True,
+            "asset_criticality_enabled": True,
+            "asset_criticality": "critical",
+            "asset_criticality_source": "direct",
+            "fix_first_count": 0,
+            "fix_soon_count": 1,
+            "schedule_count": 0,
+            "monitor_count": 0,
+        },
+        "prioritised_findings": [
+            {
+                "title": "Unit Finding",
+                "severity": "High",
+                "source": "unit",
+                "priority_score": 87,
+                "priority_label": "Fix Soon",
+                "priority_reasons": ["Asset criticality is critical, increasing priority."],
+                "asset_criticality": "critical",
+                "asset_environment": "production",
+            }
+        ],
+    }
+
+    path = save_html_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    html = path.read_text(encoding="utf-8")
+
+    assert "Asset Context" in html
+    assert "production-web" in html
+    assert "Business Unit" in html
+    assert "Vulnerability Prioritisation" in html
+    assert "Asset criticality is critical, increasing priority." in html

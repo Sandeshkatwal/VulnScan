@@ -112,6 +112,24 @@ def save_json_report(
                 "exploit_metadata_limitations": [],
             },
         ),
+        "asset_context": scan_result.get(
+            "asset_context",
+            {
+                "enabled": False,
+                "target": target,
+                "criticality": "unknown",
+                "criticality_source": "default_unknown",
+                "business_owner": "",
+                "environment": "",
+                "tags": [],
+                "notes": "",
+                "context_name": None,
+                "context_version": None,
+                "limitations": ["Asset criticality enrichment was not enabled."],
+            },
+        ),
+        "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
+        "prioritised_findings": scan_result.get("prioritised_findings", []),
         "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),
         "tls_findings": scan_result.get("tls_findings", []),
@@ -241,6 +259,8 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "vulnerability_intelligence_cve_feed_matches": int(
             (scan_result.get("vulnerability_intelligence") or {}).get("cve_feed_matches_found") or 0
         ),
+        "asset_criticality_enabled": bool((scan_result.get("asset_context") or {}).get("enabled")),
+        "asset_criticality": (scan_result.get("asset_context") or {}).get("criticality") or "unknown",
         "highest_risk_level": _highest_risk_level(findings),
         "notes": notes,
     }

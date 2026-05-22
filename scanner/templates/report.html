@@ -248,6 +248,24 @@
     </section>
 
     <section>
+      <h2>Asset Context</h2>
+      {% set asset_context = report.get("asset_context", {}) %}
+      {% if asset_context.get("enabled") %}
+      <p><strong>Target:</strong> {{ asset_context.get("target") }}</p>
+      <p><strong>Criticality:</strong> {{ asset_context.get("criticality") }}</p>
+      <p><strong>Source:</strong> {{ asset_context.get("criticality_source") }}</p>
+      <p><strong>Environment:</strong> {{ asset_context.get("environment") or "" }}</p>
+      <p><strong>Business owner:</strong> {{ asset_context.get("business_owner") or "" }}</p>
+      <p><strong>Tags:</strong> {{ asset_context.get("tags", []) | join(", ") }}</p>
+      <p><strong>Context:</strong> {{ asset_context.get("context_name") or "" }} {{ asset_context.get("context_version") or "" }}</p>
+      <p><strong>Notes:</strong> {{ asset_context.get("notes") or "" }}</p>
+      <p><strong>Limitations:</strong> {{ asset_context.get("limitations", []) | join("; ") }}</p>
+      {% else %}
+      <p class="empty">Asset criticality enrichment was not enabled for this scan.</p>
+      {% endif %}
+    </section>
+
+    <section>
       <h2>Open Ports</h2>
       {% if report.open_ports %}
       <table>
@@ -468,6 +486,51 @@
       </table>
       {% else %}
       <p class="empty">No local CVE feed matches were recorded.</p>
+      {% endif %}
+    </section>
+
+    <section>
+      <h2>Vulnerability Prioritisation</h2>
+      {% set prioritisation = report.get("prioritisation_summary", {}) %}
+      {% if prioritisation.get("enabled") %}
+      <p><strong>Asset criticality enabled:</strong> {{ prioritisation.get("asset_criticality_enabled") }}</p>
+      <p><strong>Asset criticality:</strong> {{ prioritisation.get("asset_criticality") }}</p>
+      <p><strong>Asset criticality source:</strong> {{ prioritisation.get("asset_criticality_source") }}</p>
+      <p><strong>Fix First / Fix Soon / Schedule / Monitor:</strong> {{ prioritisation.get("fix_first_count", 0) }} / {{ prioritisation.get("fix_soon_count", 0) }} / {{ prioritisation.get("schedule_count", 0) }} / {{ prioritisation.get("monitor_count", 0) }}</p>
+      {% if report.prioritised_findings %}
+      <table>
+        <thead>
+          <tr>
+            <th>Priority Score</th>
+            <th>Priority Label</th>
+            <th>Asset Criticality</th>
+            <th>Environment</th>
+            <th>Severity</th>
+            <th>Title</th>
+            <th>Source</th>
+            <th>Priority Reasons</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for finding in report.prioritised_findings %}
+          <tr>
+            <td>{{ finding.priority_score }}</td>
+            <td>{{ finding.priority_label }}</td>
+            <td>{{ finding.asset_criticality }}</td>
+            <td>{{ finding.asset_environment }}</td>
+            <td>{{ finding.severity }}</td>
+            <td>{{ finding.title }}</td>
+            <td>{{ finding.source }}</td>
+            <td>{{ finding.priority_reasons | join("; ") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No findings were available for prioritisation.</p>
+      {% endif %}
+      {% else %}
+      <p class="empty">Vulnerability prioritisation was not enabled for this scan.</p>
       {% endif %}
     </section>
 
@@ -2093,7 +2156,7 @@
     <section>
       <h2>Future Findings</h2>
       <div class="future">
-        CVEs, EPSS, asset criticality, and richer risk scoring can be added here as VulScan expands beyond port and service reporting.
+        Richer risk scoring and additional authorised defensive workflows can be added here as VulScan expands beyond port and service reporting.
       </div>
     </section>
 

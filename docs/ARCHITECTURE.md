@@ -69,6 +69,7 @@ Vulnerability Scanner
 - Web DAST robots.txt awareness.
 - Web DAST sitemap discovery.
 - Local vulnerability intelligence foundation using normalised software/service inventory, service fingerprint metadata, local JSON rules, local CVE-style feed files, local EPSS metadata files, local exploit availability metadata files, and local version conditions only.
+- Local asset criticality context using `scanner.asset_criticality`, `data\asset_context\sample_asset_criticality.json`, and the `--use-asset-criticality` / `--asset-criticality` CLI options.
 - Optional passive TLS certificate audit for detected HTTPS services.
 - Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
 - Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
@@ -76,7 +77,7 @@ Vulnerability Scanner
 - Structured SSH audit status and error-code handling for authentication, timeout, unsupported target, and command-failure paths.
 - Concise, redacted credentialed audit evidence summaries with optional report-only evidence details.
 - Standard finding model with sequential IDs, severity, confidence, evidence, impact, recommendation, verification, limitation, source, and timestamps.
-- Prioritisation Engine risk scoring with heuristic risk score, risk label, and fix priority.
+- Prioritisation Engine risk scoring with heuristic risk score, risk label, fix priority, local asset criticality boosts, `prioritisation_summary`, and `prioritised_findings`.
 - Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
 - Scan diffing between the latest two saved scans for a target, including new, fixed, unchanged, and changed-risk finding categories.
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
@@ -90,7 +91,7 @@ Vulnerability Scanner
 - Broader configuration auditing.
 - Web DAST features only when explicitly designed with strict safety controls.
 - Trusted CVE feed update workflows, CVSS enrichment, EPSS scoring, and exploit-availability enrichment.
-- Asset criticality, API access, dashboard views, richer fix-first ranking, and expanded remediation workflow tracking.
+- API access, dashboard views, richer fix-first ranking, and expanded remediation workflow tracking.
 
 ## How Version 8 and 9 Help
 
@@ -179,5 +180,7 @@ Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan 
 Version 14.4 adds `scanner.epss_importer`, an offline EPSS metadata importer. The scan command accepts `--use-epss --epss-file PATH` only with `--vuln-intel --use-cve-feed`; EPSS records are loaded from local CSV or JSON files and used only to enrich matched local CVE feed records. The importer skips malformed rows, counts invalid and duplicate records, keeps the last valid duplicate CVE row, and adds `epss_*` summary fields plus one importer status finding. EPSS is used as a conservative prioritisation signal in risk scoring and never creates a vulnerability finding by itself. Version 14.4 does not fetch live EPSS data, CVE data, Exploit-DB, Metasploit, or exploit code.
 
 Version 14.5 adds `scanner.exploit_metadata`, an offline exploit availability metadata importer. The scan command accepts `--use-exploit-metadata --exploit-metadata-file PATH` only with `--vuln-intel --use-cve-feed`; metadata records are loaded from local JSON or CSV files and used only to enrich matched local CVE feed records. The importer validates booleans and maturity values, skips malformed rows, counts duplicates, and rejects unsafe fields or suspicious content such as payload, command, shellcode, or exploit-code fields before reporting. Exploit metadata is a prioritisation signal only and does not trigger active checks, downloads, exploit execution, exploit code generation, or exploitability claims.
+
+Version 14.7 adds `scanner.asset_criticality` and `scanner.prioritisation`. Asset criticality is loaded only from direct CLI input or local JSON files, never from live internet sources. The resolver matches exact IPs, lowercase hostnames, and optional aliases, then emits a top-level `asset_context` object. The prioritisation engine adds a local asset criticality adjustment of `critical +20`, `high +12`, `medium +6`, and `low/unknown +0`, while keeping informational findings capped at `Monitor` unless other strong local signals exist. This does not perform new attack checks, validate exploitability, fetch CVE/EPSS/exploit data, or create vulnerabilities by itself.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.

@@ -29,6 +29,8 @@ data/*
 !data/exploit_metadata/
 !data/exploit_metadata/sample_exploit_metadata.json
 !data/exploit_metadata/sample_exploit_metadata.csv
+!data/asset_context/
+!data/asset_context/sample_asset_criticality.json
 data/*.db
 data/*cache*.json
 

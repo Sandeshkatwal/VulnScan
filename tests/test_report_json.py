@@ -623,3 +623,80 @@ def test_json_report_includes_vulnerability_intelligence_sections(tmp_path) -> N
     assert report["summary"]["vulnerability_intelligence_matches"] == 1
     assert report["summary"]["vulnerability_intelligence_version_matches"] == 1
     assert report["summary"]["vulnerability_intelligence_cve_feed_matches"] == 1
+
+
+def test_json_report_includes_asset_context_and_prioritisation(tmp_path) -> None:
+    scan_result = {
+        "host": "production-web",
+        "resolved_ip": "production-web",
+        "scan_mode": "safe",
+        "duration_seconds": 0.1,
+        "open_ports": [],
+        "findings": [],
+        "http_findings": [],
+        "tls_findings": [],
+        "ssh_findings": [],
+        "windows_findings": [],
+        "vuln_intel_findings": [],
+        "ssh_audit": {"enabled": False, "status": "skipped"},
+        "ssh_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_summary": {"enabled": False, "status": "skipped"},
+        "windows_audit_sections": [],
+        "credentialed_audits": [],
+        "asset_context": {
+            "enabled": True,
+            "target": "production-web",
+            "criticality": "critical",
+            "criticality_source": "direct",
+            "business_owner": "Business Unit",
+            "environment": "production",
+            "tags": ["production"],
+            "notes": "Unit test.",
+            "context_name": "Unit",
+            "context_version": "1.0",
+            "limitations": ["Local context only."],
+        },
+        "prioritisation_summary": {
+            "enabled": True,
+            "asset_criticality_enabled": True,
+            "asset_criticality": "critical",
+            "asset_criticality_source": "direct",
+            "critical_asset_findings_count": 1,
+            "high_asset_findings_count": 0,
+            "medium_asset_findings_count": 0,
+            "unknown_asset_findings_count": 0,
+            "fix_first_count": 0,
+            "fix_soon_count": 1,
+            "schedule_count": 0,
+            "monitor_count": 0,
+        },
+        "prioritised_findings": [
+            {
+                "id": "FINDING-0001",
+                "title": "Unit Finding",
+                "severity": "High",
+                "source": "unit",
+                "priority_score": 87,
+                "priority_label": "Fix Soon",
+                "priority_reasons": ["Asset criticality is critical, increasing priority."],
+                "asset_criticality": "critical",
+                "asset_environment": "production",
+                "asset_business_owner": "Business Unit",
+                "asset_tags": ["production"],
+            }
+        ],
+    }
+
+    path = save_json_report(
+        scan_result=scan_result,
+        scanner_name="VulScan",
+        scanner_version="test",
+        scan_start_time=datetime.now(timezone.utc),
+        scan_end_time=datetime.now(timezone.utc),
+        reports_dir=tmp_path,
+    )
+    report = json.loads(path.read_text(encoding="utf-8"))
+
+    assert report["asset_context"]["criticality"] == "critical"
+    assert report["prioritisation_summary"]["asset_criticality"] == "critical"
+    assert report["prioritised_findings"][0]["asset_environment"] == "production"

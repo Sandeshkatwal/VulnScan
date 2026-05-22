@@ -1,0 +1,39 @@
+{
+  "context_name": "VulScan Sample Asset Criticality Context",
+  "context_version": "1.0",
+  "description": "Local sample asset criticality mapping for prioritisation.",
+  "assets": [
+    {
+      "asset": "127.0.0.1",
+      "criticality": "low",
+      "business_owner": "Lab",
+      "environment": "local",
+      "tags": ["lab", "localhost"],
+      "notes": "Local testing target."
+    },
+    {
+      "asset": "192.168.1.239",
+      "criticality": "medium",
+      "business_owner": "Lab",
+      "environment": "home-lab",
+      "tags": ["linux", "test-target"],
+      "notes": "Authorised Linux lab target."
+    },
+    {
+      "asset": "demo-windows",
+      "criticality": "low",
+      "business_owner": "Demo",
+      "environment": "demo",
+      "tags": ["demo"],
+      "notes": "Demo Windows audit target."
+    },
+    {
+      "asset": "production-web",
+      "criticality": "critical",
+      "business_owner": "Example Business Unit",
+      "environment": "production",
+      "tags": ["production", "web"],
+      "notes": "Example production-like asset."
+    }
+  ]
+}

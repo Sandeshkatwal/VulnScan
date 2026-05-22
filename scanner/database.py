@@ -109,10 +109,18 @@ def init_db(db_path: Path = DB_PATH) -> None:
                 risk_score INTEGER,
                 risk_label TEXT,
                 fix_priority TEXT,
+                asset_criticality TEXT NULL,
+                asset_environment TEXT NULL,
+                asset_business_owner TEXT NULL,
+                asset_tags TEXT NULL,
                 created_at TEXT
             )
             """
         )
+        _ensure_column(connection, "findings", "asset_criticality", "TEXT NULL")
+        _ensure_column(connection, "findings", "asset_environment", "TEXT NULL")
+        _ensure_column(connection, "findings", "asset_business_owner", "TEXT NULL")
+        _ensure_column(connection, "findings", "asset_tags", "TEXT NULL")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS remediation_status (
@@ -178,3 +186,15 @@ def init_db(db_path: Path = DB_PATH) -> None:
             )
             """
         )
+
+
+def _ensure_column(
+    connection: sqlite3.Connection,
+    table_name: str,
+    column_name: str,
+    column_definition: str,
+) -> None:
+    columns = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    existing = {str(column["name"]) for column in columns}
+    if column_name not in existing:
+        connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")

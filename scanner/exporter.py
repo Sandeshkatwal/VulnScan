@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from scanner.evidence import redact_nested
+from scanner.database import init_db
 
 
 DB_PATH = Path("data") / "vulscan.db"
@@ -67,6 +68,10 @@ FINDING_FIELDS = [
     "risk_score",
     "risk_label",
     "fix_priority",
+    "asset_criticality",
+    "asset_environment",
+    "asset_business_owner",
+    "asset_tags",
     "created_at",
 ]
 
@@ -191,6 +196,7 @@ def _export_rows(
             "status": "missing_database",
             "message": "No local SQLite database exists. Run a scan with --save-db first.",
         }
+    init_db(DB_PATH)
 
     if not _table_exists(table_name):
         return {

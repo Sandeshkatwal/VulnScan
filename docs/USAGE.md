@@ -68,6 +68,29 @@ Risk scores are heuristic and range from 0 to 100. They combine severity, confid
 
 Risk scores help with triage, but they are not a final statement of business risk. A human reviewer should validate context, asset criticality, exposure, compensating controls, and operational impact before prioritising remediation.
 
+## Asset Criticality and Prioritisation
+
+Version 14.7 adds local asset criticality context for prioritisation. Asset criticality is not a vulnerability by itself; it is business context used to help rank remediation work.
+
+Allowed criticality values are `critical`, `high`, `medium`, `low`, and `unknown`.
+
+Direct criticality for the current target:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --prioritise --use-asset-criticality --asset-criticality low
+.\.venv311\Scripts\python.exe -m scanner.main scan --target production-web --vuln-intel --prioritise --use-asset-criticality --asset-criticality critical
+```
+
+File-based criticality from local JSON:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --prioritise --use-asset-criticality --asset-criticality-file data\asset_context\sample_asset_criticality.json --json --html --save-db
+```
+
+`--asset-criticality` overrides the file mapping for the current target. If `--asset-criticality` is provided without `--use-asset-criticality`, VulScan enables asset criticality automatically. If the file is missing, invalid, empty, or does not contain the target, the scan continues with `unknown` criticality and a friendly warning.
+
+JSON and HTML reports include top-level `asset_context`, `prioritisation_summary`, and `prioritised_findings`. Saved finding exports include asset criticality fields when available. Keep `data\asset_context\sample_asset_criticality.json` as a sample only and maintain real asset context locally without secrets.
+
 ## Scan History
 
 Use `--save-db` to store scan results in the local SQLite database at `data\vulscan.db`:

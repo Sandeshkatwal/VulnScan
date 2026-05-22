@@ -17,7 +17,13 @@ from scanner.audit_profiles import (
     get_audit_profile,
 )
 from scanner.assets import get_asset_services, get_assets
-from scanner.finding import assign_sequential_finding_ids, create_port_exposure_findings
+from scanner.asset_criticality import (
+    DEFAULT_ASSET_CRITICALITY_PATH,
+    disabled_asset_context,
+    load_asset_criticality_context,
+    resolve_asset_criticality,
+)
+from scanner.finding import assign_sequential_finding_ids, create_finding, create_port_exposure_findings
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
 from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH
@@ -40,6 +46,7 @@ from scanner.http_audit import audit_http_services
 from scanner.port_scan import PortScanError, scan_tcp_ports
 from scanner.report_html import save_html_report
 from scanner.report_json import save_json_report
+from scanner.prioritisation import build_prioritisation
 from scanner.remediation import (
     enrich_findings_with_remediation,
     get_remediation_list,
@@ -362,6 +369,34 @@ def scan(
             help="Save scan results to the local SQLite history database.",
         ),
     ] = False,
+    prioritise: Annotated[
+        bool,
+        typer.Option(
+            "--prioritise",
+            help="Build a vulnerability prioritisation view from local scan evidence.",
+        ),
+    ] = False,
+    use_asset_criticality: Annotated[
+        bool,
+        typer.Option(
+            "--use-asset-criticality",
+            help="Enable local asset criticality enrichment for prioritisation.",
+        ),
+    ] = False,
+    asset_criticality: Annotated[
+        str | None,
+        typer.Option(
+            "--asset-criticality",
+            help="Direct asset criticality for the current target: critical, high, medium, low, or unknown.",
+        ),
+    ] = None,
+    asset_criticality_file: Annotated[
+        Path,
+        typer.Option(
+            "--asset-criticality-file",
+            help="Path to a local JSON asset criticality context file.",
+        ),
+    ] = DEFAULT_ASSET_CRITICALITY_PATH,
     vuln_intel: Annotated[
         bool,
         typer.Option(
@@ -420,6 +455,17 @@ def scan(
     ] = DEFAULT_EXPLOIT_METADATA_PATH,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
+    if asset_criticality and not use_asset_criticality:
+        console.print(
+            "[yellow]--asset-criticality was provided without --use-asset-criticality. Asset criticality enrichment has been enabled automatically.[/yellow]"
+        )
+        use_asset_criticality = True
+    if use_asset_criticality and not prioritise:
+        console.print(
+            "[yellow]--use-asset-criticality is most useful with --prioritise. Prioritisation has been enabled automatically.[/yellow]"
+        )
+        prioritise = True
+
     if windows_demo and ssh_audit:
         console.print("[red]Windows demo mode cannot be combined with --ssh-audit because demo mode must not connect to any host.[/red]")
         raise typer.Exit(code=1)
@@ -550,6 +596,9 @@ def scan(
         scan_result["credentialed_audits"] = []
         scan_result["ssh_findings"] = []
         scan_result["windows_findings"] = []
+        scan_result["asset_context"] = disabled_asset_context(target)
+        scan_result["prioritisation_summary"] = {"enabled": False}
+        scan_result["prioritised_findings"] = []
         scan_result["demo_mode"] = bool(windows_demo)
         scan_result["demo_notice"] = DEMO_NOTICE if windows_demo else ""
         findings = [] if windows_demo else create_port_exposure_findings(scan_result["open_ports"])
@@ -620,6 +669,7 @@ def scan(
             scan_result["ssh_audit"] = ssh_result
             findings.extend(ssh_result.get("findings", []))
         scan_result["findings"] = assign_sequential_finding_ids(findings)
+        _apply_asset_fields_to_findings(scan_result["findings"], scan_result.get("asset_context", {}))
         scan_result["http_findings"] = [
             finding for finding in scan_result["findings"] if finding["source"] == "http_audit"
         ]
@@ -691,7 +741,21 @@ def scan(
             scan_result["vulnerability_intelligence"] = vulnerability_intelligence
             scan_result["vuln_intel_findings"] = vuln_intel_findings
             findings.extend(vuln_intel_findings)
+        if use_asset_criticality:
+            asset_context_file = load_asset_criticality_context(asset_criticality_file)
+            for warning in asset_context_file.get("warnings") or []:
+                console.print(f"[yellow]{warning}[/yellow]")
+            asset_context = resolve_asset_criticality(
+                target=scan_result["host"],
+                direct_value=asset_criticality,
+                context=asset_context_file,
+            )
+            for warning in asset_context.get("warnings") or []:
+                console.print(f"[yellow]{warning}[/yellow]")
+            scan_result["asset_context"] = asset_context
+            findings.append(_build_asset_criticality_finding(asset_context))
         scan_result["findings"] = assign_sequential_finding_ids(findings)
+        _apply_asset_fields_to_findings(scan_result["findings"], scan_result.get("asset_context", {}))
         scan_result["http_findings"] = [
             finding for finding in scan_result["findings"] if finding["source"] == "http_audit"
         ]
@@ -713,6 +777,14 @@ def scan(
             for finding in scan_result["findings"]
             if finding["source"] in {"vuln_intel", "cve_feed", "epss_importer", "exploit_metadata"}
         ]
+        if prioritise:
+            prioritisation_summary, prioritised_findings = build_prioritisation(
+                scan_result["findings"],
+                asset_context=scan_result.get("asset_context"),
+                enabled=True,
+            )
+            scan_result["prioritisation_summary"] = prioritisation_summary
+            scan_result["prioritised_findings"] = prioritised_findings
         if ssh_audit:
             scan_result["ssh_audit"]["findings"] = scan_result["ssh_findings"]
             scan_result["credentialed_audits"] = _build_credentialed_audits(
@@ -768,6 +840,11 @@ def scan(
     _print_windows_audit_summary(scan_result.get("windows_audit_summary", {"enabled": False}))
     _print_credentialed_audit_modules(scan_result.get("credentialed_audits", []))
     _print_vulnerability_intelligence(scan_result.get("vulnerability_intelligence", {}))
+    _print_asset_context(scan_result.get("asset_context", {}))
+    _print_prioritisation(
+        scan_result.get("prioritisation_summary", {}),
+        scan_result.get("prioritised_findings", []),
+    )
 
     _print_findings(scan_result["findings"])
 
@@ -1765,6 +1842,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "web_sitemap",
         "web_passive_summary",
         "vuln_intel",
+        "asset_criticality",
         "ssh_audit",
         "package_audit",
         "ssh_hardening",
@@ -1808,6 +1886,73 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
             )
 
         console.print(table)
+
+
+def _print_asset_context(asset_context: dict[str, Any]) -> None:
+    if not asset_context or not asset_context.get("enabled"):
+        return
+
+    table = Table(title="Asset Context")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Target", asset_context.get("target")),
+        ("Criticality", asset_context.get("criticality")),
+        ("Source", asset_context.get("criticality_source")),
+        ("Environment", asset_context.get("environment")),
+        ("Business owner", asset_context.get("business_owner")),
+        ("Tags", ", ".join(asset_context.get("tags") or [])),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_prioritisation(
+    summary: dict[str, Any],
+    prioritised_findings: list[dict[str, Any]],
+) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+
+    summary_table = Table(title="Vulnerability Prioritisation Summary")
+    summary_table.add_column("Field")
+    summary_table.add_column("Value")
+    rows = [
+        ("Asset criticality enabled", summary.get("asset_criticality_enabled")),
+        ("Asset criticality", summary.get("asset_criticality")),
+        ("Asset criticality source", summary.get("asset_criticality_source")),
+        ("Fix First", summary.get("fix_first_count")),
+        ("Fix Soon", summary.get("fix_soon_count")),
+        ("Schedule", summary.get("schedule_count")),
+        ("Monitor", summary.get("monitor_count")),
+    ]
+    for label, value in rows:
+        summary_table.add_row(label, "" if value is None else str(value))
+    console.print(summary_table)
+
+    if not prioritised_findings:
+        return
+
+    table = Table(title="Vulnerability Prioritisation")
+    table.add_column("Priority", justify="right")
+    table.add_column("Label")
+    table.add_column("Asset")
+    table.add_column("Severity")
+    table.add_column("Title")
+    table.add_column("Source")
+    table.add_column("Reasons")
+    for finding in prioritised_findings:
+        table.add_row(
+            str(finding.get("priority_score") or 0),
+            str(finding.get("priority_label") or ""),
+            str(finding.get("asset_criticality") or ""),
+            str(finding.get("severity") or ""),
+            str(finding.get("title") or ""),
+            str(finding.get("source") or ""),
+            "; ".join(str(reason) for reason in finding.get("priority_reasons") or []),
+        )
+    console.print(table)
 
 
 def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
@@ -2479,6 +2624,55 @@ def _ssh_progress_callback(message: str) -> None:
 
 def _windows_progress_callback(message: str) -> None:
     console.print(f"- {message}")
+
+
+def _build_asset_criticality_finding(asset_context: dict[str, Any]) -> Any:
+    criticality = str(asset_context.get("criticality") or "unknown")
+    if criticality == "unknown":
+        return create_finding(
+            title="Asset Criticality Unknown",
+            severity="Informational",
+            category="Prioritisation",
+            evidence="No asset criticality mapping was found for the target.",
+            confidence="High",
+            impact="Unknown asset criticality may reduce prioritisation accuracy.",
+            recommendation="Add the asset to the asset criticality context file or provide --asset-criticality.",
+            verification="Review the configured local asset criticality context.",
+            limitation="Unknown criticality may reduce prioritisation accuracy.",
+            source="asset_criticality",
+            affected_host=str(asset_context.get("target") or ""),
+        )
+    return create_finding(
+        title="Asset Criticality Applied",
+        severity="Informational",
+        category="Prioritisation",
+        evidence="Asset criticality was resolved and applied to prioritisation.",
+        confidence="High",
+        impact="Asset criticality can improve fix-first remediation ranking when reviewed with scan evidence.",
+        recommendation="Maintain accurate asset criticality values to improve fix-first ranking.",
+        verification="Review the Asset Context section and local asset criticality source.",
+        limitation="Asset criticality is a local context input and should be reviewed regularly.",
+        source="asset_criticality",
+        affected_host=str(asset_context.get("target") or ""),
+        evidence_details={
+            "criticality": criticality,
+            "criticality_source": asset_context.get("criticality_source"),
+            "environment": asset_context.get("environment"),
+        },
+    )
+
+
+def _apply_asset_fields_to_findings(
+    findings: list[dict[str, Any]],
+    asset_context: dict[str, Any],
+) -> None:
+    if not asset_context or not asset_context.get("enabled"):
+        return
+    for finding in findings:
+        finding.setdefault("asset_criticality", asset_context.get("criticality") or "unknown")
+        finding.setdefault("asset_environment", asset_context.get("environment") or "")
+        finding.setdefault("asset_business_owner", asset_context.get("business_owner") or "")
+        finding.setdefault("asset_tags", list(asset_context.get("tags") or []))
 
 
 def _print_credentialed_audit_modules(credentialed_audits: list[dict[str, Any]]) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -90,8 +91,9 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                 affected_host, affected_port, affected_url, service,
                 evidence, confidence, impact, recommendation, verification,
                 limitation, source, risk_score, risk_label, fix_priority,
+                asset_criticality, asset_environment, asset_business_owner, asset_tags,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -114,6 +116,10 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                     finding.get("risk_score"),
                     finding.get("risk_label"),
                     finding.get("fix_priority"),
+                    finding.get("asset_criticality"),
+                    finding.get("asset_environment"),
+                    finding.get("asset_business_owner"),
+                    json.dumps(finding.get("asset_tags") or []),
                     finding.get("created_at"),
                 )
                 for finding in findings
