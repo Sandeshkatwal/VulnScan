@@ -11,6 +11,7 @@ from typing import Any
 from scanner.evidence import redact_nested
 from scanner.finding import SEVERITY_ORDER, findings_to_dicts
 from scanner.prioritisation_report import disabled_fix_first_dashboard
+from scanner.prioritisation_trends import disabled_prioritisation_trends
 from scanner.windows_result import build_windows_consolidated_summary
 
 
@@ -147,6 +148,14 @@ def save_json_report(
         "executive_summary": scan_result.get(
             "executive_summary",
             disabled_fix_first_dashboard(target)["executive_summary"],
+        ),
+        "prioritisation_trends": scan_result.get(
+            "prioritisation_trends",
+            disabled_prioritisation_trends(target)["prioritisation_trends"],
+        ),
+        "prioritisation_trend_details": scan_result.get(
+            "prioritisation_trend_details",
+            disabled_prioritisation_trends(target)["prioritisation_trend_details"],
         ),
         "findings": findings_to_dicts(scan_result.get("findings", [])),
         "http_findings": scan_result.get("http_findings", []),

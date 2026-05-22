@@ -299,6 +299,18 @@
           <div class="label">Exploit Metadata</div>
           <div class="value">{{ dashboard.get("exploitable_metadata_count", 0) }}</div>
         </div>
+        <div class="metric">
+          <div class="label">Risk Trend</div>
+          <div class="value">{{ dashboard.get("risk_trend_label", "n/a") }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">New Fix First</div>
+          <div class="value">{{ dashboard.get("new_fix_first_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Resolved Fix First</div>
+          <div class="value">{{ dashboard.get("resolved_fix_first_count", 0) }}</div>
+        </div>
       </div>
 
       <h3>Priority Distribution</h3>
@@ -412,6 +424,67 @@
       {% endfor %}
 
       <p><strong>Dashboard limitations:</strong> {{ dashboard.get("dashboard_limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
+    {% set trends = report.get("prioritisation_trends", {}) %}
+    {% if trends.get("enabled") %}
+    {% set trend_details = report.get("prioritisation_trend_details", {}) %}
+    <section>
+      <h2>Prioritisation Trend Tracking</h2>
+      <h3>Trend Overview</h3>
+      <table>
+        <tbody>
+          <tr><th>Status</th><td>{{ trends.get("status") }}</td></tr>
+          <tr><th>Previous scan time</th><td>{{ trends.get("previous_scan_time") or "n/a" }}</td></tr>
+          <tr><th>Current scan time</th><td>{{ trends.get("current_scan_time") }}</td></tr>
+          <tr><th>Risk trend label</th><td>{{ trends.get("risk_trend_label") }}</td></tr>
+          <tr><th>New findings</th><td>{{ trends.get("new_findings_count", 0) }}</td></tr>
+          <tr><th>Resolved findings</th><td>{{ trends.get("resolved_findings_count", 0) }}</td></tr>
+          <tr><th>Priority increased</th><td>{{ trends.get("priority_increased_count", 0) }}</td></tr>
+          <tr><th>Priority decreased</th><td>{{ trends.get("priority_decreased_count", 0) }}</td></tr>
+          <tr><th>New Fix First</th><td>{{ trends.get("fix_first_new_count", 0) }}</td></tr>
+          <tr><th>Resolved Fix First</th><td>{{ trends.get("fix_first_resolved_count", 0) }}</td></tr>
+          <tr><th>Persisting Fix First</th><td>{{ trends.get("fix_first_persisting_count", 0) }}</td></tr>
+          <tr><th>Average priority delta</th><td>{{ trends.get("average_priority_delta", 0) }}</td></tr>
+          <tr><th>Highest priority delta</th><td>{{ trends.get("highest_priority_delta", 0) }}</td></tr>
+        </tbody>
+      </table>
+
+      {% for bucket, title in [("new_findings", "New Findings"), ("resolved_findings", "Resolved Findings"), ("priority_increased", "Priority Increased"), ("priority_decreased", "Priority Decreased"), ("fix_first_new", "Fix First Trend - New"), ("fix_first_resolved", "Fix First Trend - Resolved"), ("fix_first_persisting", "Fix First Trend - Persisting")] %}
+      <h3>{{ title }}</h3>
+      {% if trend_details.get(bucket, []) %}
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Source</th>
+            <th>Previous</th>
+            <th>Current</th>
+            <th>Delta</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in trend_details.get(bucket, []) %}
+          <tr>
+            <td>{{ item.title }}</td>
+            <td>{{ item.source }}</td>
+            <td>{{ item.previous_priority_score if item.previous_priority_score is not none else "" }} {{ item.previous_priority_label }}</td>
+            <td>{{ item.current_priority_score if item.current_priority_score is not none else "" }} {{ item.current_priority_label }}</td>
+            <td>{{ item.score_delta if item.score_delta is not none else "" }}</td>
+            <td>{{ item.reason_summary }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No {{ title | lower }} recorded.</p>
+      {% endif %}
+      {% endfor %}
+
+      <h3>Limitations</h3>
+      <p>{{ trends.get("trend_limitations", []) | join("; ") }}</p>
     </section>
     {% endif %}
 

@@ -93,6 +93,8 @@ def test_finding_export_includes_asset_context_fields(tmp_path, monkeypatch) -> 
     assert rows[0]["asset_business_owner"] == "Business Unit"
     assert rows[0]["priority_score"] == 95
     assert rows[0]["priority_label"] == "Fix First"
+    assert "trend_status" in rows[0]
+    assert "score_delta" in rows[0]
 
 
 def test_prioritisation_export_includes_priority_fields(tmp_path, monkeypatch) -> None:
@@ -173,3 +175,5 @@ def test_prioritisation_export_includes_priority_fields(tmp_path, monkeypatch) -
     assert rows[0]["priority_score"] == 95
     assert rows[0]["priority_label"] == "Fix First"
     assert rows[0]["fix_first_rank"] == 1
+    assert "previous_priority_score" in rows[0]
+    assert "current_priority_label" in rows[0]

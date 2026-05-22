@@ -106,6 +106,15 @@ Saved finding exports include dashboard fields where available: `priority_score`
 .\.venv311\Scripts\python.exe -m scanner.main export prioritisation --format csv
 ```
 
+Version 14.9 adds prioritisation trend tracking. It compares current prioritised findings with the most recent previous saved scan for the same target:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --prioritise --fix-first-dashboard --priority-trends --save-db
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --use-cve-feed --use-epss --use-exploit-metadata --prioritise --use-asset-criticality --asset-criticality low --fix-first-dashboard --priority-trends --save-db --cve-feed data\cve_feeds\sample_cve_feed.json --epss-file data\epss\sample_epss.csv --exploit-metadata-file data\exploit_metadata\sample_exploit_metadata.json --json --html
+```
+
+If there is no previous saved scan, the trend status is `baseline`. `--save-db` is recommended so future runs have useful history. Trend matching uses stable finding keys, but renamed or substantially changed findings may require human review. Trend tracking is reporting-only and does not perform new scanning, exploit checks, live attack checks, or internet feed fetching.
+
 ## Scan History
 
 Use `--save-db` to store scan results in the local SQLite database at `data\vulscan.db`:

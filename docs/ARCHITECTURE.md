@@ -36,7 +36,8 @@ Vulnerability Scanner
 │   ├── Risk scoring
 │   ├── Asset criticality
 │   ├── Fix-first ranking
-│   └── Fix-first dashboard reporting
+│   ├── Fix-first dashboard reporting
+│   └── Prioritisation trend tracking
 ├── Storage
 │   ├── Assets
 │   ├── Findings
@@ -78,7 +79,7 @@ Vulnerability Scanner
 - Structured SSH audit status and error-code handling for authentication, timeout, unsupported target, and command-failure paths.
 - Concise, redacted credentialed audit evidence summaries with optional report-only evidence details.
 - Standard finding model with sequential IDs, severity, confidence, evidence, impact, recommendation, verification, limitation, source, and timestamps.
-- Prioritisation Engine risk scoring with heuristic risk score, risk label, fix priority, local asset criticality boosts, `prioritisation_summary`, `prioritised_findings`, and Version 14.8 fix-first dashboard reporting.
+- Prioritisation Engine risk scoring with heuristic risk score, risk label, fix priority, local asset criticality boosts, `prioritisation_summary`, `prioritised_findings`, Version 14.8 fix-first dashboard reporting, and Version 14.9 prioritisation trend tracking.
 - Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
 - Scan diffing between the latest two saved scans for a target, including new, fixed, unchanged, and changed-risk finding categories.
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
@@ -175,6 +176,8 @@ Version 13.9 adds `scanner.web_report_summary`, a passive report consolidation l
 Version 14.2 extends the Vulnerability Intelligence Engine foundation. `scanner.software_inventory` normalises open-port, service-detection, SSH audit, Windows audit, and local service fingerprint evidence into a top-level `software_inventory` structure with product/version left null when VulScan lacks explicit evidence. `scanner.vuln_intel` loads a local JSON ruleset, validates supported identity and version match fields, evaluates safe version conditions, builds a `vulnerability_intelligence` summary, and emits standard findings with source `vuln_intel`. JSON and HTML reports include inventory and intelligence sections, while SQLite and exports continue to use the existing findings pipeline.
 
 Version 14.2 intentionally uses local rules only. It does not fetch live CVE feeds, EPSS data, Exploit-DB records, Metasploit modules, exploit code, or perform live attack checks. CVE, CVSS, EPSS, affected-version, fixed-version, references, and exploit availability fields can be present in local rules as metadata, but matches remain indicators requiring manual validation. Version-specific rules require product/version evidence unless `allow_unknown_version` is explicitly set, and unknown-version findings are low confidence.
+
+Version 14.9 adds `scanner.prioritisation_trends`, a reporting-only comparison layer for prioritised findings. When `--priority-trends` is used, VulScan loads the latest previous saved scan for the same target from SQLite, compares stable finding keys, classifies new, resolved, unchanged, increased, decreased, and Fix First trend categories, and reports `prioritisation_trends` plus `prioritisation_trend_details`. SQLite stores a redacted scan-result snapshot for future comparison and keeps a findings-table fallback for older scans. Trend tracking does not run new attack checks, fetch internet data, or confirm exploitability; it supports remediation progress review and still requires human validation.
 
 Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan command accepts `--use-cve-feed --cve-feed PATH` only alongside `--vuln-intel`; the importer loads local JSON, validates feed structure, normalises vendor/product/CPE identifiers, evaluates affected version conditions, and merges results into `vulnerability_intelligence.cve_feed_*` fields. Matched feed records create standard findings with source `cve_feed`, while missing or unknown versions are counted as insufficient evidence and do not create confirmed CVE findings. The feature remains offline-only and does not fetch live CVE data, remote references, Exploit-DB, Metasploit, or exploit code.
 

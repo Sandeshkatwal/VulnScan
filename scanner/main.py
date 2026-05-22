@@ -40,6 +40,7 @@ from scanner.exporter import (
 from scanner.history import (
     get_database_path,
     get_latest_scan_finding_summaries,
+    get_latest_scan_for_prioritisation_trends,
     get_scan_history,
     save_scan_result,
 )
@@ -52,6 +53,13 @@ from scanner.prioritisation_report import (
     build_dashboard_finding,
     build_fix_first_dashboard,
     disabled_fix_first_dashboard,
+)
+from scanner.prioritisation_trends import (
+    build_finding_stable_key,
+    build_prioritisation_trends,
+    build_trend_finding,
+    disabled_prioritisation_trends,
+    unavailable_prioritisation_trends,
 )
 from scanner.remediation import (
     enrich_findings_with_remediation,
@@ -389,6 +397,13 @@ def scan(
             help="Generate a fix-first dashboard from prioritised findings.",
         ),
     ] = False,
+    priority_trends: Annotated[
+        bool,
+        typer.Option(
+            "--priority-trends",
+            help="Compare current prioritised findings with the latest saved scan for the same target.",
+        ),
+    ] = False,
     use_asset_criticality: Annotated[
         bool,
         typer.Option(
@@ -483,6 +498,15 @@ def scan(
             "[yellow]--fix-first-dashboard requires prioritisation. Prioritisation has been enabled automatically.[/yellow]"
         )
         prioritise = True
+    if priority_trends and not prioritise:
+        console.print(
+            "[yellow]--priority-trends requires prioritisation. Prioritisation has been enabled automatically.[/yellow]"
+        )
+        prioritise = True
+    if priority_trends and not save_db:
+        console.print(
+            "[yellow]--priority-trends can compare with previous saved scans, but this current scan will not be saved for future trend comparison unless --save-db is used.[/yellow]"
+        )
 
     if windows_demo and ssh_audit:
         console.print("[red]Windows demo mode cannot be combined with --ssh-audit because demo mode must not connect to any host.[/red]")
@@ -618,6 +642,7 @@ def scan(
         scan_result["prioritisation_summary"] = {"enabled": False}
         scan_result["prioritised_findings"] = []
         scan_result.update(disabled_fix_first_dashboard(target))
+        scan_result.update(disabled_prioritisation_trends(target))
         scan_result["demo_mode"] = bool(windows_demo)
         scan_result["demo_notice"] = DEMO_NOTICE if windows_demo else ""
         findings = [] if windows_demo else create_port_exposure_findings(scan_result["open_ports"])
@@ -825,6 +850,49 @@ def scan(
                     scan_result.get("top_fix_first_findings", []),
                     prioritised_findings,
                 )
+            if priority_trends:
+                current_scan_time = scan_start_time.isoformat(timespec="seconds")
+                try:
+                    previous_scan = get_latest_scan_for_prioritisation_trends(scan_result["host"])
+                    if previous_scan and previous_scan.get("trend_warning"):
+                        console.print(f"[yellow]{previous_scan['trend_warning']}[/yellow]")
+                    trends_payload = build_prioritisation_trends(
+                        target=scan_result["host"],
+                        current_prioritised_findings=prioritised_findings,
+                        previous_scan=previous_scan,
+                        current_scan_time=current_scan_time,
+                    )
+                except Exception:
+                    console.print("[yellow]Priority trend comparison is unavailable because local scan history could not be read.[/yellow]")
+                    trends_payload = unavailable_prioritisation_trends(
+                        scan_result["host"],
+                        "Priority trend comparison was unavailable because local scan history could not be read.",
+                        current_scan_time=current_scan_time,
+                    )
+                scan_result.update(trends_payload)
+                trends = scan_result.get("prioritisation_trends", {})
+                if trends.get("status") == "baseline":
+                    console.print("[yellow]No previous saved prioritised scan was found. This scan is the trend baseline.[/yellow]")
+                _apply_trends_to_dashboard(scan_result)
+                _apply_trend_export_fields(
+                    scan_result["findings"],
+                    scan_result.get("prioritisation_trend_details", {}),
+                    scan_result["host"],
+                )
+                if trends.get("status") in {"baseline", "compared"} and not _has_trend_finding(scan_result["findings"]):
+                    findings.append(build_trend_finding(str(trends.get("status") or "")))
+                    scan_result["findings"] = assign_sequential_finding_ids(findings)
+                    _apply_asset_fields_to_findings(scan_result["findings"], scan_result.get("asset_context", {}))
+                    _apply_dashboard_export_fields(
+                        scan_result["findings"],
+                        scan_result.get("top_fix_first_findings", []),
+                        prioritised_findings,
+                    )
+                    _apply_trend_export_fields(
+                        scan_result["findings"],
+                        scan_result.get("prioritisation_trend_details", {}),
+                        scan_result["host"],
+                    )
         scan_result["http_findings"] = [
             finding for finding in scan_result["findings"] if finding["source"] == "http_audit"
         ]
@@ -909,6 +977,10 @@ def scan(
     _print_fix_first_dashboard(
         scan_result.get("fix_first_dashboard", {}),
         scan_result.get("top_fix_first_findings", []),
+    )
+    _print_prioritisation_trends(
+        scan_result.get("prioritisation_trends", {}),
+        scan_result.get("prioritisation_trend_details", {}),
     )
 
     _print_findings(scan_result["findings"])
@@ -2106,6 +2178,61 @@ def _print_fix_first_dashboard(
     console.print(top_table)
 
 
+def _print_prioritisation_trends(
+    trends: dict[str, Any],
+    details: dict[str, Any],
+) -> None:
+    if not trends or not trends.get("enabled"):
+        return
+
+    table = Table(title="Prioritisation Trends")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Status", trends.get("status")),
+        ("Previous scan time", trends.get("previous_scan_time") or "n/a"),
+        ("Risk trend", trends.get("risk_trend_label")),
+        ("New findings", trends.get("new_findings_count")),
+        ("Resolved findings", trends.get("resolved_findings_count")),
+        ("Priority increased", trends.get("priority_increased_count")),
+        ("Priority decreased", trends.get("priority_decreased_count")),
+        ("New Fix First", trends.get("fix_first_new_count")),
+        ("Resolved Fix First", trends.get("fix_first_resolved_count")),
+        ("Persisting Fix First", trends.get("fix_first_persisting_count")),
+        ("Average priority delta", trends.get("average_priority_delta")),
+        ("Highest priority delta", trends.get("highest_priority_delta")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+    _print_trend_detail_table("New Fix First Findings", details.get("fix_first_new", []))
+    _print_trend_detail_table("Resolved Fix First Findings", details.get("fix_first_resolved", []))
+    _print_trend_detail_table("Priority Increased Findings", details.get("priority_increased", []))
+
+
+def _print_trend_detail_table(title: str, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+    table = Table(title=title)
+    table.add_column("Title")
+    table.add_column("Source")
+    table.add_column("Previous")
+    table.add_column("Current")
+    table.add_column("Delta")
+    table.add_column("Reason")
+    for item in rows[:10]:
+        table.add_row(
+            str(item.get("title") or ""),
+            str(item.get("source") or ""),
+            "" if item.get("previous_priority_score") is None else str(item.get("previous_priority_score")),
+            "" if item.get("current_priority_score") is None else str(item.get("current_priority_score")),
+            "" if item.get("score_delta") is None else str(item.get("score_delta")),
+            str(item.get("reason_summary") or ""),
+        )
+    console.print(table)
+
+
 def _print_vulnerability_intelligence(summary: dict[str, Any]) -> None:
     if not summary:
         return
@@ -2830,6 +2957,10 @@ def _has_dashboard_finding(findings: list[dict[str, Any]]) -> bool:
     return any(str(finding.get("source") or "") == "prioritisation_report" for finding in findings)
 
 
+def _has_trend_finding(findings: list[dict[str, Any]]) -> bool:
+    return any(str(finding.get("source") or "") == "prioritisation_trends" for finding in findings)
+
+
 def _apply_dashboard_export_fields(
     findings: list[dict[str, Any]],
     top_findings: list[dict[str, Any]],
@@ -2858,6 +2989,66 @@ def _apply_dashboard_export_fields(
         finding["recommended_action"] = top_item.get("recommended_action") or prioritised.get("recommendation") or prioritised.get("recommended_action") or finding.get("recommendation") or ""
         finding["sla_hint"] = top_item.get("sla_hint") or _sla_hint_for_export(prioritised)
         finding["fix_first_rank"] = ranks.get(key)
+
+
+def _apply_trends_to_dashboard(scan_result: dict[str, Any]) -> None:
+    dashboard = scan_result.get("fix_first_dashboard") or {}
+    trends = scan_result.get("prioritisation_trends") or {}
+    if not dashboard.get("enabled") or not trends.get("enabled"):
+        return
+    dashboard["risk_trend_label"] = trends.get("risk_trend_label") or "Unknown"
+    dashboard["new_fix_first_count"] = trends.get("fix_first_new_count", 0)
+    dashboard["resolved_fix_first_count"] = trends.get("fix_first_resolved_count", 0)
+    dashboard["persisting_fix_first_count"] = trends.get("fix_first_persisting_count", 0)
+    dashboard["average_priority_delta"] = trends.get("average_priority_delta", 0)
+    dashboard["highest_priority_delta"] = trends.get("highest_priority_delta", 0)
+    action = _trend_recommended_action(str(trends.get("risk_trend_label") or "Unknown"))
+    actions = list(dashboard.get("top_recommended_actions") or [])
+    if action and action not in actions:
+        actions.insert(0, action)
+    dashboard["top_recommended_actions"] = actions
+
+
+def _trend_recommended_action(label: str) -> str:
+    if label == "Worsened":
+        return "Review new or increased-priority findings immediately."
+    if label == "Improved":
+        return "Confirm remediation evidence and continue monitoring."
+    if label == "Stable":
+        return "Focus on persisting Fix First and Fix Soon findings."
+    if label == "Baseline":
+        return "Use this scan as the baseline for future trend comparisons."
+    return ""
+
+
+def _apply_trend_export_fields(
+    findings: list[dict[str, Any]],
+    trend_details: dict[str, Any],
+    target: str,
+) -> None:
+    by_key: dict[str, dict[str, Any]] = {}
+    for bucket in (
+        "new_findings",
+        "priority_increased",
+        "priority_decreased",
+        "fix_first_new",
+        "fix_first_persisting",
+    ):
+        for item in trend_details.get(bucket) or []:
+            stable_key = str(item.get("stable_key") or "")
+            if stable_key and stable_key not in by_key:
+                by_key[stable_key] = item
+    for finding in findings:
+        stable_key = build_finding_stable_key(finding, target)
+        item = by_key.get(stable_key)
+        if not item:
+            continue
+        finding["trend_status"] = item.get("trend_status")
+        finding["previous_priority_score"] = item.get("previous_priority_score")
+        finding["current_priority_score"] = item.get("current_priority_score")
+        finding["score_delta"] = item.get("score_delta")
+        finding["previous_priority_label"] = item.get("previous_priority_label")
+        finding["current_priority_label"] = item.get("current_priority_label")
 
 
 def _sla_hint_for_export(finding: dict[str, Any]) -> str:

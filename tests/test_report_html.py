@@ -883,6 +883,33 @@ def test_html_report_renders_fix_first_dashboard(tmp_path) -> None:
             "informational_actions": [],
         },
         "executive_summary": "VulScan prioritised 1 findings. Human validation is required.",
+        "prioritisation_trends": {
+            "enabled": True,
+            "status": "compared",
+            "risk_trend_label": "Worsened",
+            "fix_first_new_count": 1,
+            "trend_limitations": ["Stable keys are approximate."],
+        },
+        "prioritisation_trend_details": {
+            "new_findings": [
+                {
+                    "title": "Unit Finding",
+                    "source": "cve_feed",
+                    "previous_priority_score": None,
+                    "current_priority_score": 95,
+                    "previous_priority_label": "",
+                    "current_priority_label": "Fix First",
+                    "score_delta": None,
+                    "reason_summary": "Finding is new.",
+                }
+            ],
+            "resolved_findings": [],
+            "priority_increased": [],
+            "priority_decreased": [],
+            "fix_first_new": [],
+            "fix_first_resolved": [],
+            "fix_first_persisting": [],
+        },
     }
 
     path = save_html_report(
@@ -898,5 +925,6 @@ def test_html_report_renders_fix_first_dashboard(tmp_path) -> None:
     assert "Fix-First Dashboard" in html
     assert "Top Fix-First Findings" in html
     assert "Remediation Action Plan" in html
+    assert "Prioritisation Trend Tracking" in html
     assert "Unit Finding" in html
     assert "Human validation required." in html

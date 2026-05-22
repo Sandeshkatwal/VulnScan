@@ -10,6 +10,7 @@ from uuid import uuid4
 from scanner import __version__
 from scanner.assets import update_asset_inventory
 from scanner.database import DB_PATH, database_exists, database_has_required_tables, get_connection, init_db
+from scanner.evidence import redact_nested
 from scanner.remediation import ensure_remediation_records_for_scan
 
 
@@ -32,6 +33,7 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
     highest_risk_score = max((int(finding.get("risk_score", 0)) for finding in findings), default=0)
     highest_risk_label = _highest_risk_label(findings)
     created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    scan_result_json = json.dumps(_scan_result_snapshot(scan_result), default=str)
 
     with get_connection() as connection:
         connection.execute(
@@ -40,8 +42,8 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                 scan_id, target, resolved_ip, scanner_version, scan_mode,
                 scan_start_time, scan_end_time, duration_seconds,
                 total_open_ports, total_findings, highest_risk_score,
-                highest_risk_label, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                highest_risk_label, scan_result_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 scan_id,
@@ -56,6 +58,7 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                 len(findings),
                 highest_risk_score,
                 highest_risk_label,
+                scan_result_json,
                 created_at,
             ),
         )
@@ -93,8 +96,10 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                 limitation, source, risk_score, risk_label, fix_priority,
                 asset_criticality, asset_environment, asset_business_owner, asset_tags,
                 priority_score, priority_label, recommended_action, sla_hint, fix_first_rank,
+                trend_status, previous_priority_score, current_priority_score, score_delta,
+                previous_priority_label, current_priority_label,
                 created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -126,6 +131,12 @@ def save_scan_result(scan_result: dict[str, Any]) -> str:
                     finding.get("recommended_action"),
                     finding.get("sla_hint"),
                     finding.get("fix_first_rank"),
+                    finding.get("trend_status"),
+                    finding.get("previous_priority_score"),
+                    finding.get("current_priority_score"),
+                    finding.get("score_delta"),
+                    finding.get("previous_priority_label"),
+                    finding.get("current_priority_label"),
                     finding.get("created_at"),
                 )
                 for finding in findings
@@ -225,9 +236,98 @@ def get_latest_scan_finding_summaries(target: str) -> dict[str, dict[str, int]] 
     }
 
 
+def get_latest_scan_for_prioritisation_trends(target: str) -> dict[str, Any] | None:
+    """Return latest saved scan data for priority trend comparison."""
+    if not database_exists() or not database_has_required_tables():
+        return None
+    init_db()
+
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT scan_id, scan_start_time, scan_result_json
+            FROM scans
+            WHERE target = ?
+            ORDER BY scan_start_time DESC, id DESC
+            LIMIT 1
+            """,
+            (target,),
+        ).fetchone()
+        if row is None:
+            return None
+
+        scan = {
+            "scan_id": str(row["scan_id"] or ""),
+            "scan_start_time": str(row["scan_start_time"] or ""),
+            "prioritised_findings": [],
+            "findings": [],
+        }
+        raw_json = row["scan_result_json"] if "scan_result_json" in row.keys() else None
+        if raw_json:
+            try:
+                payload = json.loads(str(raw_json))
+                if isinstance(payload, dict):
+                    scan["prioritised_findings"] = list(payload.get("prioritised_findings") or [])
+                    scan["findings"] = list(payload.get("findings") or [])
+            except json.JSONDecodeError:
+                scan["trend_warning"] = "Previous scan JSON was malformed; falling back to saved finding rows."
+
+        if not scan["prioritised_findings"]:
+            scan["findings"] = _get_saved_findings_for_scan(connection, scan["scan_id"])
+            scan["prioritised_findings"] = [
+                finding for finding in scan["findings"] if finding.get("priority_score") is not None
+            ]
+            if not scan["prioritised_findings"]:
+                scan["prioritised_findings"] = scan["findings"]
+        return scan
+
+
 def get_database_path() -> str:
     """Return the configured scan history database path."""
     return str(DB_PATH)
+
+
+def _scan_result_snapshot(scan_result: dict[str, Any]) -> dict[str, Any]:
+    """Return a redacted scan snapshot suitable for future local trend comparison."""
+    return redact_nested(
+        {
+            "host": scan_result.get("host"),
+            "resolved_ip": scan_result.get("resolved_ip"),
+            "scan_start_time": scan_result.get("scan_start_time"),
+            "scan_end_time": scan_result.get("scan_end_time"),
+            "findings": scan_result.get("findings", []),
+            "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
+            "prioritised_findings": scan_result.get("prioritised_findings", []),
+            "fix_first_dashboard": scan_result.get("fix_first_dashboard", {}),
+            "prioritisation_trends": scan_result.get("prioritisation_trends", {}),
+        }
+    )
+
+
+def _get_saved_findings_for_scan(connection: Any, scan_id: str) -> list[dict[str, Any]]:
+    rows = connection.execute(
+        """
+        SELECT finding_id AS id, title, severity, category, affected_host, affected_port,
+               affected_url, service, evidence, confidence, impact, recommendation,
+               verification, limitation, source, risk_score, risk_label, fix_priority,
+               asset_criticality, asset_environment, asset_business_owner, asset_tags,
+               priority_score, priority_label, recommended_action, sla_hint, fix_first_rank,
+               trend_status, previous_priority_score, current_priority_score, score_delta,
+               previous_priority_label, current_priority_label, created_at
+        FROM findings
+        WHERE scan_id = ?
+        """,
+        (scan_id,),
+    ).fetchall()
+    findings: list[dict[str, Any]] = []
+    for row in rows:
+        finding = dict(row)
+        try:
+            finding["asset_tags"] = json.loads(finding.get("asset_tags") or "[]")
+        except json.JSONDecodeError:
+            finding["asset_tags"] = []
+        findings.append(finding)
+    return findings
 
 
 def _highest_risk_label(findings: list[dict[str, Any]]) -> str:

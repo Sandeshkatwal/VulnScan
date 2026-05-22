@@ -781,6 +781,31 @@ def test_json_report_includes_fix_first_dashboard(tmp_path) -> None:
             "informational_actions": [],
         },
         "executive_summary": "VulScan prioritised 1 findings. Human validation is required.",
+        "prioritisation_trends": {
+            "enabled": True,
+            "status": "compared",
+            "risk_trend_label": "Worsened",
+            "fix_first_new_count": 1,
+            "trend_limitations": ["Human validation required."],
+        },
+        "prioritisation_trend_details": {
+            "new_findings": [
+                {
+                    "title": "Unit Finding",
+                    "source": "cve_feed",
+                    "current_priority_score": 95,
+                    "current_priority_label": "Fix First",
+                    "trend_status": "new",
+                    "reason_summary": "Finding is new.",
+                }
+            ],
+            "resolved_findings": [],
+            "priority_increased": [],
+            "priority_decreased": [],
+            "fix_first_new": [],
+            "fix_first_resolved": [],
+            "fix_first_persisting": [],
+        },
     }
 
     path = save_json_report(
@@ -796,3 +821,4 @@ def test_json_report_includes_fix_first_dashboard(tmp_path) -> None:
     assert report["fix_first_dashboard"]["enabled"] is True
     assert report["top_fix_first_findings"][0]["rank"] == 1
     assert report["executive_summary"].startswith("VulScan prioritised")
+    assert report["prioritisation_trends"]["risk_trend_label"] == "Worsened"

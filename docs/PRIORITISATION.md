@@ -4,6 +4,8 @@ Version 14.7 adds local asset criticality to the prioritisation engine.
 
 Version 14.8 adds fix-first dashboard reporting for prioritised findings.
 
+Version 14.9 adds prioritisation trend tracking for saved scan history.
+
 Prioritisation uses existing local scan evidence plus local business context. It does not perform exploitation, live attack checks, brute forcing, credential attacks, destructive payloads, or live CVE, EPSS, or exploit-data fetching.
 
 ## Asset Criticality
@@ -86,3 +88,22 @@ Dashboard outputs include:
 - `executive_summary`
 
 The remediation action plan groups findings into immediate, planned, monitoring, and informational actions. SLA hints are generic examples and should be customised to local remediation policy, asset criticality, exposure, and change windows. Human validation is still required before remediation decisions.
+
+## Prioritisation Trends
+
+Version 14.9 compares the current scan's prioritised findings with the most recent previous saved scan for the same target:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --prioritise --fix-first-dashboard --priority-trends --save-db
+```
+
+`--priority-trends` enables prioritisation automatically if needed. `--save-db` is recommended because trend tracking depends on local scan history; if no previous scan exists, VulScan reports `baseline` and uses the current scan as the first comparison point.
+
+Trend output includes:
+
+- `prioritisation_trends`
+- `prioritisation_trend_details`
+- dashboard trend fields such as new, resolved, and persisting Fix First counts
+- trend export fields when saved findings contain them
+
+Stable finding keys are built from local target, source, category, title, service or port, CVE metadata when available, and a short normalised evidence fingerprint. They avoid timestamps and scan duration, but they may not perfectly match renamed or substantially reworded findings. Trend results are remediation decision support and require human review.

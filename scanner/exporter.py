@@ -77,6 +77,12 @@ FINDING_FIELDS = [
     "recommended_action",
     "sla_hint",
     "fix_first_rank",
+    "trend_status",
+    "previous_priority_score",
+    "current_priority_score",
+    "score_delta",
+    "previous_priority_label",
+    "current_priority_label",
     "created_at",
 ]
 
@@ -94,6 +100,12 @@ PRIORITISATION_FIELDS = [
     "recommended_action",
     "sla_hint",
     "fix_first_rank",
+    "trend_status",
+    "previous_priority_score",
+    "current_priority_score",
+    "score_delta",
+    "previous_priority_label",
+    "current_priority_label",
     "created_at",
 ]
 

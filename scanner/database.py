@@ -65,10 +65,12 @@ def init_db(db_path: Path = DB_PATH) -> None:
                 total_findings INTEGER,
                 highest_risk_score INTEGER,
                 highest_risk_label TEXT,
+                scan_result_json TEXT NULL,
                 created_at TEXT
             )
             """
         )
+        _ensure_column(connection, "scans", "scan_result_json", "TEXT NULL")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS open_ports (
@@ -118,6 +120,12 @@ def init_db(db_path: Path = DB_PATH) -> None:
                 recommended_action TEXT NULL,
                 sla_hint TEXT NULL,
                 fix_first_rank INTEGER NULL,
+                trend_status TEXT NULL,
+                previous_priority_score INTEGER NULL,
+                current_priority_score INTEGER NULL,
+                score_delta INTEGER NULL,
+                previous_priority_label TEXT NULL,
+                current_priority_label TEXT NULL,
                 created_at TEXT
             )
             """
@@ -131,6 +139,12 @@ def init_db(db_path: Path = DB_PATH) -> None:
         _ensure_column(connection, "findings", "recommended_action", "TEXT NULL")
         _ensure_column(connection, "findings", "sla_hint", "TEXT NULL")
         _ensure_column(connection, "findings", "fix_first_rank", "INTEGER NULL")
+        _ensure_column(connection, "findings", "trend_status", "TEXT NULL")
+        _ensure_column(connection, "findings", "previous_priority_score", "INTEGER NULL")
+        _ensure_column(connection, "findings", "current_priority_score", "INTEGER NULL")
+        _ensure_column(connection, "findings", "score_delta", "INTEGER NULL")
+        _ensure_column(connection, "findings", "previous_priority_label", "TEXT NULL")
+        _ensure_column(connection, "findings", "current_priority_label", "TEXT NULL")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS remediation_status (
