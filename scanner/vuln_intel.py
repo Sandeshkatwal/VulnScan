@@ -436,9 +436,7 @@ def _refresh_combined_summary_metrics(summary: dict[str, Any]) -> None:
     cvss_scores = [score for score in (rule_highest, feed_highest) if score is not None]
     if cvss_scores:
         summary["highest_cvss_score"] = max(cvss_scores)
-    summary["exploit_available_count"] = int(summary.get("exploit_available_count") or 0) + int(
-        summary.get("cve_feed_exploit_available_count") or 0
-    )
+    summary["exploit_available_count"] = int(summary.get("exploit_available_count") or 0)
     if summary.get("cve_feed_limitations"):
         limitations = list(summary.get("limitations") or [])
         for limitation in summary.get("cve_feed_limitations") or []:

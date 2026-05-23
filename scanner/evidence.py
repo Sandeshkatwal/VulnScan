@@ -115,7 +115,8 @@ def safe_truncate(value: Any, max_chars: int = SUMMARY_MAX_CHARS) -> str:
     cleaned = " ".join(text.split())
     if len(cleaned) <= max_chars:
         return cleaned
-    return cleaned[: max_chars - 15].rstrip() + " ... [truncated]"
+    suffix = " ... [truncated]"
+    return cleaned[: max_chars - len(suffix)].rstrip() + suffix
 
 
 def limited_sample(values: list[Any] | tuple[Any, ...], limit: int = SAMPLE_MAX_ITEMS) -> list[str]:

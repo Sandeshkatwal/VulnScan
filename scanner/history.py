@@ -282,6 +282,79 @@ def get_latest_scan_for_prioritisation_trends(target: str) -> dict[str, Any] | N
         return scan
 
 
+def get_recent_scans(limit: int = 10, target: str | None = None) -> list[dict[str, Any]]:
+    """Return recent saved scan rows for API and reporting use."""
+    if not database_exists() or not database_has_required_tables():
+        return []
+    init_db()
+    safe_limit = max(1, min(int(limit or 10), 100))
+    where_clause = "WHERE target = ?" if target else ""
+    parameters: tuple[Any, ...] = (target, safe_limit) if target else (safe_limit,)
+    with get_connection() as connection:
+        rows = connection.execute(
+            f"""
+            SELECT scan_id, target, resolved_ip, scanner_version, scan_mode,
+                   scan_start_time, scan_end_time, duration_seconds,
+                   total_open_ports, total_findings, highest_risk_score,
+                   highest_risk_label, created_at
+            FROM scans
+            {where_clause}
+            ORDER BY scan_start_time DESC, id DESC
+            LIMIT ?
+            """,
+            parameters,
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_scan_result_by_id(scan_id: str) -> dict[str, Any] | None:
+    """Return a saved scan result snapshot by scan ID."""
+    if not database_exists() or not database_has_required_tables():
+        return None
+    init_db()
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT scan_id, target, resolved_ip, scanner_version, scan_mode,
+                   scan_start_time, scan_end_time, duration_seconds,
+                   total_open_ports, total_findings, highest_risk_score,
+                   highest_risk_label, scan_result_json, created_at
+            FROM scans
+            WHERE scan_id = ?
+            LIMIT 1
+            """,
+            (scan_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        scan = dict(row)
+        raw_json = scan.pop("scan_result_json", None)
+        if raw_json:
+            try:
+                payload = json.loads(str(raw_json))
+                if isinstance(payload, dict):
+                    return payload
+            except json.JSONDecodeError:
+                pass
+        scan["findings"] = _get_saved_findings_for_scan(connection, str(scan_id))
+        return scan
+
+
+def get_findings_for_scan_id(scan_id: str) -> list[dict[str, Any]] | None:
+    """Return saved findings for a scan ID, or None if the scan does not exist."""
+    if not database_exists() or not database_has_required_tables():
+        return None
+    init_db()
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT scan_id FROM scans WHERE scan_id = ? LIMIT 1",
+            (scan_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return _get_saved_findings_for_scan(connection, str(scan_id))
+
+
 def get_database_path() -> str:
     """Return the configured scan history database path."""
     return str(DB_PATH)

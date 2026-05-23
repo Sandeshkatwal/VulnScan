@@ -16,6 +16,8 @@ from scanner.audit_profiles import (
     DEFAULT_AUDIT_PROFILE,
     get_audit_profile,
 )
+from scanner.api_runner import run_api_server
+from scanner.api_security import API_KEY_ENV_VAR, LOCAL_DEVELOPMENT_WARNING, get_configured_api_key
 from scanner.assets import get_asset_services, get_assets
 from scanner.asset_criticality import (
     DEFAULT_ASSET_CRITICALITY_PATH,
@@ -137,6 +139,78 @@ console = Console()
 @app.callback()
 def main() -> None:
     """Run VulScan commands."""
+
+
+@app.command("api")
+def api_command(
+    host: Annotated[
+        str,
+        typer.Option(
+            "--host",
+            help="API bind host. Defaults to localhost only.",
+        ),
+    ] = "127.0.0.1",
+    port: Annotated[
+        int,
+        typer.Option(
+            "--port",
+            min=1,
+            max=65535,
+            help="API bind port.",
+        ),
+    ] = 8088,
+    reload: Annotated[
+        bool,
+        typer.Option(
+            "--reload",
+            help="Enable uvicorn reload for local development.",
+        ),
+    ] = False,
+    require_api_key: Annotated[
+        bool,
+        typer.Option(
+            "--require-api-key",
+            help="Refuse to start unless VULSCAN_API_KEY is configured.",
+        ),
+    ] = False,
+    allow_remote_api: Annotated[
+        bool,
+        typer.Option(
+            "--allow-remote-api",
+            help="Explicitly allow binding the API to a non-localhost interface.",
+        ),
+    ] = False,
+) -> None:
+    """Start the local VulScan API foundation."""
+    normalised_host = host.strip().lower()
+    if not normalised_host:
+        console.print("[red]API host cannot be empty.[/red]")
+        raise typer.Exit(code=1)
+    if normalised_host not in {"127.0.0.1", "localhost"} and not allow_remote_api:
+        console.print(
+            "[red]The VulScan API binds to localhost only by default. Use --allow-remote-api only for explicitly authorised local-network testing.[/red]"
+        )
+        raise typer.Exit(code=1)
+    if normalised_host not in {"127.0.0.1", "localhost"}:
+        console.print(
+            "[yellow]Remote API binding was explicitly enabled. Do not expose this development API publicly.[/yellow]"
+        )
+    configured_api_key = get_configured_api_key()
+    if require_api_key and configured_api_key is None:
+        console.print(
+            f"[red]VulScan API key protection was required, but {API_KEY_ENV_VAR} is not set.[/red]"
+        )
+        console.print(
+            f"[yellow]Set it for this PowerShell session with: $env:{API_KEY_ENV_VAR}=\"change-this-local-dev-key\"[/yellow]"
+        )
+        raise typer.Exit(code=1)
+    if configured_api_key is None:
+        console.print(f"[yellow]{LOCAL_DEVELOPMENT_WARNING}[/yellow]")
+    else:
+        console.print("[green]API key protection enabled via environment variable.[/green]")
+    console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
+    console.print("[yellow]Version 15.2 API is for local development only and does not expose credentialed scans.[/yellow]")
+    run_api_server(host=host, port=port, reload=reload)
 
 
 @app.command()
@@ -661,6 +735,7 @@ def scan(
             )
             if windows_demo:
                 console.print("[yellow]DEMO MODE: No real target was scanned.[/yellow]")
+                console.print("[yellow]Demo Mode Notice: Demo data only. No real target was scanned.[/yellow]")
                 windows_result = build_windows_demo_result(
                     target=scan_result["host"],
                     profile_summary=profile_summary_fields,

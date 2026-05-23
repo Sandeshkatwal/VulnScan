@@ -44,8 +44,9 @@ Vulnerability Scanner
 │   ├── Scan history
 │   └── Reports
 ├── API
-│   ├── Start scan
-│   ├── Get results
+│   ├── Local FastAPI foundation with API key protection
+│   ├── Start safe scan
+│   ├── Get saved results
 │   └── Export data
 └── Dashboard
     ├── Risk overview
@@ -85,6 +86,7 @@ Vulnerability Scanner
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
 - Storage / Assets inventory for saved targets and detected services, implemented in Version 10.4.
 - CSV and JSON export of saved assets, scan history, findings, and remediation records, implemented in Version 10.5.
+- Local FastAPI API foundation with Version 15.2 API key protection, bound to `127.0.0.1` by default, with public health/version endpoints and protected scan, job, saved-result, saved-findings, and findings export metadata endpoints when `VULSCAN_API_KEY` is configured.
 
 ## Planned Later
 
@@ -178,6 +180,8 @@ Version 14.2 extends the Vulnerability Intelligence Engine foundation. `scanner.
 Version 14.2 intentionally uses local rules only. It does not fetch live CVE feeds, EPSS data, Exploit-DB records, Metasploit modules, exploit code, or perform live attack checks. CVE, CVSS, EPSS, affected-version, fixed-version, references, and exploit availability fields can be present in local rules as metadata, but matches remain indicators requiring manual validation. Version-specific rules require product/version evidence unless `allow_unknown_version` is explicitly set, and unknown-version findings are low confidence.
 
 Version 14.9 adds `scanner.prioritisation_trends`, a reporting-only comparison layer for prioritised findings. When `--priority-trends` is used, VulScan loads the latest previous saved scan for the same target from SQLite, compares stable finding keys, classifies new, resolved, unchanged, increased, decreased, and Fix First trend categories, and reports `prioritisation_trends` plus `prioritisation_trend_details`. SQLite stores a redacted scan-result snapshot for future comparison and keeps a findings-table fallback for older scans. Trend tracking does not run new attack checks, fetch internet data, or confirm exploitability; it supports remediation progress review and still requires human validation.
+
+Version 15.2 adds `scanner.api_security` to the local API stack (`scanner.api_app`, `scanner.api_models`, and `scanner.api_runner`). The API is local-development only, binds to localhost by default, reads API keys only from `VULSCAN_API_KEY`, keeps `GET /health` and `GET /version` public, and protects scan, job, and export endpoints when a key is configured. The auth header is checked separately and is not copied into request models, reports, exports, or database rows. Request models reject unexpected credential-like fields including passwords, tokens, secrets, private keys, API keys, bearer values, and authorization fields. The API still does not expose credentialed SSH, credentialed Windows, active Web DAST, brute forcing, exploitation, live attack checks, or internet feed fetching. API scan paths remain limited to safe TCP scanning plus optional local vulnerability intelligence and prioritisation.
 
 Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan command accepts `--use-cve-feed --cve-feed PATH` only alongside `--vuln-intel`; the importer loads local JSON, validates feed structure, normalises vendor/product/CPE identifiers, evaluates affected version conditions, and merges results into `vulnerability_intelligence.cve_feed_*` fields. Matched feed records create standard findings with source `cve_feed`, while missing or unknown versions are counted as insufficient evidence and do not create confirmed CVE findings. The feature remains offline-only and does not fetch live CVE data, remote references, Exploit-DB, Metasploit, or exploit code.
 

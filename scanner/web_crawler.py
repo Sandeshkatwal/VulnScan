@@ -264,7 +264,7 @@ def crawl_web(
         html = str(request_result.get("text") or "") if _is_html(content_type) else ""
         parsed = _parse_html(current_url, html) if html else {"title": "", "links": [], "forms": []}
         page_forms = parsed["forms"]
-        forms.extend(page_forms)
+        forms.extend(_top_level_form_result(form) for form in page_forms)
         internal_links: list[str] = []
         external_links: list[str] = []
         for link in parsed.get("links") or []:
@@ -590,6 +590,12 @@ def _form_id(
 ) -> str:
     material = "|".join([page_url, method, action, ",".join(input_names), ",".join(input_types), str(index)])
     return f"FORM-{hashlib.sha256(material.encode('utf-8')).hexdigest()[:12].upper()}"
+
+
+def _top_level_form_result(form: dict[str, Any]) -> dict[str, Any]:
+    result = dict(form)
+    result["action"] = str(result.get("resolved_action_url") or result.get("action") or "")
+    return result
 
 
 def _is_csrf_like(value: str) -> bool:

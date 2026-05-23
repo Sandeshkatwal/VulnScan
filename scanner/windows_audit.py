@@ -803,7 +803,11 @@ def _perform_winrm_auth_check(
             registry_audit_template_path=registry_template_path,
         )
     except WindowsCommandError as exc:
-        error_code = WINRM_TIMEOUT if exc.error_code in {WINDOWS_COMMAND_TIMEOUT, WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED} else WINRM_AUTH_FAILED
+        error_code = (
+            WINRM_TIMEOUT
+            if exc.error_code in {WINDOWS_COMMAND_TIMEOUT, WINDOWS_AUDIT_TIME_BUDGET_EXCEEDED, WINRM_TIMEOUT}
+            else WINRM_AUTH_FAILED
+        )
         return _winrm_auth_result(
             started=started,
             status=_winrm_status_from_error_code(error_code),
@@ -1642,7 +1646,7 @@ def _defender_status_from_output(value: str) -> dict[str, str]:
 def _classify_winrm_exception(exc: Exception) -> str:
     name = exc.__class__.__name__.lower()
     text = str(exc).lower()
-    if "timeout" in name or "timeout" in text:
+    if "timeout" in name or "timeout" in text or "timed out" in text:
         return WINRM_TIMEOUT
     if any(token in text for token in ("401", "unauthorized", "forbidden", "auth", "credential")):
         return WINRM_AUTH_FAILED
@@ -2259,7 +2263,7 @@ def _windows_progress(progress_callback: Any | None, message: str) -> None:
 def _normalise_command_exception(exc: Exception) -> str:
     name = exc.__class__.__name__.lower()
     text = str(exc).lower()
-    if "timeout" in name or "timeout" in text:
+    if "timeout" in name or "timeout" in text or "timed out" in text:
         return WINDOWS_COMMAND_TIMEOUT
     if "not recognized" in text or "not found" in text or "unavailable" in text:
         return WINDOWS_COMMAND_UNAVAILABLE

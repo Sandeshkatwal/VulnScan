@@ -8,6 +8,7 @@ from typing import Any
 
 WINDOWS_AUDIT_PROFILE_NAMES = ("foundation", "standard", "detailed")
 WINRM_ONLY_SECTIONS = {
+    "winrm_authentication",
     "windows_host_info",
     "windows_security_status",
     "windows_policy_status",

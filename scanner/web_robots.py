@@ -87,7 +87,7 @@ def fetch_robots_policy(
     timeout: float,
     limiter: Any,
     enabled: bool,
-    respect_robots: bool,
+    respect_robots: bool = True,
     robots_user_agent: str = DEFAULT_ROBOTS_USER_AGENT,
 ) -> WebRobotsPolicy:
     robots_url = build_robots_url(start_url)

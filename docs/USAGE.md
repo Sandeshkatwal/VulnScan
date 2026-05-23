@@ -139,6 +139,33 @@ The history command shows the database path, target, number of scans shown, scan
 
 The database is local to your workstation and should not be committed to Git. It supports future scan diffing, remediation tracking, and trend reporting.
 
+## Local API Foundation
+
+Version 15.2 adds API key protection to the FastAPI-based local API foundation. The API binds to `127.0.0.1` by default and is intended for local development only:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main api
+.\.venv311\Scripts\python.exe -m scanner.main api --host 127.0.0.1 --port 8088
+$env:VULSCAN_API_KEY="change-this-local-dev-key"
+.\.venv311\Scripts\python.exe -m scanner.main api --require-api-key
+```
+
+When `VULSCAN_API_KEY` is set, scan, job, and export endpoints require `X-VulScan-API-Key: YOUR_KEY` or `Authorization: Bearer YOUR_KEY`. `GET /health` and `GET /version` stay public. If the key is missing, VulScan can run in local development mode and prints a warning. Use `--require-api-key` to refuse startup unless the environment variable is configured.
+
+Remote binding requires explicit `--allow-remote-api` and should not be used for public deployment. Credentialed SSH scans, Windows credentialed scans, passwords, tokens, private keys, active Web DAST, live attack checks, and internet feed fetching are not exposed through the API. Do not hard-code or commit API keys.
+
+Basic API examples:
+
+```powershell
+curl http://127.0.0.1:8088/health
+curl http://127.0.0.1:8088/version
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs
+curl -X POST http://127.0.0.1:8088/scans -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"target\":\"127.0.0.1\",\"scan_mode\":\"safe\",\"json_report\":true,\"html_report\":false,\"save_db\":true}"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/scans
+```
+
+See `docs\API.md` for endpoint details and safety notes.
+
 ## Scan Diffing
 
 Version 10.2 can compare the latest two saved scans for the same target using the local SQLite database.
