@@ -13,49 +13,119 @@ class StrictApiModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ScanRequest(StrictApiModel):
-    """Safe scan request accepted by the Version 15.4 API."""
+class PaginationMetadata(StrictApiModel):
+    limit: int = Field(20, description="Maximum number of records returned in this page.", examples=[20])
+    offset: int = Field(0, description="Zero-based offset into the matching result set.", examples=[0])
+    returned: int = Field(0, description="Number of records returned in this response.", examples=[0])
+    total: int = Field(0, description="Total number of records matching the request.", examples=[0])
+    has_next: bool = Field(False, description="Whether another page exists after this response.", examples=[False])
+    has_previous: bool = Field(False, description="Whether a previous page exists before this response.", examples=[False])
+    next_offset: int | None = Field(None, description="Offset to request the next page, if available.", examples=[20])
+    previous_offset: int | None = Field(None, description="Offset to request the previous page, if available.", examples=[0])
 
-    target: str = Field(..., min_length=1, max_length=255)
-    scan_mode: str = "safe"
-    json_report: bool = False
-    html_report: bool = False
-    save_db: bool = True
-    vuln_intel: bool = False
-    prioritise: bool = False
-    fix_first_dashboard: bool = False
+
+class ScanRequest(StrictApiModel):
+    """Safe scan request accepted by the Version 15.5 API."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "127.0.0.1",
+                    "scan_mode": "safe",
+                    "json_report": True,
+                    "html_report": False,
+                    "save_db": True,
+                    "vuln_intel": False,
+                    "prioritise": True,
+                    "fix_first_dashboard": True,
+                }
+            ]
+        },
+    )
+
+    target: str = Field(..., min_length=1, max_length=255, description="Authorised local scan target.", examples=["127.0.0.1"])
+    scan_mode: str = Field("safe", description="API scan mode. Version 15.5 accepts safe mode only.", examples=["safe"])
+    json_report: bool = Field(False, description="Write a local JSON report for the job.", examples=[True])
+    html_report: bool = Field(False, description="Write a local HTML report for the job.", examples=[False])
+    save_db: bool = Field(True, description="Save scan history and findings to local SQLite storage.", examples=[True])
+    vuln_intel: bool = Field(False, description="Enable local vulnerability intelligence matching.", examples=[False])
+    prioritise: bool = Field(False, description="Enable local prioritisation for findings.", examples=[True])
+    fix_first_dashboard: bool = Field(False, description="Include fix-first dashboard data when prioritisation is enabled.", examples=[True])
 
 
 class ScanResponse(StrictApiModel):
-    job_id: str | None = None
-    scan_id: str
-    status: str
-    target: str
-    summary: dict[str, Any]
-    result_path: str | None = None
-    html_report_path: str | None = None
-    retrievable: bool = True
+    job_id: str | None = Field(None, description="Persistent API job identifier.", examples=["job_..."])
+    scan_id: str = Field("", description="Completed scan identifier, if already available.", examples=["scan_..."])
+    status: str = Field(..., description="Current job status.", examples=["queued"])
+    target: str = Field(..., description="Authorised scan target.", examples=["127.0.0.1"])
+    summary: dict[str, Any] = Field(default_factory=dict, description="Safe result summary for completed jobs.", examples=[{}])
+    result_path: str | None = Field(None, description="Local JSON report path, if a report was written.", examples=["reports/example.json"])
+    html_report_path: str | None = Field(None, description="Local HTML report path, if a report was written.", examples=["reports/example.html"])
+    retrievable: bool = Field(True, description="Whether VulScan expects result retrieval to be available.", examples=[True])
+    status_url: str | None = Field(None, description="Relative URL for job status.", examples=["/jobs/job_..."])
+    result_url: str | None = Field(None, description="Relative URL for job result retrieval.", examples=["/jobs/job_.../result"])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "job_id": "job_...",
+                    "status": "queued",
+                    "target": "127.0.0.1",
+                    "status_url": "/jobs/job_...",
+                    "result_url": "/jobs/job_.../result",
+                }
+            ]
+        },
+    )
 
 
 class ScanSummaryResponse(StrictApiModel):
-    scans: list[dict[str, Any]]
-    pagination: dict[str, Any] | None = None
-    filters: dict[str, Any] | None = None
+    scans: list[dict[str, Any]] = Field(default_factory=list, description="Saved scan summaries.")
+    pagination: PaginationMetadata | dict[str, Any] | None = Field(None, description="Pagination metadata for this response.")
+    filters: dict[str, Any] | None = Field(None, description="Active filters and sorting applied to this response.", examples=[{"target": "127.0.0.1"}])
 
 
 class JobSummaryResponse(StrictApiModel):
-    jobs: list[dict[str, Any]]
-    pagination: dict[str, Any] | None = None
-    filters: dict[str, Any] | None = None
+    jobs: list[dict[str, Any]] = Field(default_factory=list, description="Persistent API job summaries.")
+    pagination: PaginationMetadata | dict[str, Any] | None = Field(None, description="Pagination metadata for this response.")
+    filters: dict[str, Any] | None = Field(None, description="Active filters and sorting applied to this response.", examples=[{"status": "completed"}])
 
 
 class FindingResponse(StrictApiModel):
-    scan_id: str
-    findings: list[dict[str, Any]]
-    pagination: dict[str, Any] | None = None
-    filters: dict[str, Any] | None = None
+    scan_id: str = Field("", description="Saved scan identifier.", examples=["scan_..."])
+    findings: list[dict[str, Any]] = Field(default_factory=list, description="Finding records matching the request.", examples=[[]])
+    pagination: PaginationMetadata | dict[str, Any] | None = Field(None, description="Pagination metadata for this response.")
+    filters: dict[str, Any] | None = Field(None, description="Active finding filters and sorting applied to this response.", examples=[{"severity": "High"}])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "findings": [],
+                    "pagination": {
+                        "limit": 20,
+                        "offset": 0,
+                        "returned": 0,
+                        "total": 0,
+                        "has_next": False,
+                        "has_previous": False,
+                    },
+                }
+            ]
+        },
+    )
 
 
 class ErrorResponse(StrictApiModel):
-    error: str
-    detail: str | None = None
+    error: str | None = Field(None, description="Short safe error category.", examples=["Request failed."])
+    detail: str | None = Field(None, description="User-facing safe error detail without tracebacks or secrets.", examples=["Invalid or missing API key."])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"detail": "Invalid or missing API key."}]},
+    )

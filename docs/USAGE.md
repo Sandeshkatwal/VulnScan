@@ -141,7 +141,7 @@ The database is local to your workstation and should not be committed to Git. It
 
 ## Local API Foundation
 
-Version 15.4 adds filtering, pagination, sorting, and compact finding responses to the FastAPI-based local API foundation. The API binds to `127.0.0.1` by default and is intended for local development only:
+Version 15.5 improves OpenAPI documentation, route descriptions, schemas, error response docs, client examples, filtering, pagination, sorting, and compact finding responses for the FastAPI-based local API foundation. The API binds to `127.0.0.1` by default and is intended for local development only:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api
@@ -157,6 +157,8 @@ API jobs are stored in the local SQLite database and can survive API restarts. J
 Remote binding requires explicit `--allow-remote-api` and should not be used for public deployment. Credentialed SSH scans, Windows credentialed scans, passwords, tokens, private keys, active Web DAST, live attack checks, and internet feed fetching are not exposed through the API. Do not hard-code or commit API keys.
 
 Job, scan, finding, and findings export endpoints support `limit`, `offset`, endpoint-specific `sort_by`, and `sort_order=asc|desc`. Finding endpoints also support `severity`, `source`, `category`, `priority_label`, `min_priority_score`, `min_risk_score`, `cve`, and `compact=true` for reduced dashboard-style responses.
+
+OpenAPI docs are available at `http://127.0.0.1:8088/docs`, and the raw schema is available at `http://127.0.0.1:8088/openapi.json`. Local client examples are in `examples\api\curl_examples.md`, `examples\api\powershell_examples.md`, and `examples\api\python_client.py`.
 
 Basic API examples:
 

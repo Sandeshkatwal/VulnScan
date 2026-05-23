@@ -45,7 +45,7 @@ Vulnerability Scanner
 │   └── Reports
 ├── API
 │   ├── Local FastAPI foundation with API key protection and persistent jobs
-│   ├── Filtering, sorting, pagination, and compact finding responses
+│   ├── OpenAPI documentation, filtering, sorting, pagination, and compact finding responses
 │   ├── Start safe scan
 │   ├── Get saved results
 │   └── Export data
@@ -87,7 +87,7 @@ Vulnerability Scanner
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
 - Storage / Assets inventory for saved targets and detected services, implemented in Version 10.4.
 - CSV and JSON export of saved assets, scan history, findings, and remediation records, implemented in Version 10.5.
-- Local FastAPI API foundation with Version 15.4 API key protection, persistent SQLite job storage, filtering, sorting, pagination, and compact finding responses, bound to `127.0.0.1` by default, with public health/version endpoints and protected scan, job, saved-result, saved-findings, and findings export metadata endpoints when `VULSCAN_API_KEY` is configured.
+- Local FastAPI API foundation with Version 15.5 OpenAPI metadata, API key protection, persistent SQLite job storage, filtering, sorting, pagination, and compact finding responses, bound to `127.0.0.1` by default, with public health/version endpoints and protected scan, job, saved-result, saved-findings, and findings export metadata endpoints when `VULSCAN_API_KEY` is configured.
 
 ## Planned Later
 
@@ -185,6 +185,8 @@ Version 14.9 adds `scanner.prioritisation_trends`, a reporting-only comparison l
 Version 15.3 adds `scanner.api_job_store` and `scanner.api_jobs` to the local API stack (`scanner.api_app`, `scanner.api_models`, `scanner.api_runner`, and `scanner.api_security`). API jobs are stored in the local SQLite `api_jobs` table with job metadata, sanitized request JSON, result summaries, report paths, and safe error fields. The table is created idempotently during database initialisation and API startup. Jobs can survive API restarts; queued or running jobs found at startup are marked failed with `API_JOB_INTERRUPTED` because in-process background work cannot survive a stopped API process. API keys are read only from `VULSCAN_API_KEY`, auth headers are checked separately, and keys or credential-like fields are never stored in job rows, request models, reports, exports, or database scan results. The API still binds to localhost by default and does not expose credentialed SSH, credentialed Windows, active Web DAST, brute forcing, exploitation, live attack checks, or internet feed fetching.
 
 Version 15.4 adds `scanner.api_filters`, a reusable helper layer for API pagination, sorting, compact finding responses, and finding filters. `GET /jobs`, `GET /scans`, `GET /jobs/{job_id}/findings`, `GET /scans/{scan_id}/findings`, and `GET /exports/findings` now return pagination and filter metadata while preserving their existing top-level response keys. Job listings page and filter directly through the SQLite-backed job store; scan listings page through the existing scan history database; finding filters operate on saved API job results or saved scan snapshots. `compact=true` trims finding responses for dashboard views without changing stored reports or CLI output. API key protection remains unchanged, and filtering does not add new scan checks, credentialed API workflows, exploitation, brute forcing, destructive payloads, or live attack checks.
+
+Version 15.5 improves API documentation only. `scanner.api_app` now publishes richer FastAPI metadata, route summaries, route descriptions, response documentation, and an OpenAPI API key security scheme for `X-VulScan-API-Key`. `scanner.api_models` includes schema descriptions and safe examples for scan requests, scan responses, findings, pagination, filters, and errors without credential fields or API key values. Local client examples live under `examples/api` for curl, PowerShell, and a small Python `requests` client. Runtime scan behavior, API key enforcement, localhost binding defaults, persistent job storage, filtering, and report generation remain unchanged.
 
 Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan command accepts `--use-cve-feed --cve-feed PATH` only alongside `--vuln-intel`; the importer loads local JSON, validates feed structure, normalises vendor/product/CPE identifiers, evaluates affected version conditions, and merges results into `vulnerability_intelligence.cve_feed_*` fields. Matched feed records create standard findings with source `cve_feed`, while missing or unknown versions are counted as insufficient evidence and do not create confirmed CVE findings. The feature remains offline-only and does not fetch live CVE data, remote references, Exploit-DB, Metasploit, or exploit code.
 

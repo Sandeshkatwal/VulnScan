@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from scanner import __version__
@@ -22,7 +23,7 @@ from scanner.api_filters import (
     validate_sort_by,
     validate_sort_order,
 )
-from scanner.api_models import FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
+from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
 from scanner.api_job_store import ApiJobStore, UNAVAILABLE_FINDINGS_MESSAGE, UNAVAILABLE_RESULT_MESSAGE, sanitize_request_payload
 from scanner.api_jobs import run_scan_job
 from scanner.api_runner import run_scan_pipeline
@@ -31,8 +32,69 @@ from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "15.4"
+API_VERSION = "15.5"
 ScanExecutor = Callable[..., dict[str, Any]]
+ERROR_RESPONSES = {
+    400: {"model": ErrorResponse, "description": "Invalid request."},
+    401: {"model": ErrorResponse, "description": "Invalid or missing API key."},
+    404: {"model": ErrorResponse, "description": "Requested local resource was not found."},
+    422: {"model": ErrorResponse, "description": "Request validation failed."},
+    500: {"model": ErrorResponse, "description": "Safe internal API error."},
+}
+PROTECTED_PATHS = {
+    "/scans",
+    "/scans/{scan_id}",
+    "/scans/{scan_id}/findings",
+    "/jobs",
+    "/jobs/{job_id}",
+    "/jobs/{job_id}/result",
+    "/jobs/{job_id}/findings",
+    "/exports/findings",
+}
+TAGS_METADATA = [
+    {"name": "Health", "description": "Public local API health checks."},
+    {"name": "System", "description": "Public scanner and API version metadata."},
+    {"name": "Scans", "description": "Safe scan job creation and saved scan history."},
+    {"name": "Jobs", "description": "Persistent API job status and result retrieval."},
+    {"name": "Findings", "description": "Saved finding retrieval with filtering, sorting, pagination, and compact responses."},
+    {"name": "Exports", "description": "Local export metadata for saved findings."},
+]
+SCAN_REQUEST_EXAMPLE = {
+    "target": "127.0.0.1",
+    "scan_mode": "safe",
+    "json_report": True,
+    "html_report": False,
+    "save_db": True,
+    "vuln_intel": False,
+    "prioritise": True,
+    "fix_first_dashboard": True,
+}
+SCAN_RESPONSE_EXAMPLE = {
+    "job_id": "job_...",
+    "status": "queued",
+    "target": "127.0.0.1",
+    "status_url": "/jobs/job_...",
+    "result_url": "/jobs/job_.../result",
+}
+JOB_STATUS_EXAMPLE = {
+    "job_id": "job_...",
+    "status": "completed",
+    "target": "127.0.0.1",
+    "duration_seconds": 1.25,
+    "result_summary": {},
+}
+FINDING_LIST_EXAMPLE = {
+    "findings": [],
+    "pagination": {
+        "limit": 20,
+        "offset": 0,
+        "returned": 0,
+        "total": 0,
+        "has_next": False,
+        "has_previous": False,
+    },
+}
+ERROR_EXAMPLE = {"detail": "Invalid or missing API key."}
 
 
 def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore | None = None) -> FastAPI:
@@ -41,9 +103,16 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
     store = job_store or ApiJobStore()
     store.mark_interrupted_jobs()
     app = FastAPI(
-        title="VulScan Local API",
+        title="VulScan API",
         version=API_VERSION,
-        description="Local development API for authorised VulScan workflows.",
+        description=(
+            "Local API for authorised vulnerability scanning and reporting. "
+            "The API binds to localhost by default, does not accept credentials through API requests, "
+            "and does not expose credentialed scan workflows."
+        ),
+        contact={"name": "VulScan local API"},
+        license_info={"name": "Authorised local use only"},
+        openapi_tags=TAGS_METADATA,
     )
 
     @app.exception_handler(RequestValidationError)
@@ -60,18 +129,42 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             content={"error": "Request failed.", "detail": "The API could not complete the request."},
         )
 
-    @app.get("/health")
+    @app.get(
+        "/health",
+        tags=["Health"],
+        summary="API health check",
+        description="Public health check for the local VulScan API.",
+        responses={500: ERROR_RESPONSES[500]},
+    )
     def health() -> dict[str, str]:
         return {"status": "ok", "scanner": "VulScan"}
 
-    @app.get("/version")
+    @app.get(
+        "/version",
+        tags=["System"],
+        summary="API and scanner version",
+        description="Public scanner package version and local API version metadata.",
+        responses={500: ERROR_RESPONSES[500]},
+    )
     def version() -> dict[str, str]:
         return {"scanner": "VulScan", "version": __version__, "api_version": API_VERSION}
 
-    @app.post("/scans", response_model=ScanResponse, dependencies=[Depends(require_api_key)])
+    @app.post(
+        "/scans",
+        response_model=ScanResponse,
+        dependencies=[Depends(require_api_key)],
+        tags=["Scans"],
+        summary="Create scan job",
+        description="Creates a safe scan job and returns job status URLs. Does not accept credentials.",
+        responses={
+            200: {"description": "Scan job was created.", "content": {"application/json": {"example": SCAN_RESPONSE_EXAMPLE}}},
+            **ERROR_RESPONSES,
+        },
+        openapi_extra={"requestBody": {"content": {"application/json": {"example": SCAN_REQUEST_EXAMPLE}}}},
+    )
     def start_scan(request: ScanRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
         if request.scan_mode.lower() != "safe":
-            raise HTTPException(status_code=400, detail="Version 15.4 API supports only safe scan_mode.")
+            raise HTTPException(status_code=400, detail="Version 15.5 API supports only safe scan_mode.")
         try:
             request_payload = sanitize_request_payload(request.model_dump())
         except ValueError as exc:
@@ -99,9 +192,19 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             "result_path": job.get("result_path"),
             "html_report_path": job.get("html_report_path"),
             "retrievable": True,
+            "status_url": f"/jobs/{job_id}",
+            "result_url": f"/jobs/{job_id}/result",
         }
 
-    @app.get("/scans", response_model=ScanSummaryResponse, dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/scans",
+        response_model=ScanSummaryResponse,
+        dependencies=[Depends(require_api_key)],
+        tags=["Scans"],
+        summary="List saved scans",
+        description="Lists saved local SQLite scan history with filtering, pagination, and sorting.",
+        responses=ERROR_RESPONSES,
+    )
     def list_scans(
         limit: int = Query(default=20, ge=1, le=100),
         offset: int = Query(default=0, ge=0),
@@ -129,14 +232,29 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         except Exception as exc:
             raise HTTPException(status_code=500, detail="Could not read local scan history.") from exc
 
-    @app.get("/scans/{scan_id}", dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/scans/{scan_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Scans"],
+        summary="Get saved scan result",
+        description="Returns a saved local scan result snapshot by scan ID.",
+        responses=ERROR_RESPONSES,
+    )
     def get_scan(scan_id: str) -> dict[str, Any]:
         result = get_scan_result_by_id(scan_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Scan ID was not found in local history.")
         return {"scan_id": scan_id, "result": result}
 
-    @app.get("/scans/{scan_id}/findings", response_model=FindingResponse, dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/scans/{scan_id}/findings",
+        response_model=FindingResponse,
+        dependencies=[Depends(require_api_key)],
+        tags=["Findings"],
+        summary="Get findings for saved scan",
+        description="Returns saved findings for a scan ID with filtering, sorting, pagination, and compact response support.",
+        responses=ERROR_RESPONSES,
+    )
     def get_scan_findings(
         scan_id: str,
         limit: int = Query(default=20, ge=1, le=100),
@@ -172,7 +290,15 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             compact=compact,
         )
 
-    @app.get("/jobs", response_model=JobSummaryResponse, dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/jobs",
+        response_model=JobSummaryResponse,
+        dependencies=[Depends(require_api_key)],
+        tags=["Jobs"],
+        summary="List scan jobs",
+        description="Lists persistent local API scan jobs with filtering, pagination, and sorting.",
+        responses=ERROR_RESPONSES,
+    )
     def list_jobs(
         limit: int = Query(default=20, ge=1, le=100),
         offset: int = Query(default=0, ge=0),
@@ -203,14 +329,31 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             "filters": active_filters(status=status, target=target, sort_by=sort_by, sort_order=sort_order),
         }
 
-    @app.get("/jobs/{job_id}", dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/jobs/{job_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Jobs"],
+        summary="Get job status",
+        description="Returns persistent local job metadata and current status by job ID.",
+        responses={
+            200: {"description": "Persistent job status.", "content": {"application/json": {"example": JOB_STATUS_EXAMPLE}}},
+            **ERROR_RESPONSES,
+        },
+    )
     def get_job(job_id: str) -> dict[str, Any]:
         job = store.get_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="Job ID was not found in local job history.")
         return _public_job(job)
 
-    @app.get("/jobs/{job_id}/result", dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/jobs/{job_id}/result",
+        dependencies=[Depends(require_api_key)],
+        tags=["Jobs"],
+        summary="Get completed job result",
+        description="Returns the completed job result from a saved JSON report or local scan history when available.",
+        responses=ERROR_RESPONSES,
+    )
     def get_job_result(job_id: str) -> dict[str, Any]:
         job = store.get_job(job_id)
         if job is None:
@@ -222,7 +365,17 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             return {"job_id": job_id, "status": "completed", "message": UNAVAILABLE_RESULT_MESSAGE, "result": None}
         return {"job_id": job_id, "status": "completed", "result": result}
 
-    @app.get("/jobs/{job_id}/findings", dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/jobs/{job_id}/findings",
+        dependencies=[Depends(require_api_key)],
+        tags=["Findings"],
+        summary="Get findings for completed job",
+        description="Returns findings for a completed API job with filtering, sorting, pagination, and compact response support.",
+        responses={
+            200: {"description": "Paginated findings for the completed job.", "content": {"application/json": {"example": FINDING_LIST_EXAMPLE}}},
+            **ERROR_RESPONSES,
+        },
+    )
     def get_job_findings(
         job_id: str,
         limit: int = Query(default=20, ge=1, le=100),
@@ -288,7 +441,14 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             compact=compact,
         )
 
-    @app.get("/exports/findings", dependencies=[Depends(require_api_key)])
+    @app.get(
+        "/exports/findings",
+        dependencies=[Depends(require_api_key)],
+        tags=["Exports"],
+        summary="Export findings",
+        description="Exports saved local findings to CSV or JSON with optional filtering and pagination controls.",
+        responses=ERROR_RESPONSES,
+    )
     def export_saved_findings(
         format: str = Query(default="json", pattern="^(csv|json)$"),
         target: str | None = Query(default=None, min_length=1, max_length=255),
@@ -322,10 +482,8 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             response["export_path"] = str(response.pop("path"))
         return response
 
+    _install_custom_openapi(app)
     return app
-
-
-app = create_app()
 
 
 def _public_job(job: dict[str, Any]) -> dict[str, Any]:
@@ -408,3 +566,39 @@ def _filtered_findings_response(
     response["pagination"] = pagination
     response["filters"] = filters
     return response
+
+
+def _install_custom_openapi(app: FastAPI) -> None:
+    """Install OpenAPI metadata that documents local API key protection."""
+
+    def custom_openapi() -> dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(
+            title=app.title,
+            version=app.version,
+            description=app.description,
+            routes=app.routes,
+            tags=TAGS_METADATA,
+        )
+        components = schema.setdefault("components", {})
+        security_schemes = components.setdefault("securitySchemes", {})
+        security_schemes["VulScanApiKey"] = {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-VulScan-API-Key",
+            "description": "Local API key from the VULSCAN_API_KEY environment variable. Do not include real keys in examples or code.",
+        }
+        for path, methods in schema.get("paths", {}).items():
+            for operation in methods.values():
+                if path in PROTECTED_PATHS:
+                    operation["security"] = [{"VulScanApiKey": []}]
+                else:
+                    operation["security"] = []
+        app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
+
+
+app = create_app()

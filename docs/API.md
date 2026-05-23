@@ -1,6 +1,6 @@
 # VulScan API
 
-Version 15.4 adds filtering, pagination, sorting, and compact finding responses to the local FastAPI API for authorised VulScan workflows.
+Version 15.5 improves OpenAPI documentation, schemas, route descriptions, error response documentation, and local client examples for authorised VulScan workflows.
 
 The API binds to `127.0.0.1` by default, does not enable broad CORS, does not expose credentialed SSH or Windows scans, and does not accept passwords, tokens, private keys, API keys, authorization headers, or secrets in scan requests.
 
@@ -35,6 +35,21 @@ API key not configured. Protected endpoints are running in local development mod
 ```
 
 Remote binding is still blocked by default. If a non-localhost host is supplied, VulScan requires `--allow-remote-api` and prints a warning. Do not expose the development API publicly.
+
+## OpenAPI Documentation
+
+When the API is running, interactive documentation and the raw schema are available locally:
+
+- `http://127.0.0.1:8088/docs`
+- `http://127.0.0.1:8088/openapi.json`
+
+The OpenAPI schema documents public endpoints without authentication and protected endpoints with the `X-VulScan-API-Key` API key security scheme. It does not include real API key values or credentialed scan examples.
+
+Local client examples:
+
+- `examples/api/curl_examples.md`
+- `examples/api/powershell_examples.md`
+- `examples/api/python_client.py`
 
 ## Public Endpoints
 
@@ -77,6 +92,24 @@ Common query parameters:
 - `sort_order`: `asc` or `desc`, default `desc`
 
 Pagination metadata includes `limit`, `offset`, `returned`, `total`, `has_next`, `has_previous`, `next_offset`, and `previous_offset`.
+
+## Error Responses
+
+Errors use safe user-facing details and do not include raw tracebacks or submitted secret-like values. Common responses include:
+
+- `400`: invalid request or unsupported option
+- `401`: invalid or missing API key
+- `404`: local job, scan, or export data was not found
+- `422`: request validation failed
+- `500`: safe internal API error
+
+Example:
+
+```json
+{
+  "detail": "Invalid or missing API key."
+}
+```
 
 ## Health
 
@@ -257,6 +290,8 @@ The endpoint reuses existing export logic and returns export metadata, including
 - Interrupted queued/running jobs are marked failed on startup instead of being silently left running.
 - Job, scan, finding, and findings export endpoints support filtering and pagination.
 - `compact=true` reduces finding responses for dashboard-style views.
+- OpenAPI docs are available locally at `/docs` and `/openapi.json`.
+- Client examples are available under `examples/api`.
 - Result payload availability depends on saved JSON reports or saved scan history.
 - Credentialed SSH and Windows scans are not exposed through the API.
 - API request models do not include password, token, secret, private key, API key, bearer, or authorization fields.
