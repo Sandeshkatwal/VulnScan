@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 from scanner.api_app import create_app
+from scanner.api_job_store import ApiJobStore
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +22,11 @@ def _fake_scan_executor(**kwargs):
     }
 
 
+@pytest.fixture
+def job_store(tmp_path):
+    return ApiJobStore(tmp_path / "vulscan-test.db")
+
+
 def test_health_returns_ok() -> None:
     client = TestClient(create_app(scan_executor=_fake_scan_executor))
 
@@ -38,12 +44,12 @@ def test_version_returns_scanner_and_version() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["scanner"] == "VulScan"
-    assert body["api_version"] == "15.2"
+    assert body["api_version"] == "15.3"
     assert body["version"]
 
 
-def test_post_scans_accepts_safe_scan_request() -> None:
-    client = TestClient(create_app(scan_executor=_fake_scan_executor))
+def test_post_scans_creates_persistent_safe_scan_job(job_store) -> None:
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
 
     response = client.post(
         "/scans",
@@ -58,9 +64,13 @@ def test_post_scans_accepts_safe_scan_request() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["scan_id"] == "scan-123"
-    assert body["status"] == "completed"
-    assert body["result_path"] == "reports/unit.json"
+    assert body["job_id"]
+    assert body["status"] == "queued"
+    job = job_store.get_job(body["job_id"])
+    assert job is not None
+    assert job["scan_id"] == "scan-123"
+    assert job["status"] == "completed"
+    assert job["result_path"] == "reports/unit.json"
 
 
 def test_post_scans_rejects_credential_fields() -> None:
@@ -99,12 +109,44 @@ def test_get_scans_returns_list_structure(monkeypatch) -> None:
 
 
 def test_get_jobs_returns_list_structure() -> None:
-    client = TestClient(create_app(scan_executor=_fake_scan_executor))
+    store = ApiJobStore()
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=store))
 
     response = client.get("/jobs")
 
     assert response.status_code == 200
-    assert response.json() == {"jobs": []}
+    assert "jobs" in response.json()
+
+
+def test_get_jobs_uses_persistent_store(job_store) -> None:
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs")
+
+    assert response.status_code == 200
+    assert response.json()["jobs"][0]["job_id"] == "job-1"
+
+
+def test_get_job_returns_persistent_job(job_store) -> None:
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs/job-1")
+
+    assert response.status_code == 200
+    assert response.json()["job_id"] == "job-1"
+
+
+def test_get_job_result_handles_missing_payload(job_store) -> None:
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    job_store.save_job_result("job-1", "missing-scan", {"total_findings": 0}, None, None)
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs/job-1/result")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Job completed but result payload is no longer available."
 
 
 def test_get_scan_handles_missing_scan(monkeypatch) -> None:
@@ -127,14 +169,17 @@ def test_get_scan_findings_handles_missing_scan(monkeypatch) -> None:
     assert "traceback" not in response.text.lower()
 
 
-def test_error_responses_do_not_include_tracebacks() -> None:
+def test_scan_job_failure_does_not_include_tracebacks(job_store) -> None:
     def failing_executor(**kwargs):
         raise RuntimeError("internal unit failure")
 
-    client = TestClient(create_app(scan_executor=failing_executor))
+    client = TestClient(create_app(scan_executor=failing_executor, job_store=job_store))
 
     response = client.post("/scans", json={"target": "127.0.0.1", "scan_mode": "safe"})
 
-    assert response.status_code == 500
-    assert "traceback" not in response.text.lower()
-    assert "internal unit failure" not in response.text
+    assert response.status_code == 200
+    job = job_store.get_job(response.json()["job_id"])
+    assert job["status"] == "failed"
+    assert job["safe_error_code"] == "API_JOB_FAILED"
+    assert "traceback" not in str(job).lower()
+    assert "internal unit failure" not in str(job)

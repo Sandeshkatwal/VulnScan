@@ -1,6 +1,6 @@
 # VulScan API
 
-Version 15.2 adds API key protection to the local FastAPI API for authorised VulScan workflows.
+Version 15.3 adds persistent SQLite API job storage to the local FastAPI API for authorised VulScan workflows.
 
 The API binds to `127.0.0.1` by default, does not enable broad CORS, does not expose credentialed SSH or Windows scans, and does not accept passwords, tokens, private keys, API keys, authorization headers, or secrets in scan requests.
 
@@ -17,6 +17,7 @@ $env:VULSCAN_API_KEY="change-this-local-dev-key"
 Start the API and require a configured key:
 
 ```powershell
+.\.venv311\Scripts\python.exe -m scanner.main api
 .\.venv311\Scripts\python.exe -m scanner.main api --require-api-key
 ```
 
@@ -91,7 +92,16 @@ Returns scanner and API version metadata.
 
 ```powershell
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?limit=20&status=completed&target=127.0.0.1"
 ```
+
+Jobs are stored in the local VulScan SQLite database in the `api_jobs` table. Job metadata can survive API restarts. If the API process stops while jobs are `queued` or `running`, startup marks those jobs as `failed` with `safe_error_code` set to `API_JOB_INTERRUPTED` and the message:
+
+```text
+Job was interrupted because the API process stopped before completion.
+```
+
+Job rows store safe metadata only: job ID, scan ID, target, status, timestamps, duration, sanitized request fields, result summary, report paths, and safe error fields. API keys and credentials are never stored.
 
 ## Start a Safe Scan
 
@@ -112,7 +122,55 @@ Supported request fields:
 
 The API scan can run the simple safe TCP scan and optional local vulnerability intelligence and prioritisation. It does not expose SSH credentials, Windows credentials, credentialed scans, active Web DAST, exploit checks, live attack checks, or internet feed fetching.
 
-If `save_db` is `false`, the response returns the current scan summary, but `GET /scans/{scan_id}` may not be able to retrieve it later.
+`POST /scans` creates a persistent API job and starts the safe scan in a background task. The response includes a `job_id` plus the existing scan response fields. Use `GET /jobs/{job_id}` to check status.
+
+## Get Job
+
+```powershell
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs/JOB_ID
+```
+
+Returns persistent job metadata:
+
+```json
+{
+  "job_id": "JOB_ID",
+  "scan_id": "SCAN_ID",
+  "target": "127.0.0.1",
+  "status": "completed",
+  "created_at": "...",
+  "started_at": "...",
+  "completed_at": "...",
+  "duration_seconds": 1.23,
+  "result_summary": {},
+  "result_path": "reports/example.json",
+  "html_report_path": null,
+  "error_message": null,
+  "safe_error_code": null
+}
+```
+
+## Get Job Result
+
+```powershell
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs/JOB_ID/result
+```
+
+For completed jobs, VulScan first tries the saved JSON report path. If that is unavailable but `scan_id` exists, VulScan tries the saved scan history in SQLite. If neither is available, the endpoint returns:
+
+```text
+Job completed but result payload is no longer available.
+```
+
+## Get Job Findings
+
+```powershell
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs/JOB_ID/findings
+```
+
+Findings are loaded from the same result sources. If they are unavailable, the endpoint returns a friendly message and an empty findings list.
+
+If `save_db` is `false`, job metadata is still persisted, but later result retrieval depends on the JSON report path still existing.
 
 ## List Scans
 
@@ -153,6 +211,9 @@ The endpoint reuses existing export logic and returns export metadata, including
 - API bind host defaults to `127.0.0.1`.
 - API keys are read only from `VULSCAN_API_KEY`.
 - Do not commit API keys.
+- API jobs are stored in the local SQLite database and can survive API restarts.
+- Interrupted queued/running jobs are marked failed on startup instead of being silently left running.
+- Result payload availability depends on saved JSON reports or saved scan history.
 - Credentialed SSH and Windows scans are not exposed through the API.
 - API request models do not include password, token, secret, private key, API key, bearer, or authorization fields.
 - The API authentication header is checked separately and is not copied into scan request data.

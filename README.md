@@ -75,7 +75,7 @@ Version 14.9 adds prioritisation trend tracking:
 
 Trend tracking compares current prioritised findings with the latest previous saved scan for the same target and reports baseline, improved, worsened, or stable trend context. Use `--save-db` for useful history. Stable finding keys are intentionally conservative but may not perfectly match renamed findings, so human review is still required. Trend tracking does not perform new scanning, exploit checks, live attack checks, or internet feed fetching. See `docs\PRIORITISATION.md`.
 
-Version 15.2 adds API key protection to the local FastAPI API foundation:
+Version 15.3 adds persistent SQLite job storage and API key protection to the local FastAPI API foundation:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api
@@ -85,10 +85,11 @@ curl http://127.0.0.1:8088/health
 curl http://127.0.0.1:8088/version
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs
 curl -X POST http://127.0.0.1:8088/scans -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"target\":\"127.0.0.1\",\"scan_mode\":\"safe\",\"json_report\":true,\"html_report\":false,\"save_db\":true}"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs/JOB_ID
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/scans
 ```
 
-The API binds to `127.0.0.1` by default and is for local development only. `GET /health` and `GET /version` are public. When `VULSCAN_API_KEY` is set, scan, job, and export endpoints require `X-VulScan-API-Key: YOUR_KEY` or `Authorization: Bearer YOUR_KEY`. Store API keys in the environment, not in code, and do not commit them. Credentialed scans are not exposed through the API, and request models reject passwords, tokens, private keys, API keys, authorization fields, and unexpected fields. See `docs\API.md`.
+The API binds to `127.0.0.1` by default and is for local development only. `GET /health` and `GET /version` are public. When `VULSCAN_API_KEY` is set, scan, job, and export endpoints require `X-VulScan-API-Key: YOUR_KEY` or `Authorization: Bearer YOUR_KEY`. API jobs are stored in SQLite so job history can survive API restarts; queued or running jobs interrupted by restart are marked failed with `API_JOB_INTERRUPTED`. Store API keys in the environment, not in code, and do not commit them. Credentialed scans are not exposed through the API, and request models reject passwords, tokens, private keys, API keys, authorization fields, and unexpected fields. See `docs\API.md`.
 
 Optional authenticated SSH audit for an authorised Linux system:
 

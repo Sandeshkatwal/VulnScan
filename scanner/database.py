@@ -210,6 +210,54 @@ def init_db(db_path: Path = DB_PATH) -> None:
             )
             """
         )
+        init_api_jobs_table(connection)
+
+
+def init_api_jobs_table(connection: sqlite3.Connection | None = None, db_path: Path = DB_PATH) -> None:
+    """Initialise persistent API job storage if it does not exist."""
+    if connection is None:
+        with get_connection(db_path) as managed_connection:
+            init_api_jobs_table(managed_connection, db_path=db_path)
+        return
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS api_jobs (
+            job_id TEXT PRIMARY KEY,
+            scan_id TEXT,
+            target TEXT,
+            status TEXT,
+            created_at TEXT,
+            started_at TEXT,
+            completed_at TEXT,
+            duration_seconds REAL,
+            request_json TEXT,
+            result_summary_json TEXT,
+            result_path TEXT,
+            html_report_path TEXT,
+            error_message TEXT,
+            safe_error_code TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_api_jobs_created_at
+        ON api_jobs (created_at)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_api_jobs_status
+        ON api_jobs (status)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_api_jobs_target
+        ON api_jobs (target)
+        """
+    )
 
 
 def _ensure_column(

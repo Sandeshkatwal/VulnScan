@@ -14,7 +14,7 @@ class StrictApiModel(BaseModel):
 
 
 class ScanRequest(StrictApiModel):
-    """Safe scan request accepted by the Version 15.2 API."""
+    """Safe scan request accepted by the Version 15.3 API."""
 
     target: str = Field(..., min_length=1, max_length=255)
     scan_mode: str = "safe"
@@ -27,6 +27,7 @@ class ScanRequest(StrictApiModel):
 
 
 class ScanResponse(StrictApiModel):
+    job_id: str | None = None
     scan_id: str
     status: str
     target: str
