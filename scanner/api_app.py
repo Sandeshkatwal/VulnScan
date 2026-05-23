@@ -12,16 +12,26 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from scanner import __version__
+from scanner.api_filters import (
+    active_filters,
+    compact_findings,
+    filter_findings,
+    paginate_items,
+    pagination_metadata,
+    sort_findings,
+    validate_sort_by,
+    validate_sort_order,
+)
 from scanner.api_models import FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
 from scanner.api_job_store import ApiJobStore, UNAVAILABLE_FINDINGS_MESSAGE, UNAVAILABLE_RESULT_MESSAGE, sanitize_request_payload
 from scanner.api_jobs import run_scan_job
 from scanner.api_runner import run_scan_pipeline
 from scanner.api_security import require_api_key
 from scanner.exporter import export_findings
-from scanner.history import get_findings_for_scan_id, get_recent_scans, get_scan_result_by_id
+from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "15.3"
+API_VERSION = "15.4"
 ScanExecutor = Callable[..., dict[str, Any]]
 
 
@@ -61,7 +71,7 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
     @app.post("/scans", response_model=ScanResponse, dependencies=[Depends(require_api_key)])
     def start_scan(request: ScanRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
         if request.scan_mode.lower() != "safe":
-            raise HTTPException(status_code=400, detail="Version 15.3 API supports only safe scan_mode.")
+            raise HTTPException(status_code=400, detail="Version 15.4 API supports only safe scan_mode.")
         try:
             request_payload = sanitize_request_payload(request.model_dump())
         except ValueError as exc:
@@ -93,11 +103,29 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
 
     @app.get("/scans", response_model=ScanSummaryResponse, dependencies=[Depends(require_api_key)])
     def list_scans(
-        limit: int = Query(default=10, ge=1, le=100),
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
         target: str | None = Query(default=None, min_length=1, max_length=255),
-    ) -> dict[str, list[dict[str, Any]]]:
+        sort_by: str | None = Query(default=None),
+        sort_order: str = Query(default="desc"),
+    ) -> dict[str, Any]:
         try:
-            return {"scans": get_recent_scans(limit=limit, target=target)}
+            sort_by = validate_sort_by(sort_by or "scan_time", {"scan_time", "target", "duration_seconds"})
+            sort_order = validate_sort_order(sort_order)
+            scans, total = get_recent_scans_page(
+                limit=limit,
+                offset=offset,
+                target=target,
+                sort_by=sort_by,
+                sort_order=sort_order,
+            )
+            return {
+                "scans": scans,
+                "pagination": pagination_metadata(total, len(scans), limit, offset),
+                "filters": active_filters(target=target, sort_by=sort_by, sort_order=sort_order),
+            }
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
             raise HTTPException(status_code=500, detail="Could not read local scan history.") from exc
 
@@ -109,19 +137,71 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         return {"scan_id": scan_id, "result": result}
 
     @app.get("/scans/{scan_id}/findings", response_model=FindingResponse, dependencies=[Depends(require_api_key)])
-    def get_scan_findings(scan_id: str) -> dict[str, Any]:
+    def get_scan_findings(
+        scan_id: str,
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        severity: str | None = Query(default=None),
+        source: str | None = Query(default=None),
+        category: str | None = Query(default=None),
+        priority_label: str | None = Query(default=None),
+        min_priority_score: float | None = Query(default=None),
+        min_risk_score: float | None = Query(default=None),
+        cve: str | None = Query(default=None),
+        sort_by: str | None = Query(default=None),
+        sort_order: str = Query(default="desc"),
+        compact: bool = Query(default=False),
+    ) -> dict[str, Any]:
         findings = get_findings_for_scan_id(scan_id)
         if findings is None:
             raise HTTPException(status_code=404, detail="Scan ID was not found in local history.")
-        return {"scan_id": scan_id, "findings": findings}
+        return _filtered_findings_response(
+            {"scan_id": scan_id},
+            findings,
+            limit=limit,
+            offset=offset,
+            severity=severity,
+            source=source,
+            category=category,
+            priority_label=priority_label,
+            min_priority_score=min_priority_score,
+            min_risk_score=min_risk_score,
+            cve=cve,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            compact=compact,
+        )
 
     @app.get("/jobs", response_model=JobSummaryResponse, dependencies=[Depends(require_api_key)])
     def list_jobs(
         limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
         status: str | None = Query(default=None, pattern="^(queued|running|completed|failed|cancelled)$"),
         target: str | None = Query(default=None, min_length=1, max_length=255),
-    ) -> dict[str, list[dict[str, Any]]]:
-        return {"jobs": [_public_job(job) for job in store.list_jobs(limit=limit, status=status, target=target)]}
+        sort_by: str | None = Query(default=None),
+        sort_order: str = Query(default="desc"),
+    ) -> dict[str, Any]:
+        try:
+            sort_by = validate_sort_by(
+                sort_by or "created_at",
+                {"created_at", "updated_at", "completed_at", "duration_seconds", "status", "target"},
+            )
+            sort_order = validate_sort_order(sort_order)
+            jobs, total = store.list_jobs_page(
+                limit=limit,
+                offset=offset,
+                status=status,
+                target=target,
+                sort_by=sort_by,
+                sort_order=sort_order,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "jobs": [_public_job(job) for job in jobs],
+            "pagination": pagination_metadata(total, len(jobs), limit, offset),
+            "filters": active_filters(status=status, target=target, sort_by=sort_by, sort_order=sort_order),
+        }
 
     @app.get("/jobs/{job_id}", dependencies=[Depends(require_api_key)])
     def get_job(job_id: str) -> dict[str, Any]:
@@ -143,23 +223,96 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         return {"job_id": job_id, "status": "completed", "result": result}
 
     @app.get("/jobs/{job_id}/findings", dependencies=[Depends(require_api_key)])
-    def get_job_findings(job_id: str) -> dict[str, Any]:
+    def get_job_findings(
+        job_id: str,
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        severity: str | None = Query(default=None),
+        source: str | None = Query(default=None),
+        category: str | None = Query(default=None),
+        priority_label: str | None = Query(default=None),
+        min_priority_score: float | None = Query(default=None),
+        min_risk_score: float | None = Query(default=None),
+        cve: str | None = Query(default=None),
+        sort_by: str | None = Query(default=None),
+        sort_order: str = Query(default="desc"),
+        compact: bool = Query(default=False),
+    ) -> dict[str, Any]:
         job = store.get_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="Job ID was not found in local job history.")
         if job["status"] != "completed":
-            return {"job_id": job_id, "status": job["status"], "findings": []}
+            return {
+                "job_id": job_id,
+                "status": job["status"],
+                "message": "Job is not completed yet.",
+                "findings": [],
+                "pagination": pagination_metadata(0, 0, limit, offset),
+                "filters": active_filters(
+                    severity=severity,
+                    source=source,
+                    category=category,
+                    priority_label=priority_label,
+                    min_priority_score=min_priority_score,
+                    min_risk_score=min_risk_score,
+                    cve=cve,
+                    sort_by=sort_by,
+                    sort_order=sort_order,
+                    compact=compact,
+                ),
+            }
         result = _load_job_result(job)
         if result is None:
-            return {"job_id": job_id, "status": "completed", "message": UNAVAILABLE_FINDINGS_MESSAGE, "findings": []}
-        return {"job_id": job_id, "status": "completed", "findings": list(result.get("findings") or [])}
+            return {
+                "job_id": job_id,
+                "status": "completed",
+                "message": UNAVAILABLE_FINDINGS_MESSAGE,
+                "findings": [],
+                "pagination": pagination_metadata(0, 0, limit, offset),
+                "filters": active_filters(sort_order=sort_order, compact=compact),
+            }
+        return _filtered_findings_response(
+            {"job_id": job_id, "status": "completed"},
+            list(result.get("findings") or []),
+            limit=limit,
+            offset=offset,
+            severity=severity,
+            source=source,
+            category=category,
+            priority_label=priority_label,
+            min_priority_score=min_priority_score,
+            min_risk_score=min_risk_score,
+            cve=cve,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            compact=compact,
+        )
 
     @app.get("/exports/findings", dependencies=[Depends(require_api_key)])
     def export_saved_findings(
         format: str = Query(default="json", pattern="^(csv|json)$"),
         target: str | None = Query(default=None, min_length=1, max_length=255),
+        severity: str | None = Query(default=None),
+        source: str | None = Query(default=None),
+        category: str | None = Query(default=None),
+        priority_label: str | None = Query(default=None),
+        min_priority_score: float | None = Query(default=None),
+        min_risk_score: float | None = Query(default=None),
+        limit: int | None = Query(default=None, ge=1, le=1000),
+        offset: int = Query(default=0, ge=0),
     ) -> dict[str, Any]:
-        result = export_findings(format, target=target)
+        result = export_findings(
+            format,
+            target=target,
+            severity=severity,
+            source=source,
+            category=category,
+            priority_label=priority_label,
+            min_priority_score=min_priority_score,
+            min_risk_score=min_risk_score,
+            limit=limit,
+            offset=offset,
+        )
         if result.get("status") == "unsupported_format":
             raise HTTPException(status_code=400, detail="Supported export formats are csv and json.")
         if result.get("status") in {"missing_database", "missing_table"}:
@@ -208,3 +361,50 @@ def _load_job_result(job: dict[str, Any]) -> dict[str, Any] | None:
     if scan_id:
         return get_scan_result_by_id(scan_id)
     return None
+
+
+def _filtered_findings_response(
+    base: dict[str, Any],
+    findings: list[dict[str, Any]],
+    *,
+    limit: int,
+    offset: int,
+    severity: str | None,
+    source: str | None,
+    category: str | None,
+    priority_label: str | None,
+    min_priority_score: float | None,
+    min_risk_score: float | None,
+    cve: str | None,
+    sort_by: str | None,
+    sort_order: str,
+    compact: bool,
+) -> dict[str, Any]:
+    try:
+        sort_by = validate_sort_by(
+            sort_by,
+            {"severity", "risk_score", "priority_score", "title", "source", "category"},
+        )
+        sort_order = validate_sort_order(sort_order)
+        filters = active_filters(
+            severity=severity,
+            source=source,
+            category=category,
+            priority_label=priority_label,
+            min_priority_score=min_priority_score,
+            min_risk_score=min_risk_score,
+            cve=cve,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            compact=compact,
+        )
+        filtered = filter_findings(findings, filters)
+        sorted_findings = sort_findings(filtered, sort_by, sort_order)
+        page, pagination = paginate_items(sorted_findings, limit, offset)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    response = dict(base)
+    response["findings"] = compact_findings(page, compact)
+    response["pagination"] = pagination
+    response["filters"] = filters
+    return response

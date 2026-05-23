@@ -1,6 +1,6 @@
 # VulScan API
 
-Version 15.3 adds persistent SQLite API job storage to the local FastAPI API for authorised VulScan workflows.
+Version 15.4 adds filtering, pagination, sorting, and compact finding responses to the local FastAPI API for authorised VulScan workflows.
 
 The API binds to `127.0.0.1` by default, does not enable broad CORS, does not expose credentialed SSH or Windows scans, and does not accept passwords, tokens, private keys, API keys, authorization headers, or secrets in scan requests.
 
@@ -65,6 +65,19 @@ Missing or incorrect keys return:
 }
 ```
 
+## Pagination And Filtering
+
+List-style API responses keep their existing top-level keys and add `pagination` and `filters` metadata.
+
+Common query parameters:
+
+- `limit`: default `20`, minimum `1`, maximum `100`
+- `offset`: default `0`, minimum `0`
+- `sort_by`: endpoint-specific
+- `sort_order`: `asc` or `desc`, default `desc`
+
+Pagination metadata includes `limit`, `offset`, `returned`, `total`, `has_next`, `has_previous`, `next_offset`, and `previous_offset`.
+
 ## Health
 
 ```powershell
@@ -92,8 +105,18 @@ Returns scanner and API version metadata.
 
 ```powershell
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs
-curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?limit=20&status=completed&target=127.0.0.1"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?limit=20&offset=0"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?status=completed&limit=10"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?target=127.0.0.1&status=completed"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?sort_by=duration_seconds&sort_order=desc"
 ```
+
+Supported filters and sorting:
+
+- `status`
+- `target`
+- `sort_by`: `created_at`, `updated_at`, `completed_at`, `duration_seconds`, `status`, `target`
+- `sort_order`: `asc` or `desc`
 
 Jobs are stored in the local VulScan SQLite database in the `api_jobs` table. Job metadata can survive API restarts. If the API process stops while jobs are `queued` or `running`, startup marks those jobs as `failed` with `safe_error_code` set to `API_JOB_INTERRUPTED` and the message:
 
@@ -166,20 +189,37 @@ Job completed but result payload is no longer available.
 
 ```powershell
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs/JOB_ID/findings
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?severity=High"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?priority_label=Fix%20First&compact=true"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?min_priority_score=75&sort_by=priority_score&sort_order=desc"
 ```
 
 Findings are loaded from the same result sources. If they are unavailable, the endpoint returns a friendly message and an empty findings list.
 
 If `save_db` is `false`, job metadata is still persisted, but later result retrieval depends on the JSON report path still existing.
 
+Finding filters:
+
+- `severity`
+- `source`
+- `category`
+- `priority_label`
+- `min_priority_score`
+- `min_risk_score`
+- `cve`
+- `sort_by`: `severity`, `risk_score`, `priority_score`, `title`, `source`, `category`
+- `sort_order`: `asc` or `desc`
+- `compact=true`: returns title, severity, source, category, risk score, priority score, priority label, and recommendation only.
+
 ## List Scans
 
 ```powershell
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/scans
-curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/scans?limit=5&target=127.0.0.1"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/scans?limit=5&offset=0&target=127.0.0.1"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/scans?sort_by=scan_time&sort_order=desc"
 ```
 
-Returns recent saved scans from the local SQLite database.
+Returns recent saved scans from the local SQLite database. Supported scan filters and sorting are `target`, `sort_by=scan_time|target|duration_seconds`, and `sort_order=asc|desc`.
 
 ## Get Scan Result
 
@@ -193,18 +233,20 @@ Returns the saved scan result snapshot when available.
 
 ```powershell
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/scans/SCAN_ID/findings
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/scans/SCAN_ID/findings?severity=Medium&compact=true"
 ```
 
-Returns saved findings for a scan ID.
+Returns saved findings for a scan ID. It supports the same finding filters, sorting, pagination, and `compact=true` option as `GET /jobs/{job_id}/findings`.
 
 ## Export Findings
 
 ```powershell
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/exports/findings?format=json"
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/exports/findings?format=csv&target=127.0.0.1"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/exports/findings?format=csv&severity=Medium"
 ```
 
-The endpoint reuses existing export logic and returns export metadata, including the local export path when a file is written. It does not return huge report or HTML content inline.
+The endpoint reuses existing export logic and returns export metadata, including the local export path when a file is written. It supports `target`, `severity`, `source`, `category`, `priority_label`, `min_priority_score`, `min_risk_score`, `limit`, and `offset`. It does not return huge report or HTML content inline.
 
 ## Safety Notes
 
@@ -213,6 +255,8 @@ The endpoint reuses existing export logic and returns export metadata, including
 - Do not commit API keys.
 - API jobs are stored in the local SQLite database and can survive API restarts.
 - Interrupted queued/running jobs are marked failed on startup instead of being silently left running.
+- Job, scan, finding, and findings export endpoints support filtering and pagination.
+- `compact=true` reduces finding responses for dashboard-style views.
 - Result payload availability depends on saved JSON reports or saved scan history.
 - Credentialed SSH and Windows scans are not exposed through the API.
 - API request models do not include password, token, secret, private key, API key, bearer, or authorization fields.

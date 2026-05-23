@@ -159,26 +159,80 @@ def export_history(format_name: str, target: str | None = None) -> dict[str, Any
     )
 
 
-def export_findings(format_name: str, target: str | None = None) -> dict[str, Any]:
+def export_findings(
+    format_name: str,
+    target: str | None = None,
+    *,
+    severity: str | None = None,
+    source: str | None = None,
+    category: str | None = None,
+    priority_label: str | None = None,
+    min_priority_score: float | None = None,
+    min_risk_score: float | None = None,
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict[str, Any]:
     """Export finding records."""
+    filters = {
+        "target": target,
+        "severity": severity,
+        "source": source,
+        "category": category,
+        "priority_label": priority_label,
+        "min_priority_score": min_priority_score,
+        "min_risk_score": min_risk_score,
+    }
+    safe_offset = max(0, int(offset or 0))
+    safe_limit = None if limit is None else max(1, min(int(limit), 1000))
+    clauses: list[str] = []
+    parameters_list: list[Any] = []
     if target:
-        query = f"""
-            SELECT f.{", f.".join(FINDING_FIELDS)}
-            FROM findings f
-            INNER JOIN scans s ON s.scan_id = f.scan_id
-            WHERE s.target = ?
-            ORDER BY f.risk_score DESC, f.created_at DESC
-        """
-        parameters: tuple[Any, ...] = (target,)
-    else:
-        query = f"""
-            SELECT {", ".join(FINDING_FIELDS)}
-            FROM findings
-            ORDER BY risk_score DESC, created_at DESC
-        """
-        parameters = ()
+        clauses.append("s.target = ?")
+        parameters_list.append(target)
+    for field, value in (
+        ("severity", severity),
+        ("source", source),
+        ("category", category),
+        ("priority_label", priority_label),
+    ):
+        if value:
+            clauses.append(f"LOWER(f.{field}) = LOWER(?)")
+            parameters_list.append(value)
+    if min_priority_score is not None:
+        clauses.append("COALESCE(f.priority_score, 0) >= ?")
+        parameters_list.append(float(min_priority_score))
+    if min_risk_score is not None:
+        clauses.append("COALESCE(f.risk_score, 0) >= ?")
+        parameters_list.append(float(min_risk_score))
 
-    return _export_rows(
+    where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    join_clause = "INNER JOIN scans s ON s.scan_id = f.scan_id" if target else ""
+    count_query = f"""
+        SELECT COUNT(*) AS total
+        FROM findings f
+        {join_clause}
+        {where_clause}
+    """
+    count_parameters = tuple(parameters_list)
+    limit_clause = ""
+    parameters = tuple(parameters_list)
+    if safe_limit is not None:
+        limit_clause = "LIMIT ? OFFSET ?"
+        parameters = tuple(parameters_list + [safe_limit, safe_offset])
+    if target:
+        select_fields = f"f.{', f.'.join(FINDING_FIELDS)}"
+    else:
+        select_fields = f"f.{', f.'.join(FINDING_FIELDS)}"
+    query = f"""
+        SELECT {select_fields}
+        FROM findings f
+        {join_clause}
+        {where_clause}
+        ORDER BY f.risk_score DESC, f.created_at DESC
+        {limit_clause}
+    """
+
+    result = _export_rows(
         export_type="findings",
         table_name="findings",
         fields=FINDING_FIELDS,
@@ -186,7 +240,24 @@ def export_findings(format_name: str, target: str | None = None) -> dict[str, An
         parameters=parameters,
         format_name=format_name,
         target=target,
+        count_query=count_query,
+        count_parameters=count_parameters,
     )
+    returned = int(result.get("record_count") or 0)
+    total = int(result.get("total_count") or returned)
+    next_offset = safe_offset + safe_limit if safe_limit is not None and safe_offset + safe_limit < total else None
+    result["filters"] = {key: value for key, value in filters.items() if value is not None and value != ""}
+    result["pagination"] = {
+        "limit": safe_limit,
+        "offset": safe_offset,
+        "returned": returned,
+        "total": total,
+        "has_next": next_offset is not None,
+        "has_previous": safe_offset > 0,
+        "next_offset": next_offset,
+        "previous_offset": max(0, safe_offset - (safe_limit or safe_offset)) if safe_offset > 0 else None,
+    }
+    return result
 
 
 def export_prioritisation(format_name: str, target: str | None = None) -> dict[str, Any]:
@@ -248,6 +319,8 @@ def _export_rows(
     parameters: tuple[Any, ...],
     format_name: str,
     target: str | None = None,
+    count_query: str | None = None,
+    count_parameters: tuple[Any, ...] = (),
 ) -> dict[str, Any]:
     normalized_format = format_name.strip().lower()
     if normalized_format not in SUPPORTED_FORMATS:
@@ -269,13 +342,17 @@ def _export_rows(
             "message": f"Table '{table_name}' does not exist. Run a scan with --save-db first.",
         }
 
+    total_count = _fetch_count(count_query, count_parameters) if count_query else None
     rows = [redact_nested(row) for row in _fetch_rows(query, parameters)]
     if not rows:
-        return {
+        result = {
             "status": "no_records",
             "message": f"No {export_type} records were found to export.",
             "record_count": 0,
         }
+        if total_count is not None:
+            result["total_count"] = total_count
+        return result
 
     EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
     output_path = EXPORTS_DIR / _build_export_filename(export_type, normalized_format, target)
@@ -284,13 +361,16 @@ def _export_rows(
     else:
         _write_json(output_path, rows)
 
-    return {
+    result = {
         "status": "exported",
         "export_type": export_type,
         "format": normalized_format,
         "record_count": len(rows),
         "path": output_path,
     }
+    if total_count is not None:
+        result["total_count"] = total_count
+    return result
 
 
 def _connect() -> sqlite3.Connection:
@@ -316,6 +396,12 @@ def _fetch_rows(query: str, parameters: tuple[Any, ...]) -> list[dict[str, Any]]
     with _connect() as connection:
         rows = connection.execute(query, parameters).fetchall()
     return [dict(row) for row in rows]
+
+
+def _fetch_count(query: str, parameters: tuple[Any, ...]) -> int:
+    with _connect() as connection:
+        row = connection.execute(query, parameters).fetchone()
+    return int(row["total"] if row else 0)
 
 
 def _write_csv(output_path: Path, fields: list[str], rows: list[dict[str, Any]]) -> None:

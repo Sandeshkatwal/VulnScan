@@ -141,7 +141,7 @@ The database is local to your workstation and should not be committed to Git. It
 
 ## Local API Foundation
 
-Version 15.3 adds persistent SQLite job storage to the FastAPI-based local API foundation. The API binds to `127.0.0.1` by default and is intended for local development only:
+Version 15.4 adds filtering, pagination, sorting, and compact finding responses to the FastAPI-based local API foundation. The API binds to `127.0.0.1` by default and is intended for local development only:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api
@@ -156,6 +156,8 @@ API jobs are stored in the local SQLite database and can survive API restarts. J
 
 Remote binding requires explicit `--allow-remote-api` and should not be used for public deployment. Credentialed SSH scans, Windows credentialed scans, passwords, tokens, private keys, active Web DAST, live attack checks, and internet feed fetching are not exposed through the API. Do not hard-code or commit API keys.
 
+Job, scan, finding, and findings export endpoints support `limit`, `offset`, endpoint-specific `sort_by`, and `sort_order=asc|desc`. Finding endpoints also support `severity`, `source`, `category`, `priority_label`, `min_priority_score`, `min_risk_score`, `cve`, and `compact=true` for reduced dashboard-style responses.
+
 Basic API examples:
 
 ```powershell
@@ -166,6 +168,12 @@ curl -X POST http://127.0.0.1:8088/scans -H "Content-Type: application/json" -H 
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs/JOB_ID
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs/JOB_ID/result
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/scans
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?status=completed&limit=10"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs?target=127.0.0.1&limit=10"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?severity=High"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?priority_label=Fix%20First&compact=true"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?min_priority_score=75&sort_by=priority_score&sort_order=desc"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/exports/findings?format=csv&severity=Medium"
 ```
 
 See `docs\API.md` for endpoint details and safety notes.

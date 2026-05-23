@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import json
 import pytest
 
 from scanner.api_app import create_app
@@ -44,7 +45,7 @@ def test_version_returns_scanner_and_version() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["scanner"] == "VulScan"
-    assert body["api_version"] == "15.3"
+    assert body["api_version"] == "15.4"
     assert body["version"]
 
 
@@ -97,8 +98,8 @@ def test_post_scans_rejects_unsupported_scan_mode() -> None:
 
 def test_get_scans_returns_list_structure(monkeypatch) -> None:
     monkeypatch.setattr(
-        "scanner.api_app.get_recent_scans",
-        lambda limit=10, target=None: [{"scan_id": "scan-1", "target": target or "127.0.0.1"}],
+        "scanner.api_app.get_recent_scans_page",
+        lambda **kwargs: ([{"scan_id": "scan-1", "target": kwargs.get("target") or "127.0.0.1"}], 1),
     )
     client = TestClient(create_app(scan_executor=_fake_scan_executor))
 
@@ -106,6 +107,7 @@ def test_get_scans_returns_list_structure(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert response.json()["scans"][0]["scan_id"] == "scan-1"
+    assert response.json()["pagination"]["total"] == 1
 
 
 def test_get_jobs_returns_list_structure() -> None:
@@ -128,6 +130,52 @@ def test_get_jobs_uses_persistent_store(job_store) -> None:
     assert response.json()["jobs"][0]["job_id"] == "job-1"
 
 
+def test_get_jobs_supports_limit_offset(job_store) -> None:
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "created_at": "2026-05-23T00:00:00+00:00", "request": {"target": "127.0.0.1"}})
+    job_store.create_job({"job_id": "job-2", "target": "127.0.0.1", "created_at": "2026-05-23T00:00:01+00:00", "request": {"target": "127.0.0.1"}})
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs?limit=1&offset=1")
+
+    assert response.status_code == 200
+    assert response.json()["pagination"]["offset"] == 1
+    assert response.json()["pagination"]["has_previous"] is True
+    assert len(response.json()["jobs"]) == 1
+
+
+def test_get_jobs_supports_status_filter(job_store) -> None:
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    job_store.create_job({"job_id": "job-2", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    job_store.mark_job_failed("job-2", "API_JOB_FAILED", "Safe failure.")
+
+    response = client.get("/jobs?status=failed")
+
+    assert response.status_code == 200
+    assert [job["job_id"] for job in response.json()["jobs"]] == ["job-2"]
+    assert response.json()["filters"]["status"] == "failed"
+
+
+def test_get_jobs_supports_target_filter(job_store) -> None:
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    job_store.create_job({"job_id": "job-2", "target": "127.0.0.2", "request": {"target": "127.0.0.2"}})
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs?target=127.0.0.2")
+
+    assert response.status_code == 200
+    assert [job["job_id"] for job in response.json()["jobs"]] == ["job-2"]
+
+
+def test_get_jobs_rejects_invalid_sort_by(job_store) -> None:
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs?sort_by=scan_id")
+
+    assert response.status_code == 400
+    assert "Unsupported sort_by" in response.text
+
+
 def test_get_job_returns_persistent_job(job_store) -> None:
     job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
     client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
@@ -147,6 +195,98 @@ def test_get_job_result_handles_missing_payload(job_store) -> None:
 
     assert response.status_code == 200
     assert response.json()["message"] == "Job completed but result payload is no longer available."
+
+
+def test_get_job_findings_supports_severity_filter(job_store, tmp_path) -> None:
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {"title": "High Finding", "severity": "High", "source": "unit", "category": "Unit"},
+                    {"title": "Low Finding", "severity": "Low", "source": "unit", "category": "Unit"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    job_store.save_job_result("job-1", "scan-1", {"total_findings": 2}, str(result_path), None)
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs/job-1/findings?severity=High")
+
+    assert response.status_code == 200
+    assert [finding["title"] for finding in response.json()["findings"]] == ["High Finding"]
+
+
+def test_get_job_findings_supports_compact_true(job_store, tmp_path) -> None:
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "findings": [
+                    {
+                        "title": "High Finding",
+                        "severity": "High",
+                        "source": "unit",
+                        "category": "Unit",
+                        "risk_score": 80,
+                        "priority_score": 90,
+                        "priority_label": "Fix First",
+                        "recommendation": "Fix it.",
+                        "evidence": "Verbose evidence.",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    job_store.create_job({"job_id": "job-1", "target": "127.0.0.1", "request": {"target": "127.0.0.1"}})
+    job_store.save_job_result("job-1", "scan-1", {"total_findings": 1}, str(result_path), None)
+    client = TestClient(create_app(scan_executor=_fake_scan_executor, job_store=job_store))
+
+    response = client.get("/jobs/job-1/findings?compact=true")
+
+    assert response.status_code == 200
+    finding = response.json()["findings"][0]
+    assert "recommendation" in finding
+    assert "evidence" not in finding
+
+
+def test_get_scans_supports_pagination(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scanner.api_app.get_recent_scans_page",
+        lambda **kwargs: ([{"scan_id": "scan-2", "target": "127.0.0.1"}], 3),
+    )
+    client = TestClient(create_app(scan_executor=_fake_scan_executor))
+
+    response = client.get("/scans?limit=1&offset=1")
+
+    assert response.status_code == 200
+    assert response.json()["pagination"]["total"] == 3
+    assert response.json()["pagination"]["has_next"] is True
+
+
+def test_export_findings_includes_filters(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "scanner.api_app.export_findings",
+        lambda *args, **kwargs: {
+            "status": "exported",
+            "format": "csv",
+            "path": "exports/unit.csv",
+            "record_count": 1,
+            "filters": {"severity": kwargs.get("severity")},
+            "pagination": {"limit": kwargs.get("limit"), "offset": kwargs.get("offset"), "returned": 1, "total": 1, "has_next": False, "has_previous": False, "next_offset": None, "previous_offset": None},
+        },
+    )
+    client = TestClient(create_app(scan_executor=_fake_scan_executor))
+
+    response = client.get("/exports/findings?format=csv&severity=Medium&limit=10")
+
+    assert response.status_code == 200
+    assert response.json()["filters"]["severity"] == "Medium"
+    assert response.json()["export_path"] == "exports/unit.csv"
 
 
 def test_get_scan_handles_missing_scan(monkeypatch) -> None:

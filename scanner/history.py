@@ -307,6 +307,55 @@ def get_recent_scans(limit: int = 10, target: str | None = None) -> list[dict[st
     return [dict(row) for row in rows]
 
 
+def get_recent_scans_page(
+    *,
+    limit: int = 20,
+    offset: int = 0,
+    target: str | None = None,
+    sort_by: str | None = None,
+    sort_order: str = "desc",
+) -> tuple[list[dict[str, Any]], int]:
+    """Return paginated recent saved scan rows for API use."""
+    if not database_exists() or not database_has_required_tables():
+        return [], 0
+    init_db()
+    safe_limit = max(1, min(int(limit or 20), 100))
+    safe_offset = max(0, int(offset or 0))
+    sort_field_map = {
+        "scan_time": "scan_start_time",
+        "target": "target",
+        "duration_seconds": "duration_seconds",
+    }
+    order_field = sort_field_map.get(str(sort_by or "scan_time").strip().lower())
+    if order_field is None:
+        raise ValueError("Unsupported scan sort field.")
+    order_direction = str(sort_order or "desc").strip().lower()
+    if order_direction not in {"asc", "desc"}:
+        raise ValueError("Unsupported scan sort order.")
+    where_clause = "WHERE target = ?" if target else ""
+    base_parameters: tuple[Any, ...] = (target,) if target else ()
+    with get_connection() as connection:
+        total_row = connection.execute(
+            f"SELECT COUNT(*) AS total FROM scans {where_clause}",
+            base_parameters,
+        ).fetchone()
+        rows = connection.execute(
+            f"""
+            SELECT scan_id, target, resolved_ip, scanner_version, scan_mode,
+                   scan_start_time, scan_end_time, duration_seconds,
+                   total_open_ports, total_findings, highest_risk_score,
+                   highest_risk_label, created_at
+            FROM scans
+            {where_clause}
+            ORDER BY {order_field} {order_direction.upper()}, id DESC
+            LIMIT ? OFFSET ?
+            """,
+            base_parameters + (safe_limit, safe_offset),
+        ).fetchall()
+    total = int(total_row["total"] if total_row else 0)
+    return [dict(row) for row in rows], total
+
+
 def get_scan_result_by_id(scan_id: str) -> dict[str, Any] | None:
     """Return a saved scan result snapshot by scan ID."""
     if not database_exists() or not database_has_required_tables():

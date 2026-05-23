@@ -14,7 +14,7 @@ class StrictApiModel(BaseModel):
 
 
 class ScanRequest(StrictApiModel):
-    """Safe scan request accepted by the Version 15.3 API."""
+    """Safe scan request accepted by the Version 15.4 API."""
 
     target: str = Field(..., min_length=1, max_length=255)
     scan_mode: str = "safe"
@@ -39,15 +39,21 @@ class ScanResponse(StrictApiModel):
 
 class ScanSummaryResponse(StrictApiModel):
     scans: list[dict[str, Any]]
+    pagination: dict[str, Any] | None = None
+    filters: dict[str, Any] | None = None
 
 
 class JobSummaryResponse(StrictApiModel):
     jobs: list[dict[str, Any]]
+    pagination: dict[str, Any] | None = None
+    filters: dict[str, Any] | None = None
 
 
 class FindingResponse(StrictApiModel):
     scan_id: str
     findings: list[dict[str, Any]]
+    pagination: dict[str, Any] | None = None
+    filters: dict[str, Any] | None = None
 
 
 class ErrorResponse(StrictApiModel):

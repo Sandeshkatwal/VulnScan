@@ -12,6 +12,14 @@ from scanner.evidence import redact_nested
 
 
 ALLOWED_JOB_STATUSES = {"queued", "running", "completed", "failed", "cancelled"}
+ALLOWED_JOB_SORT_FIELDS = {
+    "created_at",
+    "updated_at",
+    "completed_at",
+    "duration_seconds",
+    "status",
+    "target",
+}
 INTERRUPTED_ERROR_CODE = "API_JOB_INTERRUPTED"
 INTERRUPTED_ERROR_MESSAGE = "Job was interrupted because the API process stopped before completion."
 UNAVAILABLE_RESULT_MESSAGE = "Job completed but result payload is no longer available."
@@ -152,10 +160,34 @@ class ApiJobStore:
         self,
         *,
         limit: int = 20,
+        offset: int = 0,
         status: str | None = None,
         target: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> list[dict[str, Any]]:
+        jobs, _total = self.list_jobs_page(
+            limit=limit,
+            offset=offset,
+            status=status,
+            target=target,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+        return jobs
+
+    def list_jobs_page(
+        self,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+        status: str | None = None,
+        target: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
+    ) -> tuple[list[dict[str, Any]], int]:
         safe_limit = max(1, min(int(limit or 20), 100))
+        safe_offset = max(0, int(offset or 0))
         clauses: list[str] = []
         params: list[Any] = []
         if status:
@@ -165,18 +197,26 @@ class ApiJobStore:
             clauses.append("target = ?")
             params.append(target)
         where_clause = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        params.append(safe_limit)
+        order_field = _validate_sort_field(sort_by)
+        order_direction = _validate_sort_order(sort_order)
+        count_params = tuple(params)
+        params.extend([safe_limit, safe_offset])
         with get_connection(self.db_path) as connection:
+            total_row = connection.execute(
+                f"SELECT COUNT(*) AS total FROM api_jobs {where_clause}",
+                count_params,
+            ).fetchone()
             rows = connection.execute(
                 f"""
                 SELECT * FROM api_jobs
                 {where_clause}
-                ORDER BY created_at DESC, updated_at DESC
-                LIMIT ?
+                ORDER BY {order_field} {order_direction}, created_at DESC, updated_at DESC
+                LIMIT ? OFFSET ?
                 """,
                 tuple(params),
             ).fetchall()
-        return [_row_to_job(row) for row in rows]
+        total = int(total_row["total"] if total_row else 0)
+        return [_row_to_job(row) for row in rows], total
 
     def save_job_result(
         self,
@@ -273,6 +313,20 @@ def _validate_status(status: str) -> str:
     if normalized not in ALLOWED_JOB_STATUSES:
         raise ValueError(f"Unsupported API job status: {status}")
     return normalized
+
+
+def _validate_sort_field(sort_by: str | None) -> str:
+    normalized = str(sort_by or "created_at").strip().lower()
+    if normalized not in ALLOWED_JOB_SORT_FIELDS:
+        raise ValueError(f"Unsupported API job sort field: {sort_by}")
+    return normalized
+
+
+def _validate_sort_order(sort_order: str) -> str:
+    normalized = str(sort_order or "desc").strip().lower()
+    if normalized not in {"asc", "desc"}:
+        raise ValueError("Unsupported API job sort order.")
+    return normalized.upper()
 
 
 def _now() -> str:
