@@ -50,6 +50,8 @@ export interface JobSummary {
   [key: string]: unknown
 }
 
+export type JobDetail = JobSummary
+
 export interface JobsResponse {
   jobs: JobSummary[]
   pagination?: Pagination | null
@@ -100,6 +102,29 @@ export interface FindingsResponse {
   [key: string]: unknown
 }
 
+export interface ScanResponse {
+  job_id?: string
+  scan_id?: string
+  status?: string
+  target?: string
+  summary?: ApiRecord
+  result_path?: string | null
+  html_report_path?: string | null
+  retrievable?: boolean
+  status_url?: string | null
+  result_url?: string | null
+  [key: string]: unknown
+}
+
+export interface JobResultResponse {
+  job_id?: string
+  status?: string
+  job?: JobSummary
+  result?: ApiRecord | null
+  message?: string
+  [key: string]: unknown
+}
+
 export interface ScanRequest {
   target: string
   scan_mode?: 'safe'
@@ -109,4 +134,34 @@ export interface ScanRequest {
   vuln_intel?: boolean
   prioritise?: boolean
   fix_first_dashboard?: boolean
+}
+
+export interface JobsQuery {
+  limit?: number
+  offset?: number
+  status?: string
+  target?: string
+  sort_by?: string
+  sort_order?: string
+}
+
+export interface ScansQuery {
+  limit?: number
+  offset?: number
+  target?: string
+  sort_by?: string
+  sort_order?: string
+}
+
+export interface FindingFilters {
+  severity?: string
+  source?: string
+  category?: string
+  priority_label?: string
+  min_priority_score?: string
+  compact?: boolean
+  limit?: number
+  offset?: number
+  sort_by?: string
+  sort_order?: string
 }

@@ -1,12 +1,12 @@
 # VulScan API
 
-Version 16.0 adds the local dashboard foundation for authorised VulScan workflows. The existing API remains local-only and now allows narrow CORS access from the Vite development dashboard.
+Version 16.1 adds local dashboard scan job controls for authorised VulScan workflows. The existing API remains local-only and allows narrow CORS access from the Vite development dashboard.
 
 The API binds to `127.0.0.1` by default, does not enable broad CORS, does not expose credentialed SSH or Windows scans, and does not accept passwords, tokens, private keys, API keys, authorization headers, or secrets in scan requests.
 
 ## Local Dashboard
 
-Version 16.0 includes a React + Vite dashboard under `dashboard/`. Start the backend API first:
+Version 16.1 includes a React + Vite dashboard under `dashboard/`. Start the backend API first:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api
@@ -41,6 +41,8 @@ VITE_VULSCAN_API_KEY=
 ```
 
 Do not commit `dashboard/.env`. The dashboard includes `X-VulScan-API-Key` only when `VITE_VULSCAN_API_KEY` is set.
+
+The dashboard scan form creates safe jobs through `POST /scans` with `scan_mode` fixed to `safe`. It can refresh job status, load job result summaries, and load/filter findings for completed jobs. It does not support credentialed scans, SSH passwords, Windows passwords, tokens, private keys, API key input fields, exploit options, brute forcing, or active web attack options.
 
 ## Local CORS
 

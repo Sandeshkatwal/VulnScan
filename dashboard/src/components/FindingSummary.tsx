@@ -2,6 +2,10 @@ import type { Finding } from '../types/api'
 
 export interface PrioritySummary {
   total: number
+  critical: number
+  high: number
+  medium: number
+  low: number
   fixFirst: number
   fixSoon: number
   monitor: number
@@ -18,6 +22,10 @@ interface FindingSummaryProps {
 export function buildPrioritySummary(findings: Finding[]): PrioritySummary {
   const summary: PrioritySummary = {
     total: findings.length,
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
     fixFirst: 0,
     fixSoon: 0,
     monitor: 0,
@@ -28,6 +36,16 @@ export function buildPrioritySummary(findings: Finding[]): PrioritySummary {
   for (const finding of findings) {
     const label = String(finding.priority_label || '').trim()
     const severity = String(finding.severity || '').trim()
+    if (severity === 'Critical') {
+      summary.critical += 1
+    } else if (severity === 'High') {
+      summary.high += 1
+    } else if (severity === 'Medium') {
+      summary.medium += 1
+    } else if (severity === 'Low') {
+      summary.low += 1
+    }
+
     if (label === 'Fix First') {
       summary.fixFirst += 1
     } else if (label === 'Fix Soon' || label === 'Schedule') {
@@ -64,6 +82,22 @@ export function FindingSummary({ summary, loading = false, error }: FindingSumma
       <div>
         <span>Total Findings</span>
         <strong>{summary.total}</strong>
+      </div>
+      <div>
+        <span>Critical</span>
+        <strong>{summary.critical}</strong>
+      </div>
+      <div>
+        <span>High</span>
+        <strong>{summary.high}</strong>
+      </div>
+      <div>
+        <span>Medium</span>
+        <strong>{summary.medium}</strong>
+      </div>
+      <div>
+        <span>Low</span>
+        <strong>{summary.low}</strong>
       </div>
       <div>
         <span>Fix First</span>

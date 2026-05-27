@@ -4,6 +4,8 @@ interface JobsTableProps {
   jobs: JobSummary[]
   loading?: boolean
   error?: string | null
+  selectedJobId?: string | null
+  onSelectJob?: (job: JobSummary) => void
 }
 
 function formatDate(value?: string): string {
@@ -17,14 +19,14 @@ function formatDuration(value?: number | null): string {
   return `${Number(value).toFixed(2)}s`
 }
 
-function statusTone(status?: string): string {
+export function statusTone(status?: string): string {
   if (status === 'completed') return 'good'
   if (status === 'failed' || status === 'cancelled') return 'bad'
   if (status === 'running' || status === 'queued') return 'warn'
   return 'neutral'
 }
 
-export function JobsTable({ jobs, loading = false, error }: JobsTableProps) {
+export function JobsTable({ jobs, loading = false, error, selectedJobId, onSelectJob }: JobsTableProps) {
   if (loading) {
     return <div className="panel-message">Loading recent jobs...</div>
   }
@@ -53,7 +55,11 @@ export function JobsTable({ jobs, loading = false, error }: JobsTableProps) {
         </thead>
         <tbody>
           {jobs.map((job) => (
-            <tr key={job.job_id || `${job.target}-${job.created_at}`}>
+            <tr
+              key={job.job_id || `${job.target}-${job.created_at}`}
+              className={selectedJobId && selectedJobId === job.job_id ? 'selected-row' : undefined}
+              onClick={() => onSelectJob?.(job)}
+            >
               <td className="mono">{job.job_id || 'n/a'}</td>
               <td>{job.target || 'n/a'}</td>
               <td>

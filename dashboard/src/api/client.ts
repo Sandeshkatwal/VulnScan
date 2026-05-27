@@ -1,8 +1,14 @@
 import type {
+  FindingFilters,
   FindingsResponse,
   HealthResponse,
+  JobDetail,
+  JobResultResponse,
+  JobsQuery,
   JobsResponse,
   ScanRequest,
+  ScanResponse,
+  ScansQuery,
   ScansResponse,
   VersionResponse,
 } from '../types/api'
@@ -66,23 +72,33 @@ export function getVersion(): Promise<VersionResponse> {
   return request<VersionResponse>('/version')
 }
 
-export function getJobs(limit = 10): Promise<JobsResponse> {
-  return request<JobsResponse>('/jobs', {}, { limit })
+export function getJobs(params: JobsQuery | number = { limit: 10 }): Promise<JobsResponse> {
+  const query = typeof params === 'number' ? { limit: params } : params
+  return request<JobsResponse>('/jobs', {}, { ...query })
 }
 
-export function getScans(limit = 10): Promise<ScansResponse> {
-  return request<ScansResponse>('/scans', {}, { limit })
+export function getScans(params: ScansQuery | number = { limit: 10 }): Promise<ScansResponse> {
+  const query = typeof params === 'number' ? { limit: params } : params
+  return request<ScansResponse>('/scans', {}, { ...query })
+}
+
+export function getJob(jobId: string): Promise<JobDetail> {
+  return request<JobDetail>(`/jobs/${encodeURIComponent(jobId)}`)
+}
+
+export function getJobResult(jobId: string): Promise<JobResultResponse> {
+  return request<JobResultResponse>(`/jobs/${encodeURIComponent(jobId)}/result`)
 }
 
 export function getJobFindings(
   jobId: string,
-  params: Record<string, QueryValue> = {},
+  params: FindingFilters = {},
 ): Promise<FindingsResponse> {
-  return request<FindingsResponse>(`/jobs/${encodeURIComponent(jobId)}/findings`, {}, params)
+  return request<FindingsResponse>(`/jobs/${encodeURIComponent(jobId)}/findings`, {}, { ...params })
 }
 
-export function createScan(requestBody: ScanRequest) {
-  return request('/scans', {
+export function createScan(requestBody: ScanRequest): Promise<ScanResponse> {
+  return request<ScanResponse>('/scans', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scan_mode: 'safe', ...requestBody }),
