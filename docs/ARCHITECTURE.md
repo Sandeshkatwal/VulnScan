@@ -50,10 +50,11 @@ Vulnerability Scanner
 │   ├── Get saved results
 │   └── Export data
 └── Dashboard
-    ├── Risk overview
-    ├── Vulnerability list
-    ├── Trends
-    └── Reports
+    ├── Local React + Vite dashboard foundation
+    ├── API health and version status
+    ├── Recent API jobs
+    ├── Recent saved scans
+    └── High-level findings and prioritisation summary
 ```
 
 ## Implemented Now
@@ -87,7 +88,8 @@ Vulnerability Scanner
 - Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
 - Storage / Assets inventory for saved targets and detected services, implemented in Version 10.4.
 - CSV and JSON export of saved assets, scan history, findings, and remediation records, implemented in Version 10.5.
-- Local FastAPI API foundation with Version 15.5 OpenAPI metadata, API key protection, persistent SQLite job storage, filtering, sorting, pagination, and compact finding responses, bound to `127.0.0.1` by default, with public health/version endpoints and protected scan, job, saved-result, saved-findings, and findings export metadata endpoints when `VULSCAN_API_KEY` is configured.
+- Local FastAPI API foundation with Version 16.0 OpenAPI metadata, API key protection, persistent SQLite job storage, filtering, sorting, pagination, compact finding responses, and local-only dashboard CORS, bound to `127.0.0.1` by default, with public health/version endpoints and protected scan, job, saved-result, saved-findings, and findings export metadata endpoints when `VULSCAN_API_KEY` is configured.
+- Local React + Vite dashboard foundation in `dashboard/`, showing API health, recent jobs, recent scans, and high-level findings/prioritisation overview. It is local development only and uses `VITE_VULSCAN_API_URL` plus optional `VITE_VULSCAN_API_KEY`.
 
 ## Planned Later
 
@@ -96,7 +98,7 @@ Vulnerability Scanner
 - Broader configuration auditing.
 - Web DAST features only when explicitly designed with strict safety controls.
 - Trusted CVE feed update workflows, CVSS enrichment, EPSS scoring, and exploit-availability enrichment.
-- API access, dashboard views, richer fix-first ranking, and expanded remediation workflow tracking.
+- Richer dashboard risk views, vulnerability list, trends, reports, and expanded remediation workflow tracking.
 
 ## How Version 8 and 9 Help
 
@@ -187,6 +189,8 @@ Version 15.3 adds `scanner.api_job_store` and `scanner.api_jobs` to the local AP
 Version 15.4 adds `scanner.api_filters`, a reusable helper layer for API pagination, sorting, compact finding responses, and finding filters. `GET /jobs`, `GET /scans`, `GET /jobs/{job_id}/findings`, `GET /scans/{scan_id}/findings`, and `GET /exports/findings` now return pagination and filter metadata while preserving their existing top-level response keys. Job listings page and filter directly through the SQLite-backed job store; scan listings page through the existing scan history database; finding filters operate on saved API job results or saved scan snapshots. `compact=true` trims finding responses for dashboard views without changing stored reports or CLI output. API key protection remains unchanged, and filtering does not add new scan checks, credentialed API workflows, exploitation, brute forcing, destructive payloads, or live attack checks.
 
 Version 15.5 improves API documentation only. `scanner.api_app` now publishes richer FastAPI metadata, route summaries, route descriptions, response documentation, and an OpenAPI API key security scheme for `X-VulScan-API-Key`. `scanner.api_models` includes schema descriptions and safe examples for scan requests, scan responses, findings, pagination, filters, and errors without credential fields or API key values. Local client examples live under `examples/api` for curl, PowerShell, and a small Python `requests` client. Runtime scan behavior, API key enforcement, localhost binding defaults, persistent job storage, filtering, and report generation remain unchanged.
+
+Version 16.0 adds the local dashboard foundation. `dashboard/` contains a React + Vite + TypeScript app with typed fetch client helpers, local environment configuration, reusable status/table/summary components, and simple dark dashboard styling. The dashboard calls existing safe API endpoints for health, version, jobs, scans, and compact job findings. It does not add exploitation, exploit execution, credential collection, credentialed scan forms, password fields, public deployment, hard-coded secrets, or API key logging. The API now permits CORS only from `http://localhost:5173` and `http://127.0.0.1:5173` so the local dashboard can call `http://127.0.0.1:8088`.
 
 Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan command accepts `--use-cve-feed --cve-feed PATH` only alongside `--vuln-intel`; the importer loads local JSON, validates feed structure, normalises vendor/product/CPE identifiers, evaluates affected version conditions, and merges results into `vulnerability_intelligence.cve_feed_*` fields. Matched feed records create standard findings with source `cve_feed`, while missing or unknown versions are counted as insufficient evidence and do not create confirmed CVE findings. The feature remains offline-only and does not fetch live CVE data, remote references, Exploit-DB, Metasploit, or exploit code.
 

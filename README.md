@@ -75,12 +75,40 @@ Version 14.9 adds prioritisation trend tracking:
 
 Trend tracking compares current prioritised findings with the latest previous saved scan for the same target and reports baseline, improved, worsened, or stable trend context. Use `--save-db` for useful history. Stable finding keys are intentionally conservative but may not perfectly match renamed findings, so human review is still required. Trend tracking does not perform new scanning, exploit checks, live attack checks, or internet feed fetching. See `docs\PRIORITISATION.md`.
 
-Version 15.5 adds improved OpenAPI documentation, route schemas, client examples, filtering, pagination, sorting, compact finding responses, persistent SQLite job storage, and API key protection to the local FastAPI API foundation:
+Version 16.0 adds a local React + Vite dashboard foundation on top of the local FastAPI API. The dashboard is local development only, runs on `http://localhost:5173`, and displays API health, recent jobs, recent scans, and a high-level findings/prioritisation overview. Start the backend first:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api
 $env:VULSCAN_API_KEY="change-this-local-dev-key"
 .\.venv311\Scripts\python.exe -m scanner.main api --require-api-key
+```
+
+Then start the dashboard:
+
+```powershell
+cd dashboard
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Dashboard configuration lives in `dashboard\.env`, copied from `dashboard\.env.example`:
+
+```text
+VITE_VULSCAN_API_URL=http://127.0.0.1:8088
+VITE_VULSCAN_API_KEY=
+```
+
+Do not commit `.env` or hard-code API keys. If `VITE_VULSCAN_API_KEY` is set, the dashboard sends it as `X-VulScan-API-Key`; otherwise it calls public endpoints and local-development protected endpoints only when the API permits them. Version 16.0 also allows local-only CORS for `http://localhost:5173` and `http://127.0.0.1:5173`; broad origins are not enabled.
+
+The underlying API still supports the Version 15.5 foundation features: improved OpenAPI documentation, route schemas, client examples, filtering, pagination, sorting, compact finding responses, persistent SQLite job storage, and API key protection:
+
+```powershell
 curl http://127.0.0.1:8088/health
 curl http://127.0.0.1:8088/version
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/jobs

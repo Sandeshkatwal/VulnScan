@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
@@ -32,7 +33,8 @@ from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "15.5"
+API_VERSION = "16.0"
+LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
     400: {"model": ErrorResponse, "description": "Invalid request."},
@@ -114,6 +116,13 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         license_info={"name": "Authorised local use only"},
         openapi_tags=TAGS_METADATA,
     )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(LOCAL_DASHBOARD_ORIGINS),
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-VulScan-API-Key", "Authorization"],
+    )
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -164,7 +173,7 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
     )
     def start_scan(request: ScanRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
         if request.scan_mode.lower() != "safe":
-            raise HTTPException(status_code=400, detail="Version 15.5 API supports only safe scan_mode.")
+            raise HTTPException(status_code=400, detail="Version 16.0 API supports only safe scan_mode.")
         try:
             request_payload = sanitize_request_payload(request.model_dump())
         except ValueError as exc:

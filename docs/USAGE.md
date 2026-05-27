@@ -141,7 +141,7 @@ The database is local to your workstation and should not be committed to Git. It
 
 ## Local API Foundation
 
-Version 15.5 improves OpenAPI documentation, route descriptions, schemas, error response docs, client examples, filtering, pagination, sorting, and compact finding responses for the FastAPI-based local API foundation. The API binds to `127.0.0.1` by default and is intended for local development only:
+Version 16.0 adds the local React + Vite dashboard foundation while preserving the FastAPI local API foundation. The API binds to `127.0.0.1` by default and is intended for local development only:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api

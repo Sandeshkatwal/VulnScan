@@ -12,6 +12,7 @@ __pycache__/
 
 # Environment files
 .env
+dashboard/.env
 
 # Reports and local data
 reports/*

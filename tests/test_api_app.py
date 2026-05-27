@@ -45,8 +45,24 @@ def test_version_returns_scanner_and_version() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["scanner"] == "VulScan"
-    assert body["api_version"] == "15.5"
+    assert body["api_version"] == "16.0"
     assert body["version"]
+
+
+def test_local_dashboard_cors_origin_is_allowed() -> None:
+    client = TestClient(create_app(scan_executor=_fake_scan_executor))
+
+    response = client.options(
+        "/jobs",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "X-VulScan-API-Key",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
 
 
 def test_post_scans_creates_persistent_safe_scan_job(job_store) -> None:

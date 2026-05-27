@@ -1,0 +1,112 @@
+export type ApiRecord = Record<string, unknown>
+
+export interface Pagination {
+  limit?: number
+  offset?: number
+  returned?: number
+  total?: number
+  has_next?: boolean
+  has_previous?: boolean
+  next_offset?: number | null
+  previous_offset?: number | null
+  [key: string]: unknown
+}
+
+export interface ApiError {
+  error?: string
+  detail?: string
+  message?: string
+  status?: number
+  [key: string]: unknown
+}
+
+export interface HealthResponse {
+  status?: string
+  scanner?: string
+  [key: string]: unknown
+}
+
+export interface VersionResponse {
+  scanner?: string
+  version?: string
+  api_version?: string
+  [key: string]: unknown
+}
+
+export interface JobSummary {
+  job_id?: string
+  scan_id?: string
+  target?: string
+  status?: string
+  created_at?: string
+  started_at?: string
+  completed_at?: string
+  duration_seconds?: number | null
+  result_summary?: ApiRecord
+  result_path?: string | null
+  html_report_path?: string | null
+  error_message?: string | null
+  safe_error_code?: string | null
+  [key: string]: unknown
+}
+
+export interface JobsResponse {
+  jobs: JobSummary[]
+  pagination?: Pagination | null
+  filters?: ApiRecord | null
+  [key: string]: unknown
+}
+
+export interface ScanSummary {
+  scan_id?: string
+  target?: string
+  host?: string
+  scan_time?: string
+  scan_start_time?: string
+  created_at?: string
+  duration_seconds?: number | null
+  findings_count?: number | null
+  finding_count?: number | null
+  total_findings?: number | null
+  [key: string]: unknown
+}
+
+export interface ScansResponse {
+  scans: ScanSummary[]
+  pagination?: Pagination | null
+  filters?: ApiRecord | null
+  [key: string]: unknown
+}
+
+export interface Finding {
+  finding_id?: string
+  title?: string
+  severity?: string
+  source?: string
+  category?: string
+  risk_score?: number | null
+  priority_score?: number | null
+  priority_label?: string
+  recommendation?: string
+  fix_first_rank?: number | null
+  [key: string]: unknown
+}
+
+export interface FindingsResponse {
+  findings: Finding[]
+  pagination?: Pagination | null
+  filters?: ApiRecord | null
+  message?: string
+  [key: string]: unknown
+}
+
+export interface ScanRequest {
+  target: string
+  scan_mode?: 'safe'
+  json_report?: boolean
+  html_report?: boolean
+  save_db?: boolean
+  vuln_intel?: boolean
+  prioritise?: boolean
+  fix_first_dashboard?: boolean
+}

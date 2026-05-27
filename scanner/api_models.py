@@ -25,7 +25,7 @@ class PaginationMetadata(StrictApiModel):
 
 
 class ScanRequest(StrictApiModel):
-    """Safe scan request accepted by the Version 15.5 API."""
+    """Safe scan request accepted by the Version 16.0 API."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -46,7 +46,7 @@ class ScanRequest(StrictApiModel):
     )
 
     target: str = Field(..., min_length=1, max_length=255, description="Authorised local scan target.", examples=["127.0.0.1"])
-    scan_mode: str = Field("safe", description="API scan mode. Version 15.5 accepts safe mode only.", examples=["safe"])
+    scan_mode: str = Field("safe", description="API scan mode. Version 16.0 accepts safe mode only.", examples=["safe"])
     json_report: bool = Field(False, description="Write a local JSON report for the job.", examples=[True])
     html_report: bool = Field(False, description="Write a local HTML report for the job.", examples=[False])
     save_db: bool = Field(True, description="Save scan history and findings to local SQLite storage.", examples=[True])
