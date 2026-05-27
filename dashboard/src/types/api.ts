@@ -81,15 +81,38 @@ export interface ScansResponse {
 }
 
 export interface Finding {
+  id?: string
   finding_id?: string
   title?: string
   severity?: string
   source?: string
   category?: string
+  description?: string
+  evidence?: string
+  evidence_details?: ApiRecord
+  impact?: string
   risk_score?: number | null
+  risk_label?: string
   priority_score?: number | null
   priority_label?: string
+  priority_reasons?: string[]
   recommendation?: string
+  recommended_action?: string
+  verification?: string
+  limitation?: string
+  sla_hint?: string
+  cve?: string
+  cvss_score?: number | string | null
+  cvss_vector?: string
+  epss_score?: number | string | null
+  epss_percentile?: number | string | null
+  exploit_available?: boolean | string | null
+  exploit_maturity?: string
+  active_exploitation_reported?: boolean | string | null
+  affected_urls?: string[]
+  affected_url?: string
+  asset_criticality?: string
+  remediation_status?: string
   fix_first_rank?: number | null
   [key: string]: unknown
 }
@@ -159,6 +182,7 @@ export interface FindingFilters {
   category?: string
   priority_label?: string
   min_priority_score?: string
+  min_risk_score?: string
   compact?: boolean
   limit?: number
   offset?: number

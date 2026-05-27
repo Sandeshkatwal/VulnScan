@@ -65,7 +65,7 @@ export function FilterBar({ filters, onChange, onApply, onClear, disabled = fals
         </select>
       </label>
       <label>
-        <span>Min score</span>
+        <span>Min priority</span>
         <input
           type="number"
           min="0"
@@ -73,6 +73,17 @@ export function FilterBar({ filters, onChange, onApply, onClear, disabled = fals
           value={filters.min_priority_score || ''}
           disabled={disabled}
           onChange={(event) => setFilter('min_priority_score', event.target.value)}
+        />
+      </label>
+      <label>
+        <span>Min risk</span>
+        <input
+          type="number"
+          min="0"
+          max="100"
+          value={filters.min_risk_score || ''}
+          disabled={disabled}
+          onChange={(event) => setFilter('min_risk_score', event.target.value)}
         />
       </label>
       <div className="filter-actions">

@@ -432,13 +432,17 @@ tbody tr:hover {
 }
 
 .field,
-.filter-bar label {
+.filter-bar label,
+.search-box,
+.pagination-controls label {
   display: grid;
   gap: 6px;
 }
 
 .field span,
-.filter-bar span {
+.filter-bar span,
+.search-box span,
+.pagination-controls span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
@@ -584,20 +588,120 @@ dd {
   font-size: 15px;
 }
 
+.sticky-filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0 0 12px;
+  background: linear-gradient(180deg, var(--panel-strong), rgba(22, 34, 40, 0.92));
+}
+
+.search-box {
+  margin-bottom: 12px;
+}
+
 .filter-bar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(130px, 1fr)) auto;
+  grid-template-columns: repeat(6, minmax(120px, 1fr)) auto;
   gap: 10px;
   align-items: end;
   margin-bottom: 12px;
 }
 
 .findings-table {
-  min-width: 980px;
+  min-width: 1220px;
 }
 
 .recommendation-cell {
   min-width: 260px;
+}
+
+.table-sort-button {
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.table-sort-button:hover {
+  color: var(--heading);
+}
+
+.compact-button {
+  min-height: 30px;
+  padding: 4px 8px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pagination-controls > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-right: auto;
+}
+
+.pagination-controls label {
+  min-width: 120px;
+}
+
+.detail-drawer {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(111, 183, 255, 0.38);
+  border-radius: 8px;
+  background: rgba(8, 13, 16, 0.46);
+}
+
+.detail-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.detail-drawer h3 {
+  margin: 0 0 10px;
+  color: var(--heading);
+  font-size: 20px;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.detail-grid > div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(17, 26, 31, 0.68);
+}
+
+.detail-grid dd {
+  white-space: pre-wrap;
 }
 
 .finding-summary {
@@ -644,7 +748,8 @@ dd {
     grid-template-columns: 1fr;
   }
 
-  .filter-bar {
+  .filter-bar,
+  .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -672,8 +777,15 @@ dd {
   .checkbox-grid,
   .job-details dl,
   .result-summary dl,
-  .filter-bar {
+  .filter-bar,
+  .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .detail-drawer__header,
+  .pagination-controls {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .brand h1 {

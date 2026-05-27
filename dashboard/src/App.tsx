@@ -11,21 +11,21 @@ import {
   getVersion,
 } from './api/client'
 import { ErrorAlert } from './components/ErrorAlert'
-import { FilterBar } from './components/FilterBar'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
-import { FindingsTable } from './components/FindingsTable'
 import { JobDetails } from './components/JobDetails'
 import { JobsTable, statusTone } from './components/JobsTable'
 import { Layout } from './components/Layout'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
 import { StatusCard } from './components/StatusCard'
+import { VulnerabilityList } from './components/VulnerabilityList'
 import type {
   Finding,
   FindingFilters,
   HealthResponse,
   JobResultResponse,
   JobSummary,
+  Pagination,
   ScanRequest,
   ScanResponse,
   ScanSummary,
@@ -55,8 +55,11 @@ const initialState: DashboardState = {
 }
 
 const defaultFindingFilters: FindingFilters = {
-  limit: 100,
-  compact: true,
+  limit: 20,
+  offset: 0,
+  sort_by: 'priority_score',
+  sort_order: 'desc',
+  compact: false,
 }
 
 function errorMessage(error: unknown): string {
@@ -79,6 +82,7 @@ function App() {
   const [resultError, setResultError] = useState<string | null>(null)
   const [findings, setFindings] = useState<Finding[]>([])
   const [findingFilters, setFindingFilters] = useState<FindingFilters>(defaultFindingFilters)
+  const [findingPagination, setFindingPagination] = useState<Pagination | null>(null)
   const [findingsLoading, setFindingsLoading] = useState(false)
   const [findingsError, setFindingsError] = useState<string | null>(null)
   const [jobActionError, setJobActionError] = useState<string | null>(null)
@@ -152,10 +156,14 @@ function App() {
       try {
         const response = await getJobFindings(selectedJob.job_id, {
           ...filters,
-          limit: filters.limit || 100,
-          compact: true,
+          limit: filters.limit || 20,
+          offset: filters.offset || 0,
+          sort_by: filters.sort_by || 'priority_score',
+          sort_order: filters.sort_order || 'desc',
+          compact: false,
         })
         setFindings(response.findings)
+        setFindingPagination(response.pagination || null)
         if (response.message) {
           setFindingsError(response.message)
         }
@@ -176,6 +184,7 @@ function App() {
       setSelectedJob(job)
       setJobResult(null)
       setFindings([])
+      setFindingPagination(null)
       setJobActionError(null)
       setState((current) => ({ ...current, jobs: mergeJob(current.jobs, job) }))
     }
@@ -187,6 +196,7 @@ function App() {
     setJobResult(null)
     setResultError(null)
     setFindings([])
+    setFindingPagination(null)
     setFindingsError(null)
     setJobActionError(null)
   }
@@ -194,6 +204,26 @@ function App() {
   function clearFilters() {
     setFindingFilters(defaultFindingFilters)
     void loadFindings(defaultFindingFilters)
+  }
+
+  function updateFindingPage(limit: number, offset: number) {
+    const nextFilters = { ...findingFilters, limit, offset }
+    setFindingFilters(nextFilters)
+    void loadFindings(nextFilters)
+  }
+
+  function applyFindingFilters() {
+    const nextFilters = { ...findingFilters, offset: 0 }
+    setFindingFilters(nextFilters)
+    void loadFindings(nextFilters)
+  }
+
+  function updateFindingSort(sortBy: string) {
+    const currentOrder = findingFilters.sort_by === sortBy ? findingFilters.sort_order : 'desc'
+    const nextOrder = currentOrder === 'asc' ? 'desc' : 'asc'
+    const nextFilters = { ...findingFilters, sort_by: sortBy, sort_order: nextOrder, offset: 0 }
+    setFindingFilters(nextFilters)
+    void loadFindings(nextFilters)
   }
 
   const prioritySummary = useMemo(() => buildPrioritySummary(findings), [findings])
@@ -283,27 +313,24 @@ function App() {
 
         <article className="panel panel--wide">
           <div className="panel-heading">
-            <h2>Job Findings</h2>
-            <p>Filtered findings from the selected completed job.</p>
+            <h2>Vulnerability List</h2>
+            <p>Read-only findings for the selected completed job.</p>
           </div>
-          <FilterBar
+          <VulnerabilityList
+            findings={findings}
             filters={findingFilters}
-            onChange={setFindingFilters}
-            onApply={() => void loadFindings()}
-            onClear={clearFilters}
-            disabled={!selectedJob?.job_id || selectedJob.status !== 'completed' || findingsLoading}
+            pagination={findingPagination}
+            loading={findingsLoading}
+            error={findingsError}
+            selectedJobStatus={selectedJob?.status}
+            hasSelectedJob={Boolean(selectedJob?.job_id)}
+            onFiltersChange={setFindingFilters}
+            onApplyFilters={applyFindingFilters}
+            onClearFilters={clearFilters}
+            onPageChange={updateFindingPage}
+            onSort={updateFindingSort}
+            onRefresh={() => void loadFindings()}
           />
-          <div className="button-row button-row--right">
-            <button
-              className="secondary-button"
-              type="button"
-              disabled={!selectedJob?.job_id || selectedJob.status !== 'completed' || findingsLoading}
-              onClick={() => void loadFindings()}
-            >
-              Refresh findings
-            </button>
-          </div>
-          <FindingsTable findings={findings} loading={findingsLoading} error={findingsError} />
         </article>
 
         <article className="panel panel--wide">
@@ -317,10 +344,6 @@ function App() {
         <article className="panel placeholder-panel">
           <h2>Risk Overview</h2>
           <p>Reserved for Version 16.x risk scoring and asset context visuals.</p>
-        </article>
-        <article className="panel placeholder-panel">
-          <h2>Vulnerability List</h2>
-          <p>Reserved for wider finding review and remediation workflow.</p>
         </article>
         <article className="panel placeholder-panel">
           <h2>Trends</h2>

@@ -10,6 +10,8 @@ export interface PrioritySummary {
   fixSoon: number
   monitor: number
   informational: number
+  cveCount: number
+  exploitAvailable: number
   available: boolean
 }
 
@@ -30,6 +32,8 @@ export function buildPrioritySummary(findings: Finding[]): PrioritySummary {
     fixSoon: 0,
     monitor: 0,
     informational: 0,
+    cveCount: 0,
+    exploitAvailable: 0,
     available: findings.length > 0,
   }
 
@@ -54,6 +58,13 @@ export function buildPrioritySummary(findings: Finding[]): PrioritySummary {
       summary.informational += 1
     } else {
       summary.monitor += 1
+    }
+    if (finding.cve || finding.evidence_details?.cve || finding.evidence_details?.cves) {
+      summary.cveCount += 1
+    }
+    const exploitValue = finding.exploit_available ?? finding.evidence_details?.exploit_available
+    if (exploitValue === true || String(exploitValue).toLowerCase() === 'true') {
+      summary.exploitAvailable += 1
     }
   }
 
@@ -114,6 +125,14 @@ export function FindingSummary({ summary, loading = false, error }: FindingSumma
       <div>
         <span>Informational</span>
         <strong>{summary.informational}</strong>
+      </div>
+      <div>
+        <span>CVE Metadata</span>
+        <strong>{summary.cveCount}</strong>
+      </div>
+      <div>
+        <span>Exploit Metadata</span>
+        <strong>{summary.exploitAvailable}</strong>
       </div>
     </div>
   )

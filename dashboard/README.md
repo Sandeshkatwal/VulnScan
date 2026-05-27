@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-Version 16.1 adds local dashboard scan job controls for the VulScan API. It is for local development only and should be used with the API bound to `127.0.0.1`.
+Version 16.2 adds a read-only vulnerability list and finding detail UI for the VulScan API. It is for local development only and should be used with the API bound to `127.0.0.1`.
 
 ## Start The API
 
@@ -63,6 +63,18 @@ The dashboard can then refresh job status, load result summaries, and load/filte
 
 The dashboard does not support credentialed scans, SSH credentials, Windows credentials, API key entry, token entry, private key entry, exploit options, brute forcing, or active web attack options.
 
+## Review Vulnerabilities
+
+Select a completed job, then load findings. The vulnerability list supports:
+
+- Client-side search across loaded finding text.
+- API-backed filters for severity, source, category, priority, minimum priority score, and minimum risk score.
+- API-backed sorting by severity, risk score, priority score, title, source, and category.
+- API-backed pagination with page sizes of 10, 20, and 50.
+- Detail view for evidence, impact, recommendations, verification, prioritisation, CVE/CVSS/EPSS metadata, exploit metadata indicators, affected URLs, asset criticality, and remediation status where available.
+
+The vulnerability list is read-only. It does not add exploit or credential controls.
+
 ## Build Check
 
 ```powershell
@@ -72,4 +84,4 @@ npm run build
 
 ## Scope
 
-The Version 16.1 dashboard shows API health, version metadata, safe scan job creation, recent jobs, selected job details, result summaries, recent scans, and selected job findings with safe filters. It does not add public deployment, exploitation, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.
+The Version 16.2 dashboard shows API health, version metadata, safe scan job creation, recent jobs, selected job details, result summaries, recent scans, a vulnerability list, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.
