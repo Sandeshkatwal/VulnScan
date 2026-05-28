@@ -7,6 +7,21 @@ export function formatValue(value: unknown): string {
   return String(value)
 }
 
+export function formatSignedNumber(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'Not available'
+  const numberValue = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(numberValue)) return 'Not available'
+  if (numberValue > 0) return `+${numberValue}`
+  return String(numberValue)
+}
+
+export function formatDateTime(value: unknown): string {
+  if (value === null || value === undefined || value === '') return 'Not available'
+  const date = new Date(String(value))
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString()
+}
+
 export function getCve(finding: Finding): string {
   const direct = finding.cve
   if (direct) return String(direct)

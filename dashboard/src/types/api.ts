@@ -121,6 +121,61 @@ export interface Finding {
   [key: string]: unknown
 }
 
+export interface PrioritisationTrends {
+  enabled?: boolean
+  status?: string
+  target?: string
+  previous_scan_id?: string | null
+  previous_scan_time?: string | null
+  current_scan_time?: string | null
+  previous_findings_count?: number | null
+  current_findings_count?: number | null
+  new_findings_count?: number | null
+  resolved_findings_count?: number | null
+  unchanged_findings_count?: number | null
+  priority_increased_count?: number | null
+  priority_decreased_count?: number | null
+  priority_label_changed_count?: number | null
+  fix_first_new_count?: number | null
+  fix_first_resolved_count?: number | null
+  fix_first_persisting_count?: number | null
+  previous_average_priority_score?: number | null
+  current_average_priority_score?: number | null
+  average_priority_delta?: number | null
+  previous_highest_priority_score?: number | null
+  current_highest_priority_score?: number | null
+  highest_priority_delta?: number | null
+  risk_trend_label?: string
+  trend_limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface TrendDetailItem {
+  stable_key?: string
+  title?: string
+  source?: string
+  category?: string
+  previous_priority_score?: number | null
+  current_priority_score?: number | null
+  previous_priority_label?: string
+  current_priority_label?: string
+  score_delta?: number | null
+  trend_status?: string
+  reason_summary?: string
+  [key: string]: unknown
+}
+
+export interface PrioritisationTrendDetails {
+  new_findings?: TrendDetailItem[]
+  resolved_findings?: TrendDetailItem[]
+  priority_increased?: TrendDetailItem[]
+  priority_decreased?: TrendDetailItem[]
+  fix_first_new?: TrendDetailItem[]
+  fix_first_resolved?: TrendDetailItem[]
+  fix_first_persisting?: TrendDetailItem[]
+  [key: string]: unknown
+}
+
 export interface FindingsResponse {
   findings: Finding[]
   pagination?: Pagination | null

@@ -20,6 +20,7 @@ import { RiskOverview } from './components/RiskOverview'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
 import { StatusCard } from './components/StatusCard'
+import { TrendsView } from './components/TrendsView'
 import { VulnerabilityList } from './components/VulnerabilityList'
 import type {
   Finding,
@@ -410,6 +411,14 @@ function App() {
 
         <article className="panel panel--wide">
           <div className="panel-heading">
+            <h2>Trends View</h2>
+            <p>Prioritisation trend data for the selected completed job.</p>
+          </div>
+          <TrendsView job={selectedJob} result={jobResult} resultLoading={resultLoading || riskLoading} resultError={resultError} />
+        </article>
+
+        <article className="panel panel--wide">
+          <div className="panel-heading">
             <h2>Recent Jobs</h2>
             <p>Click a row to inspect status, result, and findings.</p>
           </div>
@@ -470,10 +479,6 @@ function App() {
           <ScansTable scans={state.scans} loading={state.loading && state.scans.length === 0} error={state.scansError} />
         </article>
 
-        <article className="panel placeholder-panel">
-          <h2>Trends</h2>
-          <p>Reserved for prioritisation and remediation trend tracking.</p>
-        </article>
         <article className="panel placeholder-panel">
           <h2>Reports</h2>
           <p>Reserved for local JSON, HTML, and export views.</p>
