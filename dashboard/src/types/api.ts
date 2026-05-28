@@ -207,6 +207,36 @@ export interface JobResultResponse {
   [key: string]: unknown
 }
 
+export interface ReportSummary {
+  job_id?: string
+  scan_id?: string
+  target?: string
+  status?: string
+  result_path?: string | null
+  html_report_path?: string | null
+  completed_at?: string
+  duration_seconds?: number | null
+  findings_count?: number | null
+  has_json_report?: boolean
+  has_html_report?: boolean
+  has_fix_first_dashboard?: boolean
+  has_trend_data?: boolean
+  has_vuln_intel?: boolean
+  has_web_dast?: boolean
+  [key: string]: unknown
+}
+
+export interface ReportMetadata {
+  report_summary?: ReportSummary
+  prioritisation_summary?: ApiRecord | null
+  fix_first_dashboard?: ApiRecord | null
+  prioritisation_trends?: ApiRecord | null
+  vulnerability_intelligence?: ApiRecord | null
+  web_dast_summary?: ApiRecord | null
+  asset_context?: ApiRecord | null
+  [key: string]: unknown
+}
+
 export interface ScanRequest {
   target: string
   scan_mode?: 'safe'

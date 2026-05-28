@@ -77,6 +77,10 @@ export function getJobs(params: JobsQuery | number = { limit: 10 }): Promise<Job
   return request<JobsResponse>('/jobs', {}, { ...query })
 }
 
+export function getCompletedJobs(limit = 50): Promise<JobsResponse> {
+  return getJobs({ status: 'completed', limit })
+}
+
 export function getScans(params: ScansQuery | number = { limit: 10 }): Promise<ScansResponse> {
   const query = typeof params === 'number' ? { limit: params } : params
   return request<ScansResponse>('/scans', {}, { ...query })

@@ -1066,6 +1066,137 @@ dd {
   min-width: 240px;
 }
 
+.reports-view {
+  display: grid;
+  gap: 16px;
+}
+
+.report-note {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  color: var(--muted);
+  border: 1px solid rgba(244, 184, 74, 0.28);
+  border-radius: 8px;
+  background: var(--amber-bg);
+  font-size: 13px;
+}
+
+.report-note code {
+  color: var(--heading);
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.report-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.report-card {
+  min-width: 0;
+  min-height: 102px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 13, 16, 0.32);
+}
+
+.report-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.report-card strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--heading);
+  font-size: 24px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.reports-table {
+  min-width: 1320px;
+}
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 260px;
+}
+
+.report-path-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-path-badge--available {
+  color: var(--green);
+  background: var(--green-bg);
+  border-color: rgba(53, 208, 127, 0.45);
+}
+
+.report-path-badge--missing {
+  color: var(--muted);
+  background: rgba(143, 162, 160, 0.08);
+}
+
+.report-metadata-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.report-metadata-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.report-metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.report-metadata-grid > div,
+.report-metadata-section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 13, 16, 0.32);
+}
+
+.report-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.report-metadata-section h3 {
+  margin: 0 0 12px;
+  color: var(--heading);
+  font-size: 15px;
+}
+
 .placeholder-panel {
   min-height: 148px;
 }
@@ -1089,7 +1220,10 @@ dd {
   .risk-chart-grid,
   .risk-context-grid,
   .trend-metric-grid,
-  .trend-summary-grid {
+  .trend-summary-grid,
+  .report-card-grid,
+  .report-metadata-grid,
+  .report-section-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1125,6 +1259,9 @@ dd {
   .trend-metric-grid,
   .trend-summary-grid,
   .trend-comparison-grid,
+  .report-card-grid,
+  .report-metadata-grid,
+  .report-section-grid,
   .top-risk-item dl,
   .context-card__grid {
     grid-template-columns: 1fr;

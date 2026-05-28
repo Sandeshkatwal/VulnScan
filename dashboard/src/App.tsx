@@ -16,6 +16,7 @@ import { FindingDetailDrawer } from './components/FindingDetailDrawer'
 import { JobDetails } from './components/JobDetails'
 import { JobsTable, statusTone } from './components/JobsTable'
 import { Layout } from './components/Layout'
+import { ReportsView } from './components/ReportsView'
 import { RiskOverview } from './components/RiskOverview'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
@@ -479,9 +480,12 @@ function App() {
           <ScansTable scans={state.scans} loading={state.loading && state.scans.length === 0} error={state.scansError} />
         </article>
 
-        <article className="panel placeholder-panel">
-          <h2>Reports</h2>
-          <p>Reserved for local JSON, HTML, and export views.</p>
+        <article className="panel panel--wide">
+          <div className="panel-heading">
+            <h2>Reports View</h2>
+            <p>Saved JSON and HTML report paths from completed jobs.</p>
+          </div>
+          <ReportsView apiOnline={healthTone !== 'bad'} />
         </article>
       </section>
       <FindingDetailDrawer finding={selectedFinding} onClose={() => setSelectedFinding(null)} />
