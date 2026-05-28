@@ -111,7 +111,11 @@ export interface Finding {
   active_exploitation_reported?: boolean | string | null
   affected_urls?: string[]
   affected_url?: string
+  affected_host?: string
   asset_criticality?: string
+  asset_environment?: string
+  asset_business_owner?: string
+  asset_tags?: string[]
   remediation_status?: string
   fix_first_rank?: number | null
   [key: string]: unknown

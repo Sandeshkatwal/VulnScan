@@ -12,9 +12,11 @@ import {
 } from './api/client'
 import { ErrorAlert } from './components/ErrorAlert'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
+import { FindingDetailDrawer } from './components/FindingDetailDrawer'
 import { JobDetails } from './components/JobDetails'
 import { JobsTable, statusTone } from './components/JobsTable'
 import { Layout } from './components/Layout'
+import { RiskOverview } from './components/RiskOverview'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
 import { StatusCard } from './components/StatusCard'
@@ -81,11 +83,15 @@ function App() {
   const [resultLoading, setResultLoading] = useState(false)
   const [resultError, setResultError] = useState<string | null>(null)
   const [findings, setFindings] = useState<Finding[]>([])
+  const [riskFindings, setRiskFindings] = useState<Finding[]>([])
+  const [riskLoading, setRiskLoading] = useState(false)
+  const [riskError, setRiskError] = useState<string | null>(null)
   const [findingFilters, setFindingFilters] = useState<FindingFilters>(defaultFindingFilters)
   const [findingPagination, setFindingPagination] = useState<Pagination | null>(null)
   const [findingsLoading, setFindingsLoading] = useState(false)
   const [findingsError, setFindingsError] = useState<string | null>(null)
   const [jobActionError, setJobActionError] = useState<string | null>(null)
+  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
 
   const loadDashboard = useCallback(async () => {
     setState((current) => ({ ...current, loading: true }))
@@ -119,22 +125,6 @@ function App() {
     void loadDashboard()
   }, [loadDashboard])
 
-  const loadSelectedJob = useCallback(
-    async (jobId?: string) => {
-      const id = jobId || selectedJob?.job_id
-      if (!id) return
-      setJobActionError(null)
-      try {
-        const job = await getJob(id)
-        setSelectedJob(job)
-        setState((current) => ({ ...current, jobs: mergeJob(current.jobs, job) }))
-      } catch (caught) {
-        setJobActionError(errorMessage(caught))
-      }
-    },
-    [selectedJob],
-  )
-
   const loadResult = useCallback(async () => {
     if (!selectedJob?.job_id) return
     setResultLoading(true)
@@ -147,6 +137,33 @@ function App() {
       setResultLoading(false)
     }
   }, [selectedJob])
+
+  const loadRiskData = useCallback(async (job: JobSummary) => {
+    if (!job.job_id || job.status !== 'completed') return
+    setRiskLoading(true)
+    setRiskError(null)
+    try {
+      const [resultResponse, findingsResponse] = await Promise.all([
+        getJobResult(job.job_id),
+        getJobFindings(job.job_id, {
+          limit: 500,
+          offset: 0,
+          sort_by: 'priority_score',
+          sort_order: 'desc',
+          compact: false,
+        }),
+      ])
+      setJobResult(resultResponse)
+      setRiskFindings(findingsResponse.findings)
+      if (findingsResponse.message) {
+        setRiskError(findingsResponse.message)
+      }
+    } catch (caught) {
+      setRiskError(errorMessage(caught))
+    } finally {
+      setRiskLoading(false)
+    }
+  }, [])
 
   const loadFindings = useCallback(
     async (filters: FindingFilters = findingFilters) => {
@@ -176,6 +193,103 @@ function App() {
     [findingFilters, selectedJob],
   )
 
+  const loadSelectedJob = useCallback(
+    async (jobId?: string) => {
+      const id = jobId || selectedJob?.job_id
+      if (!id) return
+      setJobActionError(null)
+      try {
+        const job = await getJob(id)
+        setSelectedJob(job)
+        setState((current) => ({ ...current, jobs: mergeJob(current.jobs, job) }))
+        if (job.status === 'completed') {
+          setFindingsLoading(true)
+          try {
+            await Promise.all([
+              loadRiskData(job),
+              getJobFindings(id, defaultFindingFilters).then((response) => {
+                setFindings(response.findings)
+                setFindingPagination(response.pagination || null)
+                setFindingFilters(defaultFindingFilters)
+                if (response.message) setFindingsError(response.message)
+              }),
+            ])
+          } finally {
+            setFindingsLoading(false)
+          }
+        }
+      } catch (caught) {
+        setJobActionError(errorMessage(caught))
+      }
+    },
+    [loadRiskData, selectedJob],
+  )
+
+  const selectAndLoadJob = useCallback(
+    async (job: JobSummary) => {
+      setSelectedJob(job)
+      setJobResult(null)
+      setResultError(null)
+      setFindings([])
+      setRiskFindings([])
+      setFindingPagination(null)
+      setFindingsError(null)
+      setRiskError(null)
+      setJobActionError(null)
+      setSelectedFinding(null)
+
+      if (!job.job_id) return
+
+      try {
+        setRiskLoading(true)
+        setFindingsLoading(true)
+        const latestJob = await getJob(job.job_id)
+        setSelectedJob(latestJob)
+        setState((current) => ({ ...current, jobs: mergeJob(current.jobs, latestJob) }))
+        if (latestJob.status !== 'completed') {
+          return
+        }
+        const latestJobId = latestJob.job_id
+        if (!latestJobId) return
+
+        const [resultResponse, listFindingsResponse, riskFindingsResponse] = await Promise.all([
+          getJobResult(latestJobId),
+          getJobFindings(latestJobId, defaultFindingFilters),
+          getJobFindings(latestJobId, {
+            limit: 500,
+            offset: 0,
+            sort_by: 'priority_score',
+            sort_order: 'desc',
+            compact: false,
+          }),
+        ])
+        setJobResult(resultResponse)
+        setFindings(listFindingsResponse.findings)
+        setFindingPagination(listFindingsResponse.pagination || null)
+        setRiskFindings(riskFindingsResponse.findings)
+        setFindingFilters(defaultFindingFilters)
+        if (listFindingsResponse.message) setFindingsError(listFindingsResponse.message)
+        if (riskFindingsResponse.message) setRiskError(riskFindingsResponse.message)
+      } catch (caught) {
+        const message = errorMessage(caught)
+        setJobActionError(message)
+        setRiskError(message)
+      } finally {
+        setRiskLoading(false)
+        setFindingsLoading(false)
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (selectedJob?.job_id || state.loading) return
+    const latestCompleted = state.jobs.find((job) => job.status === 'completed' && job.job_id)
+    if (latestCompleted) {
+      void selectAndLoadJob(latestCompleted)
+    }
+  }, [selectAndLoadJob, selectedJob, state.jobs, state.loading])
+
   async function handleCreateScan(request: ScanRequest): Promise<ScanResponse> {
     const response = await createScan(request)
     await loadDashboard()
@@ -184,7 +298,11 @@ function App() {
       setSelectedJob(job)
       setJobResult(null)
       setFindings([])
+      setRiskFindings([])
       setFindingPagination(null)
+      setRiskError(null)
+      setFindingsError(null)
+      setSelectedFinding(null)
       setJobActionError(null)
       setState((current) => ({ ...current, jobs: mergeJob(current.jobs, job) }))
     }
@@ -192,13 +310,7 @@ function App() {
   }
 
   function handleSelectJob(job: JobSummary) {
-    setSelectedJob(job)
-    setJobResult(null)
-    setResultError(null)
-    setFindings([])
-    setFindingPagination(null)
-    setFindingsError(null)
-    setJobActionError(null)
+    void selectAndLoadJob(job)
   }
 
   function clearFilters() {
@@ -282,6 +394,22 @@ function App() {
 
         <article className="panel panel--wide">
           <div className="panel-heading">
+            <h2>Risk Overview</h2>
+            <p>Visual risk summary for the selected completed job.</p>
+          </div>
+          <RiskOverview
+            job={selectedJob}
+            result={jobResult}
+            findings={riskFindings}
+            loading={riskLoading}
+            error={riskError}
+            apiOnline={healthTone !== 'bad'}
+            onSelectFinding={setSelectedFinding}
+          />
+        </article>
+
+        <article className="panel panel--wide">
+          <div className="panel-heading">
             <h2>Recent Jobs</h2>
             <p>Click a row to inspect status, result, and findings.</p>
           </div>
@@ -330,6 +458,7 @@ function App() {
             onPageChange={updateFindingPage}
             onSort={updateFindingSort}
             onRefresh={() => void loadFindings()}
+            onSelectFinding={setSelectedFinding}
           />
         </article>
 
@@ -342,10 +471,6 @@ function App() {
         </article>
 
         <article className="panel placeholder-panel">
-          <h2>Risk Overview</h2>
-          <p>Reserved for Version 16.x risk scoring and asset context visuals.</p>
-        </article>
-        <article className="panel placeholder-panel">
           <h2>Trends</h2>
           <p>Reserved for prioritisation and remediation trend tracking.</p>
         </article>
@@ -354,6 +479,7 @@ function App() {
           <p>Reserved for local JSON, HTML, and export views.</p>
         </article>
       </section>
+      <FindingDetailDrawer finding={selectedFinding} onClose={() => setSelectedFinding(null)} />
     </Layout>
   )
 }

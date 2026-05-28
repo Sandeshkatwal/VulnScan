@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-Version 16.2 adds a read-only vulnerability list and finding detail UI for the VulScan API. It is for local development only and should be used with the API bound to `127.0.0.1`.
+Version 16.3 adds a Risk Overview for completed scan jobs. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
 
 ## Start The API
 
@@ -63,6 +63,20 @@ The dashboard can then refresh job status, load result summaries, and load/filte
 
 The dashboard does not support credentialed scans, SSH credentials, Windows credentials, API key entry, token entry, private key entry, exploit options, brute forcing, or active web attack options.
 
+## Review Risk Overview
+
+Select a completed job to populate the Risk Overview. If no job is selected, the dashboard will use the latest completed job when result and finding data can be loaded.
+
+The Risk Overview uses loaded findings and the selected job result data to show:
+
+- Total findings, Critical/High findings, Fix First findings, highest priority score, highest risk score, exploit metadata count, CVE finding count, and asset criticality.
+- Severity, priority, and source distributions.
+- Top risk findings sorted by priority score, risk score, then severity fallback.
+- Trend summary when scans were created with priority trends and saved history.
+- Asset context when scans use asset criticality data.
+
+Trend cards need scans created with priority trends and saved history, such as `--priority-trends` and `--save-db` in the CLI flow. Asset context cards need asset criticality data. The Risk Overview is read-only and includes no exploit or credential controls.
+
 ## Review Vulnerabilities
 
 Select a completed job, then load findings. The vulnerability list supports:
@@ -84,4 +98,4 @@ npm run build
 
 ## Scope
 
-The Version 16.2 dashboard shows API health, version metadata, safe scan job creation, recent jobs, selected job details, result summaries, recent scans, a vulnerability list, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.
+The Version 16.3 dashboard shows API health, version metadata, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, recent scans, a vulnerability list, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.

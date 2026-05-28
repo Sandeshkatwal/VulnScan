@@ -731,6 +731,201 @@ dd {
   font-size: 28px;
 }
 
+.risk-overview {
+  display: grid;
+  gap: 16px;
+}
+
+.risk-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.risk-metric-card,
+.distribution-card,
+.context-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 13, 16, 0.32);
+}
+
+.risk-metric-card {
+  min-height: 108px;
+  padding: 14px;
+}
+
+.risk-metric-card span,
+.risk-metric-card small {
+  display: block;
+  color: var(--muted);
+}
+
+.risk-metric-card span {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.risk-metric-card strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--heading);
+  font-size: 28px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.risk-metric-card small {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.risk-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.distribution-card,
+.context-card {
+  padding: 14px;
+}
+
+.distribution-card h3,
+.context-card h3 {
+  margin: 0 0 12px;
+  color: var(--heading);
+  font-size: 15px;
+}
+
+.distribution-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.distribution-bar {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.8fr) minmax(120px, 1.8fr) 36px;
+  gap: 10px;
+  align-items: center;
+}
+
+.distribution-bar span,
+.distribution-list span {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.distribution-bar div {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(111, 183, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(111, 183, 255, 0.08);
+}
+
+.distribution-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+}
+
+.distribution-bar strong,
+.distribution-list strong {
+  color: var(--heading);
+  font-size: 13px;
+  text-align: right;
+}
+
+.distribution-list {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.distribution-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.risk-context-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.top-risk-list {
+  display: grid;
+  gap: 10px;
+}
+
+.top-risk-item {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+  padding: 12px;
+  color: var(--text);
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(17, 26, 31, 0.68);
+}
+
+.top-risk-item:hover,
+.top-risk-item:focus-visible {
+  border-color: var(--blue);
+  outline: none;
+}
+
+.top-risk-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.top-risk-item__header strong {
+  color: var(--heading);
+  overflow-wrap: anywhere;
+}
+
+.top-risk-item dl,
+.context-card__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.top-risk-item dl > div,
+.context-card__grid > div {
+  min-width: 0;
+}
+
+.top-risk-item p {
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.context-card__message {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+
 .placeholder-panel {
   min-height: 148px;
 }
@@ -749,7 +944,10 @@ dd {
   }
 
   .filter-bar,
-  .detail-grid {
+  .detail-grid,
+  .risk-metric-grid,
+  .risk-chart-grid,
+  .risk-context-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -778,7 +976,12 @@ dd {
   .job-details dl,
   .result-summary dl,
   .filter-bar,
-  .detail-grid {
+  .detail-grid,
+  .risk-metric-grid,
+  .risk-chart-grid,
+  .risk-context-grid,
+  .top-risk-item dl,
+  .context-card__grid {
     grid-template-columns: 1fr;
   }
 
