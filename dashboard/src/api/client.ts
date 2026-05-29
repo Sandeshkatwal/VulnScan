@@ -9,6 +9,12 @@ import type {
   ReportMetadataResponse,
   ReportsQuery,
   ReportsResponse,
+  RemediationQuery,
+  RemediationRecordResponse,
+  RemediationResponse,
+  RemediationSummary,
+  RemediationUpdatePayload,
+  RemediationUpdateResponse,
   ScanRequest,
   ScanResponse,
   ScansQuery,
@@ -112,6 +118,29 @@ export function getJobFindings(
 
 export function getReports(params: ReportsQuery = { limit: 20 }): Promise<ReportsResponse> {
   return request<ReportsResponse>('/reports', {}, { ...params })
+}
+
+export function getRemediation(params: RemediationQuery = { limit: 20 }): Promise<RemediationResponse> {
+  return request<RemediationResponse>('/remediation', {}, { ...params })
+}
+
+export function getRemediationSummary(): Promise<RemediationSummary> {
+  return request<RemediationSummary>('/remediation/summary')
+}
+
+export function getRemediationRecord(findingKey: string): Promise<RemediationRecordResponse> {
+  return request<RemediationRecordResponse>(`/remediation/${encodeURIComponent(findingKey)}`)
+}
+
+export function updateRemediation(
+  findingKey: string,
+  payload: RemediationUpdatePayload,
+): Promise<RemediationUpdateResponse> {
+  return request<RemediationUpdateResponse>(`/remediation/${encodeURIComponent(findingKey)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 }
 
 export function getReportMetadata(reportId: string): Promise<ReportMetadataResponse> {

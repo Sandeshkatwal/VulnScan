@@ -121,6 +121,29 @@ class FindingResponse(StrictApiModel):
     )
 
 
+class RemediationUpdateRequest(StrictApiModel):
+    """Tracking-only remediation status update."""
+
+    status: str = Field(..., description="Tracking status only. Does not execute remediation.", examples=["in_progress"])
+    note: str | None = Field(None, max_length=1000, description="Local tracking note. Do not include secrets.", examples=["Reviewing remediation options."])
+    owner: str | None = Field(None, max_length=255, description="Optional local owner note.", examples=["security-team"])
+    due_date: str | None = Field(None, max_length=64, description="Optional ISO date or datetime.", examples=["2026-06-15"])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "status": "in_progress",
+                    "note": "Reviewing remediation options.",
+                    "owner": "security-team",
+                    "due_date": "2026-06-15",
+                }
+            ]
+        },
+    )
+
+
 class ErrorResponse(StrictApiModel):
     error: str | None = Field(None, description="Short safe error category.", examples=["Request failed."])
     detail: str | None = Field(None, description="User-facing safe error detail without tracebacks or secrets.", examples=["Invalid or missing API key."])

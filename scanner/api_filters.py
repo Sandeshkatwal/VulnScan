@@ -23,6 +23,10 @@ COMPACT_FINDING_FIELDS = (
     "priority_score",
     "priority_label",
     "recommendation",
+    "finding_key",
+    "remediation_status",
+    "remediation_owner",
+    "remediation_due_date",
 )
 
 

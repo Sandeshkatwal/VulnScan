@@ -162,6 +162,8 @@ Version 16.7 adds safe local report access for the dashboard. `GET /reports` lis
 
 The dashboard Settings page includes an API connection manager for `/health`, `/version`, and a protected `GET /jobs?limit=1` test. It shows whether an API key is configured, but never displays the key. The Reports View uses authenticated fetch downloads when report URLs are available, which avoids the browser limitation where `localhost` pages cannot reliably open local Windows file paths directly.
 
+Version 16.8 adds dashboard remediation tracking. Remediation API endpoints and the dashboard Remediation section update local tracking status, owner, due date, and notes only. They do not run commands, patch systems, restart services, connect to targets, or modify remote systems. Notes should not contain passwords, tokens, API keys, private keys, secrets, or credentials.
+
 OpenAPI docs are available at `http://127.0.0.1:8088/docs`, and the raw schema is available at `http://127.0.0.1:8088/openapi.json`. Local client examples are in `examples\api\curl_examples.md`, `examples\api\powershell_examples.md`, and `examples\api\python_client.py`.
 
 Basic API examples:
@@ -180,6 +182,8 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jo
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?priority_label=Fix%20First&compact=true"
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?min_priority_score=75&sort_by=priority_score&sort_order=desc"
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/reports
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/remediation/summary
+curl -X PUT http://127.0.0.1:8088/remediation/FINDING_KEY -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"status\":\"in_progress\",\"note\":\"Reviewing remediation options.\"}"
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/exports/findings?format=csv&severity=Medium"
 ```
 

@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-Version 16.7 adds a Settings/API connection manager and API-backed report access for the local dashboard. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
+Version 16.8 adds a remediation workflow view for local tracking status and notes. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
 
 ## Start The API
 
@@ -58,6 +58,7 @@ Version 16.6 organises the dashboard into:
 - Risk: risk overview, severity distribution, priority distribution, source distribution, and top risk findings.
 - Trends: prioritisation trends, trend details, and comparison panels.
 - Reports: saved report paths, report metadata, safe copy controls, and API-backed view/download actions when report URLs are available.
+- Remediation: tracking-only remediation status, owner, due date, and notes.
 - Settings: API URL, API key configured/not configured status, connection tests, protected endpoint test, refresh interval preference, local dashboard mode, backend docs, and OpenAPI links.
 
 The dashboard keeps selected job, loaded result, loaded findings, and filter state while switching sections. API keys are configured through `.env`; the dashboard shows only whether a key is configured and never displays the key value.
@@ -140,6 +141,14 @@ Select a completed job, then load findings. The vulnerability list supports:
 
 The vulnerability list is read-only. It does not add exploit or credential controls.
 
+## Track Remediation
+
+Version 16.8 adds a Remediation section for local tracking only. It shows summary counts for Open, In Progress, Fixed, Accepted Risk, and False Positive records, plus a filterable table with title, target, severity, priority, source, owner, due date, and update time.
+
+You can update a finding status, owner, due date, and note from the Remediation section or from the finding detail drawer when a finding has a `finding_key`. Status updates are stored in the local SQLite remediation tables only.
+
+VulScan does not automatically patch systems, restart services, execute commands, connect to targets, or modify remote systems. Remediation notes should not contain passwords, tokens, API keys, private keys, secrets, or credential material. API key protection applies when configured.
+
 ## Build Check
 
 ```powershell
@@ -149,4 +158,4 @@ npm run build
 
 ## Scope
 
-The Version 16.7 dashboard shows API health, version metadata, sidebar navigation, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View with safe API report access, recent scans, a vulnerability list, settings, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.
+The Version 16.8 dashboard shows API health, version metadata, sidebar navigation, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View with safe API report access, remediation tracking, recent scans, a vulnerability list, settings, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, command execution, automatic patching, or stored secrets.

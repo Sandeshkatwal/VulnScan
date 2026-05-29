@@ -4,6 +4,8 @@ Version 16.1 adds local dashboard scan job controls for authorised VulScan workf
 
 Version 16.7 adds safe report access endpoints for local dashboard report viewing and downloads. Report endpoints serve only `.json` and `.html` files that resolve inside the VulScan `reports` directory.
 
+Version 16.8 adds remediation tracking endpoints. They update local status and notes only; they do not execute remediation, run commands, connect to targets, restart services, or patch systems.
+
 The API binds to `127.0.0.1` by default, does not enable broad CORS, does not expose credentialed SSH or Windows scans, and does not accept passwords, tokens, private keys, API keys, authorization headers, or secrets in scan requests.
 
 ## Local Dashboard
@@ -125,6 +127,10 @@ When `VULSCAN_API_KEY` is configured, these endpoints require a valid key:
 - `GET /reports/{report_id}/metadata`
 - `GET /reports/{report_id}/download`
 - `GET /reports/{report_id}/view`
+- `GET /remediation`
+- `GET /remediation/summary`
+- `GET /remediation/{finding_key}`
+- `PUT /remediation/{finding_key}`
 - `GET /exports/findings`
 
 Missing or incorrect keys return:
@@ -287,6 +293,23 @@ Each report entry includes `report_id`, `filename`, `type`, `target`, `created_a
 
 Report IDs are safe URL identifiers that map only to known files under the configured reports directory. The API rejects path traversal, raw file paths, unknown IDs, unsupported suffixes, and files outside `reports`. It serves only `.json` and `.html` report files. When `VULSCAN_API_KEY` is configured, report endpoints require the same API key protection as jobs and scans.
 
+## Remediation
+
+```powershell
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/remediation/summary
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/remediation?status=open&limit=20"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/remediation/FINDING_KEY
+curl -X PUT http://127.0.0.1:8088/remediation/FINDING_KEY -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"status\":\"in_progress\",\"note\":\"Reviewing remediation options.\"}"
+```
+
+`GET /remediation` lists local remediation tracking records with optional filters for `target`, `status`, `severity`, `source`, and `priority_label`, plus `limit` and `offset` pagination. Allowed status values are `open`, `in_progress`, `fixed`, `accepted_risk`, and `false_positive`.
+
+`GET /remediation/summary` returns `open_count`, `in_progress_count`, `fixed_count`, `accepted_risk_count`, `false_positive_count`, `overdue_count`, and `total_count`.
+
+`GET /remediation/{finding_key}` returns one remediation record and recent local status history. `PUT /remediation/{finding_key}` updates tracking status, note, owner, and due date only. Notes are limited to 1000 characters and must not contain passwords, tokens, API keys, private keys, secrets, or credential-like content.
+
+Remediation endpoints use stable finding keys exposed in findings responses as `finding_key`. If no key is available for a finding, dashboard remediation tracking is unavailable for that item until it is present in local saved data.
+
 ## Get Job Result
 
 ```powershell
@@ -376,6 +399,8 @@ The endpoint reuses existing export logic and returns export metadata, including
 - Result payload availability depends on saved JSON reports or saved scan history.
 - Report view and download endpoints serve only `.json` and `.html` files inside the local `reports` directory.
 - Report endpoints do not accept raw file paths and block path traversal.
+- Remediation endpoints are tracking-only and never execute commands on targets.
+- Remediation notes should not contain secrets or credentials.
 - Credentialed SSH and Windows scans are not exposed through the API.
 - API request models do not include password, token, secret, private key, API key, bearer, or authorization fields.
 - The API authentication header is checked separately and is not copied into scan request data.

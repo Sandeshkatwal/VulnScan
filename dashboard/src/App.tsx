@@ -7,8 +7,10 @@ import {
   getJobFindings,
   getJobResult,
   getJobs,
+  getRemediationRecord,
   getScans,
   getVersion,
+  updateRemediation,
 } from './api/client'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ErrorAlert } from './components/ErrorAlert'
@@ -18,6 +20,7 @@ import { JobDetails } from './components/JobDetails'
 import { JobsTable, statusTone } from './components/JobsTable'
 import { Layout } from './components/Layout'
 import { ReportsView } from './components/ReportsView'
+import { RemediationView } from './components/RemediationView'
 import { RiskOverview } from './components/RiskOverview'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
@@ -32,13 +35,15 @@ import type {
   JobResultResponse,
   JobSummary,
   Pagination,
+  RemediationRecord,
+  RemediationUpdatePayload,
   ScanRequest,
   ScanResponse,
   ScanSummary,
   VersionResponse,
 } from './types/api'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -77,6 +82,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'risk', label: 'Risk' },
   { id: 'trends', label: 'Trends' },
   { id: 'reports', label: 'Reports' },
+  { id: 'remediation', label: 'Remediation' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -104,6 +110,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   reports: {
     title: 'Reports',
     description: 'Saved JSON and HTML report paths from completed jobs.',
+  },
+  remediation: {
+    title: 'Remediation',
+    description: 'Tracking-only remediation status, owners, due dates, and notes.',
   },
   settings: {
     title: 'Settings',
@@ -139,6 +149,10 @@ function App() {
   const [findingsError, setFindingsError] = useState<string | null>(null)
   const [jobActionError, setJobActionError] = useState<string | null>(null)
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
+  const [selectedRemediation, setSelectedRemediation] = useState<RemediationRecord | null>(null)
+  const [remediationLoading, setRemediationLoading] = useState(false)
+  const [remediationError, setRemediationError] = useState<string | null>(null)
+  const [remediationMessage, setRemediationMessage] = useState<string | null>(null)
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview')
 
   const loadDashboard = useCallback(async () => {
@@ -285,6 +299,7 @@ function App() {
       setRiskError(null)
       setJobActionError(null)
       setSelectedFinding(null)
+      setSelectedRemediation(null)
 
       if (!job.job_id) return
 
@@ -351,6 +366,7 @@ function App() {
       setRiskError(null)
       setFindingsError(null)
       setSelectedFinding(null)
+      setSelectedRemediation(null)
       setJobActionError(null)
       setState((current) => ({ ...current, jobs: mergeJob(current.jobs, job) }))
     }
@@ -359,6 +375,44 @@ function App() {
 
   function handleSelectJob(job: JobSummary) {
     void selectAndLoadJob(job)
+  }
+
+  async function handleSelectFinding(finding: Finding) {
+    setSelectedFinding(finding)
+    setSelectedRemediation(null)
+    setRemediationError(null)
+    setRemediationMessage(null)
+    const findingKey = String(finding.finding_key || finding.remediation_fingerprint || '')
+    if (!findingKey) {
+      setRemediationError('Finding key is missing, remediation tracking is unavailable for this item.')
+      return
+    }
+    setRemediationLoading(true)
+    try {
+      const response = await getRemediationRecord(findingKey)
+      setSelectedRemediation(response.record || null)
+    } catch (caught) {
+      setRemediationError(errorMessage(caught))
+    } finally {
+      setRemediationLoading(false)
+    }
+  }
+
+  async function handleUpdateFindingRemediation(findingKey: string, payload: RemediationUpdatePayload) {
+    setRemediationLoading(true)
+    setRemediationError(null)
+    setRemediationMessage(null)
+    try {
+      const response = await updateRemediation(findingKey, payload)
+      setSelectedRemediation(response.record || null)
+      setRemediationMessage('Remediation tracking updated.')
+      void loadFindings()
+      if (selectedJob?.status === 'completed') void loadRiskData(selectedJob)
+    } catch (caught) {
+      setRemediationError(errorMessage(caught))
+    } finally {
+      setRemediationLoading(false)
+    }
   }
 
   function clearFilters() {
@@ -517,7 +571,7 @@ function App() {
           onPageChange={updateFindingPage}
           onSort={updateFindingSort}
           onRefresh={() => void loadFindings()}
-          onSelectFinding={setSelectedFinding}
+          onSelectFinding={(finding) => void handleSelectFinding(finding)}
         />
       </article>
     )
@@ -533,7 +587,7 @@ function App() {
           loading={riskLoading}
           error={riskError}
           apiOnline={healthTone !== 'bad'}
-          onSelectFinding={setSelectedFinding}
+          onSelectFinding={(finding) => void handleSelectFinding(finding)}
         />
       </article>
     )
@@ -551,6 +605,14 @@ function App() {
     return (
       <article className="panel panel--wide">
         <ReportsView apiOnline={healthTone !== 'bad'} />
+      </article>
+    )
+  }
+
+  function renderRemediation() {
+    return (
+      <article className="panel panel--wide">
+        <RemediationView apiOnline={healthTone !== 'bad'} />
       </article>
     )
   }
@@ -588,6 +650,7 @@ function App() {
     if (currentSection === 'risk') return renderRisk()
     if (currentSection === 'trends') return renderTrends()
     if (currentSection === 'reports') return renderReports()
+    if (currentSection === 'remediation') return renderRemediation()
     return renderSettings()
   }
 
@@ -607,7 +670,15 @@ function App() {
     >
       <SectionHeader title={section.title} description={section.description} />
       {renderCurrentSection()}
-      <FindingDetailDrawer finding={selectedFinding} onClose={() => setSelectedFinding(null)} />
+      <FindingDetailDrawer
+        finding={selectedFinding}
+        remediationRecord={selectedRemediation}
+        remediationLoading={remediationLoading}
+        remediationError={remediationError}
+        remediationMessage={remediationMessage}
+        onUpdateRemediation={handleUpdateFindingRemediation}
+        onClose={() => setSelectedFinding(null)}
+      />
     </Layout>
   )
 }

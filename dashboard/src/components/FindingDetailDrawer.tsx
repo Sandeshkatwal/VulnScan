@@ -1,9 +1,16 @@
-import type { Finding } from '../types/api'
+import type { Finding, RemediationRecord, RemediationUpdatePayload } from '../types/api'
 import { formatValue, getCve, getCvss, getEpss, getExploitAvailable } from '../utils/format'
 import { FindingBadge } from './FindingBadge'
+import { RemediationStatusBadge } from './RemediationStatusBadge'
+import { RemediationUpdateForm } from './RemediationUpdateForm'
 
 interface FindingDetailDrawerProps {
   finding: Finding | null
+  remediationRecord?: RemediationRecord | null
+  remediationLoading?: boolean
+  remediationError?: string | null
+  remediationMessage?: string | null
+  onUpdateRemediation?: (findingKey: string, payload: RemediationUpdatePayload) => Promise<void> | void
   onClose: () => void
 }
 
@@ -42,8 +49,17 @@ function redactDisplayObject(value: unknown): unknown {
   )
 }
 
-export function FindingDetailDrawer({ finding, onClose }: FindingDetailDrawerProps) {
+export function FindingDetailDrawer({
+  finding,
+  remediationRecord,
+  remediationLoading = false,
+  remediationError,
+  remediationMessage,
+  onUpdateRemediation = () => undefined,
+  onClose,
+}: FindingDetailDrawerProps) {
   if (!finding) return null
+  const findingKey = String(finding.finding_key || finding.remediation_fingerprint || '')
 
   return (
     <aside className="detail-drawer" aria-label="Finding details">
@@ -54,6 +70,7 @@ export function FindingDetailDrawer({ finding, onClose }: FindingDetailDrawerPro
             <FindingBadge type="severity" value={finding.severity} />
             <FindingBadge type="priority" value={finding.priority_label} />
             <FindingBadge type="exploit" value={getExploitAvailable(finding)} />
+            <RemediationStatusBadge status={remediationRecord?.status || finding.remediation_status} />
           </div>
         </div>
         <button className="ghost-button" type="button" onClick={onClose}>
@@ -88,7 +105,27 @@ export function FindingDetailDrawer({ finding, onClose }: FindingDetailDrawerPro
         <Field label="Affected URLs" value={finding.affected_urls ?? finding.affected_url} />
         <Field label="Asset Criticality" value={finding.asset_criticality} />
         <Field label="Remediation Status" value={finding.remediation_status} />
+        <Field label="Remediation Owner" value={remediationRecord?.owner ?? finding.remediation_owner} />
+        <Field label="Remediation Due Date" value={remediationRecord?.due_date ?? finding.remediation_due_date} />
+        <Field label="Latest Remediation Note" value={remediationRecord?.note ?? finding.remediation_note} />
       </dl>
+      <div className="detail-remediation-panel">
+        <h4>Remediation Tracking</h4>
+        {remediationMessage ? <div className="success-message">{remediationMessage}</div> : null}
+        {remediationError ? <div className="panel-message panel-message--error">{remediationError}</div> : null}
+        <RemediationUpdateForm
+          record={remediationRecord || {
+            finding_key: findingKey,
+            status: finding.remediation_status || 'open',
+            owner: finding.remediation_owner,
+            due_date: finding.remediation_due_date,
+            note: finding.remediation_note,
+          }}
+          findingKey={findingKey}
+          loading={remediationLoading}
+          onSubmit={onUpdateRemediation}
+        />
+      </div>
     </aside>
   )
 }

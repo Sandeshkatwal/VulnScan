@@ -153,19 +153,43 @@ def init_db(db_path: Path = DB_PATH) -> None:
                 finding_id TEXT NULL,
                 target TEXT NULL,
                 title TEXT NOT NULL,
+                source TEXT NULL,
+                category TEXT NULL,
+                severity TEXT NULL,
+                priority_label TEXT NULL,
                 status TEXT NOT NULL,
                 owner TEXT NULL,
+                due_date TEXT NULL,
                 note TEXT NULL,
                 first_seen TEXT NULL,
                 last_seen TEXT NULL,
+                created_at TEXT NULL,
                 updated_at TEXT NOT NULL
             )
             """
         )
+        _ensure_column(connection, "remediation_status", "source", "TEXT NULL")
+        _ensure_column(connection, "remediation_status", "category", "TEXT NULL")
+        _ensure_column(connection, "remediation_status", "severity", "TEXT NULL")
+        _ensure_column(connection, "remediation_status", "priority_label", "TEXT NULL")
+        _ensure_column(connection, "remediation_status", "due_date", "TEXT NULL")
+        _ensure_column(connection, "remediation_status", "created_at", "TEXT NULL")
         connection.execute(
             """
             CREATE UNIQUE INDEX IF NOT EXISTS idx_remediation_status_fingerprint
             ON remediation_status (finding_fingerprint)
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS remediation_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                finding_fingerprint TEXT NOT NULL,
+                old_status TEXT NULL,
+                new_status TEXT NOT NULL,
+                note TEXT NULL,
+                updated_at TEXT NOT NULL
+            )
             """
         )
         connection.execute(

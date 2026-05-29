@@ -68,8 +68,9 @@ def ensure_remediation_records_for_scan(scan_result: dict[str, Any]) -> None:
                     """
                     INSERT INTO remediation_status (
                         finding_fingerprint, finding_id, target, title, status,
-                        owner, note, first_seen, last_seen, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        source, category, severity, priority_label, owner, note,
+                        first_seen, last_seen, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         fingerprint,
@@ -77,10 +78,15 @@ def ensure_remediation_records_for_scan(scan_result: dict[str, Any]) -> None:
                         target,
                         finding.get("title"),
                         "Open",
+                        finding.get("source"),
+                        finding.get("category"),
+                        finding.get("severity"),
+                        finding.get("priority_label"),
                         None,
                         None,
                         observed_at,
                         observed_at,
+                        _now(),
                         _now(),
                     ),
                 )
@@ -99,6 +105,7 @@ def ensure_remediation_records_for_scan(scan_result: dict[str, Any]) -> None:
                 """
                 UPDATE remediation_status
                 SET finding_id = ?, target = ?, title = ?, status = ?,
+                    source = ?, category = ?, severity = ?, priority_label = ?,
                     note = ?, last_seen = ?, updated_at = ?
                 WHERE finding_fingerprint = ?
                 """,
@@ -107,6 +114,10 @@ def ensure_remediation_records_for_scan(scan_result: dict[str, Any]) -> None:
                     target,
                     finding.get("title"),
                     status,
+                    finding.get("source"),
+                    finding.get("category"),
+                    finding.get("severity"),
+                    finding.get("priority_label"),
                     note,
                     observed_at,
                     _now(),

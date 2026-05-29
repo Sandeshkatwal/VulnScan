@@ -25,11 +25,20 @@ from scanner.api_filters import (
     validate_sort_order,
 )
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
+from scanner.api_models import RemediationUpdateRequest
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
+from scanner.api_remediation import (
+    attach_finding_keys,
+    get_remediation_record,
+    get_remediation_summary,
+    list_remediation_records,
+    update_remediation_record,
+)
 from scanner.api_job_store import ApiJobStore, UNAVAILABLE_FINDINGS_MESSAGE, UNAVAILABLE_RESULT_MESSAGE, sanitize_request_payload
 from scanner.api_jobs import run_scan_job
 from scanner.api_runner import run_scan_pipeline
 from scanner.api_security import require_api_key
+from scanner.database import DB_PATH
 from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
@@ -57,6 +66,9 @@ PROTECTED_PATHS = {
     "/reports/{report_id}/metadata",
     "/reports/{report_id}/download",
     "/reports/{report_id}/view",
+    "/remediation",
+    "/remediation/summary",
+    "/remediation/{finding_key}",
 }
 TAGS_METADATA = [
     {"name": "Health", "description": "Public local API health checks."},
@@ -66,6 +78,7 @@ TAGS_METADATA = [
     {"name": "Findings", "description": "Saved finding retrieval with filtering, sorting, pagination, and compact responses."},
     {"name": "Exports", "description": "Local export metadata for saved findings."},
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
+    {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
 ]
 SCAN_REQUEST_EXAMPLE = {
     "target": "127.0.0.1",
@@ -105,11 +118,17 @@ FINDING_LIST_EXAMPLE = {
 ERROR_EXAMPLE = {"detail": "Invalid or missing API key."}
 
 
-def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore | None = None, reports_dir: Path | str = Path("reports")) -> FastAPI:
+def create_app(
+    scan_executor: ScanExecutor | None = None,
+    job_store: ApiJobStore | None = None,
+    reports_dir: Path | str = Path("reports"),
+    remediation_db_path: Path | str | None = None,
+) -> FastAPI:
     """Create the local VulScan FastAPI app."""
     executor = scan_executor or run_scan_pipeline
     store = job_store or ApiJobStore()
     safe_reports_dir = Path(reports_dir)
+    safe_remediation_db_path = Path(remediation_db_path) if remediation_db_path is not None else DB_PATH
     store.mark_interrupted_jobs()
     app = FastAPI(
         title="VulScan API",
@@ -127,7 +146,7 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         CORSMiddleware,
         allow_origins=list(LOCAL_DASHBOARD_ORIGINS),
         allow_credentials=False,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "OPTIONS"],
         allow_headers=["Content-Type", "X-VulScan-API-Key", "Authorization"],
     )
 
@@ -304,6 +323,8 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             sort_by=sort_by,
             sort_order=sort_order,
             compact=compact,
+            target=None,
+            remediation_db_path=safe_remediation_db_path,
         )
 
     @app.get(
@@ -455,6 +476,8 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             sort_by=sort_by,
             sort_order=sort_order,
             compact=compact,
+            target=str(job.get("target") or ""),
+            remediation_db_path=safe_remediation_db_path,
         )
 
     @app.get(
@@ -497,6 +520,96 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         if response.get("path") is not None:
             response["export_path"] = str(response.pop("path"))
         return response
+
+    @app.get(
+        "/remediation",
+        dependencies=[Depends(require_api_key)],
+        tags=["Remediation"],
+        summary="List remediation tracking records",
+        description="Lists local remediation tracking records. This endpoint does not execute remediation or connect to targets.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_remediation(
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        target: str | None = Query(default=None, min_length=1, max_length=255),
+        status: str | None = Query(default=None, pattern="^(open|in_progress|fixed|accepted_risk|false_positive)$"),
+        severity: str | None = Query(default=None),
+        source: str | None = Query(default=None),
+        priority_label: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        try:
+            records = list_remediation_records(
+                target=target,
+                status=status,
+                severity=severity,
+                source=source,
+                priority_label=priority_label,
+                db_path=safe_remediation_db_path,
+            )
+            page, pagination = paginate_items(records, limit, offset)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "records": page,
+            "pagination": pagination,
+            "filters": active_filters(target=target, status=status, severity=severity, source=source, priority_label=priority_label),
+        }
+
+    @app.get(
+        "/remediation/summary",
+        dependencies=[Depends(require_api_key)],
+        tags=["Remediation"],
+        summary="Get remediation tracking summary",
+        description="Returns local remediation tracking counts. This endpoint does not execute remediation.",
+        responses=ERROR_RESPONSES,
+    )
+    def remediation_summary() -> dict[str, Any]:
+        return get_remediation_summary(db_path=safe_remediation_db_path)
+
+    @app.get(
+        "/remediation/{finding_key}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Remediation"],
+        summary="Get remediation tracking record",
+        description="Returns local remediation tracking status and history for one finding key.",
+        responses=ERROR_RESPONSES,
+    )
+    def remediation_record(finding_key: str) -> dict[str, Any]:
+        record = get_remediation_record(finding_key, db_path=safe_remediation_db_path)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Remediation record was not found.")
+        return {"record": record}
+
+    @app.put(
+        "/remediation/{finding_key}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Remediation"],
+        summary="Update remediation tracking status",
+        description="Updates local remediation tracking status and notes only. Does not run commands, patch systems, or connect to targets.",
+        responses=ERROR_RESPONSES,
+    )
+    def update_remediation(finding_key: str, request: RemediationUpdateRequest) -> dict[str, Any]:
+        try:
+            record = update_remediation_record(
+                finding_key,
+                status=request.status,
+                note=request.note,
+                owner=request.owner,
+                due_date=request.due_date,
+                db_path=safe_remediation_db_path,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if record is None:
+            raise HTTPException(status_code=404, detail="Remediation record was not found.")
+        return {
+            "finding_key": record["finding_key"],
+            "status": record["status"],
+            "updated_at": record["updated_at"],
+            "note": record.get("note"),
+            "record": record,
+        }
 
     @app.get(
         "/reports",
@@ -639,8 +752,11 @@ def _filtered_findings_response(
     sort_by: str | None,
     sort_order: str,
     compact: bool,
+    target: str | None = None,
+    remediation_db_path: Path | str = DB_PATH,
 ) -> dict[str, Any]:
     try:
+        findings = attach_finding_keys(findings, target=target, db_path=remediation_db_path)
         sort_by = validate_sort_by(
             sort_by,
             {"severity", "risk_score", "priority_score", "title", "source", "category"},

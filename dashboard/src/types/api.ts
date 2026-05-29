@@ -119,7 +119,14 @@ export interface Finding {
   asset_environment?: string
   asset_business_owner?: string
   asset_tags?: string[]
+  finding_key?: string
+  remediation_fingerprint?: string
+  remediation_fingerprint_short?: string
   remediation_status?: string
+  remediation_owner?: string | null
+  remediation_due_date?: string | null
+  remediation_note?: string | null
+  remediation_updated_at?: string | null
   fix_first_rank?: number | null
   [key: string]: unknown
 }
@@ -314,4 +321,84 @@ export interface FindingFilters {
   offset?: number
   sort_by?: string
   sort_order?: string
+}
+
+export type RemediationStatus = 'open' | 'in_progress' | 'fixed' | 'accepted_risk' | 'false_positive'
+
+export interface RemediationRecord {
+  finding_key?: string
+  finding_key_short?: string
+  finding_id?: string | null
+  target?: string | null
+  title?: string | null
+  source?: string | null
+  category?: string | null
+  severity?: string | null
+  priority_label?: string | null
+  status?: RemediationStatus | string
+  owner?: string | null
+  due_date?: string | null
+  note?: string | null
+  first_seen?: string | null
+  last_seen?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+  history?: RemediationHistoryItem[]
+  [key: string]: unknown
+}
+
+export interface RemediationHistoryItem {
+  old_status?: RemediationStatus | string
+  new_status?: RemediationStatus | string
+  note?: string | null
+  updated_at?: string | null
+}
+
+export interface RemediationSummary {
+  open_count?: number
+  in_progress_count?: number
+  fixed_count?: number
+  accepted_risk_count?: number
+  false_positive_count?: number
+  overdue_count?: number
+  total_count?: number
+  [key: string]: unknown
+}
+
+export interface RemediationQuery {
+  target?: string
+  status?: RemediationStatus | string
+  severity?: string
+  source?: string
+  priority_label?: string
+  limit?: number
+  offset?: number
+}
+
+export interface RemediationResponse {
+  records: RemediationRecord[]
+  pagination?: Pagination | null
+  filters?: ApiRecord | null
+  [key: string]: unknown
+}
+
+export interface RemediationRecordResponse {
+  record?: RemediationRecord
+  [key: string]: unknown
+}
+
+export interface RemediationUpdatePayload {
+  status: RemediationStatus
+  note?: string
+  owner?: string
+  due_date?: string
+}
+
+export interface RemediationUpdateResponse {
+  finding_key?: string
+  status?: RemediationStatus | string
+  updated_at?: string
+  note?: string | null
+  record?: RemediationRecord
+  [key: string]: unknown
 }
