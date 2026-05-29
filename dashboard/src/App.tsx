@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   apiBaseUrl,
+  apiKeyConfigured,
   createScan,
   getHealth,
   getJob,
@@ -20,6 +21,7 @@ import { ReportsView } from './components/ReportsView'
 import { RiskOverview } from './components/RiskOverview'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
+import { SectionHeader } from './components/SectionHeader'
 import { StatusCard } from './components/StatusCard'
 import { TrendsView } from './components/TrendsView'
 import { VulnerabilityList } from './components/VulnerabilityList'
@@ -35,6 +37,8 @@ import type {
   ScanSummary,
   VersionResponse,
 } from './types/api'
+
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -66,6 +70,47 @@ const defaultFindingFilters: FindingFilters = {
   compact: false,
 }
 
+const navigationItems: Array<{ id: DashboardSection; label: string }> = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'jobs', label: 'Jobs' },
+  { id: 'vulnerabilities', label: 'Vulnerabilities' },
+  { id: 'risk', label: 'Risk' },
+  { id: 'trends', label: 'Trends' },
+  { id: 'reports', label: 'Reports' },
+  { id: 'settings', label: 'Settings' },
+]
+
+const sectionCopy: Record<DashboardSection, { title: string; description: string }> = {
+  overview: {
+    title: 'Overview',
+    description: 'API status, job counts, scan history, and quick prioritisation summary.',
+  },
+  jobs: {
+    title: 'Jobs',
+    description: 'Create safe scan jobs, inspect job status, and load results or findings.',
+  },
+  vulnerabilities: {
+    title: 'Vulnerabilities',
+    description: 'Filter, sort, page, and inspect read-only findings for the selected completed job.',
+  },
+  risk: {
+    title: 'Risk',
+    description: 'Visual risk overview, distributions, and top risk findings.',
+  },
+  trends: {
+    title: 'Trends',
+    description: 'Prioritisation trend comparisons for scans with saved trend data.',
+  },
+  reports: {
+    title: 'Reports',
+    description: 'Saved JSON and HTML report paths from completed jobs.',
+  },
+  settings: {
+    title: 'Settings',
+    description: 'Local API configuration, documentation links, and dashboard mode.',
+  },
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Request failed.'
 }
@@ -94,6 +139,7 @@ function App() {
   const [findingsError, setFindingsError] = useState<string | null>(null)
   const [jobActionError, setJobActionError] = useState<string | null>(null)
   const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
+  const [currentSection, setCurrentSection] = useState<DashboardSection>('overview')
 
   const loadDashboard = useCallback(async () => {
     setState((current) => ({ ...current, loading: true }))
@@ -346,37 +392,73 @@ function App() {
   const completedCount = countJobs(state.jobs, 'completed')
   const failedCount = countJobs(state.jobs, 'failed')
   const healthTone = state.health?.status === 'ok' && !state.apiError ? 'good' : 'bad'
+  const section = sectionCopy[currentSection]
+  const selectedIndicator = selectedJob?.job_id
+    ? `${selectedJob.target || 'Selected target'} / ${selectedJob.status || 'unknown'} / ${selectedJob.job_id}`
+    : 'No job selected'
 
-  return (
-    <Layout
-      apiBaseUrl={apiBaseUrl}
-      health={state.health}
-      version={state.version}
-      apiError={state.apiError}
-      loading={state.loading}
-      onRefresh={loadDashboard}
-    >
-      <section className="overview-grid overview-grid--six" aria-label="Dashboard overview">
-        <StatusCard
-          label="API Health"
-          value={state.health?.status || 'offline'}
-          description={state.version?.api_version ? `API ${state.version.api_version}` : 'Local API status'}
-          tone={healthTone}
-        />
-        <StatusCard label="Recent Jobs" value={state.jobs.length} description="Last 10 API jobs" />
-        <StatusCard label="Queued" value={queuedCount} description="Waiting jobs" tone={queuedCount ? 'warn' : 'neutral'} />
-        <StatusCard label="Running" value={runningCount} description="Active jobs" tone={runningCount ? 'warn' : 'neutral'} />
-        <StatusCard label="Completed" value={completedCount} description="Recent completed jobs" tone="good" />
-        <StatusCard label="Failed" value={failedCount} description="Recent failed jobs" tone={failedCount ? 'bad' : 'neutral'} />
-        <StatusCard
-          label="Selected Job"
-          value={selectedJob?.status || 'none'}
-          description={selectedJob?.job_id || 'No job selected'}
-          tone={statusTone(selectedJob?.status) as 'neutral' | 'good' | 'warn' | 'bad'}
-        />
-        <StatusCard label="Recent Scans" value={state.scans.length} description="Saved scan history" />
-      </section>
+  const overviewCards = (
+    <section className="overview-grid overview-grid--six" aria-label="Dashboard overview">
+      <StatusCard
+        label="API Health"
+        value={state.health?.status || 'offline'}
+        description={state.version?.api_version ? `API ${state.version.api_version}` : 'Local API status'}
+        tone={healthTone}
+      />
+      <StatusCard label="Recent Jobs" value={state.jobs.length} description="Last 10 API jobs" />
+      <StatusCard label="Queued" value={queuedCount} description="Waiting jobs" tone={queuedCount ? 'warn' : 'neutral'} />
+      <StatusCard label="Running" value={runningCount} description="Active jobs" tone={runningCount ? 'warn' : 'neutral'} />
+      <StatusCard label="Completed" value={completedCount} description="Recent completed jobs" tone="good" />
+      <StatusCard label="Failed" value={failedCount} description="Recent failed jobs" tone={failedCount ? 'bad' : 'neutral'} />
+      <StatusCard
+        label="Selected Job"
+        value={selectedJob?.status || 'none'}
+        description={selectedJob?.job_id || 'No job selected'}
+        tone={statusTone(selectedJob?.status) as 'neutral' | 'good' | 'warn' | 'bad'}
+      />
+      <StatusCard label="Recent Scans" value={state.scans.length} description="Saved scan history" />
+    </section>
+  )
 
+  function renderOverview() {
+    return (
+      <>
+        {overviewCards}
+        <section className="content-grid">
+          <article className="panel">
+            <div className="panel-heading">
+              <h2>Quick Risk Summary</h2>
+              <p>Selected job findings after they are loaded.</p>
+            </div>
+            <FindingSummary summary={prioritySummary} loading={findingsLoading} error={findingsError} />
+          </article>
+          <article className="panel">
+            <div className="panel-heading">
+              <h2>Recent Scans</h2>
+              <p>Saved scan history.</p>
+            </div>
+            <ScansTable scans={state.scans} loading={state.loading && state.scans.length === 0} error={state.scansError} />
+          </article>
+          <article className="panel panel--wide">
+            <div className="panel-heading">
+              <h2>Recent Jobs</h2>
+              <p>Select a completed job to populate vulnerabilities, risk, trends, and reports.</p>
+            </div>
+            <JobsTable
+              jobs={state.jobs}
+              loading={state.loading && state.jobs.length === 0}
+              error={state.jobsError}
+              selectedJobId={selectedJob?.job_id}
+              onSelectJob={handleSelectJob}
+            />
+          </article>
+        </section>
+      </>
+    )
+  }
+
+  function renderJobs() {
+    return (
       <section className="content-grid">
         <article className="panel">
           <div className="panel-heading">
@@ -385,53 +467,6 @@ function App() {
           </div>
           <ScanJobForm onSubmit={handleCreateScan} />
         </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <h2>Findings / Priority Summary</h2>
-            <p>Summarises selected job findings after loading them.</p>
-          </div>
-          <FindingSummary summary={prioritySummary} loading={findingsLoading} error={findingsError} />
-        </article>
-
-        <article className="panel panel--wide">
-          <div className="panel-heading">
-            <h2>Risk Overview</h2>
-            <p>Visual risk summary for the selected completed job.</p>
-          </div>
-          <RiskOverview
-            job={selectedJob}
-            result={jobResult}
-            findings={riskFindings}
-            loading={riskLoading}
-            error={riskError}
-            apiOnline={healthTone !== 'bad'}
-            onSelectFinding={setSelectedFinding}
-          />
-        </article>
-
-        <article className="panel panel--wide">
-          <div className="panel-heading">
-            <h2>Trends View</h2>
-            <p>Prioritisation trend data for the selected completed job.</p>
-          </div>
-          <TrendsView job={selectedJob} result={jobResult} resultLoading={resultLoading || riskLoading} resultError={resultError} />
-        </article>
-
-        <article className="panel panel--wide">
-          <div className="panel-heading">
-            <h2>Recent Jobs</h2>
-            <p>Click a row to inspect status, result, and findings.</p>
-          </div>
-          <JobsTable
-            jobs={state.jobs}
-            loading={state.loading && state.jobs.length === 0}
-            error={state.jobsError}
-            selectedJobId={selectedJob?.job_id}
-            onSelectJob={handleSelectJob}
-          />
-        </article>
-
         <article className="panel">
           <div className="panel-heading">
             <h2>Job Details</h2>
@@ -448,46 +483,136 @@ function App() {
             onLoadFindings={() => void loadFindings()}
           />
         </article>
-
         <article className="panel panel--wide">
           <div className="panel-heading">
-            <h2>Vulnerability List</h2>
-            <p>Read-only findings for the selected completed job.</p>
+            <h2>Recent Jobs</h2>
+            <p>Click a row to inspect status, result, and findings.</p>
           </div>
-          <VulnerabilityList
-            findings={findings}
-            filters={findingFilters}
-            pagination={findingPagination}
-            loading={findingsLoading}
-            error={findingsError}
-            selectedJobStatus={selectedJob?.status}
-            hasSelectedJob={Boolean(selectedJob?.job_id)}
-            onFiltersChange={setFindingFilters}
-            onApplyFilters={applyFindingFilters}
-            onClearFilters={clearFilters}
-            onPageChange={updateFindingPage}
-            onSort={updateFindingSort}
-            onRefresh={() => void loadFindings()}
-            onSelectFinding={setSelectedFinding}
+          <JobsTable
+            jobs={state.jobs}
+            loading={state.loading && state.jobs.length === 0}
+            error={state.jobsError}
+            selectedJobId={selectedJob?.job_id}
+            onSelectJob={handleSelectJob}
           />
         </article>
+      </section>
+    )
+  }
 
-        <article className="panel panel--wide">
+  function renderVulnerabilities() {
+    return (
+      <article className="panel panel--wide">
+        <VulnerabilityList
+          findings={findings}
+          filters={findingFilters}
+          pagination={findingPagination}
+          loading={findingsLoading}
+          error={findingsError}
+          selectedJobStatus={selectedJob?.status}
+          hasSelectedJob={Boolean(selectedJob?.job_id)}
+          onFiltersChange={setFindingFilters}
+          onApplyFilters={applyFindingFilters}
+          onClearFilters={clearFilters}
+          onPageChange={updateFindingPage}
+          onSort={updateFindingSort}
+          onRefresh={() => void loadFindings()}
+          onSelectFinding={setSelectedFinding}
+        />
+      </article>
+    )
+  }
+
+  function renderRisk() {
+    return (
+      <article className="panel panel--wide">
+        <RiskOverview
+          job={selectedJob}
+          result={jobResult}
+          findings={riskFindings}
+          loading={riskLoading}
+          error={riskError}
+          apiOnline={healthTone !== 'bad'}
+          onSelectFinding={setSelectedFinding}
+        />
+      </article>
+    )
+  }
+
+  function renderTrends() {
+    return (
+      <article className="panel panel--wide">
+        <TrendsView job={selectedJob} result={jobResult} resultLoading={resultLoading || riskLoading} resultError={resultError} />
+      </article>
+    )
+  }
+
+  function renderReports() {
+    return (
+      <article className="panel panel--wide">
+        <ReportsView apiOnline={healthTone !== 'bad'} />
+      </article>
+    )
+  }
+
+  function renderSettings() {
+    return (
+      <section className="settings-grid">
+        <article className="panel">
           <div className="panel-heading">
-            <h2>Recent Scans</h2>
-            <p>Saved SQLite scan history.</p>
+            <h2>API Configuration</h2>
+            <p>Environment-driven local settings.</p>
           </div>
-          <ScansTable scans={state.scans} loading={state.loading && state.scans.length === 0} error={state.scansError} />
+          <dl className="settings-list">
+            <div><dt>API URL</dt><dd className="mono">{apiBaseUrl}</dd></div>
+            <div><dt>API Key</dt><dd>{apiKeyConfigured ? 'Configured' : 'Not configured'}</dd></div>
+            <div><dt>Dashboard Mode</dt><dd>Local development</dd></div>
+            <div><dt>Backend Docs</dt><dd><a href={`${apiBaseUrl}/docs`} target="_blank" rel="noreferrer">{apiBaseUrl}/docs</a></dd></div>
+            <div><dt>OpenAPI</dt><dd><a href={`${apiBaseUrl}/openapi.json`} target="_blank" rel="noreferrer">{apiBaseUrl}/openapi.json</a></dd></div>
+          </dl>
         </article>
-
-        <article className="panel panel--wide">
+        <article className="panel">
           <div className="panel-heading">
-            <h2>Reports View</h2>
-            <p>Saved JSON and HTML report paths from completed jobs.</p>
+            <h2>Local-Only Notice</h2>
+            <p>Operational boundary for this dashboard.</p>
           </div>
-          <ReportsView apiOnline={healthTone !== 'bad'} />
+          <div className="empty-state">VulScan Dashboard is intended for local authorised testing and development. Do not expose it publicly.</div>
+          <div className="button-row button-row--right">
+            <button className="secondary-button" type="button" onClick={() => void loadDashboard()} disabled={state.loading}>
+              Refresh dashboard data
+            </button>
+          </div>
         </article>
       </section>
+    )
+  }
+
+  function renderCurrentSection() {
+    if (currentSection === 'overview') return renderOverview()
+    if (currentSection === 'jobs') return renderJobs()
+    if (currentSection === 'vulnerabilities') return renderVulnerabilities()
+    if (currentSection === 'risk') return renderRisk()
+    if (currentSection === 'trends') return renderTrends()
+    if (currentSection === 'reports') return renderReports()
+    return renderSettings()
+  }
+
+  return (
+    <Layout
+      activeSection={currentSection}
+      apiBaseUrl={apiBaseUrl}
+      health={state.health}
+      version={state.version}
+      apiError={state.apiError}
+      loading={state.loading}
+      navigationItems={navigationItems}
+      selectedIndicator={selectedIndicator}
+      title={section.title}
+      onRefresh={loadDashboard}
+      onSelectSection={(nextSection) => setCurrentSection(nextSection as DashboardSection)}
+    >
+      <SectionHeader title={section.title} description={section.description} />
+      {renderCurrentSection()}
       <FindingDetailDrawer finding={selectedFinding} onClose={() => setSelectedFinding(null)} />
     </Layout>
   )

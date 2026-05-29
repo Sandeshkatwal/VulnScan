@@ -20,6 +20,7 @@ export const apiBaseUrl = (
 ).replace(/\/+$/, '')
 
 const apiKey = import.meta.env.VITE_VULSCAN_API_KEY
+export const apiKeyConfigured = Boolean(apiKey)
 
 type QueryValue = boolean | number | string | null | undefined
 

@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-Version 16.5 adds a Reports View for completed scan jobs with saved JSON and HTML report paths. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
+Version 16.6 adds sidebar navigation and layout polish for the local dashboard. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
 
 ## Start The API
 
@@ -47,6 +47,20 @@ Open:
 ```text
 http://localhost:5173
 ```
+
+## Dashboard Sections
+
+Version 16.6 organises the dashboard into:
+
+- Overview: API status, main metric cards, recent jobs, recent scans, and quick risk summary.
+- Jobs: safe scan creation, recent jobs, selected job details, result loading, and findings loading.
+- Vulnerabilities: finding filters, findings table, pagination, and finding detail view.
+- Risk: risk overview, severity distribution, priority distribution, source distribution, and top risk findings.
+- Trends: prioritisation trends, trend details, and comparison panels.
+- Reports: saved report paths, report metadata, and safe copy controls.
+- Settings: API URL, API key configured/not configured status, local dashboard mode, backend docs, and OpenAPI links.
+
+The dashboard keeps selected job, loaded result, loaded findings, and filter state while switching sections. API keys are configured through `.env`; the dashboard shows only whether a key is configured and never displays the key value.
 
 ## Create A Safe Scan Job
 
@@ -127,4 +141,4 @@ npm run build
 
 ## Scope
 
-The Version 16.5 dashboard shows API health, version metadata, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View, recent scans, a vulnerability list, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.
+The Version 16.6 dashboard shows API health, version metadata, sidebar navigation, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View, recent scans, a vulnerability list, settings, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.
