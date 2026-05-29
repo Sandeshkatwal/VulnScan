@@ -2,6 +2,8 @@
 
 Version 16.1 adds local dashboard scan job controls for authorised VulScan workflows. The existing API remains local-only and allows narrow CORS access from the Vite development dashboard.
 
+Version 16.7 adds safe report access endpoints for local dashboard report viewing and downloads. Report endpoints serve only `.json` and `.html` files that resolve inside the VulScan `reports` directory.
+
 The API binds to `127.0.0.1` by default, does not enable broad CORS, does not expose credentialed SSH or Windows scans, and does not accept passwords, tokens, private keys, API keys, authorization headers, or secrets in scan requests.
 
 ## Local Dashboard
@@ -119,6 +121,10 @@ When `VULSCAN_API_KEY` is configured, these endpoints require a valid key:
 - `GET /jobs/{job_id}`
 - `GET /jobs/{job_id}/result`
 - `GET /jobs/{job_id}/findings`
+- `GET /reports`
+- `GET /reports/{report_id}/metadata`
+- `GET /reports/{report_id}/download`
+- `GET /reports/{report_id}/view`
 - `GET /exports/findings`
 
 Missing or incorrect keys return:
@@ -249,11 +255,37 @@ Returns persistent job metadata:
   "duration_seconds": 1.23,
   "result_summary": {},
   "result_path": "reports/example.json",
+  "result_download_url": "/reports/REPORT_ID/download",
   "html_report_path": null,
+  "html_view_url": null,
+  "html_download_url": null,
   "error_message": null,
   "safe_error_code": null
 }
 ```
+
+When saved report paths can be mapped safely into the local `reports` directory, job responses include report URLs. If mapping is not possible, the original path fields remain and URL fields are omitted or `null`.
+
+## Reports
+
+```powershell
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/reports
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/reports?type=html&limit=10"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/reports/REPORT_ID/metadata
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/reports/REPORT_ID/download
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/reports/REPORT_ID/view
+```
+
+`GET /reports` lists report files from the local `reports` directory. Supported query parameters are:
+
+- `limit`: default `20`, minimum `1`, maximum `100`
+- `offset`: default `0`
+- `type`: `json`, `html`, or `all`
+- `target`: optional target filter
+
+Each report entry includes `report_id`, `filename`, `type`, `target`, `created_at`, `size_bytes`, `download_url`, and `view_url`. `GET /reports/{report_id}/metadata` returns one entry. `GET /reports/{report_id}/download` returns a JSON or HTML report as an attachment. `GET /reports/{report_id}/view` returns an HTML response for HTML reports and a JSON response for JSON reports.
+
+Report IDs are safe URL identifiers that map only to known files under the configured reports directory. The API rejects path traversal, raw file paths, unknown IDs, unsupported suffixes, and files outside `reports`. It serves only `.json` and `.html` report files. When `VULSCAN_API_KEY` is configured, report endpoints require the same API key protection as jobs and scans.
 
 ## Get Job Result
 
@@ -342,6 +374,8 @@ The endpoint reuses existing export logic and returns export metadata, including
 - OpenAPI docs are available locally at `/docs` and `/openapi.json`.
 - Client examples are available under `examples/api`.
 - Result payload availability depends on saved JSON reports or saved scan history.
+- Report view and download endpoints serve only `.json` and `.html` files inside the local `reports` directory.
+- Report endpoints do not accept raw file paths and block path traversal.
 - Credentialed SSH and Windows scans are not exposed through the API.
 - API request models do not include password, token, secret, private key, API key, bearer, or authorization fields.
 - The API authentication header is checked separately and is not copied into scan request data.

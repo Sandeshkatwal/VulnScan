@@ -44,7 +44,10 @@ export interface JobSummary {
   duration_seconds?: number | null
   result_summary?: ApiRecord
   result_path?: string | null
+  result_download_url?: string | null
   html_report_path?: string | null
+  html_view_url?: string | null
+  html_download_url?: string | null
   error_message?: string | null
   safe_error_code?: string | null
   [key: string]: unknown
@@ -213,7 +216,10 @@ export interface ReportSummary {
   target?: string
   status?: string
   result_path?: string | null
+  result_download_url?: string | null
   html_report_path?: string | null
+  html_view_url?: string | null
+  html_download_url?: string | null
   completed_at?: string
   duration_seconds?: number | null
   findings_count?: number | null
@@ -223,6 +229,37 @@ export interface ReportSummary {
   has_trend_data?: boolean
   has_vuln_intel?: boolean
   has_web_dast?: boolean
+  [key: string]: unknown
+}
+
+export interface ReportFileSummary {
+  report_id?: string
+  filename?: string
+  type?: 'json' | 'html' | string
+  target?: string
+  created_at?: string
+  size_bytes?: number | null
+  download_url?: string | null
+  view_url?: string | null
+  [key: string]: unknown
+}
+
+export interface ReportsQuery {
+  limit?: number
+  offset?: number
+  type?: 'json' | 'html' | 'all'
+  target?: string
+}
+
+export interface ReportsResponse {
+  reports: ReportFileSummary[]
+  pagination?: Pagination | null
+  filters?: ApiRecord | null
+  [key: string]: unknown
+}
+
+export interface ReportMetadataResponse {
+  report?: ReportFileSummary
   [key: string]: unknown
 }
 

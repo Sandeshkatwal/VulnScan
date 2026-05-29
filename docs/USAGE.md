@@ -158,6 +158,10 @@ Remote binding requires explicit `--allow-remote-api` and should not be used for
 
 Job, scan, finding, and findings export endpoints support `limit`, `offset`, endpoint-specific `sort_by`, and `sort_order=asc|desc`. Finding endpoints also support `severity`, `source`, `category`, `priority_label`, `min_priority_score`, `min_risk_score`, `cve`, and `compact=true` for reduced dashboard-style responses.
 
+Version 16.7 adds safe local report access for the dashboard. `GET /reports` lists `.json` and `.html` files from the VulScan `reports` directory, and report metadata, download, and HTML view endpoints use safe report IDs instead of raw file paths. The API blocks path traversal and does not serve files outside `reports`. When `VULSCAN_API_KEY` is set, these report endpoints require the same API key header as jobs and scans.
+
+The dashboard Settings page includes an API connection manager for `/health`, `/version`, and a protected `GET /jobs?limit=1` test. It shows whether an API key is configured, but never displays the key. The Reports View uses authenticated fetch downloads when report URLs are available, which avoids the browser limitation where `localhost` pages cannot reliably open local Windows file paths directly.
+
 OpenAPI docs are available at `http://127.0.0.1:8088/docs`, and the raw schema is available at `http://127.0.0.1:8088/openapi.json`. Local client examples are in `examples\api\curl_examples.md`, `examples\api\powershell_examples.md`, and `examples\api\python_client.py`.
 
 Basic API examples:
@@ -175,6 +179,7 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jo
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?severity=High"
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?priority_label=Fix%20First&compact=true"
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/jobs/JOB_ID/findings?min_priority_score=75&sort_by=priority_score&sort_order=desc"
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/reports
 curl -H "X-VulScan-API-Key: change-this-local-dev-key" "http://127.0.0.1:8088/exports/findings?format=csv&severity=Medium"
 ```
 

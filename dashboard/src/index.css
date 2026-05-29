@@ -1371,6 +1371,121 @@ dd {
   background: rgba(8, 13, 16, 0.32);
 }
 
+.connection-manager {
+  display: grid;
+  gap: 18px;
+}
+
+.connection-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.connection-status-card {
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.connection-status-card span {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.connection-status-card strong {
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.connection-actions,
+.connection-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.refresh-setting-row {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.54);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 14px;
+}
+
+.settings-list--links {
+  margin-top: 0;
+}
+
+.report-index-panel {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.report-index-list {
+  display: grid;
+  gap: 10px;
+}
+
+.report-index-item {
+  align-items: center;
+  background: rgba(2, 6, 23, 0.34);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
+.report-index-item > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.report-index-item strong,
+.report-index-item span {
+  overflow-wrap: anywhere;
+}
+
+.report-index-item span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ghost-link {
+  align-items: center;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  color: var(--text-main);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 34px;
+  padding: 8px 11px;
+  text-decoration: none;
+}
+
+.compact-link {
+  min-height: 30px;
+  padding: 6px 8px;
+}
+
 a {
   color: var(--blue);
 }
@@ -1427,7 +1542,8 @@ a {
   .trend-summary-grid,
   .report-card-grid,
   .report-metadata-grid,
-  .report-section-grid {
+  .report-section-grid,
+  .connection-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1474,9 +1590,16 @@ a {
   .report-card-grid,
   .report-metadata-grid,
   .report-section-grid,
+  .connection-grid,
   .top-risk-item dl,
   .context-card__grid {
     grid-template-columns: 1fr;
+  }
+
+  .report-index-item,
+  .refresh-setting-row {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .detail-drawer__header,

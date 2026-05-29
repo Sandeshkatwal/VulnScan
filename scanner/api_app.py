@@ -11,7 +11,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from scanner import __version__
 from scanner.api_filters import (
@@ -25,6 +25,7 @@ from scanner.api_filters import (
     validate_sort_order,
 )
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
+from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_job_store import ApiJobStore, UNAVAILABLE_FINDINGS_MESSAGE, UNAVAILABLE_RESULT_MESSAGE, sanitize_request_payload
 from scanner.api_jobs import run_scan_job
 from scanner.api_runner import run_scan_pipeline
@@ -52,6 +53,10 @@ PROTECTED_PATHS = {
     "/jobs/{job_id}/result",
     "/jobs/{job_id}/findings",
     "/exports/findings",
+    "/reports",
+    "/reports/{report_id}/metadata",
+    "/reports/{report_id}/download",
+    "/reports/{report_id}/view",
 }
 TAGS_METADATA = [
     {"name": "Health", "description": "Public local API health checks."},
@@ -60,6 +65,7 @@ TAGS_METADATA = [
     {"name": "Jobs", "description": "Persistent API job status and result retrieval."},
     {"name": "Findings", "description": "Saved finding retrieval with filtering, sorting, pagination, and compact responses."},
     {"name": "Exports", "description": "Local export metadata for saved findings."},
+    {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
 ]
 SCAN_REQUEST_EXAMPLE = {
     "target": "127.0.0.1",
@@ -99,10 +105,11 @@ FINDING_LIST_EXAMPLE = {
 ERROR_EXAMPLE = {"detail": "Invalid or missing API key."}
 
 
-def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore | None = None) -> FastAPI:
+def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore | None = None, reports_dir: Path | str = Path("reports")) -> FastAPI:
     """Create the local VulScan FastAPI app."""
     executor = scan_executor or run_scan_pipeline
     store = job_store or ApiJobStore()
+    safe_reports_dir = Path(reports_dir)
     store.mark_interrupted_jobs()
     app = FastAPI(
         title="VulScan API",
@@ -333,7 +340,7 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {
-            "jobs": [_public_job(job) for job in jobs],
+            "jobs": [_public_job(job, safe_reports_dir) for job in jobs],
             "pagination": pagination_metadata(total, len(jobs), limit, offset),
             "filters": active_filters(status=status, target=target, sort_by=sort_by, sort_order=sort_order),
         }
@@ -353,7 +360,7 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         job = store.get_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="Job ID was not found in local job history.")
-        return _public_job(job)
+        return _public_job(job, safe_reports_dir)
 
     @app.get(
         "/jobs/{job_id}/result",
@@ -368,7 +375,7 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
         if job is None:
             raise HTTPException(status_code=404, detail="Job ID was not found in local job history.")
         if job["status"] != "completed":
-            return {"job": _public_job(job), "result": None}
+            return {"job": _public_job(job, safe_reports_dir), "result": None}
         result = _load_job_result(job)
         if result is None:
             return {"job_id": job_id, "status": "completed", "message": UNAVAILABLE_RESULT_MESSAGE, "result": None}
@@ -491,12 +498,82 @@ def create_app(scan_executor: ScanExecutor | None = None, job_store: ApiJobStore
             response["export_path"] = str(response.pop("path"))
         return response
 
+    @app.get(
+        "/reports",
+        dependencies=[Depends(require_api_key)],
+        tags=["Reports"],
+        summary="List saved reports",
+        description="Lists JSON and HTML reports under the local VulScan reports directory. Does not serve arbitrary file paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_reports(
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        type: str = Query(default="all", pattern="^(json|html|all)$"),
+        target: str | None = Query(default=None, min_length=1, max_length=255),
+    ) -> dict[str, Any]:
+        reports = list_report_metadata(reports_dir=safe_reports_dir, report_type=type, target=target)
+        page, pagination = paginate_items(reports, limit, offset)
+        return {
+            "reports": page,
+            "pagination": pagination,
+            "filters": active_filters(type=type, target=target),
+        }
+
+    @app.get(
+        "/reports/{report_id}/metadata",
+        dependencies=[Depends(require_api_key)],
+        tags=["Reports"],
+        summary="Get saved report metadata",
+        description="Returns safe metadata for one JSON or HTML report under the local reports directory.",
+        responses=ERROR_RESPONSES,
+    )
+    def get_report_metadata(report_id: str) -> dict[str, Any]:
+        path = _report_path_or_404(report_id, safe_reports_dir)
+        metadata = report_metadata(path, safe_reports_dir)
+        if not metadata:
+            raise HTTPException(status_code=404, detail="Report was not found.")
+        return {"report": metadata}
+
+    @app.get(
+        "/reports/{report_id}/download",
+        dependencies=[Depends(require_api_key)],
+        tags=["Reports"],
+        summary="Download saved report",
+        description="Downloads a JSON or HTML report from the local reports directory as an attachment.",
+        responses=ERROR_RESPONSES,
+    )
+    def download_report(report_id: str) -> FileResponse:
+        path = _report_path_or_404(report_id, safe_reports_dir)
+        media_type = "application/json" if path.suffix.lower() == ".json" else "text/html"
+        return FileResponse(path, media_type=media_type, filename=path.name)
+
+    @app.get(
+        "/reports/{report_id}/view",
+        dependencies=[Depends(require_api_key)],
+        tags=["Reports"],
+        summary="View saved report",
+        description="Returns HTML reports for browser viewing. JSON reports return safe report JSON metadata/payload.",
+        responses=ERROR_RESPONSES,
+    )
+    def view_report(report_id: str):
+        path = _report_path_or_404(report_id, safe_reports_dir)
+        if path.suffix.lower() == ".html":
+            try:
+                return HTMLResponse(path.read_text(encoding="utf-8"))
+            except OSError as exc:
+                raise HTTPException(status_code=404, detail="Report was not found.") from exc
+        payload = load_json_report(path)
+        if payload is None:
+            return JSONResponse({"message": "JSON report view is unavailable. Use the download endpoint."})
+        return JSONResponse(payload)
+
     _install_custom_openapi(app)
     return app
 
 
-def _public_job(job: dict[str, Any]) -> dict[str, Any]:
-    return {
+def _public_job(job: dict[str, Any], reports_dir: Path | str = Path("reports")) -> dict[str, Any]:
+    response = {
         "job_id": job.get("job_id"),
         "scan_id": job.get("scan_id") or "",
         "target": job.get("target") or "",
@@ -511,6 +588,22 @@ def _public_job(job: dict[str, Any]) -> dict[str, Any]:
         "error_message": job.get("error_message"),
         "safe_error_code": job.get("safe_error_code"),
     }
+    result_urls = report_urls_for_path(job.get("result_path"), reports_dir)
+    html_urls = report_urls_for_path(job.get("html_report_path"), reports_dir)
+    if result_urls["download_url"]:
+        response["result_download_url"] = result_urls["download_url"]
+    if html_urls["view_url"]:
+        response["html_view_url"] = html_urls["view_url"]
+    if html_urls["download_url"]:
+        response["html_download_url"] = html_urls["download_url"]
+    return response
+
+
+def _report_path_or_404(report_id: str, reports_dir: Path | str) -> Path:
+    path = decode_report_id(report_id, reports_dir)
+    if path is None or not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail="Report was not found.")
+    return path
 
 
 def _load_job_result(job: dict[str, Any]) -> dict[str, Any] | None:

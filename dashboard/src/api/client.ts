@@ -6,6 +6,9 @@ import type {
   JobResultResponse,
   JobsQuery,
   JobsResponse,
+  ReportMetadataResponse,
+  ReportsQuery,
+  ReportsResponse,
   ScanRequest,
   ScanResponse,
   ScansQuery,
@@ -32,6 +35,11 @@ function buildUrl(path: string, params?: Record<string, QueryValue>): string {
     }
   })
   return url.toString()
+}
+
+export function buildApiUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path
+  return `${apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`
 }
 
 async function request<T>(
@@ -100,6 +108,62 @@ export function getJobFindings(
   params: FindingFilters = {},
 ): Promise<FindingsResponse> {
   return request<FindingsResponse>(`/jobs/${encodeURIComponent(jobId)}/findings`, {}, { ...params })
+}
+
+export function getReports(params: ReportsQuery = { limit: 20 }): Promise<ReportsResponse> {
+  return request<ReportsResponse>('/reports', {}, { ...params })
+}
+
+export function getReportMetadata(reportId: string): Promise<ReportMetadataResponse> {
+  return request<ReportMetadataResponse>(`/reports/${encodeURIComponent(reportId)}/metadata`)
+}
+
+export function getReportViewUrl(reportId: string): string {
+  return buildApiUrl(`/reports/${encodeURIComponent(reportId)}/view`)
+}
+
+export function downloadReport(reportId: string, filename?: string): Promise<void> {
+  return authenticatedDownload(`/reports/${encodeURIComponent(reportId)}/download`, filename)
+}
+
+export async function authenticatedDownload(
+  path: string,
+  filename = 'vulscan-report',
+  openInNewTab = false,
+): Promise<void> {
+  const headers = new Headers()
+  if (apiKey) {
+    headers.set('X-VulScan-API-Key', apiKey)
+  }
+
+  const response = await fetch(buildApiUrl(path), { headers })
+  if (!response.ok) {
+    let detail = `Report request failed with status ${response.status}`
+    try {
+      const body = (await response.json()) as { detail?: string; error?: string }
+      detail = body.detail || body.error || detail
+    } catch {
+      // Keep the generic HTTP status message.
+    }
+    throw new Error(detail)
+  }
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+
+  if (openInNewTab) {
+    window.open(objectUrl, '_blank', 'noopener,noreferrer')
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+    return
+  }
+
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
 }
 
 export function createScan(requestBody: ScanRequest): Promise<ScanResponse> {

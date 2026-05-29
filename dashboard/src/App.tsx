@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   apiBaseUrl,
-  apiKeyConfigured,
   createScan,
   getHealth,
   getJob,
@@ -11,6 +10,7 @@ import {
   getScans,
   getVersion,
 } from './api/client'
+import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ErrorAlert } from './components/ErrorAlert'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
 import { FindingDetailDrawer } from './components/FindingDetailDrawer'
@@ -107,7 +107,7 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   },
   settings: {
     title: 'Settings',
-    description: 'Local API configuration, documentation links, and dashboard mode.',
+    description: 'Local API connection checks, report access settings, and dashboard mode.',
   },
 }
 
@@ -558,18 +558,12 @@ function App() {
   function renderSettings() {
     return (
       <section className="settings-grid">
-        <article className="panel">
+        <article className="panel panel--wide">
           <div className="panel-heading">
-            <h2>API Configuration</h2>
-            <p>Environment-driven local settings.</p>
+            <h2>API Connection Manager</h2>
+            <p>Environment-driven local settings and safe connection tests.</p>
           </div>
-          <dl className="settings-list">
-            <div><dt>API URL</dt><dd className="mono">{apiBaseUrl}</dd></div>
-            <div><dt>API Key</dt><dd>{apiKeyConfigured ? 'Configured' : 'Not configured'}</dd></div>
-            <div><dt>Dashboard Mode</dt><dd>Local development</dd></div>
-            <div><dt>Backend Docs</dt><dd><a href={`${apiBaseUrl}/docs`} target="_blank" rel="noreferrer">{apiBaseUrl}/docs</a></dd></div>
-            <div><dt>OpenAPI</dt><dd><a href={`${apiBaseUrl}/openapi.json`} target="_blank" rel="noreferrer">{apiBaseUrl}/openapi.json</a></dd></div>
-          </dl>
+          <ApiConnectionManager onRefreshDashboard={() => void loadDashboard()} refreshLoading={state.loading} />
         </article>
         <article className="panel">
           <div className="panel-heading">

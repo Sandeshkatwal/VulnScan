@@ -15,6 +15,8 @@ interface ReportsTableProps {
   onLoadResult: (job: JobSummary) => void
   onLoadFindings: (job: JobSummary) => void
   onCopy: (label: string, value?: string | null) => void
+  onViewReport: (path?: string | null, filename?: string) => void
+  onDownloadReport: (path?: string | null, filename?: string) => void
 }
 
 function formatDuration(value?: number | null): string {
@@ -33,6 +35,8 @@ export function ReportsTable({
   onLoadResult,
   onLoadFindings,
   onCopy,
+  onViewReport,
+  onDownloadReport,
 }: ReportsTableProps) {
   if (loading) return <div className="panel-message">Loading saved reports...</div>
   if (error) return <div className="panel-message panel-message--error">{error}</div>
@@ -81,6 +85,15 @@ export function ReportsTable({
                     </button>
                     <button className="ghost-button compact-button" type="button" onClick={(event) => { event.stopPropagation(); onLoadFindings(job) }}>
                       Load findings
+                    </button>
+                    <button className="ghost-button compact-button" type="button" disabled={!job.html_view_url} onClick={(event) => { event.stopPropagation(); onViewReport(job.html_view_url, job.html_report_path || 'vulscan-report.html') }}>
+                      View HTML
+                    </button>
+                    <button className="ghost-button compact-button" type="button" disabled={!job.html_download_url} onClick={(event) => { event.stopPropagation(); onDownloadReport(job.html_download_url, job.html_report_path || 'vulscan-report.html') }}>
+                      Download HTML
+                    </button>
+                    <button className="ghost-button compact-button" type="button" disabled={!job.result_download_url} onClick={(event) => { event.stopPropagation(); onDownloadReport(job.result_download_url, job.result_path || 'vulscan-report.json') }}>
+                      Download JSON
                     </button>
                     <button className="ghost-button compact-button" type="button" disabled={!job.result_path} onClick={(event) => { event.stopPropagation(); onCopy('JSON path', job.result_path) }}>
                       Copy JSON path

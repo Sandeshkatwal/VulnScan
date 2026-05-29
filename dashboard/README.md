@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-Version 16.6 adds sidebar navigation and layout polish for the local dashboard. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
+Version 16.7 adds a Settings/API connection manager and API-backed report access for the local dashboard. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
 
 ## Start The API
 
@@ -57,8 +57,8 @@ Version 16.6 organises the dashboard into:
 - Vulnerabilities: finding filters, findings table, pagination, and finding detail view.
 - Risk: risk overview, severity distribution, priority distribution, source distribution, and top risk findings.
 - Trends: prioritisation trends, trend details, and comparison panels.
-- Reports: saved report paths, report metadata, and safe copy controls.
-- Settings: API URL, API key configured/not configured status, local dashboard mode, backend docs, and OpenAPI links.
+- Reports: saved report paths, report metadata, safe copy controls, and API-backed view/download actions when report URLs are available.
+- Settings: API URL, API key configured/not configured status, connection tests, protected endpoint test, refresh interval preference, local dashboard mode, backend docs, and OpenAPI links.
 
 The dashboard keeps selected job, loaded result, loaded findings, and filter state while switching sections. API keys are configured through `.env`; the dashboard shows only whether a key is configured and never displays the key value.
 
@@ -103,22 +103,30 @@ The Trends View is read-only and local. It does not add exploit, brute-force, cr
 
 ## Review Reports
 
-The Reports View reads completed jobs from the API and shows report metadata returned by existing job fields such as `result_path`, `html_report_path`, `result_summary`, `job_id`, `scan_id`, `target`, and completion time.
+The Reports View reads completed jobs and the safe `GET /reports` index from the API. It shows report metadata returned by job fields such as `result_path`, `html_report_path`, `result_summary`, `job_id`, `scan_id`, `target`, and completion time, plus safe report URLs when the backend can map the report path into the local `reports` directory.
 
 Use the Reports View to:
 
 - Review latest completed jobs that produced JSON or HTML report paths.
+- View HTML reports through the local API when `html_view_url` is available.
+- Download JSON or HTML reports through authenticated API requests when download URLs are available.
 - Copy JSON report paths, HTML report paths, job IDs, and scan IDs.
 - Load result metadata for prioritisation, fix-first dashboard, trends, vulnerability intelligence, Web DAST, and asset context summaries when available.
 - Load findings metadata for the selected report job.
 
-Local HTML report files may need to be opened through File Explorer or PowerShell because browsers often block direct local file access from `localhost`. For example:
+Local HTML report files may still need to be opened through File Explorer or PowerShell if API report URLs are unavailable. Browsers often block direct local file access from `localhost`. For example:
 
 ```powershell
 Start-Process .\reports\REPORT_FILE.html
 ```
 
-The dashboard does not expose report files publicly and does not add report download endpoints in Version 16.5.
+Report endpoints serve only `.json` and `.html` files from the VulScan `reports` directory. They do not accept raw file paths and do not serve arbitrary files outside that directory. If the API key is configured, the dashboard uses authenticated fetch downloads and never logs or displays the key.
+
+## API Connection Manager
+
+The Settings page shows the configured API base URL, whether an API key is configured, and local dashboard mode. It includes buttons to test `/health`, `/version`, and a protected `GET /jobs?limit=1` request. If the protected test fails, check that `VITE_VULSCAN_API_KEY` matches the backend `VULSCAN_API_KEY`.
+
+Refresh is manual by default. The optional refresh interval preference is stored in local browser storage as `refreshIntervalSeconds`; it does not expose secrets and does not enable aggressive automatic polling.
 
 ## Review Vulnerabilities
 
@@ -141,4 +149,4 @@ npm run build
 
 ## Scope
 
-The Version 16.6 dashboard shows API health, version metadata, sidebar navigation, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View, recent scans, a vulnerability list, settings, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.
+The Version 16.7 dashboard shows API health, version metadata, sidebar navigation, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View with safe API report access, recent scans, a vulnerability list, settings, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, or stored secrets.

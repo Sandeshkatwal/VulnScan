@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getCompletedJobs, getJobFindings, getJobResult } from '../api/client'
-import type { FindingsResponse, JobResultResponse, JobSummary } from '../types/api'
+import { authenticatedDownload, getCompletedJobs, getJobFindings, getJobResult, getReports } from '../api/client'
+import type { FindingsResponse, JobResultResponse, JobSummary, ReportFileSummary } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { buildReportSummary, hasReportFeature, reportProducingJobs } from '../utils/reportUtils'
 import { ReportCard } from './ReportCard'
@@ -23,6 +23,7 @@ async function copyText(value?: string | null): Promise<boolean> {
 
 export function ReportsView({ apiOnline = true }: ReportsViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([])
+  const [apiReports, setApiReports] = useState<ReportFileSummary[]>([])
   const [selectedJob, setSelectedJob] = useState<JobSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,11 +40,16 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
     setLoading(true)
     setError(null)
     try {
-      const response = await getCompletedJobs(50)
-      setJobs(response.jobs)
+      const [jobsResponse, reportsResponse] = await Promise.allSettled([
+        getCompletedJobs(50),
+        getReports({ limit: 50, type: 'all' }),
+      ])
+      if (jobsResponse.status === 'rejected') throw jobsResponse.reason
+      setJobs(jobsResponse.value.jobs)
+      setApiReports(reportsResponse.status === 'fulfilled' ? reportsResponse.value.reports : [])
       setSelectedJob((current) => {
-        if (current?.job_id && response.jobs.some((job) => job.job_id === current.job_id)) return current
-        return reportProducingJobs(response.jobs)[0] || null
+        if (current?.job_id && jobsResponse.value.jobs.some((job) => job.job_id === current.job_id)) return current
+        return reportProducingJobs(jobsResponse.value.jobs)[0] || null
       })
     } catch (caught) {
       setError(errorMessage(caught))
@@ -102,10 +108,33 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
     }
   }
 
+  async function handleViewReport(path?: string | null, filename?: string) {
+    if (!path) return
+    setCopyMessage(null)
+    try {
+      await authenticatedDownload(path, filename || 'vulscan-report.html', true)
+    } catch {
+      setCopyMessage('Report could not be opened through the authenticated API.')
+    }
+  }
+
+  async function handleDownloadReport(path?: string | null, filename?: string) {
+    if (!path) return
+    setCopyMessage(null)
+    try {
+      await authenticatedDownload(path, filename || 'vulscan-report')
+      setCopyMessage('Report download started.')
+    } catch {
+      setCopyMessage('Report download failed. Copy the path and try from the API or terminal.')
+    }
+  }
+
   const summaries = reportJobs.map((job) => buildReportSummary(job, job.job_id ? loadedResults[job.job_id] : undefined, job.job_id ? loadedFindings[job.job_id] : undefined))
   const latestReport = reportJobs[0]
   const jsonReports = summaries.filter((summary) => summary.has_json_report).length
   const htmlReports = summaries.filter((summary) => summary.has_html_report).length
+  const indexedJsonReports = apiReports.filter((report) => report.type === 'json').length
+  const indexedHtmlReports = apiReports.filter((report) => report.type === 'html').length
   const fixFirstKnown = reportJobs.map((job) => hasReportFeature(job, 'fix_first_dashboard')).filter((value): value is boolean => value !== null)
   const trendKnown = reportJobs.map((job) => hasReportFeature(job, 'prioritisation_trends')).filter((value): value is boolean => value !== null)
   const fixFirstLoaded = summaries.filter((summary) => summary.has_fix_first_dashboard).length
@@ -124,7 +153,7 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
       </div>
 
       <div className="report-note">
-        Local report paths may need to be opened from your file explorer or terminal. Browsers may block direct local file access.
+        Use View or Download to access reports through the local authenticated API when report URLs are available. Local report paths may still need to be opened from your file explorer or terminal.
         <code>Start-Process .\reports\REPORT_FILE.html</code>
       </div>
 
@@ -132,6 +161,8 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
         <ReportCard label="Total Completed Jobs" value={jobs.length} />
         <ReportCard label="JSON Reports Available" value={jsonReports} />
         <ReportCard label="HTML Reports Available" value={htmlReports} />
+        <ReportCard label="API JSON Reports Indexed" value={indexedJsonReports || null} />
+        <ReportCard label="API HTML Reports Indexed" value={indexedHtmlReports || null} />
         <ReportCard label="Latest Report Target" value={latestReport?.target} />
         <ReportCard label="Latest Report Time" value={formatDateTime(latestReport?.completed_at)} />
         <ReportCard label="Reports With Fix-First Dashboard" value={fixFirstKnown.length ? fixFirstKnown.filter(Boolean).length : fixFirstLoaded || null} />
@@ -151,7 +182,40 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
         onLoadResult={loadResult}
         onLoadFindings={loadFindings}
         onCopy={handleCopy}
+        onViewReport={handleViewReport}
+        onDownloadReport={handleDownloadReport}
       />
+
+      {apiReports.length ? (
+        <div className="report-index-panel">
+          <div className="panel-heading">
+            <h2>API Report Index</h2>
+            <p>Reports safely served from the VulScan reports directory.</p>
+          </div>
+          <div className="report-index-list">
+            {apiReports.slice(0, 8).map((report) => (
+              <div className="report-index-item" key={report.report_id || report.filename}>
+                <div>
+                  <strong>{report.filename || 'Unnamed report'}</strong>
+                  <span>{report.type || 'unknown'} / {report.target || 'Not available'} / {formatDateTime(report.created_at)}</span>
+                </div>
+                <div className="report-actions">
+                  {report.type === 'html' && report.view_url ? (
+                    <button className="ghost-button compact-button" type="button" onClick={() => void handleViewReport(report.view_url, report.filename)}>
+                      View
+                    </button>
+                  ) : null}
+                  {report.download_url ? (
+                    <button className="ghost-button compact-button" type="button" onClick={() => void handleDownloadReport(report.download_url, report.filename)}>
+                      Download
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <ReportMetadataPanel
         job={selectedJob}
@@ -164,6 +228,8 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
         onLoadResult={loadResult}
         onLoadFindings={loadFindings}
         onCopy={handleCopy}
+        onViewReport={handleViewReport}
+        onDownloadReport={handleDownloadReport}
       />
     </div>
   )

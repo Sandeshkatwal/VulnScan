@@ -14,6 +14,8 @@ interface ReportMetadataPanelProps {
   onLoadResult: (job: JobSummary) => void
   onLoadFindings: (job: JobSummary) => void
   onCopy: (label: string, value?: string | null) => void
+  onViewReport: (path?: string | null, filename?: string) => void
+  onDownloadReport: (path?: string | null, filename?: string) => void
 }
 
 function SectionSummary({ title, value }: { title: string; value?: Record<string, unknown> | null }) {
@@ -53,6 +55,8 @@ export function ReportMetadataPanel({
   onLoadResult,
   onLoadFindings,
   onCopy,
+  onViewReport,
+  onDownloadReport,
 }: ReportMetadataPanelProps) {
   if (!job) return <div className="empty-state">Select a report-producing job to view report metadata.</div>
 
@@ -73,6 +77,15 @@ export function ReportMetadataPanel({
         </button>
         <button className="ghost-button" type="button" onClick={() => onCopy('HTML path', job.html_report_path)} disabled={!job.html_report_path}>
           Copy HTML path
+        </button>
+        <button className="ghost-button" type="button" onClick={() => onViewReport(job.html_view_url, job.html_report_path || 'vulscan-report.html')} disabled={!job.html_view_url}>
+          View HTML report
+        </button>
+        <button className="ghost-button" type="button" onClick={() => onDownloadReport(job.html_download_url, job.html_report_path || 'vulscan-report.html')} disabled={!job.html_download_url}>
+          Download HTML report
+        </button>
+        <button className="ghost-button" type="button" onClick={() => onDownloadReport(job.result_download_url, job.result_path || 'vulscan-report.json')} disabled={!job.result_download_url}>
+          Download JSON report
         </button>
         <button className="ghost-button" type="button" onClick={() => onCopy('Job ID', job.job_id)} disabled={!job.job_id}>
           Copy job ID
