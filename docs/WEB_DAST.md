@@ -1,5 +1,7 @@
 # Web DAST Engine
 
+The Web DAST Engine is passive by default and is intended only for authorised web applications. It supports bounded discovery and configuration review, not exploitation.
+
 Version 13.0 starts VulScan's Web DAST Engine with a safe crawler foundation.
 
 Version 13.1 adds passive security header checks to the same `web-scan` workflow.

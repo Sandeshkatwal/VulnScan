@@ -2,6 +2,16 @@
 
 VulScan is for authorised defensive vulnerability assessment only.
 
+For initial setup, see `docs\INSTALLATION.md`. For local API details, see `docs\API.md`. For dashboard operation, see `dashboard\README.md`.
+
+## Safe Local Defaults
+
+- The scanner is intended for systems you own or have explicit permission to assess.
+- The API binds to `127.0.0.1` by default.
+- Credentialed Linux and Windows audit workflows are CLI-only and require explicit credentials for an authorised target.
+- The dashboard does not collect credentials.
+- Passive Web DAST does not submit forms, authenticate, fuzz, send payloads, or execute exploit checks.
+
 ## TCP Port Scan
 
 From the project root in PowerShell, activate the virtual environment first:

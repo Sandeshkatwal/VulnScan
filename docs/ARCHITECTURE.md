@@ -1,211 +1,74 @@
 # VulScan Architecture
 
-VulScan is an authorised-use defensive vulnerability scanning and auditing tool. The current implementation is intentionally safe, limited, and TCP-connect based.
+VulScan is a local authorised vulnerability scanning and vulnerability management platform. The architecture separates evidence collection, enrichment, prioritisation, storage, API access, and dashboard presentation.
 
-## Long-Term Architecture
+## High-Level Architecture
 
 ```text
-Vulnerability Scanner
+VulScan
 ├── Discovery Engine
-│   ├── Host discovery
-│   ├── Port scanning
-│   └── Service detection
 ├── Credentialed Scan Engine
-│   ├── SSH scanner
-│   ├── SMB/Windows scanner
-│   └── Package/configuration checks
 ├── Web DAST Engine
-│   ├── Crawler
-│   ├── Header checker
-│   ├── Form discovery
-│   ├── Cookie checker
-│   ├── Passive risk summary
-│   ├── Scope controls
-│   ├── Rate limiting and politeness
-│   ├── robots.txt awareness
-│   └── Sitemap discovery
 ├── Vulnerability Intelligence Engine
-│   ├── Software/service inventory normalisation
-│   ├── Local ruleset matching
-│   ├── Local CVE-style feed import
-│   ├── Local EPSS metadata enrichment
-│   ├── Local exploit availability metadata enrichment
-│   ├── CVE/CVSS/EPSS metadata fields
-│   └── Exploit availability metadata fields
 ├── Prioritisation Engine
-│   ├── Risk scoring
-│   ├── Asset criticality
-│   ├── Fix-first ranking
-│   ├── Fix-first dashboard reporting
-│   └── Prioritisation trend tracking
 ├── Storage
-│   ├── Assets
-│   ├── Findings
-│   ├── Scan history
-│   └── Reports
 ├── API
-│   ├── Local FastAPI foundation with API key protection and persistent jobs
-│   ├── OpenAPI documentation, filtering, sorting, pagination, and compact finding responses
-│   ├── Start safe scan
-│   ├── Get saved results
-│   └── Export data
 └── Dashboard
-    ├── Local React + Vite dashboard foundation
-    ├── API health and version status
-    ├── Recent API jobs
-    ├── Recent saved scans
-    └── High-level findings and prioritisation summary
 ```
 
-## Implemented Now
+## Backend Modules
 
-- TCP connect port scanning against a fixed common-port list.
-- Passive service detection from common TCP port mappings.
-- Service-specific defensive recommendations.
-- JSON and HTML report output.
-- Optional HTTP security header audit using one normal GET request to `/`.
-- Web DAST crawler foundation using bounded same-host GET requests only.
-- Passive Web DAST security header checks for crawled pages.
-- Value-free Web DAST cookie attribute audit.
-- Passive Web DAST form discovery and classification.
-- Consolidated passive Web DAST risk summary.
-- Web DAST scope and allowlist controls.
-- Web DAST rate limiting, retry limits, Retry-After handling, and max-error controls.
-- Web DAST robots.txt awareness.
-- Web DAST sitemap discovery.
-- Local vulnerability intelligence foundation using normalised software/service inventory, service fingerprint metadata, local JSON rules, local CVE-style feed files, local EPSS metadata files, local exploit availability metadata files, and local version conditions only.
-- Local asset criticality context using `scanner.asset_criticality`, `data\asset_context\sample_asset_criticality.json`, and the `--use-asset-criticality` / `--asset-criticality` CLI options.
-- Optional passive TLS certificate audit for detected HTTPS services.
-- Optional authenticated SSH audit for authorised Linux systems using one login attempt, read-only inspection commands, Linux family detection, read-only package update checks, and Linux configuration audit templates.
-- Credentialed SSH audit summary output in terminal, JSON, and HTML reports without storing passwords, key values, or private key paths.
-- Credentialed SSH audit profiles for `basic`, `standard`, and `detailed` read-only check depth.
-- Structured SSH audit status and error-code handling for authentication, timeout, unsupported target, and command-failure paths.
-- Concise, redacted credentialed audit evidence summaries with optional report-only evidence details.
-- Standard finding model with sequential IDs, severity, confidence, evidence, impact, recommendation, verification, limitation, source, and timestamps.
-- Prioritisation Engine risk scoring with heuristic risk score, risk label, fix priority, local asset criticality boosts, `prioritisation_summary`, `prioritised_findings`, Version 14.8 fix-first dashboard reporting, and Version 14.9 prioritisation trend tracking.
-- Local SQLite scan history in `data\vulscan.db` for scans, open ports, and findings.
-- Scan diffing between the latest two saved scans for a target, including new, fixed, unchanged, and changed-risk finding categories.
-- Remediation status tracking for saved findings, including owner, note, first seen, last seen, and status counts.
-- Storage / Assets inventory for saved targets and detected services, implemented in Version 10.4.
-- CSV and JSON export of saved assets, scan history, findings, and remediation records, implemented in Version 10.5.
-- Local FastAPI API foundation with Version 16.0 OpenAPI metadata, API key protection, persistent SQLite job storage, filtering, sorting, pagination, compact finding responses, and local-only dashboard CORS, bound to `127.0.0.1` by default, with public health/version endpoints and protected scan, job, saved-result, saved-findings, and findings export metadata endpoints when `VULSCAN_API_KEY` is configured.
-- Local React + Vite dashboard foundation in `dashboard/`, showing API health, recent jobs, recent scans, and high-level findings/prioritisation overview. It is local development only and uses `VITE_VULSCAN_API_URL` plus optional `VITE_VULSCAN_API_KEY`.
+- `scanner.main`: Typer CLI commands for scans, web scans, API startup, history, diffing, remediation, assets, and exports.
+- `scanner.port_scan` and service detection modules: safe TCP connect scanning and static service identification.
+- `scanner.ssh_audit`, `scanner.package_audit`, `scanner.linux_config_audit`: read-only Linux credentialed audit checks.
+- `scanner.windows_audit`, `scanner.windows_result`, `scanner.windows_*`: Windows reachability, optional WinRM validation, and read-only indicators.
+- `scanner.web_*`: passive Web DAST crawling, scope, rate limiting, robots, sitemap, headers, cookies, forms, and passive summary reporting.
+- `scanner.software_inventory`, `scanner.vuln_intel`, `scanner.cve_feed`, `scanner.epss_importer`, `scanner.exploit_metadata`: local vulnerability intelligence and metadata enrichment.
+- `scanner.risk_score`, `scanner.asset_criticality`, `scanner.prioritisation`, `scanner.prioritisation_report`, `scanner.prioritisation_trends`: risk scoring, business context, fix-first reporting, and trend tracking.
+- `scanner.database`, `scanner.history`, `scanner.remediation`, `scanner.assets`, `scanner.exporter`: local SQLite storage, remediation records, asset inventory, and exports.
+- `scanner.api_app`, `scanner.api_runner`, `scanner.api_jobs`, `scanner.api_job_store`, `scanner.api_filters`, `scanner.api_reports`, `scanner.api_remediation`, `scanner.api_security`: local FastAPI API, persistent jobs, safe report access, filtering, and optional API key protection.
+- `scanner.report_json` and `scanner.report_html`: JSON and HTML report generation.
 
-## Planned Later
+## Dashboard Modules
 
-- Host discovery for authorised internal ranges.
-- Windows SMB/WinRM configuration checks.
-- Broader configuration auditing.
-- Web DAST features only when explicitly designed with strict safety controls.
-- Trusted CVE feed update workflows, CVSS enrichment, EPSS scoring, and exploit-availability enrichment.
-- Richer dashboard risk views, vulnerability list, trends, reports, and expanded remediation workflow tracking.
+- `dashboard/src/App.tsx`: top-level application composition.
+- `dashboard/src/api/client.ts`: typed API client helpers.
+- `dashboard/src/utils`: formatting, demo mode, risk metrics, trend metrics, and report helpers.
+- `dashboard/src/demo`: fake sample data for demo and portfolio mode.
+- `dashboard/src/components`: dashboard shell, navigation, API status, jobs, scans, vulnerability list, finding drawer, risk overview, trends, reports, remediation, settings, portfolio banner, and screenshot guide.
 
-## How Version 8 and 9 Help
+The dashboard is local React + Vite + TypeScript tooling. It does not collect credentials and does not expose exploit, brute-force, credentialed scan, or command execution controls.
 
-Version 8 adds a standard `Finding` model and top-level report `findings` section. Version 9 adds heuristic risk scoring and fix priority. Together, they give future engines a shared output contract, so port exposure, HTTP checks, TLS checks, credentialed checks, CVE enrichment, and prioritisation can all write comparable records.
+## Data Flow
 
-Sequential finding IDs make reports easier to reference during remediation. Structured fields such as `severity`, `confidence`, `impact`, `source`, `risk_score`, `risk_label`, `fix_priority`, and `created_at` provide the data needed for scan history storage, API responses, dashboard filtering, and richer prioritisation.
+```text
+scan -> findings -> storage -> API -> dashboard
+```
 
-Version 10 adds local SQLite storage. Saving scan summaries, open ports, and findings in `data\vulscan.db` creates the foundation for future diffing between scans, remediation status tracking, trend charts, and dashboard history views.
+1. The CLI or API starts a safe scan job.
+2. Engines emit standard findings and supporting evidence summaries.
+3. Optional local intelligence and prioritisation enrich the findings.
+4. Results can be saved in SQLite and written to JSON/HTML reports.
+5. The API exposes jobs, saved scans, findings, reports, exports, and remediation tracking.
+6. The dashboard presents the data for local triage and reporting.
 
-Version 10.1 improves history validation and summaries. The CLI can limit returned history rows, clearly report missing databases, missing required tables, or missing target history, and summarize latest-scan severity and risk-label counts without changing the database schema.
+## Report Flow
 
-Version 10.2 adds scan diffing without changing the database schema. It compares findings from the latest two saved scans for the same target using stable fingerprints, reports new and fixed findings, highlights risk or severity changes, and calculates whether the total risk score is improving, worsening, or unchanged. This supports future remediation tracking, trend reporting, dashboard change views, and API endpoints for scan comparison.
+```text
+scan -> JSON/HTML reports -> API report endpoints -> dashboard
+```
 
-Version 10.3 adds remediation status tracking in SQLite. Findings are matched using the same stable fingerprint model as scan diffing, so status can persist across scan runs even when sequential finding IDs change. This supports future dashboard remediation queues, API update endpoints, reporting filters, remediation SLAs, and fix verification workflows.
+Report files are written under `reports`. API report endpoints map safe report IDs to files in that directory only, reject traversal, and serve only `.json` or `.html` reports. The dashboard uses these endpoints for local viewing and download when available.
 
-Version 10.4 adds asset inventory in SQLite. Saved scans create or update asset records, track first seen and last seen timestamps, count scans, record latest open-port and finding counts, and maintain a service inventory for exposed TCP services. This marks Storage / Assets as implemented and provides the foundation for future dashboard asset pages, exposure management, asset criticality, and API inventory endpoints.
+## Safety Model
 
-Version 10.5 adds CSV and JSON exports from the local SQLite database. CSV supports Excel and spreadsheet workflows, while JSON supports future APIs, dashboards, integrations, and backup workflows. Export files are written to `exports`, which is ignored by Git.
-
-Version 11.0 adds authenticated SSH auditing for authorised Linux systems. The SSH audit uses Paramiko, requires explicit credentials, attempts only one login, and never stores SSH passwords or private key paths in reports, the database, logs, or terminal output. After authentication it runs read-only commands only, including OS inspection, effective `sshd -T` configuration where available, host firewall status where available, package-manager discovery, and package update checks. Findings are emitted through the standard finding model, then flow through risk scoring, terminal output, JSON and HTML reports, SQLite history, scan diffing, remediation tracking, asset inventory, and exports.
-
-Version 11.1 improves Linux package and patch checks. VulScan detects OS family from `/etc/os-release`, checks supported package managers with `command -v`, and runs only read-only package update checks for `apt`, `dnf`, `yum`, `pacman`, and `zypper`. It records structured SSH audit fields for OS family, selected package manager, package update count, package update sample, and package check status. The package findings are for patch management review and do not replace CVE intelligence, vendor advisories, exploitability analysis, or asset criticality.
-
-Version 11.3 adds Linux configuration audit templates over the existing authenticated SSH session. The checks are read-only and cover host firewall indicators, logging service indicators, password policy indicators, temporary directory sticky-bit indicators, cleartext service exposure indicators, and a basic Linux configuration audit completion summary. Findings use the `linux_config_audit` source and flow through the existing risk scoring, reporting, SQLite, diff, remediation, asset, and export pipeline. These checks are indicators and are not a full CIS benchmark implementation yet.
-
-Version 11.4 refines SSH audit reporting. Scan results now include a sanitized `ssh_audit_summary` with authentication status, username, auth method, OS family, hostname, kernel summary, package indicators, SSH hardening status, Linux configuration status, total SSH findings, highest SSH risk, and limitations. Terminal findings are grouped by source, and JSON/HTML reports expose the SSH summary while keeping SSH findings in the standard top-level finding pipeline.
-
-Version 11.5 adds credentialed audit profiles for authenticated SSH audits. The default `standard` profile runs login verification, OS and SSH hardening checks, package and patch indicators, firewall indicators, and logging indicators. The `basic` profile limits the run to fast credentialed verification and SSH hardening review. The `detailed` profile adds password policy indicators, temporary directory sticky-bit checks, and cleartext service exposure indicators. Profile metadata is included in `ssh_audit_summary` as the selected profile, description, enabled checks, and skipped checks.
-
-Version 11.6 adds SSH audit test fixtures and structured error handling. SSH audit results use `success`, `failed`, `skipped`, and `partial` status values with safe error codes and user-facing messages. Remote command execution is wrapped so timeouts and command failures return structured metadata rather than crashing the scan. Unit tests use fake fixture files and mocked SSH behavior, so parser and error-path tests do not require a live SSH server or real credentials.
-
-Version 11.7 improves credentialed audit evidence quality. SSH, package, and Linux configuration findings keep the backward-compatible short `evidence` string while adding optional `evidence_details` for JSON and HTML reports. Evidence helpers redact obvious secrets, avoid full raw SSH output by default, limit long text and package samples, and keep CSV/database evidence concise for remediation workflows.
-
-Version 11.8 adds credentialed audit performance and timeout controls. SSH audits now accept separate connection, command, and overall audit timeouts, with profile defaults of 30 seconds for `basic`, 60 seconds for `standard`, and 90 seconds for `detailed`. Remote command execution records per-command duration, timeout status, and safe error codes. Overall audit budget exhaustion skips remaining checks, records `SSH_AUDIT_TIME_BUDGET_EXCEEDED`, and returns partial results through the existing report pipeline rather than aborting the whole scan. The sanitized `ssh_audit_summary` includes timeout settings, total duration, planned/completed/failed/skipped checks, timed-out command count, slowest command metadata, status, error code, and performance notes.
-
-Version 11.9 adds a normalised credentialed audit result layer. `scanner.credentialed_result` defines lightweight standard-library dataclasses for `CredentialedAuditResult`, `CredentialedCheckResult`, and safe credentialed audit errors. Existing SSH output is converted into this model and exposed as top-level `credentialed_audits` while preserving `ssh_audit`, `ssh_audit_summary`, `open_ports`, `findings`, and report summaries. JSON and HTML reports include the normalised module summary, and the standard findings pipeline still drives database history, diffing, remediation, asset inventory, and exports. The model intentionally includes username and auth method but excludes passwords, private key contents, and private key paths so future Windows SMB/WinRM modules can plug into the same reporting flow safely.
-
-Version 12.6 extends the Windows SMB/WinRM audit foundation with safe read-only Windows registry audit templates. `scanner.windows_audit` still performs socket connection checks against SMB 445, NetBIOS/SMB 139, WinRM HTTP 5985, WinRM HTTPS 5986, and RDP 3389. When `--windows-auth-method winrm` is selected, it requires explicitly provided credentials, selects HTTPS 5986 before HTTP 5985 based on reachability, uses `pywinrm` when available, and performs one harmless command such as `hostname` to validate authentication. Missing `pywinrm`, unreachable WinRM, authentication failure, timeouts, and connection errors are normalised into safe error codes without secrets.
-
-When `--windows-host-info` is selected, host information commands run only after successful WinRM authentication. The allowed read-only command set collects hostname, current identity, PowerShell version, OS caption/version/build/architecture/boot/install dates, computer system domain/workgroup/manufacturer/model, and timezone. The parsed values are stored under `windows_audit_summary.windows_host_info` and mirrored into the normalised credentialed audit summary/metadata for future Windows patch, policy, Defender, and firewall modules.
-
-When `--windows-security-status` is selected, Firewall and Defender commands run only after successful WinRM authentication. The allowed read-only command set collects `Get-NetFirewallProfile`, `Get-Service WinDefend`, and `Get-MpComputerStatus` fields. It does not call `Set-NetFirewallProfile`, `Set-MpPreference`, start or stop services, enable or disable firewall rules, enumerate individual firewall rules, query registry, or query local security policy. Partial status is supported when Defender cmdlets are unavailable or restricted.
-
-When `--windows-policy-status` is selected, local security policy indicator commands run only after successful WinRM authentication. The allowed command set is limited to `net accounts`; parsing lives in `scanner.windows_policy_audit` and stores safe values under `windows_audit_summary.windows_policy_status`. It does not call `secedit /export`, `gpresult`, registry queries, local user enumeration, local group enumeration, password reset commands, account modification commands, or policy modification commands. Domain Group Policy or enterprise identity controls may override local indicators, and VulScan does not perform full Group Policy analysis.
-
-When `--windows-registry-audit` is selected, registry checks run only after successful WinRM authentication. `scanner.windows_registry_audit` loads an explicit JSON template, validates that each enabled check uses supported operator syntax and the HKLM hive, builds exact-path read-only `Get-ItemProperty` commands, and stores safe results under `windows_audit_summary.windows_registry_audit`. It does not support HKCU, wildcard paths, recursive enumeration, broad registry trees, registry hive export, or registry writes. Missing values are reported as unknown/not present and interpreted cautiously.
-
-Windows audit emits standard findings with source `windows_audit`, Windows security findings with source `windows_security_audit`, Windows policy findings with source `windows_policy_audit`, Windows registry findings with source `windows_registry_audit`, a top-level `windows_audit_summary`, and a normalised `credentialed_audits` entry with source `windows_audit`. The database, diffing, remediation, asset inventory, and exports continue to use the existing findings pipeline, so no Windows-specific tables are introduced. Version 12.6 does not enumerate SMB shares, query broad registry trees, export registry hives, export security policy, enumerate patches, list users, list groups, list processes, list files, collect secrets, collect browser data, collect hashes, collect tokens, collect private keys, exploit, brute force, dump credentials, modify systems, or restart services.
-
-Version 12.8 reuses `scanner.evidence` for Windows evidence quality and redaction. Windows findings keep the backward-compatible short `evidence` string and can include `evidence_details` with source, safe command label, observed value, expected value, raw-output-included status, redaction status, and limitation. JSON, HTML, and export writers recursively redact report containers before writing. SQLite continues to store the short evidence string through the existing schema.
-
-Version 12.9 adds Windows audit orchestration metadata without adding new intrusive checks. `scanner.windows_audit` validates connection, command, and overall audit timeout options, wraps WinRM command execution in structured result dictionaries, tracks section-level success/failed/skipped/partial status, and records performance fields such as timed-out command count and slowest command. The overall audit budget is checked before sections and commands; budget exhaustion skips remaining requested work and returns partial results through the existing findings and credentialed audit pipelines.
-
-Version 12.10 adds `scanner.windows_result`, a lightweight standard-library normalisation layer for Windows audit sections and checks. It exposes `WindowsAuditSectionResult` and `WindowsCheckResult`, normalises safe Windows errors, and builds `windows_audit_sections` for service reachability, WinRM authentication, host information, security status, patch status, local security policy, and registry audit. `windows_audit_consolidated_summary` is now derived from these sections where possible, while the legacy `windows_audit_summary`, `credentialed_audits`, `findings`, `open_ports`, and general summary structures remain intact. The section model avoids passwords, secrets, private key paths, tokens, hashes, and raw command output by default, and prepares the Windows audit path for profiles, API responses, and dashboard views without adding intrusive checks.
-
-Version 12.11 adds `scanner.windows_audit_profiles`, a small profile resolver for controlled Windows audit depth. Profiles are additive defaults: `foundation` enables service reachability and optional WinRM authentication, `standard` adds host information, security status, and patch status when WinRM is available, and `detailed` adds local policy and the default registry audit template. Manual flags extend the selected profile without disabling profile-selected sections. Profile metadata is copied into `windows_audit_summary`, `windows_audit_consolidated_summary`, and each normalised Windows section as `enabled_by_profile`, `enabled_by_manual_flag`, and `skipped_reason`, so future dashboards and APIs can explain why a section ran or was skipped without changing the existing findings pipeline.
-
-Version 12.12 adds `scanner.windows_demo`, a fake-data Windows audit generator for demonstrations and report testing. The CLI uses this path only when `--windows-demo` is set. It constructs a local demo scan result and a Windows audit result without calling TCP scanning, WinRM, socket reachability, or credentialed audit code. Demo output still flows through the normal finding, risk scoring, Windows section normalisation, JSON, HTML, credentialed audit, and optional SQLite save paths, but it is marked with `demo_mode: true` and a visible demo notice. Demo reports are sample data and are not valid security assessment evidence.
-
-Version 13.0 adds the first Web DAST Engine component in `scanner.web_crawler`. The new `web-scan` command normalises a start URL, restricts crawling to the same host by default, respects maximum page and depth limits, skips unsafe schemes and common static/binary files, and records pages, links, forms, response timing, and crawl limitations. Forms are parsed for input names, input types, password fields, and file-upload fields, but are never submitted. Findings use the existing standard finding model and flow into JSON and HTML reports alongside `web_scan_summary`, `crawled_pages`, `discovered_forms`, and `web_findings`. Version 13.0 deliberately does not fuzz, authenticate, test SQL injection, test XSS, submit forms, or crawl external domains by default. Future Web DAST work can integrate header checks, cookie audit, and safe opt-in checks on top of this bounded crawl data.
-
-Version 13.1 adds `scanner.web_header_audit`, a passive header checker integrated into `web-scan --headers`. It consumes response header metadata already collected by the crawler, checks common browser security headers, disclosure headers, and cookie flag indicators, and deduplicates findings by issue type with affected-page counts. It adds `web_header_summary` and `web_header_results` to JSON and HTML reports. It does not send additional payloads, submit forms, authenticate, crawl external domains, or perform SQL injection or XSS testing.
-
-Version 13.2 adds `scanner.web_cookie_audit`, a dedicated cookie attribute parser and audit layer. The crawler extracts `Set-Cookie` metadata into value-free cookie records, storing names and attributes only. Cookie values, session IDs, and tokens are not stored or printed. `web-scan --cookies` checks only the start URL unless `--crawl` is explicitly provided, while `--headers` also runs cookie auditing because cookies are part of passive header analysis. Cookie findings are deduplicated by cookie name, issue type, host, and scheme, and the report adds `web_cookie_summary` and `web_cookie_results`.
-
-Version 13.3 adds `scanner.web_form_audit`, an enhanced form discovery layer over the crawler's parsed HTML form metadata. The crawler records form IDs, methods, action URLs, action hosts, HTTPS-to-HTTP submission indicators, input names/types, counts, CSRF-like field names, and sensitive-looking field-name indicators without storing input values or hidden values. `web-scan --forms` checks only the start URL unless `--crawl` is explicitly provided. Form findings are passive indicators for human review and do not submit forms, authenticate, send payloads, fuzz, or test SQL injection or XSS.
-
-Version 13.4 adds `scanner.web_passive_summary`, a consolidated passive Web DAST overview. `web-scan --passive-summary` combines available crawler, header, cookie, and form indicators into `web_passive_summary`, grouped severity indicators, a highest web risk, passive risk rating, recommended next steps, and limitations. When used alone it fetches only the start URL and runs safe passive checks for headers, cookies, and basic form discovery. It does not crawl beyond the start URL unless `--crawl` is provided, submit forms, authenticate, send payloads, fuzz, test SQL injection, test XSS, or prove exploitability.
-
-Version 13.5 adds `scanner.web_scope`, a scope decision layer used by the Web DAST crawler and passive checks. Same-host scope remains the default, external domains are skipped unless explicitly allowed, and users can configure repeated `--allow-host`, `--deny-host`, `--allow-path`, and `--deny-path` rules plus opt-in `--include-subdomains`. The crawler records skipped URL counts and capped samples under `web_scope_summary` and `skipped_url_samples`, and emits concise standard findings with source `web_scope`. Scope controls are intended to make authorised boundaries explicit before future active testing; they do not add exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
-
-Version 13.6 adds `scanner.web_rate_limit`, a shared polite request layer for Web DAST. It validates request delay, request-per-minute, retry, backoff, and maximum-error settings; applies pacing before each safe GET request; retries only bounded safe GET failures for timeout, connection error, HTTP 429, and HTTP 503; respects `Retry-After` by default; and stops the crawl when the configured error threshold is reached. Results are reported under `web_politeness_summary` and capped `request_error_samples`, with concise standard findings using source `web_rate_limit`. Header, cookie, form, and passive summary analysis continue to reuse crawler page data and do not add extra requests.
-
-Version 13.7 adds `scanner.web_robots`, an advisory robots.txt awareness layer. When `web-scan --robots` is used, VulScan fetches `/robots.txt` once from the start URL origin through the existing safe request wrapper, parses it with standard-library robot parsing plus safe summary extraction, and reports `web_robots_summary`. `--respect-robots` is the default when enabled, so disallowed URLs are skipped and counted as `skipped_by_robots` in the scope summary. `--no-respect-robots` reports robots guidance without enforcing it and emits a standard informational finding. robots.txt is never treated as authorisation and does not add active testing, exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
-
-Version 13.8 adds `scanner.web_sitemap`, a passive sitemap discovery layer. When `web-scan --sitemap` is used, VulScan discovers sitemap files from robots.txt `Sitemap` lines, common same-origin sitemap paths, and repeated `--sitemap-url` values. Sitemap fetches use the shared safe request wrapper and rate limiter, XML parsing uses the Python standard library, and nested sitemap indexes are bounded by `--max-sitemap-depth` and `--max-sitemap-urls`. Sitemap URLs are never treated as authorisation; sitemap files and URL entries are filtered through `scanner.web_scope`, robots rules are respected when enabled, and sitemap-assisted crawling is disabled unless `--use-sitemap-for-crawl` is explicitly provided. Reports include `web_sitemap_summary`, `web_sitemap_results`, `web_sitemap_url_samples`, and concise standard findings with source `web_sitemap`. Version 13.8 does not add active testing, exploitation, authentication, form submission, fuzzing, SQL injection testing, or XSS testing.
-
-Version 13.9 adds `scanner.web_report_summary`, a passive report consolidation layer. It builds `web_dast_summary`, `web_dast_sections`, web finding grouping helpers, highest web risk metadata, concise recommended next steps, and a single duplicate-safe consolidation finding. The CLI uses it to print a compact Web DAST Passive Report, and JSON/HTML reports include the consolidated view while preserving existing module-specific keys. Version 13.9 does not add active vulnerability testing; passive findings remain indicators rather than proof of exploitability, and written authorisation remains required before any deeper testing.
-
-Version 14.2 extends the Vulnerability Intelligence Engine foundation. `scanner.software_inventory` normalises open-port, service-detection, SSH audit, Windows audit, and local service fingerprint evidence into a top-level `software_inventory` structure with product/version left null when VulScan lacks explicit evidence. `scanner.vuln_intel` loads a local JSON ruleset, validates supported identity and version match fields, evaluates safe version conditions, builds a `vulnerability_intelligence` summary, and emits standard findings with source `vuln_intel`. JSON and HTML reports include inventory and intelligence sections, while SQLite and exports continue to use the existing findings pipeline.
-
-Version 14.2 intentionally uses local rules only. It does not fetch live CVE feeds, EPSS data, Exploit-DB records, Metasploit modules, exploit code, or perform live attack checks. CVE, CVSS, EPSS, affected-version, fixed-version, references, and exploit availability fields can be present in local rules as metadata, but matches remain indicators requiring manual validation. Version-specific rules require product/version evidence unless `allow_unknown_version` is explicitly set, and unknown-version findings are low confidence.
-
-Version 14.9 adds `scanner.prioritisation_trends`, a reporting-only comparison layer for prioritised findings. When `--priority-trends` is used, VulScan loads the latest previous saved scan for the same target from SQLite, compares stable finding keys, classifies new, resolved, unchanged, increased, decreased, and Fix First trend categories, and reports `prioritisation_trends` plus `prioritisation_trend_details`. SQLite stores a redacted scan-result snapshot for future comparison and keeps a findings-table fallback for older scans. Trend tracking does not run new attack checks, fetch internet data, or confirm exploitability; it supports remediation progress review and still requires human validation.
-
-Version 15.3 adds `scanner.api_job_store` and `scanner.api_jobs` to the local API stack (`scanner.api_app`, `scanner.api_models`, `scanner.api_runner`, and `scanner.api_security`). API jobs are stored in the local SQLite `api_jobs` table with job metadata, sanitized request JSON, result summaries, report paths, and safe error fields. The table is created idempotently during database initialisation and API startup. Jobs can survive API restarts; queued or running jobs found at startup are marked failed with `API_JOB_INTERRUPTED` because in-process background work cannot survive a stopped API process. API keys are read only from `VULSCAN_API_KEY`, auth headers are checked separately, and keys or credential-like fields are never stored in job rows, request models, reports, exports, or database scan results. The API still binds to localhost by default and does not expose credentialed SSH, credentialed Windows, active Web DAST, brute forcing, exploitation, live attack checks, or internet feed fetching.
-
-Version 15.4 adds `scanner.api_filters`, a reusable helper layer for API pagination, sorting, compact finding responses, and finding filters. `GET /jobs`, `GET /scans`, `GET /jobs/{job_id}/findings`, `GET /scans/{scan_id}/findings`, and `GET /exports/findings` now return pagination and filter metadata while preserving their existing top-level response keys. Job listings page and filter directly through the SQLite-backed job store; scan listings page through the existing scan history database; finding filters operate on saved API job results or saved scan snapshots. `compact=true` trims finding responses for dashboard views without changing stored reports or CLI output. API key protection remains unchanged, and filtering does not add new scan checks, credentialed API workflows, exploitation, brute forcing, destructive payloads, or live attack checks.
-
-Version 15.5 improves API documentation only. `scanner.api_app` now publishes richer FastAPI metadata, route summaries, route descriptions, response documentation, and an OpenAPI API key security scheme for `X-VulScan-API-Key`. `scanner.api_models` includes schema descriptions and safe examples for scan requests, scan responses, findings, pagination, filters, and errors without credential fields or API key values. Local client examples live under `examples/api` for curl, PowerShell, and a small Python `requests` client. Runtime scan behavior, API key enforcement, localhost binding defaults, persistent job storage, filtering, and report generation remain unchanged.
-
-Version 16.0 adds the local dashboard foundation. `dashboard/` contains a React + Vite + TypeScript app with typed fetch client helpers, local environment configuration, reusable status/table/summary components, and simple dark dashboard styling. The dashboard calls existing safe API endpoints for health, version, jobs, scans, and compact job findings. It does not add exploitation, exploit execution, credential collection, credentialed scan forms, password fields, public deployment, hard-coded secrets, or API key logging. The API now permits CORS only from `http://localhost:5173` and `http://127.0.0.1:5173` so the local dashboard can call `http://127.0.0.1:8088`.
-
-Version 14.3 adds `scanner.cve_feed`, a local CVE-style feed importer. The scan command accepts `--use-cve-feed --cve-feed PATH` only alongside `--vuln-intel`; the importer loads local JSON, validates feed structure, normalises vendor/product/CPE identifiers, evaluates affected version conditions, and merges results into `vulnerability_intelligence.cve_feed_*` fields. Matched feed records create standard findings with source `cve_feed`, while missing or unknown versions are counted as insufficient evidence and do not create confirmed CVE findings. The feature remains offline-only and does not fetch live CVE data, remote references, Exploit-DB, Metasploit, or exploit code.
-
-Version 14.4 adds `scanner.epss_importer`, an offline EPSS metadata importer. The scan command accepts `--use-epss --epss-file PATH` only with `--vuln-intel --use-cve-feed`; EPSS records are loaded from local CSV or JSON files and used only to enrich matched local CVE feed records. The importer skips malformed rows, counts invalid and duplicate records, keeps the last valid duplicate CVE row, and adds `epss_*` summary fields plus one importer status finding. EPSS is used as a conservative prioritisation signal in risk scoring and never creates a vulnerability finding by itself. Version 14.4 does not fetch live EPSS data, CVE data, Exploit-DB, Metasploit, or exploit code.
-
-Version 14.5 adds `scanner.exploit_metadata`, an offline exploit availability metadata importer. The scan command accepts `--use-exploit-metadata --exploit-metadata-file PATH` only with `--vuln-intel --use-cve-feed`; metadata records are loaded from local JSON or CSV files and used only to enrich matched local CVE feed records. The importer validates booleans and maturity values, skips malformed rows, counts duplicates, and rejects unsafe fields or suspicious content such as payload, command, shellcode, or exploit-code fields before reporting. Exploit metadata is a prioritisation signal only and does not trigger active checks, downloads, exploit execution, exploit code generation, or exploitability claims.
-
-Version 14.7 adds `scanner.asset_criticality` and `scanner.prioritisation`. Asset criticality is loaded only from direct CLI input or local JSON files, never from live internet sources. The resolver matches exact IPs, lowercase hostnames, and optional aliases, then emits a top-level `asset_context` object. The prioritisation engine adds a local asset criticality adjustment of `critical +20`, `high +12`, `medium +6`, and `low/unknown +0`, while keeping informational findings capped at `Monitor` unless other strong local signals exist. This does not perform new attack checks, validate exploitability, fetch CVE/EPSS/exploit data, or create vulnerabilities by itself.
-
-Version 14.8 adds `scanner.prioritisation_report`, a reporting-only dashboard layer over existing prioritised findings. It builds `fix_first_dashboard`, `priority_distribution`, `top_fix_first_findings`, `remediation_action_plan`, and `executive_summary` for terminal, JSON, HTML, and prioritisation exports. It does not collect new evidence, perform new attack checks, fetch internet data, or confirm exploitability. SLA hints are generic decision-support metadata and should be customised by the operator.
-
-The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.
-
-## Version 16.9 Dashboard Portfolio Mode
-
-Version 16.9 adds dashboard portfolio and demo presentation support without changing scanner behavior. Demo mode uses fake sample jobs, scans, findings, reports, trends, asset context, and remediation records only. Demo records use safe sample targets such as `127.0.0.1`, `demo-linux.local`, `demo-windows.local`, and `demo-web.local`, and the UI clearly states that no real target was scanned.
-
-Portfolio mode summarises the implemented architecture as Discovery Engine, Credentialed Scan Engine, Web DAST Engine, Vulnerability Intelligence Engine, Prioritisation Engine, Storage, API, and Dashboard. Screenshot mode adds a compact guide for capturing Overview, Risk, Vulnerabilities, Reports, Remediation, and Settings views. These dashboard modes do not add public deployment, exploitation, exploit execution, brute force controls, credential collection, automatic remediation, or remote system modification.
+- Local-only by default.
+- Authorised use only.
+- API binds to `127.0.0.1` unless explicitly overridden.
+- No public deployment defaults.
+- Credentialed Linux and Windows scans are CLI-only.
+- Dashboard does not collect credentials.
+- Passive Web DAST does not submit forms, authenticate, fuzz, or send attack payloads.
+- Vulnerability intelligence uses local files only and does not fetch or execute exploit code.
+- Remediation tracking does not patch or modify systems.
+- Secrets, API keys, `.env` files, local databases, and generated sensitive reports should not be committed.

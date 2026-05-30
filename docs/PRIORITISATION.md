@@ -1,5 +1,7 @@
 # VulScan Prioritisation
 
+The Prioritisation Engine ranks existing findings so remediation can focus on the most useful work first. It does not collect new evidence, run exploit checks, modify targets, or make final business-risk decisions without human review.
+
 Version 14.7 adds local asset criticality to the prioritisation engine.
 
 Version 14.8 adds fix-first dashboard reporting for prioritised findings.

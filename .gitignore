@@ -6,16 +6,22 @@ env/
 
 # Python cache
 __pycache__/
+.pytest_cache/
 *.pyc
 *.pyo
 *.pyd
 
 # Environment files
 .env
+.env.*
+!.env.example
 dashboard/.env
+dashboard/.env.*
+!dashboard/.env.example
 
 # Reports and local data
-reports/*
+reports/*.html
+reports/*.json
 !reports/.gitkeep
 exports/
 data/*
@@ -34,9 +40,16 @@ data/*
 !data/asset_context/sample_asset_criticality.json
 data/*.db
 data/*cache*.json
+*.sqlite
+*.db
 
 # VS Code local settings
 .vscode/
+
+# Node / dashboard build output
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
 
 # OS files
 .DS_Store
