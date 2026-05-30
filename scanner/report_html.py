@@ -11,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from scanner.evidence import redact_nested
 from scanner.finding import findings_to_dicts
+from scanner.bug_bounty_scope import disabled_bug_bounty_scope
 from scanner.prioritisation_report import disabled_fix_first_dashboard
 from scanner.prioritisation_trends import disabled_prioritisation_trends
 from scanner.report_json import build_summary, credentialed_audits_to_dicts, _windows_consolidated_summary
@@ -131,6 +132,10 @@ def save_html_report(
                 "context_version": None,
                 "limitations": ["Asset criticality enrichment was not enabled."],
             },
+        ),
+        "bug_bounty_scope": scan_result.get(
+            "bug_bounty_scope",
+            disabled_bug_bounty_scope(target),
         ),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),

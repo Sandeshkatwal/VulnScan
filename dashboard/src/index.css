@@ -1745,6 +1745,122 @@ a {
   color: var(--blue);
 }
 
+.scope-program-list {
+  display: grid;
+  gap: 10px;
+}
+
+.scope-program-card {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  text-align: left;
+}
+
+.scope-program-card--selected {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px rgba(69, 125, 255, 0.2);
+}
+
+.scope-program-card span {
+  font-weight: 700;
+}
+
+.scope-program-card small {
+  color: var(--text-muted);
+}
+
+.scope-rules {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.scope-roE-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scope-roE-grid div {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.scope-roE-grid h3,
+.scope-rules h3 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.scope-roE-grid p {
+  color: var(--text-muted);
+  margin: 8px 0 0;
+}
+
+.scope-validation {
+  display: grid;
+  gap: 14px;
+}
+
+.scope-badge {
+  align-items: center;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 26px;
+  padding: 0 10px;
+  width: fit-content;
+}
+
+.scope-badge--in {
+  background: rgba(39, 174, 96, 0.12);
+  border-color: rgba(39, 174, 96, 0.35);
+  color: var(--green);
+}
+
+.scope-badge--out {
+  background: rgba(235, 87, 87, 0.12);
+  border-color: rgba(235, 87, 87, 0.35);
+  color: var(--red);
+}
+
+.scope-result {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.scope-result p {
+  margin: 0;
+}
+
+.scope-result--in {
+  background: rgba(39, 174, 96, 0.08);
+}
+
+.scope-result--out {
+  background: rgba(235, 87, 87, 0.08);
+}
+
+.scope-warning {
+  color: var(--red);
+  font-weight: 700;
+}
+
 @media (max-width: 1180px) {
   .dashboard-shell {
     grid-template-columns: 1fr;
@@ -1809,6 +1925,10 @@ a {
 
   .remediation-filter-bar,
   .remediation-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .scope-roE-grid {
     grid-template-columns: 1fr;
   }
 }

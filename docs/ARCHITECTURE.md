@@ -9,6 +9,7 @@ VulScan
 ├── Discovery Engine
 ├── Credentialed Scan Engine
 ├── Web DAST Engine
+├── Bug Bounty Scope Manager
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -23,6 +24,7 @@ VulScan
 - `scanner.ssh_audit`, `scanner.package_audit`, `scanner.linux_config_audit`: read-only Linux credentialed audit checks.
 - `scanner.windows_audit`, `scanner.windows_result`, `scanner.windows_*`: Windows reachability, optional WinRM validation, and read-only indicators.
 - `scanner.web_*`: passive Web DAST crawling, scope, rate limiting, robots, sitemap, headers, cookies, forms, and passive summary reporting.
+- `scanner.bug_bounty_scope` and `scanner.api_bug_bounty`: local bug bounty program scope loading, validation, scope decisions, API listing, and target checks.
 - `scanner.software_inventory`, `scanner.vuln_intel`, `scanner.cve_feed`, `scanner.epss_importer`, `scanner.exploit_metadata`: local vulnerability intelligence and metadata enrichment.
 - `scanner.risk_score`, `scanner.asset_criticality`, `scanner.prioritisation`, `scanner.prioritisation_report`, `scanner.prioritisation_trends`: risk scoring, business context, fix-first reporting, and trend tracking.
 - `scanner.database`, `scanner.history`, `scanner.remediation`, `scanner.assets`, `scanner.exporter`: local SQLite storage, remediation records, asset inventory, and exports.
@@ -69,6 +71,7 @@ Report files are written under `reports`. API report endpoints map safe report I
 - Credentialed Linux and Windows scans are CLI-only.
 - Dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, or send attack payloads.
+- Bug bounty scope decisions are local decision support and do not replace live program policy verification.
 - Vulnerability intelligence uses local files only and does not fetch or execute exploit code.
 - Remediation tracking does not patch or modify systems.
 - Secrets, API keys, `.env` files, local databases, and generated sensitive reports should not be committed.

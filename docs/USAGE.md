@@ -11,6 +11,31 @@ For initial setup, see `docs\INSTALLATION.md`. For local API details, see `docs\
 - Credentialed Linux and Windows audit workflows are CLI-only and require explicit credentials for an authorised target.
 - The dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, send payloads, or execute exploit checks.
+- Bug bounty scope files are local decision support only; always verify the live program policy before testing.
+
+## Bug Bounty Scope Manager
+
+Version 18.0 adds local bug bounty scope management. Scope files live under `data\bug_bounty` and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.
+
+Load a scope file and show the decision without blocking:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --bug-bounty-scope data\bug_bounty\sample_program_scope.json
+```
+
+Enforce scope and block out-of-scope targets:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope
+```
+
+Use scope with passive Web DAST:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --crawl --headers --cookies --forms --passive-summary --json --html
+```
+
+Out-of-scope rules override in-scope rules. Unknown targets are out of scope by default. See `docs\BUG_BOUNTY.md`.
 
 ## TCP Port Scan
 

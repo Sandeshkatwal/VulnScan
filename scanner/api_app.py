@@ -24,8 +24,10 @@ from scanner.api_filters import (
     validate_sort_by,
     validate_sort_order,
 )
+from scanner.api_bug_bounty import check_scope, get_scope_by_program_id, list_scope_files
+from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import RemediationUpdateRequest
+from scanner.api_models import RemediationUpdateRequest, ScopeCheckRequest
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_remediation import (
     attach_finding_keys,
@@ -43,7 +45,7 @@ from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "16.0"
+API_VERSION = "18.0"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -66,6 +68,9 @@ PROTECTED_PATHS = {
     "/reports/{report_id}/metadata",
     "/reports/{report_id}/download",
     "/reports/{report_id}/view",
+    "/bug-bounty/scopes",
+    "/bug-bounty/scopes/{program_id}",
+    "/bug-bounty/scope-check",
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
@@ -78,6 +83,7 @@ TAGS_METADATA = [
     {"name": "Findings", "description": "Saved finding retrieval with filtering, sorting, pagination, and compact responses."},
     {"name": "Exports", "description": "Local export metadata for saved findings."},
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
+    {"name": "Bug Bounty", "description": "Local bug bounty scope metadata and scope decision checks."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
 ]
 SCAN_REQUEST_EXAMPLE = {
@@ -184,6 +190,45 @@ def create_app(
     def version() -> dict[str, str]:
         return {"scanner": "VulScan", "version": __version__, "api_version": API_VERSION}
 
+    @app.get(
+        "/bug-bounty/scopes",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="List local bug bounty scope files",
+        description="Lists valid local JSON scope files under data/bug_bounty. Does not read arbitrary paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_bug_bounty_scopes() -> dict[str, Any]:
+        return {"scopes": list_scope_files()}
+
+    @app.get(
+        "/bug-bounty/scopes/{program_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="Get local bug bounty scope",
+        description="Returns local scope metadata and rules by program ID from data/bug_bounty.",
+        responses=ERROR_RESPONSES,
+    )
+    def get_bug_bounty_scope(program_id: str) -> dict[str, Any]:
+        result = get_scope_by_program_id(program_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Bug bounty scope program was not found.")
+        return result
+
+    @app.post(
+        "/bug-bounty/scope-check",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="Check target against local bug bounty scope",
+        description="Evaluates a target, URL, domain, or IP against one local JSON scope file under data/bug_bounty.",
+        responses=ERROR_RESPONSES,
+    )
+    def check_bug_bounty_scope(request: ScopeCheckRequest) -> dict[str, Any]:
+        try:
+            return check_scope(request.target, request.scope_file)
+        except BugBountyScopeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.post(
         "/scans",
         response_model=ScanResponse,
@@ -199,7 +244,7 @@ def create_app(
     )
     def start_scan(request: ScanRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
         if request.scan_mode.lower() != "safe":
-            raise HTTPException(status_code=400, detail="Version 16.0 API supports only safe scan_mode.")
+            raise HTTPException(status_code=400, detail="Version 18.0 API supports only safe scan_mode.")
         try:
             request_payload = sanitize_request_payload(request.model_dump())
         except ValueError as exc:

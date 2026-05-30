@@ -15,6 +15,7 @@ import {
 import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
+import { BugBountyScopeView } from './components/BugBountyScopeView'
 import { DemoModeToggle } from './components/DemoModeToggle'
 import { ErrorAlert } from './components/ErrorAlert'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
@@ -51,7 +52,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -93,6 +94,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'trends', label: 'Trends' },
   { id: 'reports', label: 'Reports' },
   { id: 'remediation', label: 'Remediation' },
+  { id: 'bug-bounty', label: 'Bug Bounty' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -124,6 +126,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   remediation: {
     title: 'Remediation',
     description: 'Tracking-only remediation status, owners, due dates, and notes.',
+  },
+  'bug-bounty': {
+    title: 'Bug Bounty',
+    description: 'Local program scope, rules of engagement, and safe scope validation.',
   },
   settings: {
     title: 'Settings',
@@ -697,6 +703,10 @@ function App() {
     )
   }
 
+  function renderBugBounty() {
+    return <BugBountyScopeView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
   function renderSettings() {
     return (
       <section className="settings-grid">
@@ -738,6 +748,7 @@ function App() {
     if (currentSection === 'trends') return renderTrends()
     if (currentSection === 'reports') return renderReports()
     if (currentSection === 'remediation') return renderRemediation()
+    if (currentSection === 'bug-bounty') return renderBugBounty()
     return renderSettings()
   }
 

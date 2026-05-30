@@ -128,6 +128,20 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/rep
 - `GET /remediation/{finding_key}`
 - `PUT /remediation/{finding_key}`
 
+## Bug Bounty Scope Endpoints
+
+- `GET /bug-bounty/scopes`
+- `GET /bug-bounty/scopes/{program_id}`
+- `POST /bug-bounty/scope-check`
+
+These endpoints read local JSON scope files under `data/bug_bounty` only. They do not fetch live program policies, accept arbitrary filesystem paths, store secrets, launch scans, or modify targets.
+
+Example:
+
+```powershell
+curl -X POST http://127.0.0.1:8088/bug-bounty/scope-check -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"target\":\"https://demo-web.local/\",\"scope_file\":\"data/bug_bounty/sample_program_scope.json\"}"
+```
+
 Remediation endpoints update local tracking fields only: status, owner, due date, and notes. They do not run commands, patch systems, restart services, connect to targets, or modify remote systems.
 
 Example:

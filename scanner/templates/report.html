@@ -265,6 +265,27 @@
       {% endif %}
     </section>
 
+    <section>
+      <h2>Bug Bounty Scope</h2>
+      {% set bug_bounty_scope = report.get("bug_bounty_scope", {}) %}
+      {% if bug_bounty_scope.get("enabled") %}
+      <p><strong>Program:</strong> {{ bug_bounty_scope.get("program_name") }}</p>
+      <p><strong>Program ID:</strong> {{ bug_bounty_scope.get("program_id") }}</p>
+      <p><strong>Platform:</strong> {{ bug_bounty_scope.get("platform") }}</p>
+      <p><strong>Scope version:</strong> {{ bug_bounty_scope.get("scope_version") }}</p>
+      <p><strong>Target:</strong> {{ bug_bounty_scope.get("target") }}</p>
+      <p><strong>Target in scope:</strong> {{ bug_bounty_scope.get("target_in_scope") }}</p>
+      <p><strong>Decision:</strong> {{ bug_bounty_scope.get("scope_decision_reason") }}</p>
+      <p><strong>Matched rule:</strong> {{ bug_bounty_scope.get("matched_rule") }}</p>
+      <p><strong>Forbidden actions:</strong> {{ bug_bounty_scope.get("forbidden_actions", []) | join(", ") }}</p>
+      <p><strong>Allowed test types:</strong> {{ bug_bounty_scope.get("allowed_test_types", []) | join(", ") }}</p>
+      <p><strong>Disallowed test types:</strong> {{ bug_bounty_scope.get("disallowed_test_types", []) | join(", ") }}</p>
+      <p><strong>Limitations:</strong> {{ bug_bounty_scope.get("limitations", []) | join("; ") }}</p>
+      {% else %}
+      <p class="empty">Bug bounty scope was not configured for this scan.</p>
+      {% endif %}
+    </section>
+
     {% set dashboard = report.get("fix_first_dashboard", {}) %}
     {% if dashboard.get("enabled") %}
     <section>

@@ -402,3 +402,68 @@ export interface RemediationUpdateResponse {
   record?: RemediationRecord
   [key: string]: unknown
 }
+
+export interface BugBountyScopeSummary {
+  program_id?: string
+  program_name?: string
+  platform?: string
+  policy_url?: string
+  scope_version?: string
+  last_updated?: string
+  scope_file?: string
+  in_scope_domain_count?: number
+  out_of_scope_domain_count?: number
+  [key: string]: unknown
+}
+
+export interface BugBountyScopeRules {
+  domains?: string[]
+  urls?: string[]
+  api_base_urls?: string[]
+  ip_ranges?: string[]
+  [key: string]: unknown
+}
+
+export interface BugBountyScopeDetail {
+  metadata?: BugBountyScopeSummary
+  scope?: {
+    program_id?: string
+    program_name?: string
+    platform?: string
+    policy_url?: string
+    scope_version?: string
+    last_updated?: string
+    safe_testing_notice?: string
+    in_scope?: BugBountyScopeRules
+    out_of_scope?: BugBountyScopeRules
+    forbidden_actions?: string[]
+    allowed_test_types?: string[]
+    disallowed_test_types?: string[]
+    rate_limits?: ApiRecord
+    notes?: string[]
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+}
+
+export interface BugBountyScopesResponse {
+  scopes: BugBountyScopeSummary[]
+  [key: string]: unknown
+}
+
+export interface ScopeDecision {
+  target?: string
+  in_scope?: boolean
+  reason?: string
+  matched_rule?: string
+  program_id?: string
+  program_name?: string
+  [key: string]: unknown
+}
+
+export interface ScopeCheckRequest {
+  target: string
+  scope_file: string
+}
+
+export type ScopeCheckResponse = ScopeDecision

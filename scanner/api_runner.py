@@ -33,9 +33,9 @@ def run_scan_pipeline(
     scanner_name: str = "VulScan",
     scanner_version: str = "unknown",
 ) -> dict[str, Any]:
-    """Run the Version 16.0 API-safe scan pipeline synchronously."""
+    """Run the Version 18.0 API-safe scan pipeline synchronously."""
     if str(scan_mode or "").lower() != "safe":
-        raise ValueError("Version 16.0 API supports only safe scan_mode.")
+        raise ValueError("Version 18.0 API supports only safe scan_mode.")
     cleaned_target = str(target or "").strip()
     if not cleaned_target:
         raise ValueError("A target is required.")

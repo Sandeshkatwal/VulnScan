@@ -1,0 +1,71 @@
+{
+  "program_id": "demo-bug-bounty-program",
+  "program_name": "Demo Bug Bounty Program",
+  "platform": "local-demo",
+  "policy_url": "local-only",
+  "scope_version": "1.0",
+  "last_updated": "demo-local",
+  "safe_testing_notice": "Demo scope for authorised testing workflow only.",
+  "in_scope": {
+    "domains": [
+      "demo-web.local",
+      "*.demo-web.local",
+      "127.0.0.1"
+    ],
+    "urls": [
+      "http://127.0.0.1:8000/",
+      "https://demo-web.local/"
+    ],
+    "api_base_urls": [
+      "https://api.demo-web.local/"
+    ],
+    "ip_ranges": [
+      "127.0.0.1/32"
+    ]
+  },
+  "out_of_scope": {
+    "domains": [
+      "payments.demo-web.local",
+      "auth.thirdparty.local"
+    ],
+    "urls": [
+      "https://demo-web.local/logout",
+      "https://demo-web.local/admin/delete"
+    ],
+    "ip_ranges": []
+  },
+  "forbidden_actions": [
+    "denial_of_service",
+    "brute_force",
+    "credential_stuffing",
+    "social_engineering",
+    "data_destruction",
+    "payment_testing",
+    "spam",
+    "physical_attack"
+  ],
+  "rate_limits": {
+    "max_requests_per_minute": 30,
+    "request_delay_seconds": 1.0,
+    "max_pages": 50,
+    "max_depth": 2
+  },
+  "allowed_test_types": [
+    "passive_recon",
+    "passive_web_dast",
+    "safe_header_checks",
+    "safe_cookie_checks",
+    "safe_form_discovery",
+    "manual_validation"
+  ],
+  "disallowed_test_types": [
+    "automated_exploitation",
+    "destructive_testing",
+    "credential_attacks",
+    "dos_testing"
+  ],
+  "notes": [
+    "This is demo scope data only.",
+    "Always verify scope against the real program policy before testing."
+  ]
+}

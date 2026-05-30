@@ -45,7 +45,7 @@ def test_version_returns_scanner_and_version() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["scanner"] == "VulScan"
-    assert body["api_version"] == "16.0"
+    assert body["api_version"] == "18.0"
     assert body["version"]
 
 

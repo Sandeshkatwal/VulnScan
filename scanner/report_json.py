@@ -10,6 +10,7 @@ from typing import Any
 
 from scanner.evidence import redact_nested
 from scanner.finding import SEVERITY_ORDER, findings_to_dicts
+from scanner.bug_bounty_scope import disabled_bug_bounty_scope
 from scanner.prioritisation_report import disabled_fix_first_dashboard
 from scanner.prioritisation_trends import disabled_prioritisation_trends
 from scanner.windows_result import build_windows_consolidated_summary
@@ -129,6 +130,10 @@ def save_json_report(
                 "context_version": None,
                 "limitations": ["Asset criticality enrichment was not enabled."],
             },
+        ),
+        "bug_bounty_scope": scan_result.get(
+            "bug_bounty_scope",
+            disabled_bug_bounty_scope(target),
         ),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),

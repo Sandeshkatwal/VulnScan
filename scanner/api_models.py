@@ -25,7 +25,7 @@ class PaginationMetadata(StrictApiModel):
 
 
 class ScanRequest(StrictApiModel):
-    """Safe scan request accepted by the Version 16.0 API."""
+    """Safe scan request accepted by the Version 18.0 API."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -46,7 +46,7 @@ class ScanRequest(StrictApiModel):
     )
 
     target: str = Field(..., min_length=1, max_length=255, description="Authorised local scan target.", examples=["127.0.0.1"])
-    scan_mode: str = Field("safe", description="API scan mode. Version 16.0 accepts safe mode only.", examples=["safe"])
+    scan_mode: str = Field("safe", description="API scan mode. Version 18.0 accepts safe mode only.", examples=["safe"])
     json_report: bool = Field(False, description="Write a local JSON report for the job.", examples=[True])
     html_report: bool = Field(False, description="Write a local HTML report for the job.", examples=[False])
     save_db: bool = Field(True, description="Save scan history and findings to local SQLite storage.", examples=[True])
@@ -138,6 +138,25 @@ class RemediationUpdateRequest(StrictApiModel):
                     "note": "Reviewing remediation options.",
                     "owner": "security-team",
                     "due_date": "2026-06-15",
+                }
+            ]
+        },
+    )
+
+
+class ScopeCheckRequest(StrictApiModel):
+    """Local bug bounty scope decision request."""
+
+    target: str = Field(..., min_length=1, max_length=2048, description="Target, domain, IP, or URL to check.", examples=["https://demo-web.local/"])
+    scope_file: str = Field(..., min_length=1, max_length=512, description="Local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "https://demo-web.local/",
+                    "scope_file": "data/bug_bounty/sample_program_scope.json",
                 }
             ]
         },

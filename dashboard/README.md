@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, reports, remediation tracking, settings, demo mode, portfolio mode, and screenshot mode.
+The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, reports, remediation tracking, bug bounty scope management, settings, demo mode, portfolio mode, and screenshot mode.
 
 The dashboard is local development tooling. It does not collect credentials and does not include exploit, brute-force, credentialed scan, password, token, private key, command execution, or automatic remediation controls.
 
@@ -101,6 +101,12 @@ Screenshot mode adds a compact capture guide. Use it with demo mode and portfoli
 - If the protected endpoint test fails, confirm `VITE_VULSCAN_API_KEY` matches `VULSCAN_API_KEY`.
 - Restart `npm run dev` after changing `.env`.
 - Use demo mode when the backend is not running and you only need screenshots.
+
+## Bug Bounty Scope Manager
+
+The Bug Bounty section lists local scope files from `data/bug_bounty`, shows program metadata, in-scope and out-of-scope rules, forbidden actions, allowed and disallowed test types, rate limits, and a target scope validation panel.
+
+Version 18.0 does not launch scans from this panel. If a target is out of scope, the panel shows a clear warning.
 
 ## Safety Note
 

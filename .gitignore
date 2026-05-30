@@ -38,6 +38,8 @@ data/*
 !data/exploit_metadata/sample_exploit_metadata.csv
 !data/asset_context/
 !data/asset_context/sample_asset_criticality.json
+!data/bug_bounty/
+!data/bug_bounty/sample_program_scope.json
 data/*.db
 data/*cache*.json
 *.sqlite

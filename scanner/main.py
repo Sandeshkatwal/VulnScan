@@ -25,6 +25,13 @@ from scanner.asset_criticality import (
     load_asset_criticality_context,
     resolve_asset_criticality,
 )
+from scanner.bug_bounty_scope import (
+    BugBountyScopeError,
+    build_bug_bounty_scope_summary,
+    build_scope_applied_finding,
+    get_scope_decision,
+    load_bug_bounty_scope,
+)
 from scanner.finding import assign_sequential_finding_ids, create_finding, create_port_exposure_findings
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
@@ -209,7 +216,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 16.0 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.0 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -555,8 +562,39 @@ def scan(
             help="Path to a local exploit availability metadata JSON or CSV file.",
         ),
     ] = DEFAULT_EXPLOIT_METADATA_PATH,
+    bug_bounty_scope: Annotated[
+        Path | None,
+        typer.Option(
+            "--bug-bounty-scope",
+            help="Path to a local bug bounty program scope JSON file.",
+        ),
+    ] = None,
+    enforce_scope: Annotated[
+        bool,
+        typer.Option(
+            "--enforce-scope",
+            help="Refuse to scan targets outside the configured bug bounty scope.",
+        ),
+    ] = False,
 ) -> None:
     """Run a defensive TCP connect scan against an authorised target."""
+    bug_bounty_scope_summary: dict[str, Any] | None = None
+    bug_bounty_scope_finding: dict[str, Any] | None = None
+    if bug_bounty_scope is not None:
+        try:
+            loaded_scope = load_bug_bounty_scope(bug_bounty_scope)
+        except BugBountyScopeError as exc:
+            console.print(f"[red]Bug bounty scope error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        decision = get_scope_decision(target, loaded_scope)
+        bug_bounty_scope_summary = build_bug_bounty_scope_summary(loaded_scope, decision)
+        bug_bounty_scope_finding = build_scope_applied_finding(bug_bounty_scope_summary)
+        _print_bug_bounty_scope_summary(bug_bounty_scope_summary)
+        if enforce_scope and not decision.get("in_scope"):
+            console.print(f"[red]Bug bounty scope blocked scan:[/red] {decision.get('reason')}")
+            raise typer.Exit(code=1)
+        if not enforce_scope and not decision.get("in_scope"):
+            console.print("[yellow]Bug bounty scope warning: target is outside configured scope. Scan will continue because --enforce-scope was not used.[/yellow]")
     if asset_criticality and not use_asset_criticality:
         console.print(
             "[yellow]--asset-criticality was provided without --use-asset-criticality. Asset criticality enrichment has been enabled automatically.[/yellow]"
@@ -719,7 +757,11 @@ def scan(
         scan_result.update(disabled_prioritisation_trends(target))
         scan_result["demo_mode"] = bool(windows_demo)
         scan_result["demo_notice"] = DEMO_NOTICE if windows_demo else ""
+        if bug_bounty_scope_summary:
+            scan_result["bug_bounty_scope"] = bug_bounty_scope_summary
         findings = [] if windows_demo else create_port_exposure_findings(scan_result["open_ports"])
+        if bug_bounty_scope_finding:
+            findings.append(bug_bounty_scope_finding)
         if http_audit:
             http_findings = audit_http_services(scan_result["open_ports"])
             findings.extend(http_findings)
@@ -1045,6 +1087,7 @@ def scan(
     _print_credentialed_audit_modules(scan_result.get("credentialed_audits", []))
     _print_vulnerability_intelligence(scan_result.get("vulnerability_intelligence", {}))
     _print_asset_context(scan_result.get("asset_context", {}))
+    _print_bug_bounty_scope_summary(scan_result.get("bug_bounty_scope", {}))
     _print_prioritisation(
         scan_result.get("prioritisation_summary", {}),
         scan_result.get("prioritised_findings", []),
@@ -1325,6 +1368,20 @@ def web_scan(
             help="Save web scan results to an HTML report in the reports folder.",
         ),
     ] = False,
+    bug_bounty_scope: Annotated[
+        Path | None,
+        typer.Option(
+            "--bug-bounty-scope",
+            help="Path to a local bug bounty program scope JSON file.",
+        ),
+    ] = None,
+    enforce_scope: Annotated[
+        bool,
+        typer.Option(
+            "--enforce-scope",
+            help="Refuse to crawl URLs outside the configured bug bounty scope.",
+        ),
+    ] = False,
 ) -> None:
     """Run the safe Web DAST crawler foundation."""
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
@@ -1336,6 +1393,23 @@ def web_scan(
     console.print(
         "[yellow]Web DAST safety:[/yellow] GET-only crawling. Forms are discovered but never submitted."
     )
+    bug_bounty_scope_summary: dict[str, Any] | None = None
+    bug_bounty_scope_finding: dict[str, Any] | None = None
+    if bug_bounty_scope is not None:
+        try:
+            loaded_scope = load_bug_bounty_scope(bug_bounty_scope)
+        except BugBountyScopeError as exc:
+            console.print(f"[red]Bug bounty scope error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        decision = get_scope_decision(url, loaded_scope)
+        bug_bounty_scope_summary = build_bug_bounty_scope_summary(loaded_scope, decision)
+        bug_bounty_scope_finding = build_scope_applied_finding(bug_bounty_scope_summary)
+        _print_bug_bounty_scope_summary(bug_bounty_scope_summary)
+        if enforce_scope and not decision.get("in_scope"):
+            console.print(f"[red]Bug bounty scope blocked web scan:[/red] {decision.get('reason')}")
+            raise typer.Exit(code=1)
+        if not enforce_scope and not decision.get("in_scope"):
+            console.print("[yellow]Bug bounty scope warning: URL is outside configured scope. Web scan will continue because --enforce-scope was not used.[/yellow]")
 
     try:
         validate_web_politeness_options(
@@ -1475,6 +1549,8 @@ def web_scan(
             + list(web_form_result.get("findings", []))
             + list(web_sitemap_result.get("findings", []))
         )
+        if bug_bounty_scope_finding:
+            all_web_findings.append(bug_bounty_scope_finding)
         web_scope_summary = web_result.get("web_scope_summary", scope.summary())
         web_politeness_summary = web_result.get("web_politeness_summary", rate_limiter.summary())
         web_robots_summary = robots_policy.summary()
@@ -1580,11 +1656,13 @@ def web_scan(
         "web_dast_sections": web_dast_sections,
         "demo_mode": False,
         "demo_notice": "",
+        "bug_bounty_scope": bug_bounty_scope_summary or {},
         "scan_start_time": scan_start_time.isoformat(timespec="seconds"),
         "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
     }
 
     _print_web_dast_report(scan_result["web_dast_summary"], scan_result["web_dast_sections"])
+    _print_bug_bounty_scope_summary(scan_result.get("bug_bounty_scope", {}))
     _print_findings(scan_result["findings"])
 
     if json_report or html_report:
@@ -2076,6 +2154,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "web_robots",
         "web_sitemap",
         "web_passive_summary",
+        "bug_bounty_scope",
         "vuln_intel",
         "asset_criticality",
         "prioritisation_report",
@@ -2138,6 +2217,28 @@ def _print_asset_context(asset_context: dict[str, Any]) -> None:
         ("Environment", asset_context.get("environment")),
         ("Business owner", asset_context.get("business_owner")),
         ("Tags", ", ".join(asset_context.get("tags") or [])),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_bug_bounty_scope_summary(scope_summary: dict[str, Any]) -> None:
+    if not scope_summary or not scope_summary.get("enabled"):
+        return
+
+    table = Table(title="Bug Bounty Scope")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Program", scope_summary.get("program_name")),
+        ("Program ID", scope_summary.get("program_id")),
+        ("Platform", scope_summary.get("platform")),
+        ("Scope version", scope_summary.get("scope_version")),
+        ("Target", scope_summary.get("target")),
+        ("In scope", str(bool(scope_summary.get("target_in_scope")))),
+        ("Reason", scope_summary.get("scope_decision_reason")),
+        ("Matched rule", scope_summary.get("matched_rule")),
     ]
     for label, value in rows:
         table.add_row(label, "" if value is None else str(value))

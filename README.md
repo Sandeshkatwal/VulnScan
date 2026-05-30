@@ -12,6 +12,7 @@ Use VulScan only on systems and web applications you own or have explicit writte
 - Credentialed Linux Audit using explicit SSH credentials and read-only checks.
 - Credentialed Windows Audit using safe reachability checks and optional read-only WinRM indicators.
 - Passive Web DAST for bounded crawling, headers, cookies, forms, robots.txt, sitemap, scope, and politeness reporting.
+- Bug Bounty Scope Manager for local program scope, allowed and denied rules, forbidden actions, rate limits, and scope checks.
 - Vulnerability Intelligence with local rules, local CVE-style feeds, local EPSS metadata, and local exploit-availability metadata as prioritisation signals only.
 - Prioritisation and Fix-First Dashboard data for remediation triage.
 - Local FastAPI API with jobs, filtering, pagination, report access, remediation tracking, and optional API key protection.
@@ -25,6 +26,7 @@ VulScan
 ├── Discovery Engine
 ├── Credentialed Scan Engine
 ├── Web DAST Engine
+├── Bug Bounty Scope Manager
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -121,6 +123,7 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - Credentialed scans are CLI-only and are not exposed through the API.
 - The dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, test SQL injection, test XSS, or execute payloads.
+- Bug bounty scope management is local decision support only. Always verify the live program policy before testing.
 - Vulnerability intelligence is local-file based and does not download exploit code.
 - Exploit availability metadata is a prioritisation signal only.
 - Remediation features track status only and do not patch systems or run commands.
@@ -135,6 +138,7 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - [API](docs/API.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Web DAST](docs/WEB_DAST.md)
+- [Bug Bounty Scope Manager](docs/BUG_BOUNTY.md)
 - [Vulnerability Intelligence](docs/VULNERABILITY_INTELLIGENCE.md)
 - [Prioritisation](docs/PRIORITISATION.md)
 - [Demo Guide](docs/DEMO_GUIDE.md)

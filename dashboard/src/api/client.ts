@@ -15,10 +15,14 @@ import type {
   RemediationSummary,
   RemediationUpdatePayload,
   RemediationUpdateResponse,
+  BugBountyScopeDetail,
+  BugBountyScopesResponse,
   ScanRequest,
   ScanResponse,
   ScansQuery,
   ScansResponse,
+  ScopeCheckRequest,
+  ScopeCheckResponse,
   VersionResponse,
 } from '../types/api'
 
@@ -200,5 +204,21 @@ export function createScan(requestBody: ScanRequest): Promise<ScanResponse> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ scan_mode: 'safe', ...requestBody }),
+  })
+}
+
+export function getBugBountyScopes(): Promise<BugBountyScopesResponse> {
+  return request<BugBountyScopesResponse>('/bug-bounty/scopes')
+}
+
+export function getBugBountyScope(programId: string): Promise<BugBountyScopeDetail> {
+  return request<BugBountyScopeDetail>(`/bug-bounty/scopes/${encodeURIComponent(programId)}`)
+}
+
+export function checkBugBountyScope(payload: ScopeCheckRequest): Promise<ScopeCheckResponse> {
+  return request<ScopeCheckResponse>('/bug-bounty/scope-check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   })
 }
