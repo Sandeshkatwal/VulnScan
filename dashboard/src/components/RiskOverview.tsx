@@ -51,7 +51,7 @@ export function RiskOverview({
   }
 
   if (!job?.job_id) {
-    return <div className="empty-state">Run or select a completed scan to view risk overview.</div>
+    return <div className="empty-state">Risk overview appears after findings are loaded.</div>
   }
 
   if (job.status !== 'completed') {
@@ -67,7 +67,7 @@ export function RiskOverview({
   }
 
   if (findings.length === 0 && !error) {
-    return <div className="empty-state">No findings available for this job.</div>
+    return <div className="empty-state">Risk overview appears after findings are loaded.</div>
   }
 
   const payload = resultPayload(result)

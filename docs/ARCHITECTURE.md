@@ -203,3 +203,9 @@ Version 14.7 adds `scanner.asset_criticality` and `scanner.prioritisation`. Asse
 Version 14.8 adds `scanner.prioritisation_report`, a reporting-only dashboard layer over existing prioritised findings. It builds `fix_first_dashboard`, `priority_distribution`, `top_fix_first_findings`, `remediation_action_plan`, and `executive_summary` for terminal, JSON, HTML, and prioritisation exports. It does not collect new evidence, perform new attack checks, fetch internet data, or confirm exploitability. SLA hints are generic decision-support metadata and should be customised by the operator.
 
 The scanner still preserves `open_ports` separately because open ports are useful as asset inventory even when they do not represent confirmed vulnerabilities.
+
+## Version 16.9 Dashboard Portfolio Mode
+
+Version 16.9 adds dashboard portfolio and demo presentation support without changing scanner behavior. Demo mode uses fake sample jobs, scans, findings, reports, trends, asset context, and remediation records only. Demo records use safe sample targets such as `127.0.0.1`, `demo-linux.local`, `demo-windows.local`, and `demo-web.local`, and the UI clearly states that no real target was scanned.
+
+Portfolio mode summarises the implemented architecture as Discovery Engine, Credentialed Scan Engine, Web DAST Engine, Vulnerability Intelligence Engine, Prioritisation Engine, Storage, API, and Dashboard. Screenshot mode adds a compact guide for capturing Overview, Risk, Vulnerabilities, Reports, Remediation, and Settings views. These dashboard modes do not add public deployment, exploitation, exploit execution, brute force controls, credential collection, automatic remediation, or remote system modification.

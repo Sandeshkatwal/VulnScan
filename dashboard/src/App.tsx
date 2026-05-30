@@ -12,19 +12,26 @@ import {
   getVersion,
   updateRemediation,
 } from './api/client'
+import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
+import { ArchitectureSummary } from './components/ArchitectureSummary'
+import { DemoModeToggle } from './components/DemoModeToggle'
 import { ErrorAlert } from './components/ErrorAlert'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
 import { FindingDetailDrawer } from './components/FindingDetailDrawer'
 import { JobDetails } from './components/JobDetails'
 import { JobsTable, statusTone } from './components/JobsTable'
 import { Layout } from './components/Layout'
+import { PortfolioFooter } from './components/PortfolioFooter'
+import { PortfolioModeBanner } from './components/PortfolioModeBanner'
+import { ProductHero } from './components/ProductHero'
 import { ReportsView } from './components/ReportsView'
 import { RemediationView } from './components/RemediationView'
 import { RiskOverview } from './components/RiskOverview'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
 import { SectionHeader } from './components/SectionHeader'
+import { ScreenshotGuide } from './components/ScreenshotGuide'
 import { StatusCard } from './components/StatusCard'
 import { TrendsView } from './components/TrendsView'
 import { VulnerabilityList } from './components/VulnerabilityList'
@@ -42,6 +49,7 @@ import type {
   ScanSummary,
   VersionResponse,
 } from './types/api'
+import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
 type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'settings'
 
@@ -66,6 +74,8 @@ const initialState: DashboardState = {
   scansError: null,
   loading: true,
 }
+
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '16.9-demo', api_version: '16.9' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -154,8 +164,22 @@ function App() {
   const [remediationError, setRemediationError] = useState<string | null>(null)
   const [remediationMessage, setRemediationMessage] = useState<string | null>(null)
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview')
+  const [demoMode, setDemoMode] = useState(envDemoMode)
 
   const loadDashboard = useCallback(async () => {
+    if (demoMode) {
+      setState({
+        health: { status: 'ok', scanner: 'VulScan Demo' },
+        version: demoVersion,
+        jobs: demoJobs,
+        scans: demoScans,
+        apiError: null,
+        jobsError: null,
+        scansError: null,
+        loading: false,
+      })
+      return
+    }
     setState((current) => ({ ...current, loading: true }))
 
     const [healthResult, versionResult, jobsResult, scansResult] = await Promise.allSettled([
@@ -181,7 +205,7 @@ function App() {
       if (!current?.job_id) return current
       return jobs.find((job) => job.job_id === current.job_id) || current
     })
-  }, [])
+  }, [demoMode])
 
   useEffect(() => {
     void loadDashboard()
@@ -189,6 +213,11 @@ function App() {
 
   const loadResult = useCallback(async () => {
     if (!selectedJob?.job_id) return
+    if (demoMode) {
+      setJobResult(demoJobResult)
+      setResultError(null)
+      return
+    }
     setResultLoading(true)
     setResultError(null)
     try {
@@ -198,10 +227,16 @@ function App() {
     } finally {
       setResultLoading(false)
     }
-  }, [selectedJob])
+  }, [demoMode, selectedJob])
 
   const loadRiskData = useCallback(async (job: JobSummary) => {
     if (!job.job_id || job.status !== 'completed') return
+    if (demoMode) {
+      setJobResult(demoJobResult)
+      setRiskFindings(demoFindings)
+      setRiskError(null)
+      return
+    }
     setRiskLoading(true)
     setRiskError(null)
     try {
@@ -225,11 +260,17 @@ function App() {
     } finally {
       setRiskLoading(false)
     }
-  }, [])
+  }, [demoMode])
 
   const loadFindings = useCallback(
     async (filters: FindingFilters = findingFilters) => {
       if (!selectedJob?.job_id) return
+      if (demoMode) {
+        setFindings(demoFindings)
+        setFindingPagination({ limit: filters.limit || 20, offset: filters.offset || 0, returned: demoFindings.length, total: demoFindings.length })
+        setFindingsError(null)
+        return
+      }
       setFindingsLoading(true)
       setFindingsError(null)
       try {
@@ -252,13 +293,21 @@ function App() {
         setFindingsLoading(false)
       }
     },
-    [findingFilters, selectedJob],
+    [demoMode, findingFilters, selectedJob],
   )
 
   const loadSelectedJob = useCallback(
     async (jobId?: string) => {
       const id = jobId || selectedJob?.job_id
       if (!id) return
+      if (demoMode) {
+        setSelectedJob(demoJobs[0])
+        setJobResult(demoJobResult)
+        setFindings(demoFindings)
+        setRiskFindings(demoFindings)
+        setFindingPagination({ limit: 20, offset: 0, returned: demoFindings.length, total: demoFindings.length })
+        return
+      }
       setJobActionError(null)
       try {
         const job = await getJob(id)
@@ -284,7 +333,7 @@ function App() {
         setJobActionError(errorMessage(caught))
       }
     },
-    [loadRiskData, selectedJob],
+    [demoMode, loadRiskData, selectedJob],
   )
 
   const selectAndLoadJob = useCallback(
@@ -302,6 +351,14 @@ function App() {
       setSelectedRemediation(null)
 
       if (!job.job_id) return
+      if (demoMode) {
+        setSelectedJob(job)
+        setJobResult(demoJobResult)
+        setFindings(demoFindings)
+        setRiskFindings(demoFindings)
+        setFindingPagination({ limit: 20, offset: 0, returned: demoFindings.length, total: demoFindings.length })
+        return
+      }
 
       try {
         setRiskLoading(true)
@@ -342,7 +399,7 @@ function App() {
         setFindingsLoading(false)
       }
     },
-    [],
+    [demoMode],
   )
 
   useEffect(() => {
@@ -354,6 +411,14 @@ function App() {
   }, [selectAndLoadJob, selectedJob, state.jobs, state.loading])
 
   async function handleCreateScan(request: ScanRequest): Promise<ScanResponse> {
+    if (demoMode) {
+      setSelectedJob(demoJobs[0])
+      setJobResult(demoJobResult)
+      setFindings(demoFindings)
+      setRiskFindings(demoFindings)
+      setFindingPagination({ limit: 20, offset: 0, returned: demoFindings.length, total: demoFindings.length })
+      return { job_id: 'demo-job-001', scan_id: 'demo-scan-001', status: 'completed', target: request.target || 'demo-web.local' }
+    }
     const response = await createScan(request)
     await loadDashboard()
     if (response.job_id) {
@@ -388,6 +453,11 @@ function App() {
       return
     }
     setRemediationLoading(true)
+    if (demoMode) {
+      setSelectedRemediation(demoRemediationRecords.find((record) => record.finding_key === findingKey) || null)
+      setRemediationLoading(false)
+      return
+    }
     try {
       const response = await getRemediationRecord(findingKey)
       setSelectedRemediation(response.record || null)
@@ -402,6 +472,12 @@ function App() {
     setRemediationLoading(true)
     setRemediationError(null)
     setRemediationMessage(null)
+    if (demoMode) {
+      setSelectedRemediation((current) => current ? { ...current, ...payload, updated_at: new Date().toISOString() } : current)
+      setRemediationMessage('Demo remediation tracking updated.')
+      setRemediationLoading(false)
+      return
+    }
     try {
       const response = await updateRemediation(findingKey, payload)
       setSelectedRemediation(response.record || null)
@@ -477,8 +553,12 @@ function App() {
   function renderOverview() {
     return (
       <>
+        {portfolioMode ? <ProductHero /> : null}
+        {demoMode ? <div className="demo-mode-callout">{DEMO_MODE_MESSAGE}</div> : null}
         {overviewCards}
         <section className="content-grid">
+          {portfolioMode ? <article className="panel panel--wide"><ArchitectureSummary /></article> : null}
+          {screenshotMode ? <article className="panel panel--wide"><ScreenshotGuide /></article> : null}
           <article className="panel">
             <div className="panel-heading">
               <h2>Quick Risk Summary</h2>
@@ -604,7 +684,7 @@ function App() {
   function renderReports() {
     return (
       <article className="panel panel--wide">
-        <ReportsView apiOnline={healthTone !== 'bad'} />
+        <ReportsView apiOnline={healthTone !== 'bad'} demoMode={demoMode} demoJobs={demoJobs} demoResult={demoJobResult} demoFindings={demoFindings} />
       </article>
     )
   }
@@ -612,7 +692,7 @@ function App() {
   function renderRemediation() {
     return (
       <article className="panel panel--wide">
-        <RemediationView apiOnline={healthTone !== 'bad'} />
+        <RemediationView apiOnline={healthTone !== 'bad'} demoMode={demoMode} demoRecords={demoRemediationRecords} demoSummary={demoRemediationSummary} />
       </article>
     )
   }
@@ -626,6 +706,12 @@ function App() {
             <p>Environment-driven local settings and safe connection tests.</p>
           </div>
           <ApiConnectionManager onRefreshDashboard={() => void loadDashboard()} refreshLoading={state.loading} />
+          <div className="settings-mode-grid">
+            <div><span>Demo mode</span><strong>{demoMode ? 'Enabled' : 'Disabled'}</strong></div>
+            <div><span>Portfolio mode</span><strong>{portfolioMode ? 'Enabled' : 'Disabled'}</strong></div>
+            <div><span>Screenshot mode</span><strong>{screenshotMode ? 'Enabled' : 'Disabled'}</strong></div>
+            <div><span>Local-only status</span><strong>Local development</strong></div>
+          </div>
         </article>
         <article className="panel">
           <div className="panel-heading">
@@ -633,6 +719,7 @@ function App() {
             <p>Operational boundary for this dashboard.</p>
           </div>
           <div className="empty-state">VulScan Dashboard is intended for local authorised testing and development. Do not expose it publicly.</div>
+          <DemoModeToggle enabled={demoMode} envEnabled={envDemoMode} onChange={setDemoMode} />
           <div className="button-row button-row--right">
             <button className="secondary-button" type="button" onClick={() => void loadDashboard()} disabled={state.loading}>
               Refresh dashboard data
@@ -669,6 +756,7 @@ function App() {
       onSelectSection={(nextSection) => setCurrentSection(nextSection as DashboardSection)}
     >
       <SectionHeader title={section.title} description={section.description} />
+      <PortfolioModeBanner demoMode={demoMode} portfolioMode={portfolioMode} />
       {renderCurrentSection()}
       <FindingDetailDrawer
         finding={selectedFinding}
@@ -679,6 +767,7 @@ function App() {
         onUpdateRemediation={handleUpdateFindingRemediation}
         onClose={() => setSelectedFinding(null)}
       />
+      <PortfolioFooter />
     </Layout>
   )
 }

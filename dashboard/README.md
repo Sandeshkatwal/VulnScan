@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-Version 16.8 adds a remediation workflow view for local tracking status and notes. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
+Version 16.9 adds final dashboard polish, demo data mode, portfolio mode, screenshot mode, and presentation-friendly empty states. The dashboard is for local development only and should be used with the API bound to `127.0.0.1`.
 
 ## Start The API
 
@@ -30,9 +30,55 @@ Copy `dashboard/.env.example` to `dashboard/.env` for local settings. Do not com
 ```text
 VITE_VULSCAN_API_URL=http://127.0.0.1:8088
 VITE_VULSCAN_API_KEY=
+VITE_VULSCAN_DEMO_MODE=false
+VITE_VULSCAN_PORTFOLIO_MODE=false
+VITE_VULSCAN_SCREENSHOT_MODE=false
 ```
 
 If the backend is running with `--require-api-key`, set `VITE_VULSCAN_API_KEY` to the same local development key. The dashboard sends `X-VulScan-API-Key` only when that value exists.
+
+## Demo And Portfolio Modes
+
+Demo mode is enabled with:
+
+```text
+VITE_VULSCAN_DEMO_MODE=true
+```
+
+Demo mode uses fake sample data only and clearly labels the dashboard with:
+
+```text
+Demo Mode: sample data only. No real target was scanned.
+```
+
+Demo records use safe sample targets such as `127.0.0.1`, `demo-linux.local`, `demo-windows.local`, and `demo-web.local`. They include fake jobs, scans, findings, risk data, trend data, report metadata, remediation records, and asset context. Demo report paths such as `reports\demo_report.json` and `reports\demo_report.html` are display-only unless a real backend report endpoint provides a matching file.
+
+Portfolio mode is enabled with:
+
+```text
+VITE_VULSCAN_PORTFOLIO_MODE=true
+```
+
+Portfolio mode adds a polished hero, project summary, architecture summary, and footer while keeping local-only and demo labels visible.
+
+Screenshot mode is enabled with:
+
+```text
+VITE_VULSCAN_SCREENSHOT_MODE=true
+```
+
+Screenshot mode adds a compact screenshot guide and keeps presentation-critical labels visible. It does not hide local-only or demo safety notices.
+
+Suggested screenshot flow:
+
+1. Start the dashboard.
+2. Enable demo mode.
+3. Open Overview.
+4. Open Risk.
+5. Open Vulnerabilities.
+6. Open Reports.
+7. Open Remediation.
+8. Capture screenshots.
 
 ## Start The Dashboard
 
@@ -156,6 +202,19 @@ cd dashboard
 npm run build
 ```
 
+## Architecture Summary
+
+The dashboard portfolio view summarises these project areas:
+
+- Discovery Engine: implemented.
+- Credentialed Scan Engine: implemented.
+- Web DAST Engine: foundation.
+- Vulnerability Intelligence Engine: implemented.
+- Prioritisation Engine: implemented.
+- Storage: implemented.
+- API: implemented.
+- Dashboard: in progress.
+
 ## Scope
 
-The Version 16.8 dashboard shows API health, version metadata, sidebar navigation, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View with safe API report access, remediation tracking, recent scans, a vulnerability list, settings, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, command execution, automatic patching, or stored secrets.
+The Version 16.9 dashboard shows API health, version metadata, sidebar navigation, safe scan job creation, recent jobs, selected job details, result summaries, Risk Overview charts, Trends View, Reports View with safe API report access, remediation tracking, portfolio/demo presentation views, recent scans, a vulnerability list, settings, and finding details. It does not add public deployment, exploitation, exploit download buttons, brute forcing, credential collection, credentialed scan forms, password fields, command execution, automatic patching, or stored secrets.

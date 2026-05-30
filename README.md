@@ -75,7 +75,7 @@ Version 14.9 adds prioritisation trend tracking:
 
 Trend tracking compares current prioritised findings with the latest previous saved scan for the same target and reports baseline, improved, worsened, or stable trend context. Use `--save-db` for useful history. Stable finding keys are intentionally conservative but may not perfectly match renamed findings, so human review is still required. Trend tracking does not perform new scanning, exploit checks, live attack checks, or internet feed fetching. See `docs\PRIORITISATION.md`.
 
-Version 16.2 adds a local React + Vite vulnerability list and finding detail UI on top of the local FastAPI API. The dashboard is local development only, runs on `http://localhost:5173`, and displays API health, safe scan job creation, recent jobs, selected job details, result summaries, recent scans, a read-only vulnerability list, and finding details. Version 16.3 adds a Risk Overview for the selected completed job, using loaded findings and job result data to summarise severity, priority, sources, top risks, asset criticality, and available trend context. Version 16.4 adds a Trends View for prioritisation trend data from completed jobs. Version 16.5 adds a Reports View that reads completed jobs and report paths from the API, lets local users copy JSON/HTML paths, and shows available report metadata. Version 16.6 adds sidebar navigation and layout polish with sections for Overview, Jobs, Vulnerabilities, Risk, Trends, Reports, and Settings. Version 16.7 adds a Settings/API connection manager and safe API-backed report viewing/downloads. Version 16.8 adds a remediation workflow view for local tracking status, owner, due date, and notes only. The Settings section shows API URL, API key configured/not configured status without displaying the key, connection tests, local development mode, backend docs, and OpenAPI links. Start the backend first, then the dashboard. The dashboard remains local, read-only, tracking-only for remediation, and free of exploit or credential controls.
+Version 16.2 adds a local React + Vite vulnerability list and finding detail UI on top of the local FastAPI API. The dashboard is local development only, runs on `http://localhost:5173`, and displays API health, safe scan job creation, recent jobs, selected job details, result summaries, recent scans, a read-only vulnerability list, and finding details. Version 16.3 adds a Risk Overview for the selected completed job, using loaded findings and job result data to summarise severity, priority, sources, top risks, asset criticality, and available trend context. Version 16.4 adds a Trends View for prioritisation trend data from completed jobs. Version 16.5 adds a Reports View that reads completed jobs and report paths from the API, lets local users copy JSON/HTML paths, and shows available report metadata. Version 16.6 adds sidebar navigation and layout polish with sections for Overview, Jobs, Vulnerabilities, Risk, Trends, Reports, and Settings. Version 16.7 adds a Settings/API connection manager and safe API-backed report viewing/downloads. Version 16.8 adds a remediation workflow view for local tracking status, owner, due date, and notes only. Version 16.9 adds demo data mode, portfolio mode, screenshot mode, polished empty states, a portfolio hero, architecture summary, and footer. The Settings section shows API URL, API key configured/not configured status without displaying the key, connection tests, local development mode, demo/portfolio/screenshot status, backend docs, and OpenAPI links. Start the backend first, then the dashboard. The dashboard remains local, read-only, tracking-only for remediation, and free of exploit or credential controls.
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api
@@ -102,11 +102,27 @@ Dashboard configuration lives in `dashboard\.env`, copied from `dashboard\.env.e
 ```text
 VITE_VULSCAN_API_URL=http://127.0.0.1:8088
 VITE_VULSCAN_API_KEY=
+VITE_VULSCAN_DEMO_MODE=false
+VITE_VULSCAN_PORTFOLIO_MODE=false
+VITE_VULSCAN_SCREENSHOT_MODE=false
 ```
 
 Do not commit `.env` or hard-code API keys. If `VITE_VULSCAN_API_KEY` is set, the dashboard sends it as `X-VulScan-API-Key`; otherwise it calls public endpoints and local-development protected endpoints only when the API permits them. The API allows local-only CORS for `http://localhost:5173` and `http://127.0.0.1:5173`; broad origins are not enabled.
 
 The dashboard scan form sends `POST /scans` with `scan_mode` fixed to `safe`. It does not support credentialed scans, SSH passwords, Windows passwords, tokens, private keys, API key entry, exploit options, brute forcing, or active web attack options.
+
+Demo mode can be enabled with `VITE_VULSCAN_DEMO_MODE=true`. It uses fake sample jobs, scans, findings, reports, trends, asset context, and remediation records only, and labels the UI with `Demo Mode: sample data only. No real target was scanned.` Portfolio mode adds a polished hero and architecture summary for screenshots. Screenshot mode adds a compact screenshot guide. None of these modes include real client/company data, real credentials, real API keys, exploit execution, or public deployment.
+
+Architecture summary:
+
+- Discovery Engine: implemented.
+- Credentialed Scan Engine: implemented.
+- Web DAST Engine: foundation.
+- Vulnerability Intelligence Engine: implemented.
+- Prioritisation Engine: implemented.
+- Storage: implemented.
+- API: implemented.
+- Dashboard: in progress.
 
 To review findings, select a completed job, load findings, then use search, filters, sorting, and pagination in the vulnerability list. Open a finding detail panel for evidence, impact, recommendation, verification, prioritisation, CVE/CVSS/EPSS metadata, exploit metadata indicators, affected URLs, asset criticality, and remediation status where available. The dashboard is read-only for findings and does not include exploit download or credential controls.
 

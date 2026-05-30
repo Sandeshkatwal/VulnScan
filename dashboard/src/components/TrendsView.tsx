@@ -61,7 +61,7 @@ export function TrendsView({ job, result, resultLoading = false, resultError }: 
   const dashboard = getFixFirstDashboard(payload)
 
   if (!hasTrendData(trends, dashboard)) {
-    return <div className="empty-state">Trend data is available when scans are run with --priority-trends and --save-db.</div>
+    return <div className="empty-state">Trend data appears after scans are run with priority trends and saved history.</div>
   }
 
   const limitations = trendLimitations(trends)

@@ -36,7 +36,7 @@ export function JobsTable({ jobs, loading = false, error, selectedJobId, onSelec
   }
 
   if (jobs.length === 0) {
-    return <div className="panel-message">No API jobs found yet.</div>
+    return <div className="empty-state">No scan jobs yet. Start a safe scan from the Jobs section.</div>
   }
 
   return (

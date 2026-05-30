@@ -1643,6 +1643,104 @@ dd {
   color: #cbd5e1;
 }
 
+.portfolio-banner,
+.demo-mode-callout,
+.screenshot-guide,
+.portfolio-footer {
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  border-radius: 8px;
+  color: var(--text-main);
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+}
+
+.portfolio-banner span,
+.screenshot-guide span,
+.portfolio-footer {
+  color: var(--text-muted);
+}
+
+.product-hero {
+  align-items: end;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.88));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.45fr);
+  min-height: 260px;
+  padding: 28px;
+}
+
+.product-hero h1 {
+  font-size: 44px;
+  line-height: 1;
+  margin: 0;
+}
+
+.product-hero p {
+  color: var(--text-muted);
+  font-size: 18px;
+  margin: 14px 0 0;
+  max-width: 720px;
+}
+
+.product-hero__cards,
+.architecture-grid,
+.settings-mode-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.product-hero__cards span,
+.architecture-block,
+.settings-mode-grid > div {
+  background: rgba(2, 6, 23, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.architecture-summary {
+  display: grid;
+  gap: 16px;
+}
+
+.architecture-block {
+  display: grid;
+  gap: 6px;
+}
+
+.architecture-block span,
+.settings-mode-grid span {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.settings-mode-grid {
+  margin-top: 18px;
+}
+
+.demo-mode-toggle {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.58);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px 10px;
+  grid-template-columns: auto 1fr;
+  padding: 14px;
+}
+
+.demo-mode-toggle small {
+  color: var(--text-muted);
+  grid-column: 2;
+}
+
 a {
   color: var(--blue);
 }
@@ -1701,7 +1799,11 @@ a {
   .report-metadata-grid,
   .report-section-grid,
   .connection-grid,
-  .remediation-summary-grid {
+  .remediation-summary-grid,
+  .product-hero,
+  .product-hero__cards,
+  .architecture-grid,
+  .settings-mode-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1755,9 +1857,17 @@ a {
   .report-section-grid,
   .connection-grid,
   .remediation-summary-grid,
+  .product-hero,
+  .product-hero__cards,
+  .architecture-grid,
+  .settings-mode-grid,
   .top-risk-item dl,
   .context-card__grid {
     grid-template-columns: 1fr;
+  }
+
+  .product-hero h1 {
+    font-size: 34px;
   }
 
   .report-index-item,

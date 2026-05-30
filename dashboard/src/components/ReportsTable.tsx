@@ -40,7 +40,7 @@ export function ReportsTable({
 }: ReportsTableProps) {
   if (loading) return <div className="panel-message">Loading saved reports...</div>
   if (error) return <div className="panel-message panel-message--error">{error}</div>
-  if (jobs.length === 0) return <div className="empty-state">No saved reports found. Run a scan with JSON or HTML report enabled.</div>
+  if (jobs.length === 0) return <div className="empty-state">No reports found. Run a scan with JSON or HTML report enabled.</div>
 
   return (
     <div className="table-wrap">

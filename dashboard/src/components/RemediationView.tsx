@@ -11,8 +11,19 @@ function errorMessage(error: unknown): string {
 }
 
 const defaultFilters: RemediationQuery = { limit: 20, offset: 0 }
+const emptyDemoRecords: RemediationRecord[] = []
 
-export function RemediationView({ apiOnline = true }: { apiOnline?: boolean }) {
+export function RemediationView({
+  apiOnline = true,
+  demoMode = false,
+  demoRecords = emptyDemoRecords,
+  demoSummary = null,
+}: {
+  apiOnline?: boolean
+  demoMode?: boolean
+  demoRecords?: RemediationRecord[]
+  demoSummary?: RemediationSummary | null
+}) {
   const [records, setRecords] = useState<RemediationRecord[]>([])
   const [summary, setSummary] = useState<RemediationSummary | null>(null)
   const [pagination, setPagination] = useState<Pagination | null>(null)
@@ -24,6 +35,13 @@ export function RemediationView({ apiOnline = true }: { apiOnline?: boolean }) {
   const [message, setMessage] = useState<string | null>(null)
 
   const loadRemediation = useCallback(async (nextFilters: RemediationQuery = filters) => {
+    if (demoMode) {
+      setRecords(demoRecords)
+      setSummary(demoSummary)
+      setPagination({ limit: Number(nextFilters.limit || 20), offset: Number(nextFilters.offset || 0), returned: demoRecords.length, total: demoRecords.length })
+      setSelectedRecord((current) => current || demoRecords[0] || null)
+      return
+    }
     if (!apiOnline) return
     setLoading(true)
     setError(null)
@@ -44,7 +62,7 @@ export function RemediationView({ apiOnline = true }: { apiOnline?: boolean }) {
     } finally {
       setLoading(false)
     }
-  }, [apiOnline, filters])
+  }, [apiOnline, demoMode, demoRecords, demoSummary, filters])
 
   useEffect(() => {
     void loadRemediation()
@@ -54,6 +72,12 @@ export function RemediationView({ apiOnline = true }: { apiOnline?: boolean }) {
     setUpdating(true)
     setMessage(null)
     setError(null)
+    if (demoMode) {
+      setSelectedRecord((current) => current ? { ...current, ...payload, updated_at: new Date().toISOString() } : current)
+      setMessage('Demo remediation tracking updated.')
+      setUpdating(false)
+      return
+    }
     try {
       const response = await updateRemediation(findingKey, payload)
       setSelectedRecord(response.record || selectedRecord)
@@ -89,6 +113,7 @@ export function RemediationView({ apiOnline = true }: { apiOnline?: boolean }) {
     setSelectedRecord(record)
     setError(null)
     if (!record.finding_key) return
+    if (demoMode) return
     try {
       const response = await getRemediationRecord(record.finding_key)
       setSelectedRecord(response.record || record)
@@ -97,7 +122,7 @@ export function RemediationView({ apiOnline = true }: { apiOnline?: boolean }) {
     }
   }
 
-  if (!apiOnline) {
+  if (!apiOnline && !demoMode) {
     return <div className="empty-state">API offline. Remediation tracking will load when the local API is reachable.</div>
   }
 

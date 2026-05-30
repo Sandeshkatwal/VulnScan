@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { authenticatedDownload, getCompletedJobs, getJobFindings, getJobResult, getReports } from '../api/client'
-import type { FindingsResponse, JobResultResponse, JobSummary, ReportFileSummary } from '../types/api'
+import type { Finding, FindingsResponse, JobResultResponse, JobSummary, ReportFileSummary } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { buildReportSummary, hasReportFeature, reportProducingJobs } from '../utils/reportUtils'
 import { ReportCard } from './ReportCard'
@@ -9,7 +9,14 @@ import { ReportsTable } from './ReportsTable'
 
 interface ReportsViewProps {
   apiOnline?: boolean
+  demoMode?: boolean
+  demoJobs?: JobSummary[]
+  demoResult?: JobResultResponse
+  demoFindings?: Finding[]
 }
+
+const emptyDemoJobs: JobSummary[] = []
+const emptyDemoFindings: Finding[] = []
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Request failed.'
@@ -21,7 +28,7 @@ async function copyText(value?: string | null): Promise<boolean> {
   return true
 }
 
-export function ReportsView({ apiOnline = true }: ReportsViewProps) {
+export function ReportsView({ apiOnline = true, demoMode = false, demoJobs = emptyDemoJobs, demoResult, demoFindings = emptyDemoFindings }: ReportsViewProps) {
   const [jobs, setJobs] = useState<JobSummary[]>([])
   const [apiReports, setApiReports] = useState<ReportFileSummary[]>([])
   const [selectedJob, setSelectedJob] = useState<JobSummary | null>(null)
@@ -36,6 +43,17 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
   const [copyMessage, setCopyMessage] = useState<string | null>(null)
 
   const loadReports = useCallback(async () => {
+    if (demoMode) {
+      setJobs(demoJobs)
+      setApiReports([
+        { report_id: 'demo-report-json', filename: 'demo_report.json', type: 'json', target: 'demo-web.local', created_at: '2026-05-29T09:01:18+00:00', size_bytes: 24576 },
+        { report_id: 'demo-report-html', filename: 'demo_report.html', type: 'html', target: 'demo-web.local', created_at: '2026-05-29T09:01:18+00:00', size_bytes: 32768 },
+      ])
+      setLoadedResults(demoResult && demoJobs[0]?.job_id ? { [demoJobs[0].job_id as string]: demoResult } : {})
+      setLoadedFindings(demoJobs[0]?.job_id ? { [demoJobs[0].job_id as string]: { findings: demoFindings } } : {})
+      setSelectedJob(demoJobs[0] || null)
+      return
+    }
     if (!apiOnline) return
     setLoading(true)
     setError(null)
@@ -56,7 +74,7 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
     } finally {
       setLoading(false)
     }
-  }, [apiOnline])
+  }, [apiOnline, demoFindings, demoJobs, demoMode, demoResult])
 
   useEffect(() => {
     void loadReports()
@@ -110,6 +128,10 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
 
   async function handleViewReport(path?: string | null, filename?: string) {
     if (!path) return
+    if (demoMode) {
+      setCopyMessage('Demo report path only.')
+      return
+    }
     setCopyMessage(null)
     try {
       await authenticatedDownload(path, filename || 'vulscan-report.html', true)
@@ -120,6 +142,10 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
 
   async function handleDownloadReport(path?: string | null, filename?: string) {
     if (!path) return
+    if (demoMode) {
+      setCopyMessage('Demo report path only.')
+      return
+    }
     setCopyMessage(null)
     try {
       await authenticatedDownload(path, filename || 'vulscan-report')
@@ -140,7 +166,7 @@ export function ReportsView({ apiOnline = true }: ReportsViewProps) {
   const fixFirstLoaded = summaries.filter((summary) => summary.has_fix_first_dashboard).length
   const trendLoaded = summaries.filter((summary) => summary.has_trend_data).length
 
-  if (!apiOnline) {
+  if (!apiOnline && !demoMode) {
     return <div className="empty-state">API offline. Reports View will load when the local API is reachable.</div>
   }
 
