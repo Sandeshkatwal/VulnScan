@@ -24,10 +24,12 @@ from scanner.api_filters import (
     validate_sort_by,
     validate_sort_order,
 )
-from scanner.api_bug_bounty import check_scope, get_scope_by_program_id, list_scope_files
+from scanner.api_bug_bounty import check_scope, get_scope_by_program_id, list_scope_files, resolve_scope_file
+from scanner.api_bug_bounty_recon import list_recon_reports, load_recon_report
+from scanner.bug_bounty_recon import BugBountyReconError, run_bug_bounty_recon
 from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import RemediationUpdateRequest, ScopeCheckRequest
+from scanner.api_models import BugBountyReconRequest, RemediationUpdateRequest, ScopeCheckRequest
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_remediation import (
     attach_finding_keys,
@@ -45,7 +47,7 @@ from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "18.0"
+API_VERSION = "18.1"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -71,6 +73,9 @@ PROTECTED_PATHS = {
     "/bug-bounty/scopes",
     "/bug-bounty/scopes/{program_id}",
     "/bug-bounty/scope-check",
+    "/bug-bounty/recon",
+    "/bug-bounty/recon/results",
+    "/bug-bounty/recon/results/{recon_id}",
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
@@ -230,6 +235,58 @@ def create_app(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post(
+        "/bug-bounty/recon",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="Run safe bug bounty recon",
+        description="Runs synchronous metadata-only recon for provided targets. Does not brute-force or query third-party APIs.",
+        responses=ERROR_RESPONSES,
+    )
+    def start_bug_bounty_recon(request: BugBountyReconRequest) -> dict[str, Any]:
+        if not request.targets:
+            raise HTTPException(status_code=400, detail="At least one recon target is required.")
+        try:
+            scope_file = str(resolve_scope_file(request.scope_file)) if request.scope_file else None
+            result = run_bug_bounty_recon(
+                raw_targets=request.targets,
+                scope_file=scope_file,
+                enforce_scope=request.enforce_scope,
+                request_delay=request.request_delay,
+                max_requests_per_minute=request.max_requests_per_minute,
+                timeout=request.timeout,
+                max_redirects=request.max_redirects,
+                input_source="api",
+            )
+        except (BugBountyScopeError, BugBountyReconError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return result
+
+    @app.get(
+        "/bug-bounty/recon/results",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="List local recon reports",
+        description="Lists local JSON recon reports from reports/recon.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_bug_bounty_recon_results() -> dict[str, Any]:
+        return {"reports": list_recon_reports()}
+
+    @app.get(
+        "/bug-bounty/recon/results/{recon_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="Get local recon report",
+        description="Returns a local JSON recon report by recon ID from reports/recon.",
+        responses=ERROR_RESPONSES,
+    )
+    def get_bug_bounty_recon_result(recon_id: str) -> dict[str, Any]:
+        result = load_recon_report(recon_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Recon report was not found.")
+        return {"recon_id": recon_id, "result": result}
+
+    @app.post(
         "/scans",
         response_model=ScanResponse,
         dependencies=[Depends(require_api_key)],
@@ -244,7 +301,7 @@ def create_app(
     )
     def start_scan(request: ScanRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:
         if request.scan_mode.lower() != "safe":
-            raise HTTPException(status_code=400, detail="Version 18.0 API supports only safe scan_mode.")
+            raise HTTPException(status_code=400, detail="Version 18.1 API supports only safe scan_mode.")
         try:
             request_payload = sanitize_request_payload(request.model_dump())
         except ValueError as exc:

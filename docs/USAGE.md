@@ -12,10 +12,11 @@ For initial setup, see `docs\INSTALLATION.md`. For local API details, see `docs\
 - The dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, send payloads, or execute exploit checks.
 - Bug bounty scope files are local decision support only; always verify the live program policy before testing.
+- Bug bounty recon only probes manually provided/imported targets and stores metadata only.
 
 ## Bug Bounty Scope Manager
 
-Version 18.0 adds local bug bounty scope management. Scope files live under `data\bug_bounty` and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.
+Version 18.1 includes local bug bounty scope management and a safe recon foundation. Scope files live under `data\bug_bounty` and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.
 
 Load a scope file and show the decision without blocking:
 
@@ -36,6 +37,24 @@ Use scope with passive Web DAST:
 ```
 
 Out-of-scope rules override in-scope rules. Unknown targets are out of scope by default. See `docs\BUG_BOUNTY.md`.
+
+## Bug Bounty Recon
+
+Recon imports known targets from a local text file or comma-separated CLI input, checks scope, and gently probes HTTP/HTTPS metadata. It does not brute-force subdomains, use wordlists, query external services, submit forms, authenticate, fuzz, or send payloads.
+
+Run recon from the sample local file:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt
+```
+
+Run scope-aware recon and save reports:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+```
+
+Recon reports include `bug_bounty_recon`, `bug_bounty_recon_results`, `bug_bounty_recon_skipped`, and informational findings.
 
 ## TCP Port Scan
 

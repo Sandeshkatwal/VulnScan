@@ -15,6 +15,9 @@ import type {
   RemediationSummary,
   RemediationUpdatePayload,
   RemediationUpdateResponse,
+  BugBountyReconReportsResponse,
+  BugBountyReconRequest,
+  BugBountyReconResponse,
   BugBountyScopeDetail,
   BugBountyScopesResponse,
   ScanRequest,
@@ -221,4 +224,16 @@ export function checkBugBountyScope(payload: ScopeCheckRequest): Promise<ScopeCh
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+}
+
+export function runBugBountyRecon(payload: BugBountyReconRequest): Promise<BugBountyReconResponse> {
+  return request<BugBountyReconResponse>('/bug-bounty/recon', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getBugBountyReconResults(): Promise<BugBountyReconReportsResponse> {
+  return request<BugBountyReconReportsResponse>('/bug-bounty/recon/results')
 }

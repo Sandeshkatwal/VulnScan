@@ -12,7 +12,7 @@ Use VulScan only on systems and web applications you own or have explicit writte
 - Credentialed Linux Audit using explicit SSH credentials and read-only checks.
 - Credentialed Windows Audit using safe reachability checks and optional read-only WinRM indicators.
 - Passive Web DAST for bounded crawling, headers, cookies, forms, robots.txt, sitemap, scope, and politeness reporting.
-- Bug Bounty Scope Manager for local program scope, allowed and denied rules, forbidden actions, rate limits, and scope checks.
+- Bug Bounty Scope Manager and Recon Foundation for local program rules, safe scope checks, and metadata-only probing of provided authorised targets.
 - Vulnerability Intelligence with local rules, local CVE-style feeds, local EPSS metadata, and local exploit-availability metadata as prioritisation signals only.
 - Prioritisation and Fix-First Dashboard data for remediation triage.
 - Local FastAPI API with jobs, filtering, pagination, report access, remediation tracking, and optional API key protection.
@@ -27,6 +27,7 @@ VulScan
 ├── Credentialed Scan Engine
 ├── Web DAST Engine
 ├── Bug Bounty Scope Manager
+├── Bug Bounty Recon Foundation
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -39,6 +40,7 @@ Data flow:
 ```text
 scan -> findings -> storage -> API -> dashboard
 scan -> JSON/HTML reports -> API report endpoints -> dashboard
+manual recon targets -> scope validation -> safe HTTP metadata -> recon reports
 ```
 
 ## Quick Start Backend
@@ -65,6 +67,12 @@ Run the local API:
 ```
 
 The API binds to `127.0.0.1:8088` by default.
+
+Run safe bug bounty recon from the sample manual target list:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+```
 
 ## Quick Start Dashboard
 
@@ -124,6 +132,7 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - The dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, test SQL injection, test XSS, or execute payloads.
 - Bug bounty scope management is local decision support only. Always verify the live program policy before testing.
+- Bug bounty recon only uses provided/imported targets, skips out-of-scope targets, probes gently, and stores metadata only.
 - Vulnerability intelligence is local-file based and does not download exploit code.
 - Exploit availability metadata is a prioritisation signal only.
 - Remediation features track status only and do not patch systems or run commands.

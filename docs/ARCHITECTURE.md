@@ -10,6 +10,7 @@ VulScan
 ├── Credentialed Scan Engine
 ├── Web DAST Engine
 ├── Bug Bounty Scope Manager
+├── Bug Bounty Recon Foundation
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -25,6 +26,7 @@ VulScan
 - `scanner.windows_audit`, `scanner.windows_result`, `scanner.windows_*`: Windows reachability, optional WinRM validation, and read-only indicators.
 - `scanner.web_*`: passive Web DAST crawling, scope, rate limiting, robots, sitemap, headers, cookies, forms, and passive summary reporting.
 - `scanner.bug_bounty_scope` and `scanner.api_bug_bounty`: local bug bounty program scope loading, validation, scope decisions, API listing, and target checks.
+- `scanner.bug_bounty_recon` and `scanner.api_bug_bounty_recon`: manually provided target import, scope-aware safe HTTP/HTTPS metadata probing, recon report listing, and recon result retrieval.
 - `scanner.software_inventory`, `scanner.vuln_intel`, `scanner.cve_feed`, `scanner.epss_importer`, `scanner.exploit_metadata`: local vulnerability intelligence and metadata enrichment.
 - `scanner.risk_score`, `scanner.asset_criticality`, `scanner.prioritisation`, `scanner.prioritisation_report`, `scanner.prioritisation_trends`: risk scoring, business context, fix-first reporting, and trend tracking.
 - `scanner.database`, `scanner.history`, `scanner.remediation`, `scanner.assets`, `scanner.exporter`: local SQLite storage, remediation records, asset inventory, and exports.
@@ -37,7 +39,7 @@ VulScan
 - `dashboard/src/api/client.ts`: typed API client helpers.
 - `dashboard/src/utils`: formatting, demo mode, risk metrics, trend metrics, and report helpers.
 - `dashboard/src/demo`: fake sample data for demo and portfolio mode.
-- `dashboard/src/components`: dashboard shell, navigation, API status, jobs, scans, vulnerability list, finding drawer, risk overview, trends, reports, remediation, settings, portfolio banner, and screenshot guide.
+- `dashboard/src/components`: dashboard shell, navigation, API status, jobs, scans, vulnerability list, finding drawer, risk overview, trends, reports, remediation, bug bounty scope and recon views, settings, portfolio banner, and screenshot guide.
 
 The dashboard is local React + Vite + TypeScript tooling. It does not collect credentials and does not expose exploit, brute-force, credentialed scan, or command execution controls.
 
@@ -45,6 +47,7 @@ The dashboard is local React + Vite + TypeScript tooling. It does not collect cr
 
 ```text
 scan -> findings -> storage -> API -> dashboard
+manual recon targets -> scope validation -> safe HTTP metadata -> JSON/HTML recon reports -> dashboard
 ```
 
 1. The CLI or API starts a safe scan job.
@@ -62,6 +65,8 @@ scan -> JSON/HTML reports -> API report endpoints -> dashboard
 
 Report files are written under `reports`. API report endpoints map safe report IDs to files in that directory only, reject traversal, and serve only `.json` or `.html` reports. The dashboard uses these endpoints for local viewing and download when available.
 
+Recon reports are written under `reports/recon` when requested. They include summary counts, live asset metadata, skipped target decisions, passive technology hints, and limitations. They do not include response bodies, cookies, tokens, passwords, or private keys.
+
 ## Safety Model
 
 - Local-only by default.
@@ -72,6 +77,7 @@ Report files are written under `reports`. API report endpoints map safe report I
 - Dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, or send attack payloads.
 - Bug bounty scope decisions are local decision support and do not replace live program policy verification.
+- Bug bounty recon only accepts provided targets, applies scope checks before probing, uses gentle HTTP/HTTPS GET requests, and stores metadata only.
 - Vulnerability intelligence uses local files only and does not fetch or execute exploit code.
 - Remediation tracking does not patch or modify systems.
 - Secrets, API keys, `.env` files, local databases, and generated sensitive reports should not be committed.

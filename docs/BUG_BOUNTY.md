@@ -1,6 +1,6 @@
-# Bug Bounty Scope Manager
+# Bug Bounty Scope And Recon
 
-The Bug Bounty Scope Manager stores local program scope rules for authorised testing workflows. Version 18.0 is scope management only: it does not add recon automation, exploitation, exploit execution, exploit downloads, brute-force controls, credential attacks, bypass automation, stealth logic, or destructive payloads.
+The Bug Bounty Scope Manager stores local program scope rules for authorised testing workflows. Version 18.1 also adds a safe recon foundation for manually provided targets. It does not add exploitation, exploit execution, exploit downloads, subdomain brute forcing, wordlist enumeration, credential attacks, bypass automation, stealth logic, high-rate requests, or destructive payloads.
 
 Always verify the live program policy before testing.
 
@@ -106,6 +106,44 @@ Scope-aware passive Web DAST:
 
 If `--enforce-scope` is set and the target is out of scope, VulScan stops safely before scanning or crawling.
 
+## Recon Foundation
+
+Recon imports known domains, hosts, URLs, or IP addresses from manual input or a local text file, validates them against the selected bug bounty scope, and gently probes HTTP/HTTPS metadata.
+
+It does not discover new subdomains, brute-force names, use wordlists, query search engines, call third-party APIs, submit forms, authenticate, fuzz, or send payloads.
+
+Targets file format:
+
+```text
+127.0.0.1
+http://127.0.0.1:8000/
+demo-web.local
+https://demo-web.local/
+api.demo-web.local
+```
+
+Sample file:
+
+```text
+data/bug_bounty/recon/sample_targets.txt
+```
+
+Run recon from a local file:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt
+```
+
+Run scope-aware recon and save JSON/HTML reports:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+```
+
+Recon collects status code, final URL, redirect chain, response time, page title, selected headers, content type, content length, basic technology hints, and security header presence. It caps response reads, stores metadata only, and does not store full response bodies, cookies, tokens, passwords, session data, or private keys.
+
+Scope rules are applied before probing. Out-of-scope targets are skipped and recorded in the recon summary.
+
 ## API Examples
 
 List local scope files:
@@ -128,6 +166,18 @@ curl -X POST http://127.0.0.1:8088/bug-bounty/scope-check -H "Content-Type: appl
 
 API endpoints only read local JSON files under `data/bug_bounty` and use API key protection when configured.
 
+Run synchronous recon from provided targets:
+
+```powershell
+curl -X POST http://127.0.0.1:8088/bug-bounty/recon -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"targets\":[\"http://127.0.0.1:8000/\",\"demo-web.local\"],\"scope_file\":\"data/bug_bounty/sample_program_scope.json\",\"enforce_scope\":true,\"request_delay\":1.0,\"max_requests_per_minute\":30,\"timeout\":5}"
+```
+
+List saved recon reports:
+
+```powershell
+curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/bug-bounty/recon/results
+```
+
 ## Dashboard Usage
 
 Open the Bug Bounty section to:
@@ -137,7 +187,9 @@ Open the Bug Bounty section to:
 - Review forbidden actions, allowed test types, disallowed test types, and rate limits.
 - Check whether a target is in scope.
 
-The dashboard Bug Bounty panel does not launch scans in Version 18.0.
+Open the Bug Bounty Recon section to paste known targets, select a local scope file, keep scope enforcement enabled, set gentle request limits, and review live metadata and skipped targets.
+
+The recon dashboard does not include brute-force, wordlist, exploit, payload, credential, or scan-launch controls.
 
 ## Safety Warning
 

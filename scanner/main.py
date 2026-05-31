@@ -32,6 +32,12 @@ from scanner.bug_bounty_scope import (
     get_scope_decision,
     load_bug_bounty_scope,
 )
+from scanner.bug_bounty_recon import (
+    RECON_REPORTS_DIR,
+    BugBountyReconError,
+    load_recon_targets,
+    run_bug_bounty_recon,
+)
 from scanner.finding import assign_sequential_finding_ids, create_finding, create_port_exposure_findings
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
@@ -216,7 +222,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.0 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.1 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -1689,6 +1695,159 @@ def web_scan(
         console.print(f"HTML report saved: {report_path}")
 
 
+@app.command("recon")
+def recon(
+    targets_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--targets-file",
+            help="Local newline-delimited recon targets file.",
+        ),
+    ] = None,
+    targets: Annotated[
+        str | None,
+        typer.Option(
+            "--targets",
+            help="Optional comma-separated manual recon targets.",
+        ),
+    ] = None,
+    bug_bounty_scope: Annotated[
+        Path | None,
+        typer.Option(
+            "--bug-bounty-scope",
+            help="Path to a local bug bounty program scope JSON file.",
+        ),
+    ] = None,
+    enforce_scope: Annotated[
+        bool,
+        typer.Option(
+            "--enforce-scope",
+            help="Skip out-of-scope targets before probing.",
+        ),
+    ] = False,
+    request_delay: Annotated[
+        float,
+        typer.Option(
+            "--request-delay",
+            help="Seconds to wait between recon requests.",
+        ),
+    ] = 1.0,
+    max_requests_per_minute: Annotated[
+        int,
+        typer.Option(
+            "--max-requests-per-minute",
+            help="Maximum safe recon requests per minute.",
+        ),
+    ] = 30,
+    timeout: Annotated[
+        float,
+        typer.Option(
+            "--timeout",
+            help="Per-request timeout in seconds.",
+        ),
+    ] = 5.0,
+    max_redirects: Annotated[
+        int,
+        typer.Option(
+            "--max-redirects",
+            help="Maximum redirects to follow.",
+        ),
+    ] = 5,
+    json_report: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Save recon results to a JSON report in reports/recon.",
+        ),
+    ] = False,
+    html_report: Annotated[
+        bool,
+        typer.Option(
+            "--html",
+            help="Save recon results to an HTML report in reports/recon.",
+        ),
+    ] = False,
+) -> None:
+    """Run safe bug bounty recon against provided/imported targets only."""
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    console.print("[bold]Bug Bounty Recon[/bold]")
+    console.print("[yellow]Safe usage warning:[/yellow] Recon only probes provided targets. No brute forcing, wordlists, or third-party lookups are used.")
+
+    raw_targets: list[str] = []
+    input_source = "manual"
+    if targets_file is not None:
+        try:
+            raw_targets.extend(load_recon_targets(targets_file))
+        except BugBountyReconError as exc:
+            console.print(f"[red]Recon input error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        input_source = str(targets_file)
+    if targets:
+        raw_targets.extend([target.strip() for target in targets.split(",") if target.strip()])
+        if input_source == "manual":
+            input_source = "cli"
+    if not raw_targets:
+        console.print("[red]No recon targets were provided. Use --targets-file or --targets.[/red]")
+        raise typer.Exit(code=1)
+
+    try:
+        recon_payload = run_bug_bounty_recon(
+            raw_targets=raw_targets,
+            scope_file=bug_bounty_scope,
+            enforce_scope=enforce_scope,
+            request_delay=request_delay,
+            max_requests_per_minute=max_requests_per_minute,
+            timeout=timeout,
+            max_redirects=max_redirects,
+            input_source=input_source,
+        )
+    except (BugBountyScopeError, BugBountyReconError) as exc:
+        console.print(f"[red]Bug bounty recon error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    summary = recon_payload["bug_bounty_recon"]
+    _print_bug_bounty_recon_summary(summary)
+    _print_bug_bounty_recon_results(recon_payload["bug_bounty_recon_results"])
+    _print_bug_bounty_recon_skipped(recon_payload["bug_bounty_recon_skipped"])
+    _print_findings(recon_payload["findings"])
+
+    scan_start_time = datetime.fromisoformat(summary["started_at"])
+    scan_end_time = datetime.fromisoformat(summary["completed_at"])
+    scan_result = {
+        "host": "bug-bounty-recon",
+        "resolved_ip": "",
+        "scan_mode": "bug-bounty-recon",
+        "duration_seconds": round((scan_end_time - scan_start_time).total_seconds(), 3),
+        "open_ports": [],
+        "findings": recon_payload["findings"],
+        "bug_bounty_recon": summary,
+        "bug_bounty_recon_results": recon_payload["bug_bounty_recon_results"],
+        "bug_bounty_recon_skipped": recon_payload["bug_bounty_recon_skipped"],
+        "demo_mode": False,
+        "demo_notice": "",
+    }
+    if json_report:
+        report_path = save_json_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+            reports_dir=RECON_REPORTS_DIR,
+        )
+        console.print(f"[bold]JSON recon report saved:[/bold] {report_path}")
+    if html_report:
+        report_path = save_html_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+            reports_dir=RECON_REPORTS_DIR,
+        )
+        console.print(f"HTML recon report saved: {report_path}")
+
+
 @app.command()
 def history(
     target: Annotated[
@@ -2155,6 +2314,7 @@ def _print_findings(findings: list[dict[str, Any]]) -> None:
         "web_sitemap",
         "web_passive_summary",
         "bug_bounty_scope",
+        "bug_bounty_recon",
         "vuln_intel",
         "asset_criticality",
         "prioritisation_report",
@@ -2242,6 +2402,68 @@ def _print_bug_bounty_scope_summary(scope_summary: dict[str, Any]) -> None:
     ]
     for label, value in rows:
         table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_bug_bounty_recon_summary(summary: dict[str, Any]) -> None:
+    table = Table(title="Bug Bounty Recon Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Program", summary.get("program_name") or ""),
+        ("Input targets", summary.get("input_targets_count")),
+        ("Normalised targets", summary.get("normalised_targets_count")),
+        ("Probe candidates", summary.get("probe_candidates_count")),
+        ("Probed", summary.get("probed_count")),
+        ("Live", summary.get("live_count")),
+        ("Errors", summary.get("error_count")),
+        ("Skipped", summary.get("skipped_count")),
+        ("Technologies", ", ".join(summary.get("technologies_observed") or [])),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_bug_bounty_recon_results(results: list[dict[str, Any]]) -> None:
+    if not results:
+        console.print("[yellow]Recon results:[/yellow] No targets were probed.")
+        return
+    table = Table(title="Recon Results")
+    table.add_column("Probe URL")
+    table.add_column("Status")
+    table.add_column("Title")
+    table.add_column("Server")
+    table.add_column("Tech")
+    table.add_column("Time", justify="right")
+    for result in results:
+        technologies = ", ".join(str(hint.get("name") or "") for hint in result.get("technology_hints", []) if hint.get("name"))
+        table.add_row(
+            str(result.get("probe_url") or ""),
+            str(result.get("status_code") or result.get("error_code") or ""),
+            str(result.get("page_title") or "")[:60],
+            str(result.get("server_header") or "")[:40],
+            technologies[:50],
+            f"{result.get('response_time_ms') or 0} ms",
+        )
+    console.print(table)
+
+
+def _print_bug_bounty_recon_skipped(skipped: list[dict[str, Any]]) -> None:
+    if not skipped:
+        return
+    table = Table(title="Skipped Recon Targets")
+    table.add_column("Target")
+    table.add_column("Probe URL")
+    table.add_column("Reason")
+    table.add_column("Scope Reason")
+    for item in skipped:
+        table.add_row(
+            str(item.get("target") or ""),
+            str(item.get("probe_url") or ""),
+            str(item.get("reason") or ""),
+            str(item.get("scope_reason") or ""),
+        )
     console.print(table)
 
 

@@ -1,0 +1,5 @@
+127.0.0.1
+http://127.0.0.1:8000/
+demo-web.local
+https://demo-web.local/
+api.demo-web.local

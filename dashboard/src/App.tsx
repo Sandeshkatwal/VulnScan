@@ -15,6 +15,7 @@ import {
 import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
+import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
 import { DemoModeToggle } from './components/DemoModeToggle'
 import { ErrorAlert } from './components/ErrorAlert'
@@ -52,7 +53,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -76,7 +77,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '16.9-demo', api_version: '16.9' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.1-demo', api_version: '18.1' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -95,6 +96,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'reports', label: 'Reports' },
   { id: 'remediation', label: 'Remediation' },
   { id: 'bug-bounty', label: 'Bug Bounty' },
+  { id: 'bug-bounty-recon', label: 'Recon' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -130,6 +132,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'bug-bounty': {
     title: 'Bug Bounty',
     description: 'Local program scope, rules of engagement, and safe scope validation.',
+  },
+  'bug-bounty-recon': {
+    title: 'Bug Bounty Recon',
+    description: 'Scope-aware HTTP/HTTPS metadata probing for manually provided authorised targets.',
   },
   settings: {
     title: 'Settings',
@@ -707,6 +713,10 @@ function App() {
     return <BugBountyScopeView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
 
+  function renderBugBountyRecon() {
+    return <BugBountyReconView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
   function renderSettings() {
     return (
       <section className="settings-grid">
@@ -749,6 +759,7 @@ function App() {
     if (currentSection === 'reports') return renderReports()
     if (currentSection === 'remediation') return renderRemediation()
     if (currentSection === 'bug-bounty') return renderBugBounty()
+    if (currentSection === 'bug-bounty-recon') return renderBugBountyRecon()
     return renderSettings()
   }
 

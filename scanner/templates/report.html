@@ -286,6 +286,98 @@
       {% endif %}
     </section>
 
+    {% set recon = report.get("bug_bounty_recon", {}) %}
+    {% if recon.get("enabled") %}
+    <section>
+      <h2>Bug Bounty Recon</h2>
+      <div class="grid">
+        <div class="metric">
+          <div class="label">Input Targets</div>
+          <div class="value">{{ recon.get("input_targets_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Probed</div>
+          <div class="value">{{ recon.get("probed_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Live</div>
+          <div class="value">{{ recon.get("live_count", 0) }}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Skipped</div>
+          <div class="value">{{ recon.get("skipped_count", 0) }}</div>
+        </div>
+      </div>
+      <p><strong>Program:</strong> {{ recon.get("program_name") or "" }}</p>
+      <p><strong>Technologies observed:</strong> {{ recon.get("technologies_observed", []) | join(", ") }}</p>
+      <p><strong>Limitations:</strong> {{ recon.get("limitations", []) | join("; ") }}</p>
+
+      <h3>Live Assets And Probe Results</h3>
+      {% if report.get("bug_bounty_recon_results") %}
+      <table>
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>Probe URL</th>
+            <th>Status</th>
+            <th>Title</th>
+            <th>Server</th>
+            <th>Technologies</th>
+            <th>In Scope</th>
+            <th>Response</th>
+            <th>Final URL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in report.get("bug_bounty_recon_results", []) %}
+          <tr>
+            <td>{{ item.get("target") }}</td>
+            <td>{{ item.get("probe_url") }}</td>
+            <td>{{ item.get("status_code") or item.get("error_code") }}</td>
+            <td>{{ item.get("page_title") }}</td>
+            <td>{{ item.get("server_header") }}</td>
+            <td>{% for hint in item.get("technology_hints", []) %}{{ hint.get("name") }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+            <td>{{ item.get("in_scope") }}</td>
+            <td>{{ item.get("response_time_ms") }} ms</td>
+            <td>{{ item.get("final_url") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No recon probe results were recorded.</p>
+      {% endif %}
+
+      <h3>Skipped Targets</h3>
+      {% if report.get("bug_bounty_recon_skipped") %}
+      <table>
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>Probe URL</th>
+            <th>Reason</th>
+            <th>Scope Reason</th>
+            <th>Matched Rule</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in report.get("bug_bounty_recon_skipped", []) %}
+          <tr>
+            <td>{{ item.get("target") }}</td>
+            <td>{{ item.get("probe_url") }}</td>
+            <td>{{ item.get("reason") }}</td>
+            <td>{{ item.get("scope_reason") }}</td>
+            <td>{{ item.get("matched_rule") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No recon targets were skipped.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set dashboard = report.get("fix_first_dashboard", {}) %}
     {% if dashboard.get("enabled") %}
     <section>

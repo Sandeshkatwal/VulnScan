@@ -467,3 +467,106 @@ export interface ScopeCheckRequest {
 }
 
 export type ScopeCheckResponse = ScopeDecision
+
+export interface ReconTechnologyHint {
+  name?: string
+  source?: string
+  confidence?: string
+  [key: string]: unknown
+}
+
+export interface ReconSecurityHeaderPresence {
+  hsts_present?: boolean
+  csp_present?: boolean
+  x_frame_options_present?: boolean
+  x_content_type_options_present?: boolean
+  [key: string]: unknown
+}
+
+export interface BugBountyReconSummary {
+  enabled?: boolean
+  program_id?: string
+  program_name?: string
+  input_source?: string
+  input_targets_count?: number
+  normalised_targets_count?: number
+  in_scope_targets_count?: number
+  out_of_scope_targets_count?: number
+  probe_candidates_count?: number
+  probed_count?: number
+  live_count?: number
+  error_count?: number
+  skipped_count?: number
+  technologies_observed?: string[]
+  status_code_distribution?: ApiRecord
+  content_type_distribution?: ApiRecord
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface BugBountyReconResult {
+  target?: string
+  target_type?: string
+  probe_url?: string
+  final_url?: string
+  status_code?: number | null
+  live?: boolean
+  page_title?: string
+  server_header?: string
+  x_powered_by?: string
+  content_type?: string
+  content_length?: number | null
+  redirect_chain?: string[]
+  response_time_ms?: number
+  in_scope?: boolean
+  scope_reason?: string
+  technology_hints?: ReconTechnologyHint[]
+  security_header_presence?: ReconSecurityHeaderPresence
+  error_code?: string
+  error_message?: string
+  [key: string]: unknown
+}
+
+export interface BugBountyReconSkipped {
+  target?: string
+  probe_url?: string
+  reason?: string
+  scope_reason?: string
+  matched_rule?: string
+  [key: string]: unknown
+}
+
+export interface BugBountyReconRequest {
+  targets: string[]
+  scope_file?: string
+  enforce_scope?: boolean
+  request_delay?: number
+  max_requests_per_minute?: number
+  timeout?: number
+  max_redirects?: number
+}
+
+export interface BugBountyReconResponse {
+  bug_bounty_recon?: BugBountyReconSummary
+  bug_bounty_recon_results?: BugBountyReconResult[]
+  bug_bounty_recon_skipped?: BugBountyReconSkipped[]
+  findings?: Finding[]
+  [key: string]: unknown
+}
+
+export interface BugBountyReconReportSummary {
+  recon_id?: string
+  path?: string
+  created_at?: string
+  program_id?: string
+  program_name?: string
+  input_targets_count?: number
+  live_count?: number
+  skipped_count?: number
+  [key: string]: unknown
+}
+
+export interface BugBountyReconReportsResponse {
+  reports: BugBountyReconReportSummary[]
+  [key: string]: unknown
+}

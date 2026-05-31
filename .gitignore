@@ -22,6 +22,8 @@ dashboard/.env.*
 # Reports and local data
 reports/*.html
 reports/*.json
+reports/recon/*.html
+reports/recon/*.json
 !reports/.gitkeep
 exports/
 data/*
@@ -40,6 +42,8 @@ data/*
 !data/asset_context/sample_asset_criticality.json
 !data/bug_bounty/
 !data/bug_bounty/sample_program_scope.json
+!data/bug_bounty/recon/
+!data/bug_bounty/recon/sample_targets.txt
 data/*.db
 data/*cache*.json
 *.sqlite

@@ -137,6 +137,12 @@ def save_html_report(
             "bug_bounty_scope",
             disabled_bug_bounty_scope(target),
         ),
+        "bug_bounty_recon": scan_result.get(
+            "bug_bounty_recon",
+            {"enabled": False, "limitations": ["Bug bounty recon was not enabled."]},
+        ),
+        "bug_bounty_recon_results": scan_result.get("bug_bounty_recon_results", []),
+        "bug_bounty_recon_skipped": scan_result.get("bug_bounty_recon_skipped", []),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),
         "fix_first_dashboard": scan_result.get(

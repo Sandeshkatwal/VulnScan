@@ -135,6 +135,12 @@ def save_json_report(
             "bug_bounty_scope",
             disabled_bug_bounty_scope(target),
         ),
+        "bug_bounty_recon": scan_result.get(
+            "bug_bounty_recon",
+            {"enabled": False, "limitations": ["Bug bounty recon was not enabled."]},
+        ),
+        "bug_bounty_recon_results": scan_result.get("bug_bounty_recon_results", []),
+        "bug_bounty_recon_skipped": scan_result.get("bug_bounty_recon_skipped", []),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),
         "fix_first_dashboard": scan_result.get(
@@ -282,6 +288,8 @@ def build_summary(scan_result: dict[str, Any]) -> dict[str, Any]:
         "total_windows_findings": len(scan_result.get("windows_findings", [])),
         "total_web_findings": len(scan_result.get("web_findings", [])),
         "total_vuln_intel_findings": len(scan_result.get("vuln_intel_findings", [])),
+        "total_bug_bounty_recon_results": len(scan_result.get("bug_bounty_recon_results", [])),
+        "total_bug_bounty_recon_skipped": len(scan_result.get("bug_bounty_recon_skipped", [])),
         "vulnerability_intelligence_matches": int(
             (scan_result.get("vulnerability_intelligence") or {}).get("matches_found") or 0
         ),
