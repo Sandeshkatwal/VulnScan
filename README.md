@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # VulScan
 
 VulScan is a local authorised vulnerability scanning and vulnerability management platform. It is designed for defensive assessment, reporting, triage, and remediation tracking on systems you own or have explicit permission to assess.
@@ -165,3 +166,6 @@ Planned areas include persistent dashboard preferences, dashboard authentication
 ## License
 
 License not selected yet.
+=======
+# VulnScan
+>>>>>>> 9c04837ab2e2f6b31087a69b1dcc3f8ce820b157
