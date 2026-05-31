@@ -13,6 +13,24 @@ For initial setup, see `docs\INSTALLATION.md`. For local API details, see `docs\
 - Passive Web DAST does not submit forms, authenticate, fuzz, send payloads, or execute exploit checks.
 - Bug bounty scope files are local decision support only; always verify the live program policy before testing.
 - Bug bounty recon only probes manually provided/imported targets and stores metadata only.
+- Endpoint discovery analyses supplied URLs only and produces candidates for manual validation.
+
+## Endpoint Discovery
+
+Run safe endpoint and parameter discovery from a local URL list:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000
+```
+
+With bug bounty scope enforcement and reports:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+```
+
+Parameter candidates are not confirmed vulnerabilities. The command does not
+send payloads, submit forms, exploit issues, or confirm vulnerabilities.
 
 ## Bug Bounty Scope Manager
 

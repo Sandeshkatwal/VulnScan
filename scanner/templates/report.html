@@ -378,6 +378,81 @@
     </section>
     {% endif %}
 
+    {% set endpoint_discovery = report.get("endpoint_discovery", {}) %}
+    {% if endpoint_discovery.get("enabled") %}
+    <section>
+      <h2>Bug Bounty Endpoint Discovery</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">Input URLs</div><div class="value">{{ endpoint_discovery.get("input_urls_count", 0) }}</div></div>
+        <div class="metric"><div class="label">In Scope</div><div class="value">{{ endpoint_discovery.get("in_scope_urls_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Interesting Parameters</div><div class="value">{{ endpoint_discovery.get("interesting_parameters_count", 0) }}</div></div>
+        <div class="metric"><div class="label">High Interest</div><div class="value">{{ endpoint_discovery.get("high_interest_count", 0) }}</div></div>
+      </div>
+      <p><strong>Program:</strong> {{ endpoint_discovery.get("program_name") or "" }}</p>
+      <p><strong>Limitations:</strong> {{ endpoint_discovery.get("limitations", []) | join("; ") }}</p>
+
+      <h3>High-Interest Endpoints</h3>
+      {% set high_endpoints = report.get("endpoint_results", []) | selectattr("candidate_label", "equalto", "High Interest") | list %}
+      {% if high_endpoints %}
+      <table>
+        <thead><tr><th>URL</th><th>Category</th><th>Score</th><th>Reasons</th><th>In Scope</th></tr></thead>
+        <tbody>
+          {% for item in high_endpoints[:10] %}
+          <tr>
+            <td>{{ item.get("normalised_url") }}</td>
+            <td>{{ item.get("endpoint_category") }}</td>
+            <td>{{ item.get("candidate_score") }}</td>
+            <td>{{ item.get("candidate_reasons", []) | join(", ") }}</td>
+            <td>{{ item.get("in_scope") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No high-interest endpoint candidates were identified.</p>
+      {% endif %}
+
+      <h3>Parameter Intelligence</h3>
+      {% if report.get("parameter_results") %}
+      <table>
+        <thead><tr><th>Path</th><th>Parameter</th><th>Type</th><th>Potential Issue</th><th>Confidence</th><th>Manual Validation</th></tr></thead>
+        <tbody>
+          {% for item in report.get("parameter_results", [])[:20] %}
+          <tr>
+            <td>{{ item.get("path") or item.get("url") }}</td>
+            <td>{{ item.get("parameter_name") }}</td>
+            <td>{{ item.get("parameter_type") }}</td>
+            <td>{{ item.get("potential_issue") }}</td>
+            <td>{{ item.get("confidence") }}</td>
+            <td>{{ item.get("manual_validation_note") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No interesting parameters were identified.</p>
+      {% endif %}
+
+      <h3>Skipped URLs</h3>
+      {% if report.get("endpoint_skipped") %}
+      <table>
+        <thead><tr><th>URL</th><th>Reason</th><th>Scope Reason</th></tr></thead>
+        <tbody>
+          {% for item in report.get("endpoint_skipped", [])[:20] %}
+          <tr>
+            <td>{{ item.get("original_url") }}</td>
+            <td>{{ item.get("reason") }}</td>
+            <td>{{ item.get("scope_reason") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No endpoint URLs were skipped.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set dashboard = report.get("fix_first_dashboard", {}) %}
     {% if dashboard.get("enabled") %}
     <section>

@@ -20,6 +20,8 @@ import type {
   BugBountyReconResponse,
   BugBountyScopeDetail,
   BugBountyScopesResponse,
+  EndpointDiscoveryRequest,
+  EndpointDiscoveryResponse,
   ScanRequest,
   ScanResponse,
   ScansQuery,
@@ -236,4 +238,12 @@ export function runBugBountyRecon(payload: BugBountyReconRequest): Promise<BugBo
 
 export function getBugBountyReconResults(): Promise<BugBountyReconReportsResponse> {
   return request<BugBountyReconReportsResponse>('/bug-bounty/recon/results')
+}
+
+export function analyseEndpoints(payload: EndpointDiscoveryRequest): Promise<EndpointDiscoveryResponse> {
+  return request<EndpointDiscoveryResponse>('/bug-bounty/endpoints/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
 }

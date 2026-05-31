@@ -38,6 +38,12 @@ from scanner.bug_bounty_recon import (
     load_recon_targets,
     run_bug_bounty_recon,
 )
+from scanner.endpoint_discovery import (
+    ENDPOINT_REPORTS_DIR,
+    EndpointDiscoveryError,
+    load_url_list,
+    run_endpoint_discovery,
+)
 from scanner.finding import assign_sequential_finding_ids, create_finding, create_port_exposure_findings
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
@@ -222,7 +228,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.1 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.2 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -1848,6 +1854,122 @@ def recon(
         console.print(f"HTML recon report saved: {report_path}")
 
 
+@app.command("endpoints")
+def endpoints(
+    urls_file: Annotated[
+        Path,
+        typer.Option(
+            "--urls-file",
+            help="Local newline-delimited URL/path file.",
+        ),
+    ],
+    base_url: Annotated[
+        str | None,
+        typer.Option(
+            "--base-url",
+            help="Base URL for path-only entries.",
+        ),
+    ] = None,
+    bug_bounty_scope: Annotated[
+        Path | None,
+        typer.Option(
+            "--bug-bounty-scope",
+            help="Path to a local bug bounty program scope JSON file.",
+        ),
+    ] = None,
+    enforce_scope: Annotated[
+        bool,
+        typer.Option(
+            "--enforce-scope",
+            help="Skip out-of-scope URLs before returning candidates.",
+        ),
+    ] = False,
+    json_report: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Save endpoint discovery results to a JSON report in reports/endpoints.",
+        ),
+    ] = False,
+    html_report: Annotated[
+        bool,
+        typer.Option(
+            "--html",
+            help="Save endpoint discovery results to an HTML report in reports/endpoints.",
+        ),
+    ] = False,
+    save_db: Annotated[
+        bool,
+        typer.Option(
+            "--save-db",
+            help="Accepted for workflow consistency; endpoint discovery reports are file-based in Version 18.2.",
+        ),
+    ] = False,
+) -> None:
+    """Run safe endpoint and parameter discovery from provided URL lists."""
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    console.print("[bold]Endpoint and Parameter Discovery[/bold]")
+    console.print("[yellow]Safe usage warning:[/yellow] This command analyses supplied URLs only. It does not send requests, fuzz, submit forms, or run payloads.")
+    try:
+        raw_urls = load_url_list(urls_file)
+        endpoint_payload = run_endpoint_discovery(
+            raw_urls=raw_urls,
+            base_url=base_url,
+            scope_file=bug_bounty_scope,
+            enforce_scope=enforce_scope,
+            input_source=str(urls_file),
+        )
+    except (BugBountyScopeError, EndpointDiscoveryError) as exc:
+        console.print(f"[red]Endpoint discovery error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    summary = endpoint_payload["endpoint_discovery"]
+    _print_endpoint_discovery_summary(summary)
+    _print_endpoint_results(endpoint_payload["endpoint_results"])
+    _print_parameter_results(endpoint_payload["parameter_results"])
+    _print_endpoint_skipped(endpoint_payload["endpoint_skipped"])
+    _print_findings(endpoint_payload["findings"])
+    if save_db:
+        console.print("[yellow]--save-db was accepted, but Version 18.2 stores endpoint discovery output in reports only.[/yellow]")
+
+    scan_start_time = datetime.fromisoformat(summary["started_at"])
+    scan_end_time = datetime.fromisoformat(summary["completed_at"])
+    scan_result = {
+        "host": "endpoint-discovery",
+        "resolved_ip": "",
+        "scan_mode": "endpoint-discovery",
+        "duration_seconds": round((scan_end_time - scan_start_time).total_seconds(), 3),
+        "open_ports": [],
+        "findings": endpoint_payload["findings"],
+        "endpoint_discovery": summary,
+        "endpoint_results": endpoint_payload["endpoint_results"],
+        "parameter_results": endpoint_payload["parameter_results"],
+        "endpoint_skipped": endpoint_payload["endpoint_skipped"],
+        "demo_mode": False,
+        "demo_notice": "",
+    }
+    if json_report:
+        report_path = save_json_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+            reports_dir=ENDPOINT_REPORTS_DIR,
+        )
+        console.print(f"[bold]JSON endpoint report saved:[/bold] {report_path}")
+    if html_report:
+        report_path = save_html_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+            reports_dir=ENDPOINT_REPORTS_DIR,
+        )
+        console.print(f"HTML endpoint report saved: {report_path}")
+
+
 @app.command()
 def history(
     target: Annotated[
@@ -2461,6 +2583,87 @@ def _print_bug_bounty_recon_skipped(skipped: list[dict[str, Any]]) -> None:
         table.add_row(
             str(item.get("target") or ""),
             str(item.get("probe_url") or ""),
+            str(item.get("reason") or ""),
+            str(item.get("scope_reason") or ""),
+        )
+    console.print(table)
+
+
+def _print_endpoint_discovery_summary(summary: dict[str, Any]) -> None:
+    table = Table(title="Endpoint Discovery Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Program", summary.get("program_name") or ""),
+        ("Input URLs", summary.get("input_urls_count")),
+        ("Normalised URLs", summary.get("normalised_urls_count")),
+        ("Deduplicated URLs", summary.get("deduplicated_urls_count")),
+        ("In scope", summary.get("in_scope_urls_count")),
+        ("Out of scope", summary.get("out_of_scope_urls_count")),
+        ("Skipped", summary.get("skipped_urls_count")),
+        ("With parameters", summary.get("endpoints_with_parameters_count")),
+        ("Interesting parameters", summary.get("interesting_parameters_count")),
+        ("High interest", summary.get("high_interest_count")),
+        ("Medium interest", summary.get("medium_interest_count")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_endpoint_results(results: list[dict[str, Any]]) -> None:
+    high_results = [item for item in results if item.get("candidate_label") == "High Interest"]
+    if not high_results:
+        console.print("[yellow]Top high-interest endpoints:[/yellow] None identified.")
+        return
+    table = Table(title="Top High-Interest Endpoints")
+    table.add_column("URL")
+    table.add_column("Category")
+    table.add_column("Score", justify="right")
+    table.add_column("Label")
+    table.add_column("Reasons")
+    for item in sorted(high_results, key=lambda value: int(value.get("candidate_score") or 0), reverse=True)[:10]:
+        table.add_row(
+            str(item.get("normalised_url") or ""),
+            str(item.get("endpoint_category") or ""),
+            str(item.get("candidate_score") or 0),
+            str(item.get("candidate_label") or ""),
+            ", ".join(item.get("candidate_reasons") or [])[:80],
+        )
+    console.print(table)
+
+
+def _print_parameter_results(results: list[dict[str, Any]]) -> None:
+    if not results:
+        console.print("[yellow]Interesting parameters:[/yellow] None identified.")
+        return
+    table = Table(title="Interesting Parameters")
+    table.add_column("Path")
+    table.add_column("Parameter")
+    table.add_column("Type")
+    table.add_column("Potential Issue")
+    table.add_column("Confidence")
+    for item in results[:20]:
+        table.add_row(
+            str(item.get("path") or item.get("url") or ""),
+            str(item.get("parameter_name") or ""),
+            str(item.get("parameter_type") or ""),
+            str(item.get("potential_issue") or ""),
+            str(item.get("confidence") or ""),
+        )
+    console.print(table)
+
+
+def _print_endpoint_skipped(skipped: list[dict[str, Any]]) -> None:
+    if not skipped:
+        return
+    table = Table(title="Skipped Out-of-Scope URLs")
+    table.add_column("URL")
+    table.add_column("Reason")
+    table.add_column("Scope Reason")
+    for item in skipped[:20]:
+        table.add_row(
+            str(item.get("original_url") or ""),
             str(item.get("reason") or ""),
             str(item.get("scope_reason") or ""),
         )

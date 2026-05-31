@@ -25,11 +25,13 @@ from scanner.api_filters import (
     validate_sort_order,
 )
 from scanner.api_bug_bounty import check_scope, get_scope_by_program_id, list_scope_files, resolve_scope_file
+from scanner.api_endpoint_discovery import list_endpoint_reports
 from scanner.api_bug_bounty_recon import list_recon_reports, load_recon_report
 from scanner.bug_bounty_recon import BugBountyReconError, run_bug_bounty_recon
 from scanner.bug_bounty_scope import BugBountyScopeError
+from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import BugBountyReconRequest, RemediationUpdateRequest, ScopeCheckRequest
+from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, RemediationUpdateRequest, ScopeCheckRequest
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_remediation import (
     attach_finding_keys,
@@ -47,7 +49,7 @@ from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "18.1"
+API_VERSION = "18.2"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -76,6 +78,8 @@ PROTECTED_PATHS = {
     "/bug-bounty/recon",
     "/bug-bounty/recon/results",
     "/bug-bounty/recon/results/{recon_id}",
+    "/bug-bounty/endpoints/analyse",
+    "/bug-bounty/endpoints/reports",
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
@@ -88,7 +92,7 @@ TAGS_METADATA = [
     {"name": "Findings", "description": "Saved finding retrieval with filtering, sorting, pagination, and compact responses."},
     {"name": "Exports", "description": "Local export metadata for saved findings."},
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
-    {"name": "Bug Bounty", "description": "Local bug bounty scope metadata and scope decision checks."},
+    {"name": "Bug Bounty", "description": "Local bug bounty scope metadata, recon, and endpoint discovery workflows."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
 ]
 SCAN_REQUEST_EXAMPLE = {
@@ -285,6 +289,42 @@ def create_app(
         if result is None:
             raise HTTPException(status_code=404, detail="Recon report was not found.")
         return {"recon_id": recon_id, "result": result}
+
+    @app.post(
+        "/bug-bounty/endpoints/analyse",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="Analyse endpoint and parameter candidates",
+        description="Analyses supplied URLs and paths without sending network requests or payloads.",
+        responses=ERROR_RESPONSES,
+    )
+    def analyse_bug_bounty_endpoints(request: EndpointDiscoveryRequest) -> dict[str, Any]:
+        if not request.urls:
+            raise HTTPException(status_code=400, detail="At least one endpoint URL or path is required.")
+        try:
+            scope_file = str(resolve_scope_file(request.scope_file)) if request.scope_file else None
+            result = run_endpoint_discovery(
+                raw_urls=request.urls,
+                base_url=request.base_url,
+                scope_file=scope_file,
+                enforce_scope=request.enforce_scope,
+                input_source="api",
+            )
+            save_endpoint_report(result)
+            return result
+        except (BugBountyScopeError, EndpointDiscoveryError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/bug-bounty/endpoints/reports",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="List local endpoint discovery reports",
+        description="Lists local JSON endpoint discovery reports from reports/endpoints.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_bug_bounty_endpoint_reports() -> dict[str, Any]:
+        return {"reports": list_endpoint_reports()}
 
     @app.post(
         "/scans",

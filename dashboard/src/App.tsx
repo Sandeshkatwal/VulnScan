@@ -18,6 +18,7 @@ import { ArchitectureSummary } from './components/ArchitectureSummary'
 import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
 import { DemoModeToggle } from './components/DemoModeToggle'
+import { EndpointDiscoveryView } from './components/EndpointDiscoveryView'
 import { ErrorAlert } from './components/ErrorAlert'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
 import { FindingDetailDrawer } from './components/FindingDetailDrawer'
@@ -53,7 +54,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -97,6 +98,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'remediation', label: 'Remediation' },
   { id: 'bug-bounty', label: 'Bug Bounty' },
   { id: 'bug-bounty-recon', label: 'Recon' },
+  { id: 'endpoint-discovery', label: 'Endpoints' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -136,6 +138,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'bug-bounty-recon': {
     title: 'Bug Bounty Recon',
     description: 'Scope-aware HTTP/HTTPS metadata probing for manually provided authorised targets.',
+  },
+  'endpoint-discovery': {
+    title: 'Endpoint Discovery',
+    description: 'Safe endpoint and parameter candidate discovery for manual validation workflows.',
   },
   settings: {
     title: 'Settings',
@@ -717,6 +723,10 @@ function App() {
     return <BugBountyReconView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
 
+  function renderEndpointDiscovery() {
+    return <EndpointDiscoveryView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
   function renderSettings() {
     return (
       <section className="settings-grid">
@@ -760,6 +770,7 @@ function App() {
     if (currentSection === 'remediation') return renderRemediation()
     if (currentSection === 'bug-bounty') return renderBugBounty()
     if (currentSection === 'bug-bounty-recon') return renderBugBountyRecon()
+    if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
     return renderSettings()
   }
 

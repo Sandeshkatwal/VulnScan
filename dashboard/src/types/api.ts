@@ -570,3 +570,80 @@ export interface BugBountyReconReportsResponse {
   reports: BugBountyReconReportSummary[]
   [key: string]: unknown
 }
+
+export interface EndpointDiscoverySummary {
+  enabled?: boolean
+  program_id?: string
+  program_name?: string
+  input_source?: string
+  input_urls_count?: number
+  normalised_urls_count?: number
+  deduplicated_urls_count?: number
+  in_scope_urls_count?: number
+  out_of_scope_urls_count?: number
+  skipped_urls_count?: number
+  endpoints_with_parameters_count?: number
+  interesting_parameters_count?: number
+  high_interest_count?: number
+  medium_interest_count?: number
+  low_interest_count?: number
+  static_asset_count?: number
+  endpoint_category_distribution?: ApiRecord
+  parameter_type_distribution?: ApiRecord
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface EndpointResult {
+  original_url?: string
+  normalised_url?: string
+  host?: string
+  path?: string
+  extension?: string
+  parameters?: Array<{ name?: string; value_redacted?: boolean; [key: string]: unknown }>
+  endpoint_category?: string
+  candidate_score?: number
+  candidate_label?: string
+  candidate_reasons?: string[]
+  in_scope?: boolean
+  scope_reason?: string
+  source?: string
+  [key: string]: unknown
+}
+
+export interface ParameterResult {
+  url?: string
+  path?: string
+  parameter_name?: string
+  parameter_value_redacted?: boolean
+  parameter_type?: string
+  potential_issue?: string
+  confidence?: string
+  candidate_score?: number
+  recommendation?: string
+  manual_validation_note?: string
+  [key: string]: unknown
+}
+
+export interface EndpointSkipped {
+  original_url?: string
+  reason?: string
+  scope_reason?: string
+  [key: string]: unknown
+}
+
+export interface EndpointDiscoveryRequest {
+  urls: string[]
+  base_url?: string
+  scope_file?: string
+  enforce_scope?: boolean
+}
+
+export interface EndpointDiscoveryResponse {
+  endpoint_discovery?: EndpointDiscoverySummary
+  endpoint_results?: EndpointResult[]
+  parameter_results?: ParameterResult[]
+  endpoint_skipped?: EndpointSkipped[]
+  findings?: Finding[]
+  [key: string]: unknown
+}

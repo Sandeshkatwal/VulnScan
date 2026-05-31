@@ -4,6 +4,63 @@ The Bug Bounty Scope Manager stores local program scope rules for authorised tes
 
 Always verify the live program policy before testing.
 
+## Endpoint and Parameter Discovery
+
+Version 18.2 adds safe endpoint and parameter discovery for bug bounty workflow.
+It analyses supplied URLs and paths from local files, API requests, or dashboard
+input, then normalises, deduplicates, classifies, and scores candidates for
+manual review. It does not send network requests, submit forms, run payloads, or
+confirm vulnerabilities.
+
+URL input is newline-delimited. Each line can be a full URL, a path-only entry,
+a URL with query parameters, or an API endpoint path. Path-only entries can use
+`--base-url` or the dashboard Base URL field.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000
+```
+
+Scope-aware usage:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+```
+
+Parameter intelligence categories include redirect, IDOR, path traversal,
+SSRF-like, injection/reflection, debug/config, and sensitive token indicators.
+Sensitive parameter values such as `token`, `password`, `api_key`, `session`,
+`auth`, `jwt`, and `code` are redacted.
+
+Candidate scoring is heuristic:
+
+- High Interest: `>= 60`
+- Medium Interest: `>= 35`
+- Low Interest: `>= 15`
+- Informational: `< 15`
+
+API example for `POST /bug-bounty/endpoints/analyse`:
+
+```json
+{
+  "urls": [
+    "http://127.0.0.1:8000/account?id=123",
+    "http://127.0.0.1:8000/redirect?next=/dashboard"
+  ],
+  "base_url": "http://127.0.0.1:8000",
+  "scope_file": "data/bug_bounty/sample_program_scope.json",
+  "enforce_scope": true
+}
+```
+
+Endpoint reports can be listed from `/bug-bounty/endpoints/reports`.
+
+The dashboard includes **Bug Bounty -> Endpoints** with multiline URL input,
+base URL, scope selection, scope enforcement, summary cards, endpoint
+candidates, parameter intelligence, and skipped URL tables.
+
+Safety warning: Parameter candidates are not confirmed vulnerabilities. They
+are indicators for authorised manual validation only.
+
 ## Purpose
 
 Bug bounty scope files help VulScan decide whether a target, domain, URL, or IP address is covered by a local program scope file before scanning. Out-of-scope rules override in-scope rules, and unknown targets are out of scope by default.

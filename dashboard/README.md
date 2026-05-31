@@ -1,8 +1,18 @@
 # VulScan Dashboard
 
-The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, reports, remediation tracking, bug bounty scope management, bug bounty recon, settings, demo mode, portfolio mode, and screenshot mode.
+The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, reports, remediation tracking, bug bounty scope management, bug bounty recon, endpoint discovery, settings, demo mode, portfolio mode, and screenshot mode.
 
 The dashboard is local development tooling. It does not collect credentials and does not include exploit, brute-force, credentialed scan, password, token, private key, command execution, or automatic remediation controls.
+
+## Endpoint Discovery
+
+The **Endpoints** section under Bug Bounty accepts one URL or path per line,
+an optional base URL for path-only entries, a local scope file, and scope
+enforcement. It returns endpoint candidates, parameter intelligence, skipped
+URLs, and summary counts.
+
+Parameter candidates are not confirmed vulnerabilities. The dashboard does not
+add payload testing, exploit, form submission, or brute-force controls.
 
 ## Requirements
 

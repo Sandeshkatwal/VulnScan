@@ -1,5 +1,24 @@
 # VulScan Architecture
 
+## Version 18.2 Endpoint Discovery
+
+Endpoint discovery is implemented as a local, no-network analysis pipeline:
+
+- `scanner.endpoint_discovery` loads supplied URL/path lists, normalises and
+  deduplicates URLs, applies optional bug bounty scope decisions, classifies
+  endpoints, scores candidates, and builds report-ready results.
+- `scanner.parameter_intelligence` classifies parameter names into manual
+  validation categories and redacts sensitive parameter values.
+- `scanner.api_app` exposes `POST /bug-bounty/endpoints/analyse` and
+  `GET /bug-bounty/endpoints/reports` behind the same API key dependency as
+  other protected bug bounty routes.
+- Reports include `endpoint_discovery`, `endpoint_results`,
+  `parameter_results`, `endpoint_skipped`, and sparse candidate findings.
+- The React dashboard adds an Endpoint Discovery view under Bug Bounty.
+
+The component does not crawl, fuzz, submit forms, send payloads, execute
+exploits, or confirm vulnerabilities.
+
 VulScan is a local authorised vulnerability scanning and vulnerability management platform. The architecture separates evidence collection, enrichment, prioritisation, storage, API access, and dashboard presentation.
 
 ## High-Level Architecture

@@ -143,6 +143,13 @@ def save_html_report(
         ),
         "bug_bounty_recon_results": scan_result.get("bug_bounty_recon_results", []),
         "bug_bounty_recon_skipped": scan_result.get("bug_bounty_recon_skipped", []),
+        "endpoint_discovery": scan_result.get(
+            "endpoint_discovery",
+            {"enabled": False, "limitations": ["Endpoint discovery was not enabled."]},
+        ),
+        "endpoint_results": scan_result.get("endpoint_results", []),
+        "parameter_results": scan_result.get("parameter_results", []),
+        "endpoint_skipped": scan_result.get("endpoint_skipped", []),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),
         "fix_first_dashboard": scan_result.get(

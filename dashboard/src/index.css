@@ -449,6 +449,11 @@ h2 {
   overflow-x: auto;
 }
 
+.table-shell {
+  width: 100%;
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   min-width: 840px;
@@ -901,7 +906,18 @@ dd {
   gap: 12px;
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-grid--compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .risk-metric-card,
+.metric-card,
 .distribution-card,
 .context-card {
   min-width: 0;
@@ -910,24 +926,28 @@ dd {
   background: rgba(8, 13, 16, 0.32);
 }
 
-.risk-metric-card {
+.risk-metric-card,
+.metric-card {
   min-height: 108px;
   padding: 14px;
 }
 
 .risk-metric-card span,
+.metric-card span,
 .risk-metric-card small {
   display: block;
   color: var(--muted);
 }
 
-.risk-metric-card span {
+.risk-metric-card span,
+.metric-card span {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
 }
 
-.risk-metric-card strong {
+.risk-metric-card strong,
+.metric-card strong {
   display: block;
   margin-top: 10px;
   color: var(--heading);
@@ -1161,6 +1181,32 @@ dd {
 .trend-status-badge--unknown {
   color: var(--muted);
   background: rgba(143, 162, 160, 0.08);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-badge--error {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.status-badge--warning {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.16);
+}
+
+.status-badge--info {
+  color: #075985;
+  background: rgba(14, 165, 233, 0.14);
 }
 
 .trend-summary-grid {
@@ -1950,6 +1996,7 @@ a {
   .filter-bar,
   .detail-grid,
   .risk-metric-grid,
+  .metric-grid,
   .risk-chart-grid,
   .risk-context-grid,
   .trend-metric-grid,
@@ -2012,6 +2059,7 @@ a {
   .filter-bar,
   .detail-grid,
   .risk-metric-grid,
+  .metric-grid,
   .risk-chart-grid,
   .risk-context-grid,
   .trend-metric-grid,

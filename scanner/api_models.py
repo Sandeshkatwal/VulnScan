@@ -191,6 +191,32 @@ class BugBountyReconRequest(StrictApiModel):
     )
 
 
+class EndpointDiscoveryRequest(StrictApiModel):
+    """Synchronous safe endpoint discovery request."""
+
+    urls: list[str] = Field(default_factory=list, description="URLs or paths to analyse, one item per string.", examples=[["http://127.0.0.1:8000/account?id=123"]])
+    base_url: str | None = Field(None, max_length=2048, description="Base URL for path-only entries.", examples=["http://127.0.0.1:8000"])
+    scope_file: str | None = Field(None, max_length=512, description="Optional local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
+    enforce_scope: bool = Field(True, description="Skip out-of-scope URLs before returning candidates.", examples=[True])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "urls": [
+                        "http://127.0.0.1:8000/account?id=123",
+                        "http://127.0.0.1:8000/redirect?next=/dashboard",
+                    ],
+                    "base_url": "http://127.0.0.1:8000",
+                    "scope_file": "data/bug_bounty/sample_program_scope.json",
+                    "enforce_scope": True,
+                }
+            ]
+        },
+    )
+
+
 class ErrorResponse(StrictApiModel):
     error: str | None = Field(None, description="Short safe error category.", examples=["Request failed."])
     detail: str | None = Field(None, description="User-facing safe error detail without tracebacks or secrets.", examples=["Invalid or missing API key."])
