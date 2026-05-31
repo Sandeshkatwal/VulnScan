@@ -244,6 +244,87 @@ def api_command(
     run_api_server(host=host, port=port, reload=reload)
 
 
+def _list_program_scope_files() -> list[Path]:
+    root = Path("data") / "bug_bounty"
+    if not root.exists():
+        return []
+    return sorted(path for path in root.glob("*.json") if path.is_file())
+
+
+def _program_scope_command(alias_note: str | None = None) -> None:
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    if alias_note:
+        console.print(f"[yellow]{alias_note}[/yellow]")
+    table = Table(title="Program Scope Files")
+    table.add_column("Program")
+    table.add_column("Program ID")
+    table.add_column("Scope File")
+    for path in _list_program_scope_files():
+        try:
+            scope = load_bug_bounty_scope(path)
+        except BugBountyScopeError:
+            continue
+        table.add_row(str(scope.get("program_name") or ""), str(scope.get("program_id") or ""), str(path))
+    console.print(table)
+
+
+@app.command("program-scope")
+def program_scope() -> None:
+    """List local program scope files."""
+    _program_scope_command()
+
+
+@app.command("scope")
+def scope_alias() -> None:
+    """Alias for program-scope."""
+    _program_scope_command("Alias for program-scope.")
+
+
+def _security_report_command(alias_note: str | None = None) -> None:
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    if alias_note:
+        console.print(f"[yellow]{alias_note}[/yellow]")
+    reports_root = Path("reports")
+    files = sorted(
+        [path for path in reports_root.rglob("*") if path.is_file() and path.suffix.lower() in {".json", ".html"}],
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    )[:25] if reports_root.exists() else []
+    table = Table(title="Security Finding Reports")
+    table.add_column("File")
+    table.add_column("Type")
+    for path in files:
+        table.add_row(str(path), path.suffix.lower().lstrip("."))
+    console.print(table)
+
+
+@app.command("security-report")
+def security_report() -> None:
+    """List local Security Finding Reports."""
+    _security_report_command()
+
+
+@app.command("bug-report")
+def bug_report_alias() -> None:
+    """Alias for security-report."""
+    _security_report_command("Alias for security-report.")
+
+
+@app.command("evidence")
+def evidence_reports() -> None:
+    """List local evidence and Security Finding Reports."""
+    _security_report_command("Evidence & Reports view for local Security Finding Reports.")
+
+
+@app.command("submission")
+def submission_tracker() -> None:
+    """Show submission and retest tracking guidance."""
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    console.print("[bold]Submission and Retest Tracking[/bold]")
+    console.print("Use Security Finding Reports, remediation records, and manual validation notes as the evidence source for responsible disclosure follow-up.")
+    console.print("[yellow]Do not store secrets, session cookies, tokens, passwords, private keys, or unauthorised client data in submission notes.[/yellow]")
+
+
 @app.command()
 def scan(
     target: Annotated[
@@ -597,14 +678,14 @@ def scan(
         Path | None,
         typer.Option(
             "--bug-bounty-scope",
-            help="Path to a local bug bounty program scope JSON file.",
+            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
         bool,
         typer.Option(
             "--enforce-scope",
-            help="Refuse to scan targets outside the configured bug bounty scope.",
+            help="Refuse to scan targets outside the configured program scope.",
         ),
     ] = False,
 ) -> None:
@@ -1417,14 +1498,14 @@ def web_scan(
         Path | None,
         typer.Option(
             "--bug-bounty-scope",
-            help="Path to a local bug bounty program scope JSON file.",
+            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
         bool,
         typer.Option(
             "--enforce-scope",
-            help="Refuse to crawl URLs outside the configured bug bounty scope.",
+            help="Refuse to crawl URLs outside the configured program scope.",
         ),
     ] = False,
 ) -> None:
@@ -1761,7 +1842,7 @@ def recon(
         Path | None,
         typer.Option(
             "--bug-bounty-scope",
-            help="Path to a local bug bounty program scope JSON file.",
+            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
@@ -1814,9 +1895,9 @@ def recon(
         ),
     ] = False,
 ) -> None:
-    """Run safe bug bounty recon against provided/imported targets only."""
+    """Run Recon Intelligence against provided/imported authorised targets only."""
     console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
-    console.print("[bold]Bug Bounty Recon[/bold]")
+    console.print("[bold]Recon Intelligence[/bold]")
     console.print("[yellow]Safe usage warning:[/yellow] Recon only probes provided targets. No brute forcing, wordlists, or third-party lookups are used.")
 
     raw_targets: list[str] = []
@@ -1848,7 +1929,7 @@ def recon(
             input_source=input_source,
         )
     except (BugBountyScopeError, BugBountyReconError) as exc:
-        console.print(f"[red]Bug bounty recon error:[/red] {exc}")
+        console.print(f"[red]Recon intelligence error:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
     summary = recon_payload["bug_bounty_recon"]
@@ -1914,7 +1995,7 @@ def endpoints(
         Path | None,
         typer.Option(
             "--bug-bounty-scope",
-            help="Path to a local bug bounty program scope JSON file.",
+            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
@@ -2044,7 +2125,7 @@ def validate(
     ] = None,
     bug_bounty_scope: Annotated[
         Path | None,
-        typer.Option("--bug-bounty-scope", help="Path to a local bug bounty program scope JSON file."),
+        typer.Option("--bug-bounty-scope", help="Path to a local program scope JSON file. Legacy option name is retained for compatibility."),
     ] = None,
     enforce_scope: Annotated[
         bool,
@@ -2685,7 +2766,7 @@ def _print_bug_bounty_scope_summary(scope_summary: dict[str, Any]) -> None:
     if not scope_summary or not scope_summary.get("enabled"):
         return
 
-    table = Table(title="Bug Bounty Scope")
+    table = Table(title="Program Scope")
     table.add_column("Field")
     table.add_column("Value")
     rows = [
@@ -2704,7 +2785,7 @@ def _print_bug_bounty_scope_summary(scope_summary: dict[str, Any]) -> None:
 
 
 def _print_bug_bounty_recon_summary(summary: dict[str, Any]) -> None:
-    table = Table(title="Bug Bounty Recon Summary")
+    table = Table(title="Recon Intelligence Summary")
     table.add_column("Field")
     table.add_column("Value")
     rows = [

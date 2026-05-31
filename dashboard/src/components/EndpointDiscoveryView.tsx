@@ -16,7 +16,7 @@ interface EndpointDiscoveryViewProps {
 const demoScopes: BugBountyScopeSummary[] = [
   {
     program_id: 'demo-bug-bounty-program',
-    program_name: 'Demo Bug Bounty Program',
+    program_name: 'Demo Program Scope',
     platform: 'local-demo',
     scope_file: 'data/bug_bounty/sample_program_scope.json',
   },
@@ -38,7 +38,7 @@ const sampleUrls = [
 const demoResult: EndpointDiscoveryResponse = {
   endpoint_discovery: {
     enabled: true,
-    program_name: 'Demo Bug Bounty Program',
+    program_name: 'Demo Program Scope',
     input_urls_count: 4,
     in_scope_urls_count: 4,
     out_of_scope_urls_count: 0,

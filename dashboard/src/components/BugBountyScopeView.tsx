@@ -13,7 +13,7 @@ interface BugBountyScopeViewProps {
 
 const demoScope: BugBountyScopeSummary = {
   program_id: 'demo-bug-bounty-program',
-  program_name: 'Demo Bug Bounty Program',
+  program_name: 'Demo Program Scope',
   platform: 'local-demo',
   policy_url: 'local-only',
   scope_version: '1.0',
@@ -45,7 +45,7 @@ const demoDetail: BugBountyScopeDetail = {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Bug bounty scope request failed.'
+  return error instanceof Error ? error.message : 'Program scope request failed.'
 }
 
 export function BugBountyScopeView({ apiOnline, demoMode = false }: BugBountyScopeViewProps) {
@@ -105,7 +105,7 @@ export function BugBountyScopeView({ apiOnline, demoMode = false }: BugBountySco
       <article className="panel">
         <div className="panel-heading">
           <h2>Programs</h2>
-          <p>Local scope files under data/bug_bounty.</p>
+          <p>Local program scope files under data/bug_bounty.</p>
         </div>
         <ErrorAlert message={error} />
         {loading ? <div className="empty-state">Loading scope files...</div> : null}
@@ -119,7 +119,7 @@ export function BugBountyScopeView({ apiOnline, demoMode = false }: BugBountySco
             />
           ))}
         </div>
-        {!scopes.length && !loading ? <div className="empty-state">No local bug bounty scope files were found.</div> : null}
+        {!scopes.length && !loading ? <div className="empty-state">No local program scope files were found.</div> : null}
       </article>
 
       <article className="panel">

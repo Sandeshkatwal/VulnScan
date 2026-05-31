@@ -1,12 +1,14 @@
-# Bug Bounty Scope And Recon
+# Bug Intelligence Workflow
 
-The Bug Bounty Scope Manager stores local program scope rules for authorised testing workflows. Version 18.1 also adds a safe recon foundation for manually provided targets. It does not add exploitation, exploit execution, exploit downloads, subdomain brute forcing, wordlist enumeration, credential attacks, bypass automation, stealth logic, high-rate requests, or destructive payloads.
+The Bug Intelligence workflow stores local program scope rules for authorised security testing and responsible disclosure workflows. It includes a Program Scope Manager, Recon Intelligence, endpoint and parameter discovery, OWASP indicator mapping, and safe active validation. It does not add exploitation, exploit execution, exploit downloads, subdomain brute forcing, wordlist enumeration, credential attacks, bypass automation, stealth logic, high-rate requests, or destructive payloads.
 
 Always verify the live program policy before testing.
 
+This workflow can support bug bounty, internal testing, and responsible disclosure, but VulScan uses broader "Bug Intelligence" wording for the product experience.
+
 ## Endpoint and Parameter Discovery
 
-Version 18.2 adds safe endpoint and parameter discovery for bug bounty workflow.
+Version 18.2 adds safe endpoint and parameter discovery for the bug intelligence workflow.
 It analyses supplied URLs and paths from local files, API requests, or dashboard
 input, then normalises, deduplicates, classifies, and scores candidates for
 manual review. It does not send network requests, submit forms, run payloads, or
@@ -54,7 +56,7 @@ API example for `POST /bug-bounty/endpoints/analyse`:
 
 Endpoint reports can be listed from `/bug-bounty/endpoints/reports`.
 
-The dashboard includes **Bug Bounty -> Endpoints** with multiline URL input,
+The dashboard includes **Bug Intelligence -> Endpoints** with multiline URL input,
 base URL, scope selection, scope enforcement, summary cards, endpoint
 candidates, parameter intelligence, and skipped URL tables.
 
@@ -67,7 +69,7 @@ Version 18.3 can map findings, endpoint candidates, and parameter candidates to
 OWASP Top 10:2025 indicator categories with `--owasp-map` or the OWASP
 dashboard view.
 
-This helps organise bug bounty notes and reports by familiar OWASP themes, but
+This helps organise security finding notes and reports by familiar OWASP themes, but
 it does not confirm vulnerabilities. A mapped IDOR-style parameter, login
 endpoint, debug endpoint, upload endpoint, or missing-header finding remains an
 indicator until manually validated within program rules.
@@ -120,7 +122,7 @@ API endpoint:
 POST /bug-bounty/validate
 ```
 
-Dashboard usage is available in **Bug Bounty -> Safe Validation**. The view has
+Dashboard usage is available in **Bug Intelligence -> Safe Validation**. The view has
 a safety notice, target input, allowed check selector, scope selector, low-rate
 controls, result table, skipped targets, and evidence summaries.
 
@@ -129,7 +131,7 @@ No exploitability confirmed.
 
 ## Purpose
 
-Bug bounty scope files help VulScan decide whether a target, domain, URL, or IP address is covered by a local program scope file before scanning. Out-of-scope rules override in-scope rules, and unknown targets are out of scope by default.
+Program scope files help VulScan decide whether a target, domain, URL, or IP address is covered by a local program scope file before scanning. Out-of-scope rules override in-scope rules, and unknown targets are out of scope by default.
 
 Scope decisions are local decision support. They do not replace the official program policy.
 
@@ -147,7 +149,7 @@ The included sample is fake demo data only:
 data/bug_bounty/sample_program_scope.json
 ```
 
-Do not add real private program data unless it is authorised for local storage. Do not store secrets, session cookies, tokens, passwords, private keys, real client data, or sensitive bounty data in scope files.
+Do not add real private program data unless it is authorised for local storage. Do not store secrets, session cookies, tokens, passwords, private keys, real client data, or sensitive disclosure data in scope files.
 
 ## Scope File Format
 
@@ -229,9 +231,9 @@ Scope-aware passive Web DAST:
 
 If `--enforce-scope` is set and the target is out of scope, VulScan stops safely before scanning or crawling.
 
-## Recon Foundation
+## Recon Intelligence
 
-Recon imports known domains, hosts, URLs, or IP addresses from manual input or a local text file, validates them against the selected bug bounty scope, and gently probes HTTP/HTTPS metadata.
+Recon Intelligence imports known domains, hosts, URLs, or IP addresses from manual input or a local text file, validates them against the selected program scope, and gently probes HTTP/HTTPS metadata.
 
 It does not discover new subdomains, brute-force names, use wordlists, query search engines, call third-party APIs, submit forms, authenticate, fuzz, or send payloads.
 
@@ -303,14 +305,14 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/bug
 
 ## Dashboard Usage
 
-Open the Bug Bounty section to:
+Open the Program Scope section to:
 
 - Review local program cards.
 - Inspect in-scope and out-of-scope domains, URLs, API base URLs, and IP ranges.
 - Review forbidden actions, allowed test types, disallowed test types, and rate limits.
 - Check whether a target is in scope.
 
-Open the Bug Bounty Recon section to paste known targets, select a local scope file, keep scope enforcement enabled, set gentle request limits, and review live metadata and skipped targets.
+Open the Recon section to paste known targets, select a local scope file, keep scope enforcement enabled, set gentle request limits, and review live metadata and skipped targets.
 
 The recon dashboard does not include brute-force, wordlist, exploit, payload, credential, or scan-launch controls.
 

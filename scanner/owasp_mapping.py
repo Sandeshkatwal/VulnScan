@@ -1,6 +1,6 @@
 """OWASP Top 10 indicator mapping.
 
-This module classifies existing findings and bug bounty candidates only. It
+This module classifies existing findings and bug intelligence candidates only. It
 does not run tests, send payloads, or confirm vulnerabilities.
 """
 

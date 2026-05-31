@@ -1,4 +1,4 @@
-"""Safe active validation checks for authorised bug bounty workflows.
+"""Safe active validation checks for authorised bug intelligence workflows.
 
 The checks in this module are intentionally limited and non-destructive. They
 observe simple behaviours only and never confirm exploitability.
@@ -352,7 +352,7 @@ def _build_findings(summary: dict[str, Any], results: list[dict[str, Any]]) -> l
         create_finding(
             title="Safe Active Validation Completed",
             severity="Informational",
-            category="Bug Bounty Safe Validation",
+            category="Bug Intelligence Safe Validation",
             affected_host="safe-active-validation",
             evidence=f"Safe validation ran {summary.get('checks_run', 0)} checks and found {summary.get('indicators_found', 0)} indicators.",
             recommendation="Manually validate indicators within program rules before reporting.",
@@ -364,11 +364,11 @@ def _build_findings(summary: dict[str, Any], results: list[dict[str, Any]]) -> l
         )
     ]
     if any(item.get("indicator_found") and item.get("check_name") == "reflected_input_observation" for item in results):
-        findings.append(create_finding(title="Reflected Input Indicator Observed", severity="Low", category="Bug Bounty Safe Validation", affected_host="safe-active-validation", evidence="Harmless marker was reflected in response for a GET parameter.", recommendation="Manually review output encoding and context.", source="safe_active_validation", confidence="Medium", impact="Reflected input may require manual review.", verification="Review evidence summaries for reflected marker observations.", limitation="Reflection alone does not confirm XSS."))
+        findings.append(create_finding(title="Reflected Input Indicator Observed", severity="Low", category="Bug Intelligence Safe Validation", affected_host="safe-active-validation", evidence="Harmless marker was reflected in response for a GET parameter.", recommendation="Manually review output encoding and context.", source="safe_active_validation", confidence="Medium", impact="Reflected input may require manual review.", verification="Review evidence summaries for reflected marker observations.", limitation="Reflection alone does not confirm XSS."))
     if any(item.get("indicator_found") and item.get("check_name") == "cors_indicator" for item in results):
-        findings.append(create_finding(title="CORS Configuration Indicator Observed", severity="Informational", category="Bug Bounty Safe Validation", affected_host="safe-active-validation", evidence="CORS headers were observed that may require review.", recommendation="Verify CORS policy and credential handling manually.", source="safe_active_validation", confidence="Low", impact="CORS headers can affect browser access controls depending on context.", verification="Review Access-Control response headers.", limitation="CORS headers alone do not confirm exploitability."))
+        findings.append(create_finding(title="CORS Configuration Indicator Observed", severity="Informational", category="Bug Intelligence Safe Validation", affected_host="safe-active-validation", evidence="CORS headers were observed that may require review.", recommendation="Verify CORS policy and credential handling manually.", source="safe_active_validation", confidence="Low", impact="CORS headers can affect browser access controls depending on context.", verification="Review Access-Control response headers.", limitation="CORS headers alone do not confirm exploitability."))
     if any(item.get("indicator_found") and item.get("check_name") == "directory_listing_indicator" for item in results):
-        findings.append(create_finding(title="Directory Listing Indicator Observed", severity="Low", category="Bug Bounty Safe Validation", affected_host="safe-active-validation", evidence="Response contained directory listing indicators.", recommendation="Manually verify whether sensitive files are exposed.", source="safe_active_validation", confidence="Medium", impact="Directory listings may expose files depending on content.", verification="Review the authorised URL manually.", limitation="Directory listing indicator may be false positive."))
+        findings.append(create_finding(title="Directory Listing Indicator Observed", severity="Low", category="Bug Intelligence Safe Validation", affected_host="safe-active-validation", evidence="Response contained directory listing indicators.", recommendation="Manually verify whether sensitive files are exposed.", source="safe_active_validation", confidence="Medium", impact="Directory listings may expose files depending on content.", verification="Review the authorised URL manually.", limitation="Directory listing indicator may be false positive."))
     return findings
 
 
@@ -502,7 +502,7 @@ def _owasp_for_validation_result(result: dict[str, Any]) -> list[dict[str, Any]]
 
 
 def _unscoped_decision(url: str) -> dict[str, Any]:
-    return {"target": url, "in_scope": True, "reason": "No bug bounty scope configured.", "matched_rule": ""}
+    return {"target": url, "in_scope": True, "reason": "No program scope configured.", "matched_rule": ""}
 
 
 def _safe_error(exc: Exception) -> str:

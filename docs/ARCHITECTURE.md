@@ -5,16 +5,16 @@
 Endpoint discovery is implemented as a local, no-network analysis pipeline:
 
 - `scanner.endpoint_discovery` loads supplied URL/path lists, normalises and
-  deduplicates URLs, applies optional bug bounty scope decisions, classifies
+  deduplicates URLs, applies optional program scope decisions, classifies
   endpoints, scores candidates, and builds report-ready results.
 - `scanner.parameter_intelligence` classifies parameter names into manual
   validation categories and redacts sensitive parameter values.
 - `scanner.api_app` exposes `POST /bug-bounty/endpoints/analyse` and
   `GET /bug-bounty/endpoints/reports` behind the same API key dependency as
-  other protected bug bounty routes.
+  other protected Bug Intelligence routes.
 - Reports include `endpoint_discovery`, `endpoint_results`,
   `parameter_results`, `endpoint_skipped`, and sparse candidate findings.
-- The React dashboard adds an Endpoint Discovery view under Bug Bounty.
+- The React dashboard adds an Endpoint Discovery view under Bug Intelligence.
 
 The component does not crawl, fuzz, submit forms, send payloads, execute
 exploits, or confirm vulnerabilities.
@@ -42,7 +42,7 @@ vulnerabilities.
 Safe active validation is a small, opt-in, non-destructive request layer:
 
 - `scanner.safe_active_validation` loads target JSON files, enforces optional
-  bug bounty scope before requests, applies low-rate request controls, and runs
+  program scope before requests, applies low-rate request controls, and runs
   only explicitly supported safe checks.
 - Supported checks are reflected marker observation, same-origin redirect
   behaviour, CORS header observation, directory listing indicators, known
@@ -68,8 +68,8 @@ VulScan
 ├── Discovery Engine
 ├── Credentialed Scan Engine
 ├── Web DAST Engine
-├── Bug Bounty Scope Manager
-├── Bug Bounty Recon Foundation
+├── Program Scope Manager
+├── Recon Intelligence Foundation
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -84,7 +84,7 @@ VulScan
 - `scanner.ssh_audit`, `scanner.package_audit`, `scanner.linux_config_audit`: read-only Linux credentialed audit checks.
 - `scanner.windows_audit`, `scanner.windows_result`, `scanner.windows_*`: Windows reachability, optional WinRM validation, and read-only indicators.
 - `scanner.web_*`: passive Web DAST crawling, scope, rate limiting, robots, sitemap, headers, cookies, forms, and passive summary reporting.
-- `scanner.bug_bounty_scope` and `scanner.api_bug_bounty`: local bug bounty program scope loading, validation, scope decisions, API listing, and target checks.
+- `scanner.bug_bounty_scope` and `scanner.api_bug_bounty`: local program scope loading, validation, scope decisions, API listing, and target checks. Module names are retained for backward compatibility.
 - `scanner.bug_bounty_recon` and `scanner.api_bug_bounty_recon`: manually provided target import, scope-aware safe HTTP/HTTPS metadata probing, recon report listing, and recon result retrieval.
 - `scanner.software_inventory`, `scanner.vuln_intel`, `scanner.cve_feed`, `scanner.epss_importer`, `scanner.exploit_metadata`: local vulnerability intelligence and metadata enrichment.
 - `scanner.risk_score`, `scanner.asset_criticality`, `scanner.prioritisation`, `scanner.prioritisation_report`, `scanner.prioritisation_trends`: risk scoring, business context, fix-first reporting, and trend tracking.
@@ -98,7 +98,7 @@ VulScan
 - `dashboard/src/api/client.ts`: typed API client helpers.
 - `dashboard/src/utils`: formatting, demo mode, risk metrics, trend metrics, and report helpers.
 - `dashboard/src/demo`: fake sample data for demo and portfolio mode.
-- `dashboard/src/components`: dashboard shell, navigation, API status, jobs, scans, vulnerability list, finding drawer, risk overview, trends, reports, remediation, bug bounty scope and recon views, settings, portfolio banner, and screenshot guide.
+- `dashboard/src/components`: dashboard shell, navigation, API status, jobs, scans, vulnerability list, finding drawer, risk overview, trends, Evidence & Reports, remediation, Program Scope, Recon Intelligence, endpoints, Safe Validation, Submission Tracker, settings, portfolio banner, and screenshot guide.
 
 The dashboard is local React + Vite + TypeScript tooling. It does not collect credentials and does not expose exploit, brute-force, credentialed scan, or command execution controls.
 

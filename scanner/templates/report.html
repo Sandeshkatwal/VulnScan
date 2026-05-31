@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>{{ report.scanner_name }} Report - {{ report.target }}</title>
+  <title>{{ report.scanner_name }} Security Finding Report - {{ report.target }}</title>
   <style>
     :root {
       --bg: #f5f7fa;
@@ -188,7 +188,7 @@
 <body>
   <main class="page">
     <header>
-      <h1>{{ report.scanner_name }} Vulnerability Scan Report</h1>
+      <h1>{{ report.scanner_name }} Security Finding Report</h1>
       <div class="subtitle">Version {{ report.scanner_version }} | TCP-connect scan for authorised defensive assessment</div>
     </header>
 
@@ -266,7 +266,7 @@
     </section>
 
     <section>
-      <h2>Bug Bounty Scope</h2>
+      <h2>Program Scope</h2>
       {% set bug_bounty_scope = report.get("bug_bounty_scope", {}) %}
       {% if bug_bounty_scope.get("enabled") %}
       <p><strong>Program:</strong> {{ bug_bounty_scope.get("program_name") }}</p>
@@ -289,7 +289,7 @@
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>
-      <h2>Bug Bounty Recon</h2>
+      <h2>Recon Intelligence</h2>
       <div class="grid">
         <div class="metric">
           <div class="label">Input Targets</div>
@@ -502,7 +502,7 @@
     {% set endpoint_discovery = report.get("endpoint_discovery", {}) %}
     {% if endpoint_discovery.get("enabled") %}
     <section>
-      <h2>Bug Bounty Endpoint Discovery</h2>
+      <h2>Bug Intelligence Endpoint Discovery</h2>
       <div class="grid">
         <div class="metric"><div class="label">Input URLs</div><div class="value">{{ endpoint_discovery.get("input_urls_count", 0) }}</div></div>
         <div class="metric"><div class="label">In Scope</div><div class="value">{{ endpoint_discovery.get("in_scope_urls_count", 0) }}</div></div>

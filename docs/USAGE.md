@@ -23,7 +23,7 @@ Run safe endpoint and parameter discovery from a local URL list:
 .\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000
 ```
 
-With bug bounty scope enforcement and reports:
+With program scope enforcement and reports:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
@@ -66,9 +66,9 @@ Safe validation uses low-rate requests, stores evidence summaries only, and
 does not submit forms, modify state, use exploit payloads, or confirm
 exploitability.
 
-## Bug Bounty Scope Manager
+## Program Scope Manager
 
-Version 18.1 includes local bug bounty scope management and a safe recon foundation. Scope files live under `data\bug_bounty` and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.
+Version 18.1 includes local program scope management and a safe Recon Intelligence foundation. Scope files live under `data\bug_bounty` for backward compatibility and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.
 
 Load a scope file and show the decision without blocking:
 
@@ -90,7 +90,7 @@ Use scope with passive Web DAST:
 
 Out-of-scope rules override in-scope rules. Unknown targets are out of scope by default. See `docs\BUG_BOUNTY.md`.
 
-## Bug Bounty Recon
+## Recon Intelligence
 
 Recon imports known targets from a local text file or comma-separated CLI input, checks scope, and gently probes HTTP/HTTPS metadata. It does not brute-force subdomains, use wordlists, query external services, submit forms, authenticate, fuzz, or send payloads.
 

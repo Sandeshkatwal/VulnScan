@@ -1,4 +1,4 @@
-"""Local API helpers for bug bounty scope files."""
+"""Local API helpers for program scope files."""
 
 from __future__ import annotations
 

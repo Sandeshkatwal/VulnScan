@@ -145,7 +145,7 @@ class RemediationUpdateRequest(StrictApiModel):
 
 
 class ScopeCheckRequest(StrictApiModel):
-    """Local bug bounty scope decision request."""
+    """Local program scope decision request."""
 
     target: str = Field(..., min_length=1, max_length=2048, description="Target, domain, IP, or URL to check.", examples=["https://demo-web.local/"])
     scope_file: str = Field(..., min_length=1, max_length=512, description="Local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
@@ -164,7 +164,7 @@ class ScopeCheckRequest(StrictApiModel):
 
 
 class BugBountyReconRequest(StrictApiModel):
-    """Synchronous safe bug bounty recon request."""
+    """Synchronous Recon Intelligence request."""
 
     targets: list[str] = Field(default_factory=list, description="Manual targets, one item per provided string.", examples=[["http://127.0.0.1:8000/", "demo-web.local"]])
     scope_file: str | None = Field(None, max_length=512, description="Optional local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])

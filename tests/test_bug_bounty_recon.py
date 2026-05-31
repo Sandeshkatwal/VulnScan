@@ -217,5 +217,5 @@ def test_json_and_html_reports_include_recon_fields(tmp_path) -> None:
     html = Path(html_path).read_text(encoding="utf-8")
     assert payload["bug_bounty_recon"]["enabled"] is True
     assert payload["bug_bounty_recon_results"]
-    assert "Bug Bounty Recon" in html
+    assert "Recon Intelligence" in html
     assert "Recon Demo" in html

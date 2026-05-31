@@ -15,7 +15,7 @@ interface BugBountyReconViewProps {
 const demoScopes: BugBountyScopeSummary[] = [
   {
     program_id: 'demo-bug-bounty-program',
-    program_name: 'Demo Bug Bounty Program',
+    program_name: 'Demo Program Scope',
     platform: 'local-demo',
     scope_file: 'data/bug_bounty/sample_program_scope.json',
   },
@@ -24,7 +24,7 @@ const demoScopes: BugBountyScopeSummary[] = [
 const demoResult: BugBountyReconResponse = {
   bug_bounty_recon: {
     enabled: true,
-    program_name: 'Demo Bug Bounty Program',
+    program_name: 'Demo Program Scope',
     input_targets_count: 3,
     in_scope_targets_count: 2,
     out_of_scope_targets_count: 1,
@@ -61,7 +61,7 @@ const demoResult: BugBountyReconResponse = {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Bug bounty recon request failed.'
+  return error instanceof Error ? error.message : 'Recon intelligence request failed.'
 }
 
 export function BugBountyReconView({ apiOnline, demoMode = false }: BugBountyReconViewProps) {

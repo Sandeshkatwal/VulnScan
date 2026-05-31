@@ -1,7 +1,7 @@
 # OWASP Top 10 Indicator Mapping
 
 Version 18.3 adds OWASP Top 10:2025 indicator mapping for existing VulScan
-findings and bug bounty candidates.
+findings and bug intelligence candidates.
 
 This is classification only. It does not perform active testing, payload
 injection, exploitation, bypass automation, SQL injection testing, XSS testing,

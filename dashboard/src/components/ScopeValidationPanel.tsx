@@ -34,7 +34,7 @@ export function ScopeValidationPanel({ scopes, selectedScope, demoMode = false }
         in_scope: inScope,
         reason: inScope ? 'Demo target matched local demo scope.' : 'Demo target is outside local demo scope.',
         matched_rule: inScope ? 'demo-web.local / 127.0.0.1' : '',
-        program_name: selectedScope?.program_name || 'Demo Bug Bounty Program',
+        program_name: selectedScope?.program_name || 'Demo Program Scope',
       })
       return
     }

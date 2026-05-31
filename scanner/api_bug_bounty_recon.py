@@ -1,4 +1,4 @@
-"""Local API helpers for bug bounty recon reports."""
+"""Local API helpers for Recon Intelligence reports."""
 
 from __future__ import annotations
 

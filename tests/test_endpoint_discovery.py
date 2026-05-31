@@ -106,7 +106,7 @@ def test_html_report_renders_endpoint_section(tmp_path: Path) -> None:
     scan_result = _scan_result(result)
     path = save_html_report(scan_result, "VulScan", "test", datetime.now(), datetime.now(), reports_dir=tmp_path)
     html = path.read_text(encoding="utf-8")
-    assert "Bug Bounty Endpoint Discovery" in html
+    assert "Bug Intelligence Endpoint Discovery" in html
     assert "Parameter Intelligence" in html
 
 

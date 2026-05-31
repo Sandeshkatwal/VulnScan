@@ -1,12 +1,12 @@
 # VulScan Dashboard
 
-The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, reports, remediation tracking, bug bounty scope management, bug bounty recon, endpoint discovery, settings, demo mode, portfolio mode, and screenshot mode.
+The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, Evidence & Reports, remediation tracking, Bug Intelligence, Program Scope, Recon Intelligence, endpoint discovery, Safe Validation, Submission Tracker, settings, demo mode, portfolio mode, and screenshot mode.
 
 The dashboard is local development tooling. It does not collect credentials and does not include exploit, brute-force, credentialed scan, password, token, private key, command execution, or automatic remediation controls.
 
 ## Endpoint Discovery
 
-The **Endpoints** section under Bug Bounty accepts one URL or path per line,
+The **Endpoints** section under Bug Intelligence accepts one URL or path per line,
 an optional base URL for path-only entries, a local scope file, and scope
 enforcement. It returns endpoint candidates, parameter intelligence, skipped
 URLs, and summary counts.
@@ -25,7 +25,7 @@ It must not be interpreted as confirmed OWASP vulnerability evidence.
 
 ## Safe Validation
 
-The **Safe Validation** section under Bug Bounty runs limited non-destructive
+The **Safe Validation** section under Bug Intelligence runs limited non-destructive
 checks through the local API. It supports only reflected marker observation,
 same-origin redirect indicators, CORS header observation, directory listing
 indicators, known public default files, and HTTP `OPTIONS` method observation.
@@ -132,13 +132,13 @@ Screenshot mode adds a compact capture guide. Use it with demo mode and portfoli
 - Restart `npm run dev` after changing `.env`.
 - Use demo mode when the backend is not running and you only need screenshots.
 
-## Bug Bounty Scope Manager
+## Program Scope Manager
 
-The Bug Bounty section lists local scope files from `data/bug_bounty`, shows program metadata, in-scope and out-of-scope rules, forbidden actions, allowed and disallowed test types, rate limits, and a target scope validation panel.
+The Program Scope section lists local scope files from `data/bug_bounty`, shows program metadata, in-scope and out-of-scope rules, forbidden actions, allowed and disallowed test types, rate limits, and a target scope validation panel.
 
 If a target is out of scope, the panel shows a clear warning.
 
-## Bug Bounty Recon
+## Recon Intelligence
 
 The Recon section accepts manually provided targets, selects a local scope file, defaults to scope enforcement, and starts safe HTTP/HTTPS metadata probing through the local API.
 

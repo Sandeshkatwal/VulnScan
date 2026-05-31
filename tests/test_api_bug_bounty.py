@@ -23,7 +23,7 @@ def test_api_scope_check_returns_correct_decision(monkeypatch) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["in_scope"] is True
-    assert payload["program_name"] == "Demo Bug Bounty Program"
+    assert payload["program_name"] == "Demo Program Scope"
 
 
 def test_api_does_not_allow_arbitrary_scope_file_paths(monkeypatch) -> None:

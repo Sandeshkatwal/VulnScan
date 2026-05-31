@@ -1,4 +1,4 @@
-"""Safe endpoint and parameter discovery for bug bounty workflow.
+"""Safe endpoint and parameter discovery for bug intelligence workflow.
 
 The module works from supplied URL/path lists and local scope files only. It
 does not perform network requests, fuzzing, payload injection, or exploitation.
@@ -332,7 +332,7 @@ def build_endpoint_findings(
         create_finding(
             title="Endpoint Discovery Completed",
             severity="Informational",
-            category="Bug Bounty Endpoint Discovery",
+            category="Bug Intelligence Endpoint Discovery",
             affected_host="endpoint-discovery",
             evidence=(
                 f"Endpoint discovery processed {summary.get('input_urls_count', 0)} URLs and identified "
@@ -352,7 +352,7 @@ def build_endpoint_findings(
             create_finding(
                 title="High-Interest Endpoint Candidate",
                 severity="Low",
-                category="Bug Bounty Endpoint Discovery",
+                category="Bug Intelligence Endpoint Discovery",
                 affected_host="endpoint-discovery",
                 evidence=f"{high_count} high-interest endpoint candidate(s) were identified based on path and parameter indicators.",
                 recommendation="Manually review high-interest endpoints within program scope.",
@@ -368,7 +368,7 @@ def build_endpoint_findings(
             create_finding(
                 title="Interesting Parameter Candidate",
                 severity="Informational",
-                category="Bug Bounty Parameter Intelligence",
+                category="Bug Intelligence Parameter Intelligence",
                 affected_host="endpoint-discovery",
                 evidence=(
                     "Parameters associated with IDOR, redirect, path, SSRF, token handling, "
@@ -406,7 +406,7 @@ def _redacted_query(parameters: list[dict[str, Any]]) -> str:
 
 
 def _unscoped_decision(url: str) -> dict[str, Any]:
-    return {"target": url, "in_scope": True, "reason": "No bug bounty scope configured.", "matched_rule": ""}
+    return {"target": url, "in_scope": True, "reason": "No program scope configured.", "matched_rule": ""}
 
 
 def _original_lookup(raw_urls: list[str], base_url: str | None) -> dict[str, str]:

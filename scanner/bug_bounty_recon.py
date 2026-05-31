@@ -1,4 +1,4 @@
-"""Safe bug bounty recon foundation.
+"""Safe Recon Intelligence foundation.
 
 Version 18.1 only imports provided targets, validates scope, and performs
 gentle HTTP/HTTPS metadata probes. It does not brute-force subdomains, query
@@ -25,7 +25,7 @@ from scanner.finding import assign_sequential_finding_ids, create_finding
 
 RECON_INPUT_DIR = Path("data") / "bug_bounty" / "recon"
 RECON_REPORTS_DIR = Path("reports") / "recon"
-DEFAULT_RECON_USER_AGENT = "VulScan-BugBounty-Recon"
+DEFAULT_RECON_USER_AGENT = "VulScan-ReconIntelligence"
 MAX_RESPONSE_BYTES = 512 * 1024
 
 
@@ -283,9 +283,9 @@ def build_recon_findings(
 ) -> list[dict[str, Any]]:
     findings = [
         create_finding(
-            title="Bug Bounty Recon Completed",
+            title="Recon Intelligence Completed",
             severity="Informational",
-            category="Bug Bounty Recon",
+            category="Recon Intelligence",
             evidence=f"Recon evaluated {summary.get('normalised_targets_count', 0)} targets and found {summary.get('live_count', 0)} live services.",
             confidence="High",
             impact="Provided targets were safely checked for live HTTP/HTTPS metadata.",
@@ -300,11 +300,11 @@ def build_recon_findings(
             create_finding(
                 title="Out-of-Scope Recon Target Skipped",
                 severity="Informational",
-                category="Bug Bounty Scope",
+                category="Program Scope",
                 evidence=f"{len(skipped)} target probe candidate(s) were skipped before probing.",
                 confidence="High",
                 impact="Out-of-scope targets were not probed by recon.",
-                recommendation="Confirm bug bounty scope before testing.",
+                recommendation="Confirm program scope before testing.",
                 verification="Review bug_bounty_recon_skipped in the report.",
                 limitation="Scope depends on local scope file accuracy.",
                 source="bug_bounty_recon",
@@ -317,7 +317,7 @@ def build_recon_findings(
             create_finding(
                 title="Live Web Asset Discovered",
                 severity="Informational",
-                category="Bug Bounty Recon",
+                category="Recon Intelligence",
                 evidence=f"Live web service sample: {sample_text}",
                 confidence="Medium",
                 impact="One or more provided in-scope targets responded to HTTP/HTTPS probing.",
@@ -473,7 +473,7 @@ def _unscoped_decision(target: str) -> dict[str, Any]:
     return {
         "target": target,
         "in_scope": True,
-        "reason": "No bug bounty scope file was configured; caller remains responsible for authorisation.",
+        "reason": "No program scope file was configured; caller remains responsible for authorisation.",
         "matched_rule": "",
         "program_id": "",
         "program_name": "",

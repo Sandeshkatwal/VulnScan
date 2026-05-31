@@ -22,7 +22,7 @@ def test_load_valid_scope_file() -> None:
     scope = load_bug_bounty_scope(SAMPLE_SCOPE)
 
     assert scope["program_id"] == "demo-bug-bounty-program"
-    assert scope["program_name"] == "Demo Bug Bounty Program"
+    assert scope["program_name"] == "Demo Program Scope"
 
 
 def test_reject_malformed_scope_file(tmp_path) -> None:

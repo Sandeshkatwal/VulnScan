@@ -12,7 +12,7 @@ Use VulScan only on systems and web applications you own or have explicit writte
 - Credentialed Linux Audit using explicit SSH credentials and read-only checks.
 - Credentialed Windows Audit using safe reachability checks and optional read-only WinRM indicators.
 - Passive Web DAST for bounded crawling, headers, cookies, forms, robots.txt, sitemap, scope, and politeness reporting.
-- Bug Bounty Scope Manager, Recon Foundation, and Endpoint Discovery for local program rules, safe scope checks, metadata-only probing of provided authorised targets, and manual-validation endpoint/parameter candidates.
+- Bug Intelligence workflow with Program Scope Manager, Recon Intelligence, Endpoint Discovery, Safe Validation, and Security Finding Reports for authorised vulnerability discovery.
 - OWASP Top 10:2025 indicator mapping for existing findings and candidates.
 - Safe Active Validation foundation for limited non-destructive in-scope indicator checks.
 - Vulnerability Intelligence with local rules, local CVE-style feeds, local EPSS metadata, and local exploit-availability metadata as prioritisation signals only.
@@ -28,8 +28,8 @@ VulScan
 ├── Discovery Engine
 ├── Credentialed Scan Engine
 ├── Web DAST Engine
-├── Bug Bounty Scope Manager
-├── Bug Bounty Recon Foundation
+├── Program Scope Manager
+├── Recon Intelligence Foundation
 ├── Endpoint and Parameter Discovery
 ├── OWASP Top 10 Indicator Mapping
 ├── Safe Active Validation
@@ -76,7 +76,7 @@ Run the local API:
 
 The API binds to `127.0.0.1:8088` by default.
 
-Run safe bug bounty recon from the sample manual target list:
+Run Recon Intelligence from the sample manual target list:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
@@ -139,8 +139,8 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - Credentialed scans are CLI-only and are not exposed through the API.
 - The dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, test SQL injection, test XSS, or execute payloads.
-- Bug scope management is local decision support only. Always verify the live program policy before testing.
-- Bug bounty recon only uses provided/imported targets, skips out-of-scope targets, probes gently, and stores metadata only.
+- Program scope management is local decision support only. Always verify the live program policy before testing.
+- Recon Intelligence only uses provided/imported targets, skips out-of-scope targets, probes gently, and stores metadata only.
 - Endpoint discovery analyses supplied URLs only. Parameter candidates are not confirmed vulnerabilities.
 - OWASP Top 10 mapping is indicator-only and must not be reported as a confirmed vulnerability without manual validation.
 - Safe active validation is non-destructive, low-rate, scope-aware, and does not confirm exploitability.
@@ -158,7 +158,8 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - [API](docs/API.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Web DAST](docs/WEB_DAST.md)
-- [Bug Bounty Scope Manager](docs/BUG_BOUNTY.md)
+- [Bug Intelligence Workflow](docs/BUG_BOUNTY.md)
+- [Security Finding Reporting](docs/SECURITY_FINDING_REPORTING.md)
 - [OWASP Mapping](docs/OWASP_MAPPING.md)
 - [Vulnerability Intelligence](docs/VULNERABILITY_INTELLIGENCE.md)
 - [Prioritisation](docs/PRIORITISATION.md)

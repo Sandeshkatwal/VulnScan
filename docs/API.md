@@ -128,7 +128,7 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/rep
 - `GET /remediation/{finding_key}`
 - `PUT /remediation/{finding_key}`
 
-## Bug Bounty Scope Endpoints
+## Bug Intelligence Scope Endpoints
 
 - `GET /bug-bounty/scopes`
 - `GET /bug-bounty/scopes/{program_id}`
@@ -137,7 +137,7 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/rep
 - `GET /bug-bounty/recon/results`
 - `GET /bug-bounty/recon/results/{recon_id}`
 
-Scope endpoints read local JSON scope files under `data/bug_bounty` only. Recon accepts provided target strings and optional scope files from the same local bug bounty directory. These endpoints do not fetch live program policies, accept arbitrary filesystem paths, store secrets, brute-force subdomains, use wordlists, launch exploit checks, or modify targets.
+Scope endpoints read local JSON scope files under `data/bug_bounty` only. Recon accepts provided target strings and optional scope files from the same local program scope directory. The `/bug-bounty/...` paths remain as compatibility routes. These endpoints do not fetch live program policies, accept arbitrary filesystem paths, store secrets, brute-force subdomains, use wordlists, launch exploit checks, or modify targets.
 
 Example:
 

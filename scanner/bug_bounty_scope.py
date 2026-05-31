@@ -21,20 +21,20 @@ SCOPE_LIMITATION = "Local scope files may become stale or incomplete. Always ver
 
 
 class BugBountyScopeError(ValueError):
-    """Raised when a local bug bounty scope file is invalid."""
+    """Raised when a local program scope file is invalid."""
 
 
 def load_bug_bounty_scope(path: str | Path) -> dict[str, Any]:
-    """Load, validate, and normalise a local bug bounty scope file."""
+    """Load, validate, and normalise a local program scope file."""
     scope_path = Path(path)
     try:
         payload = json.loads(scope_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise BugBountyScopeError(f"Bug bounty scope file was not found: {scope_path}") from exc
+        raise BugBountyScopeError(f"Program scope file was not found: {scope_path}") from exc
     except json.JSONDecodeError as exc:
-        raise BugBountyScopeError(f"Bug bounty scope file is not valid JSON: {scope_path}") from exc
+        raise BugBountyScopeError(f"Program scope file is not valid JSON: {scope_path}") from exc
     if not isinstance(payload, dict):
-        raise BugBountyScopeError("Bug bounty scope file must contain a JSON object.")
+        raise BugBountyScopeError("Program scope file must contain a JSON object.")
     validate_bug_bounty_scope(payload)
     return normalise_scope(payload)
 
@@ -43,14 +43,14 @@ def validate_bug_bounty_scope(scope: dict[str, Any]) -> None:
     """Validate required structure and friendly field types."""
     for field in ("program_id", "program_name", "in_scope", "out_of_scope"):
         if field not in scope:
-            raise BugBountyScopeError(f"Bug bounty scope is missing required field: {field}")
+            raise BugBountyScopeError(f"Program scope is missing required field: {field}")
     for field in ("program_id", "program_name"):
         if not isinstance(scope.get(field), str) or not scope.get(field, "").strip():
-            raise BugBountyScopeError(f"Bug bounty scope field must be a non-empty string: {field}")
+            raise BugBountyScopeError(f"Program scope field must be a non-empty string: {field}")
     for section_name in ("in_scope", "out_of_scope"):
         section = scope.get(section_name)
         if not isinstance(section, dict):
-            raise BugBountyScopeError(f"Bug bounty scope section must be an object: {section_name}")
+            raise BugBountyScopeError(f"Program scope section must be an object: {section_name}")
         for key in ("domains", "urls", "ip_ranges"):
             value = section.get(key, [])
             if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
@@ -150,9 +150,9 @@ def disabled_bug_bounty_scope(target: str = "") -> dict[str, Any]:
 def build_scope_applied_finding(summary: dict[str, Any]) -> dict[str, Any]:
     """Create an informational finding for an evaluated scope file."""
     return create_finding(
-        title="Bug Bounty Scope Applied",
+        title="Program Scope Applied",
         severity="Informational",
-        category="Bug Bounty Scope",
+        category="Program Scope",
         affected_host=str(summary.get("target") or ""),
         evidence="Bug bounty scope was loaded and evaluated for the target.",
         recommendation="Always verify scope against the official program policy before testing.",
@@ -167,9 +167,9 @@ def build_scope_applied_finding(summary: dict[str, Any]) -> dict[str, Any]:
 def build_scope_blocked_finding(target: str, decision: dict[str, Any]) -> dict[str, Any]:
     """Create an informational finding for a blocked out-of-scope scan."""
     return create_finding(
-        title="Bug Bounty Scope Blocked Scan",
+        title="Program Scope Blocked Scan",
         severity="Informational",
-        category="Bug Bounty Scope",
+        category="Program Scope",
         affected_host=str(target or ""),
         evidence="Target was outside configured scope and scan was blocked.",
         recommendation="Confirm program scope before testing.",

@@ -167,7 +167,7 @@ export function ReportsView({ apiOnline = true, demoMode = false, demoJobs = emp
   const trendLoaded = summaries.filter((summary) => summary.has_trend_data).length
 
   if (!apiOnline && !demoMode) {
-    return <div className="empty-state">API offline. Reports View will load when the local API is reachable.</div>
+    return <div className="empty-state">API offline. Evidence & Reports will load when the local API is reachable.</div>
   }
 
   return (
@@ -179,14 +179,14 @@ export function ReportsView({ apiOnline = true, demoMode = false, demoJobs = emp
       </div>
 
       <div className="report-note">
-        Use View or Download to access reports through the local authenticated API when report URLs are available. Local report paths may still need to be opened from your file explorer or terminal.
+        Use View or Download to access Security Finding Reports through the local authenticated API when report URLs are available. Local report paths may still need to be opened from your file explorer or terminal.
         <code>Start-Process .\reports\REPORT_FILE.html</code>
       </div>
 
       <div className="report-card-grid">
         <ReportCard label="Total Completed Jobs" value={jobs.length} />
-        <ReportCard label="JSON Reports Available" value={jsonReports} />
-        <ReportCard label="HTML Reports Available" value={htmlReports} />
+        <ReportCard label="JSON Security Reports" value={jsonReports} />
+        <ReportCard label="HTML Security Reports" value={htmlReports} />
         <ReportCard label="API JSON Reports Indexed" value={indexedJsonReports || null} />
         <ReportCard label="API HTML Reports Indexed" value={indexedHtmlReports || null} />
         <ReportCard label="Latest Report Target" value={latestReport?.target} />
@@ -215,8 +215,8 @@ export function ReportsView({ apiOnline = true, demoMode = false, demoJobs = emp
       {apiReports.length ? (
         <div className="report-index-panel">
           <div className="panel-heading">
-            <h2>API Report Index</h2>
-            <p>Reports safely served from the VulScan reports directory.</p>
+            <h2>API Security Report Index</h2>
+            <p>Security Finding Reports safely served from the VulScan reports directory.</p>
           </div>
           <div className="report-index-list">
             {apiReports.slice(0, 8).map((report) => (

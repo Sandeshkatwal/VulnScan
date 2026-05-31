@@ -1,6 +1,6 @@
 {
   "program_id": "demo-bug-bounty-program",
-  "program_name": "Demo Bug Bounty Program",
+  "program_name": "Demo Program Scope",
   "platform": "local-demo",
   "policy_url": "local-only",
   "scope_version": "1.0",

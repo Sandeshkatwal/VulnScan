@@ -56,7 +56,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'submission-tracker' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -80,7 +80,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.3-demo', api_version: '18.3' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.4-demo', api_version: '18.4' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -96,12 +96,14 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'vulnerabilities', label: 'Vulnerabilities' },
   { id: 'risk', label: 'Risk' },
   { id: 'trends', label: 'Trends' },
-  { id: 'reports', label: 'Reports' },
+  { id: 'reports', label: 'Evidence & Reports' },
   { id: 'remediation', label: 'Remediation' },
-  { id: 'bug-bounty', label: 'Bug Bounty' },
+  { id: 'bug-intelligence', label: 'Bug Intelligence' },
+  { id: 'bug-bounty', label: 'Program Scope' },
   { id: 'bug-bounty-recon', label: 'Recon' },
   { id: 'endpoint-discovery', label: 'Endpoints' },
   { id: 'safe-validation', label: 'Safe Validation' },
+  { id: 'submission-tracker', label: 'Submission Tracker' },
   { id: 'owasp', label: 'OWASP Top 10' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -128,19 +130,23 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
     description: 'Prioritisation trend comparisons for scans with saved trend data.',
   },
   reports: {
-    title: 'Reports',
-    description: 'Saved JSON and HTML report paths from completed jobs.',
+    title: 'Evidence & Reports',
+    description: 'Saved evidence, JSON exports, and Security Finding Reports from completed jobs.',
   },
   remediation: {
     title: 'Remediation',
     description: 'Tracking-only remediation status, owners, due dates, and notes.',
   },
+  'bug-intelligence': {
+    title: 'Bug Intelligence',
+    description: 'Authorised vulnerability discovery workflow for scope, recon, endpoints, validation, evidence, and submissions.',
+  },
   'bug-bounty': {
-    title: 'Bug Bounty',
+    title: 'Program Scope',
     description: 'Local program scope, rules of engagement, and safe scope validation.',
   },
   'bug-bounty-recon': {
-    title: 'Bug Bounty Recon',
+    title: 'Recon Intelligence',
     description: 'Scope-aware HTTP/HTTPS metadata probing for manually provided authorised targets.',
   },
   'endpoint-discovery': {
@@ -153,7 +159,11 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   },
   owasp: {
     title: 'OWASP Top 10',
-    description: 'Indicator-only OWASP Top 10:2025 mapping for findings and bug bounty candidates.',
+    description: 'Indicator-only OWASP Top 10:2025 mapping for findings and bug intelligence candidates.',
+  },
+  'submission-tracker': {
+    title: 'Submission and Retest Tracking',
+    description: 'Track responsible disclosure status, evidence readiness, retest notes, and report follow-up.',
   },
   settings: {
     title: 'Settings',
@@ -727,6 +737,32 @@ function App() {
     )
   }
 
+  function renderBugIntelligence() {
+    return (
+      <section className="content-grid">
+        <article className="panel panel--wide">
+          <div className="panel-heading">
+            <h2>Bug Intelligence Workflow</h2>
+            <p>Authorised security testing workspace for scope, recon, endpoints, validation, evidence, reporting, and responsible disclosure tracking.</p>
+          </div>
+          <div className="settings-mode-grid">
+            <div><span>Scope control</span><strong>Program Scope</strong></div>
+            <div><span>Discovery</span><strong>Recon and Endpoints</strong></div>
+            <div><span>Validation</span><strong>Indicator only</strong></div>
+            <div><span>Reporting</span><strong>Security Finding Reports</strong></div>
+          </div>
+        </article>
+        <article className="panel">
+          <div className="panel-heading">
+            <h2>Safety Boundary</h2>
+            <p>Manual validation remains required before any submission.</p>
+          </div>
+          <div className="empty-state">This workflow can support bug bounty, internal testing, and responsible disclosure. It does not add exploitation, payload testing, credential attacks, or out-of-scope scanning.</div>
+        </article>
+      </section>
+    )
+  }
+
   function renderBugBounty() {
     return <BugBountyScopeView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -745,6 +781,20 @@ function App() {
 
   function renderOWASP() {
     return <OWASPMappingView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+  }
+
+  function renderSubmissionTracker() {
+    return (
+      <section className="content-grid">
+        <article className="panel panel--wide">
+          <div className="panel-heading">
+            <h2>Submission and Retest Tracking</h2>
+            <p>Tracking workspace for responsible disclosure follow-up and retest readiness.</p>
+          </div>
+          <div className="empty-state">Use Security Finding Reports and remediation records as the evidence source for submission notes, status, owner, and retest outcomes. No secrets, session cookies, tokens, passwords, or private keys should be stored here.</div>
+        </article>
+      </section>
+    )
   }
 
   function renderSettings() {
@@ -788,10 +838,12 @@ function App() {
     if (currentSection === 'trends') return renderTrends()
     if (currentSection === 'reports') return renderReports()
     if (currentSection === 'remediation') return renderRemediation()
+    if (currentSection === 'bug-intelligence') return renderBugIntelligence()
     if (currentSection === 'bug-bounty') return renderBugBounty()
     if (currentSection === 'bug-bounty-recon') return renderBugBountyRecon()
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
     if (currentSection === 'safe-validation') return renderSafeValidation()
+    if (currentSection === 'submission-tracker') return renderSubmissionTracker()
     if (currentSection === 'owasp') return renderOWASP()
     return renderSettings()
   }
