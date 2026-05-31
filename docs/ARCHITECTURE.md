@@ -37,6 +37,28 @@ OWASP Top 10 mapping is a report enrichment layer:
 The layer does not perform active security testing and does not confirm OWASP
 vulnerabilities.
 
+## Version 18.4 Safe Active Validation
+
+Safe active validation is a small, opt-in, non-destructive request layer:
+
+- `scanner.safe_active_validation` loads target JSON files, enforces optional
+  bug bounty scope before requests, applies low-rate request controls, and runs
+  only explicitly supported safe checks.
+- Supported checks are reflected marker observation, same-origin redirect
+  behaviour, CORS header observation, directory listing indicators, known
+  public default files, and `OPTIONS` method observation.
+- The module stores evidence summaries only. It does not store response bodies,
+  cookies, tokens, passwords, or private keys.
+- `POST /bug-bounty/validate` exposes the same checks through the local API.
+- Reports include `safe_active_validation`,
+  `safe_active_validation_results`, and `safe_active_validation_skipped`.
+- The dashboard provides a Safe Validation view with safety wording, scope
+  controls, allowed check selection, result tables, and evidence summaries.
+
+The module does not run exploitation, SQL injection testing, XSS payloads, SSRF
+testing, file upload exploitation, authentication bypass, brute force, form
+submission, payment testing, or destructive HTTP methods.
+
 VulScan is a local authorised vulnerability scanning and vulnerability management platform. The architecture separates evidence collection, enrichment, prioritisation, storage, API access, and dashboard presentation.
 
 ## High-Level Architecture

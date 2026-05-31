@@ -238,6 +238,27 @@ class OWASPMapRequest(StrictApiModel):
     )
 
 
+class SafeValidationTarget(StrictApiModel):
+    url: str = Field(..., min_length=1, max_length=2048, description="Authorised HTTP/HTTPS URL to validate.", examples=["http://127.0.0.1:8000/search?q=test"])
+    candidate_type: str = Field("manual", max_length=64, description="Candidate type such as reflected_input, open_redirect, cors, directory_listing, default_file, or http_methods.", examples=["reflected_input"])
+    parameter: str | None = Field(None, max_length=128, description="Optional query parameter for parameter-specific checks.", examples=["q"])
+    source: str | None = Field(None, max_length=128, description="Local source label.", examples=["parameter_intelligence"])
+
+
+class SafeValidationRequest(StrictApiModel):
+    """Synchronous safe active validation request."""
+
+    targets: list[SafeValidationTarget] = Field(default_factory=list, description="Validation targets.")
+    scope_file: str | None = Field(None, max_length=512, description="Optional local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
+    enforce_scope: bool = Field(True, description="Skip out-of-scope targets before making requests.", examples=[True])
+    checks: list[str] | None = Field(None, description="Optional safe check names to run.", examples=[["reflected_input_observation"]])
+    request_delay: float = Field(1.0, ge=0, le=30, description="Seconds to wait between requests.", examples=[1.0])
+    max_requests_per_minute: int = Field(20, ge=1, le=120, description="Maximum safe validation requests per minute.", examples=[20])
+    timeout: float = Field(5.0, gt=0, le=30, description="Per-request timeout in seconds.", examples=[5.0])
+    max_validation_requests: int = Field(100, ge=1, le=500, description="Maximum requests for this validation run.", examples=[100])
+    safe_active_confirm: bool = Field(True, description="Required explicit acknowledgement that checks are safe and authorised.", examples=[True])
+
+
 class ErrorResponse(StrictApiModel):
     error: str | None = Field(None, description="Short safe error category.", examples=["Request failed."])
     detail: str | None = Field(None, description="User-facing safe error detail without tracebacks or secrets.", examples=["Invalid or missing API key."])

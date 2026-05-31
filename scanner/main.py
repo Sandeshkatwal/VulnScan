@@ -51,6 +51,12 @@ from scanner.owasp_mapping import (
     build_owasp_summary,
     load_owasp_mapping,
 )
+from scanner.safe_active_validation import (
+    VALIDATION_REPORTS_DIR,
+    SafeActiveValidationError,
+    load_validation_targets,
+    run_safe_active_validation,
+)
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
 from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH
@@ -234,7 +240,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.3 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.4 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -2018,6 +2024,128 @@ def endpoints(
         console.print(f"HTML endpoint report saved: {report_path}")
 
 
+@app.command("validate")
+def validate(
+    targets_file: Annotated[
+        Path | None,
+        typer.Option("--targets-file", help="Local safe validation targets JSON file."),
+    ] = None,
+    url: Annotated[
+        str | None,
+        typer.Option("--url", help="Optional single URL to validate."),
+    ] = None,
+    candidate_type: Annotated[
+        str,
+        typer.Option("--candidate-type", help="Candidate type for --url."),
+    ] = "manual",
+    parameter: Annotated[
+        str | None,
+        typer.Option("--parameter", help="Optional query parameter for parameter-specific checks."),
+    ] = None,
+    bug_bounty_scope: Annotated[
+        Path | None,
+        typer.Option("--bug-bounty-scope", help="Path to a local bug bounty program scope JSON file."),
+    ] = None,
+    enforce_scope: Annotated[
+        bool,
+        typer.Option("--enforce-scope", help="Skip out-of-scope targets before making requests."),
+    ] = False,
+    request_delay: Annotated[
+        float,
+        typer.Option("--request-delay", help="Seconds to wait between safe validation requests."),
+    ] = 1.0,
+    max_requests_per_minute: Annotated[
+        int,
+        typer.Option("--max-requests-per-minute", help="Maximum safe validation requests per minute."),
+    ] = 20,
+    timeout: Annotated[
+        float,
+        typer.Option("--timeout", help="Per-request timeout in seconds."),
+    ] = 5.0,
+    max_validation_requests: Annotated[
+        int,
+        typer.Option("--max-validation-requests", help="Maximum safe validation requests for this run."),
+    ] = 100,
+    checks: Annotated[
+        str | None,
+        typer.Option("--checks", help="Comma-separated safe checks to run."),
+    ] = None,
+    safe_active_confirm: Annotated[
+        bool,
+        typer.Option("--safe-active-confirm/--no-safe-active-confirm", help="Required acknowledgement for safe authorised validation."),
+    ] = True,
+    json_report: Annotated[
+        bool,
+        typer.Option("--json", help="Save validation results to a JSON report in reports/validation."),
+    ] = False,
+    html_report: Annotated[
+        bool,
+        typer.Option("--html", help="Save validation results to an HTML report in reports/validation."),
+    ] = False,
+    save_db: Annotated[
+        bool,
+        typer.Option("--save-db", help="Accepted for workflow consistency; validation reports are file-based in Version 18.4."),
+    ] = False,
+) -> None:
+    """Run limited non-destructive safe active validation checks."""
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    console.print("[bold]Safe Active Validation[/bold]")
+    console.print("[yellow]Safety:[/yellow] Indicator only. Manual validation required. No exploitability confirmed.")
+    targets: list[dict[str, Any]] = []
+    try:
+        if targets_file is not None:
+            targets.extend(load_validation_targets(targets_file))
+        if url:
+            targets.append({"url": url, "candidate_type": candidate_type, "parameter": parameter or "", "source": "cli"})
+        if not targets:
+            console.print("[red]No validation targets were provided. Use --targets-file or --url.[/red]")
+            raise typer.Exit(code=1)
+        validation_payload = run_safe_active_validation(
+            targets=targets,
+            scope_file=bug_bounty_scope,
+            enforce_scope=enforce_scope,
+            checks=[item.strip() for item in checks.split(",") if item.strip()] if checks else None,
+            request_delay=request_delay,
+            max_requests_per_minute=max_requests_per_minute,
+            timeout=timeout,
+            max_validation_requests=max_validation_requests,
+            safe_active_confirm=safe_active_confirm,
+        )
+    except (BugBountyScopeError, SafeActiveValidationError) as exc:
+        console.print(f"[red]Safe validation error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    summary = validation_payload["safe_active_validation"]
+    _print_safe_validation_summary(summary)
+    _print_safe_validation_results(validation_payload["safe_active_validation_results"])
+    _print_safe_validation_skipped(validation_payload["safe_active_validation_skipped"])
+    _print_findings(validation_payload["findings"])
+    if save_db:
+        console.print("[yellow]--save-db was accepted, but Version 18.4 stores safe validation output in reports only.[/yellow]")
+
+    scan_start_time = datetime.now().astimezone()
+    scan_end_time = datetime.now().astimezone()
+    scan_result = {
+        "host": "safe-active-validation",
+        "resolved_ip": "",
+        "scan_mode": "safe-active-validation",
+        "duration_seconds": 0,
+        "open_ports": [],
+        "findings": validation_payload["findings"],
+        "safe_active_validation": summary,
+        "safe_active_validation_results": validation_payload["safe_active_validation_results"],
+        "safe_active_validation_skipped": validation_payload["safe_active_validation_skipped"],
+        "demo_mode": False,
+        "demo_notice": "",
+    }
+    if json_report:
+        report_path = save_json_report(scan_result=scan_result, scanner_name="VulScan", scanner_version=__version__, scan_start_time=scan_start_time, scan_end_time=scan_end_time, reports_dir=VALIDATION_REPORTS_DIR)
+        console.print(f"[bold]JSON validation report saved:[/bold] {report_path}")
+    if html_report:
+        report_path = save_html_report(scan_result=scan_result, scanner_name="VulScan", scanner_version=__version__, scan_start_time=scan_start_time, scan_end_time=scan_end_time, reports_dir=VALIDATION_REPORTS_DIR)
+        console.print(f"HTML validation report saved: {report_path}")
+
+
 @app.command()
 def history(
     target: Annotated[
@@ -2760,6 +2888,59 @@ def _print_owasp_summary(summary: dict[str, Any], mapped_items: list[dict[str, A
         for gap in gaps[:10]:
             gap_table.add_row(str(gap.get("owasp_id") or ""), "No indicator does not mean no vulnerability.")
         console.print(gap_table)
+
+
+def _print_safe_validation_summary(summary: dict[str, Any]) -> None:
+    table = Table(title="Safe Active Validation Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Input targets", summary.get("input_targets_count")),
+        ("In scope", summary.get("in_scope_targets_count")),
+        ("Out of scope", summary.get("out_of_scope_targets_count")),
+        ("Checks run", summary.get("checks_run")),
+        ("Checks skipped", summary.get("checks_skipped")),
+        ("Indicators found", summary.get("indicators_found")),
+        ("Request count", summary.get("request_count")),
+        ("Rate limit applied", summary.get("rate_limit_applied")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_safe_validation_results(results: list[dict[str, Any]]) -> None:
+    if not results:
+        console.print("[yellow]Safe validation results:[/yellow] No checks were run.")
+        return
+    table = Table(title="Safe Validation Results")
+    table.add_column("URL")
+    table.add_column("Check")
+    table.add_column("Status")
+    table.add_column("Indicator")
+    table.add_column("Evidence")
+    for item in results:
+        table.add_row(
+            str(item.get("url") or ""),
+            str(item.get("check_name") or ""),
+            str(item.get("status") or ""),
+            str(bool(item.get("indicator_found"))),
+            str(item.get("evidence_summary") or "")[:120],
+        )
+    console.print(table)
+
+
+def _print_safe_validation_skipped(skipped: list[dict[str, Any]]) -> None:
+    if not skipped:
+        return
+    table = Table(title="Skipped Validation Targets")
+    table.add_column("URL")
+    table.add_column("Candidate")
+    table.add_column("Reason")
+    table.add_column("Scope Reason")
+    for item in skipped:
+        table.add_row(str(item.get("url") or ""), str(item.get("candidate_type") or ""), str(item.get("reason") or ""), str(item.get("scope_reason") or ""))
+    console.print(table)
 
 
 def _print_prioritisation(

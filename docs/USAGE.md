@@ -48,6 +48,24 @@ OWASP Top 10:2025 indicator mapping:
 OWASP mapping is classification only. It uses existing findings and candidates
 and does not claim a confirmed vulnerability.
 
+## Safe Active Validation
+
+Run limited non-destructive validation checks from the sample target file:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\bug_bounty\validation\sample_validation_targets.json
+```
+
+With scope enforcement and reports:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\bug_bounty\validation\sample_validation_targets.json --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+```
+
+Safe validation uses low-rate requests, stores evidence summaries only, and
+does not submit forms, modify state, use exploit payloads, or confirm
+exploitability.
+
 ## Bug Bounty Scope Manager
 
 Version 18.1 includes local bug bounty scope management and a safe recon foundation. Scope files live under `data\bug_bounty` and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.

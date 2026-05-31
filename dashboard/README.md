@@ -23,6 +23,17 @@ the local API without running any new tests.
 The view uses the terms Indicator, Candidate, and Manual validation required.
 It must not be interpreted as confirmed OWASP vulnerability evidence.
 
+## Safe Validation
+
+The **Safe Validation** section under Bug Bounty runs limited non-destructive
+checks through the local API. It supports only reflected marker observation,
+same-origin redirect indicators, CORS header observation, directory listing
+indicators, known public default files, and HTTP `OPTIONS` method observation.
+
+The view does not provide SQLi, XSS, SSRF, payload, exploit, upload, auth
+bypass, brute-force, form submission, or destructive method controls. Results
+are indicators only and require manual validation.
+
 ## Requirements
 
 - Node.js LTS

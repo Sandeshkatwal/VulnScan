@@ -32,6 +32,7 @@ import { OWASPMappingView } from './components/OWASPMappingView'
 import { ReportsView } from './components/ReportsView'
 import { RemediationView } from './components/RemediationView'
 import { RiskOverview } from './components/RiskOverview'
+import { SafeValidationView } from './components/SafeValidationView'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
 import { SectionHeader } from './components/SectionHeader'
@@ -55,7 +56,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -100,6 +101,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'bug-bounty', label: 'Bug Bounty' },
   { id: 'bug-bounty-recon', label: 'Recon' },
   { id: 'endpoint-discovery', label: 'Endpoints' },
+  { id: 'safe-validation', label: 'Safe Validation' },
   { id: 'owasp', label: 'OWASP Top 10' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -144,6 +146,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'endpoint-discovery': {
     title: 'Endpoint Discovery',
     description: 'Safe endpoint and parameter candidate discovery for manual validation workflows.',
+  },
+  'safe-validation': {
+    title: 'Safe Validation',
+    description: 'Limited non-destructive validation checks for authorised in-scope URLs.',
   },
   owasp: {
     title: 'OWASP Top 10',
@@ -733,6 +739,10 @@ function App() {
     return <EndpointDiscoveryView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
 
+  function renderSafeValidation() {
+    return <SafeValidationView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
   function renderOWASP() {
     return <OWASPMappingView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
   }
@@ -781,6 +791,7 @@ function App() {
     if (currentSection === 'bug-bounty') return renderBugBounty()
     if (currentSection === 'bug-bounty-recon') return renderBugBountyRecon()
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
+    if (currentSection === 'safe-validation') return renderSafeValidation()
     if (currentSection === 'owasp') return renderOWASP()
     return renderSettings()
   }

@@ -81,6 +81,52 @@ Use:
 The report includes mapped items, confidence, mapping reason, manual validation
 requirements, coverage gaps, and limitations.
 
+## Safe Active Validation
+
+Version 18.4 adds a safe active validation foundation for authorised in-scope
+URLs. It runs limited non-destructive checks and reports potential indicators
+only. It does not confirm exploitability.
+
+Supported checks:
+
+- reflected input observation with a harmless marker
+- open redirect behaviour indicator using a same-origin path only
+- CORS configuration indicator with a harmless Origin header
+- directory listing indicator
+- default public file observation for `/robots.txt`, `/sitemap.xml`,
+  `/.well-known/security.txt`, and `/security.txt`
+- HTTP methods indicator using `OPTIONS` only
+
+Blocked checks include SQL injection, XSS payloads, SSRF active probes, path
+traversal payloads, command injection, template injection, XXE,
+deserialisation, file upload exploitation, authentication bypass, brute force,
+password reset exploitation, payment testing, and destructive HTTP methods.
+
+Run:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\bug_bounty\validation\sample_validation_targets.json
+```
+
+Scope-aware:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\bug_bounty\validation\sample_validation_targets.json --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+```
+
+API endpoint:
+
+```text
+POST /bug-bounty/validate
+```
+
+Dashboard usage is available in **Bug Bounty -> Safe Validation**. The view has
+a safety notice, target input, allowed check selector, scope selector, low-rate
+controls, result table, skipped targets, and evidence summaries.
+
+Every result should be treated as: Indicator only. Manual validation required.
+No exploitability confirmed.
+
 ## Purpose
 
 Bug bounty scope files help VulScan decide whether a target, domain, URL, or IP address is covered by a local program scope file before scanning. Out-of-scope rules override in-scope rules, and unknown targets are out of scope by default.

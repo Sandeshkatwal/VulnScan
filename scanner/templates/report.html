@@ -378,6 +378,61 @@
     </section>
     {% endif %}
 
+    {% set validation = report.get("safe_active_validation", {}) %}
+    {% if validation.get("enabled") %}
+    <section>
+      <h2>Safe Active Validation</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">Input Targets</div><div class="value">{{ validation.get("input_targets_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Checks Run</div><div class="value">{{ validation.get("checks_run", 0) }}</div></div>
+        <div class="metric"><div class="label">Indicators</div><div class="value">{{ validation.get("indicators_found", 0) }}</div></div>
+        <div class="metric"><div class="label">Requests</div><div class="value">{{ validation.get("request_count", 0) }}</div></div>
+      </div>
+      <p><strong>Safety:</strong> Indicator only. Manual validation required. No exploitability confirmed.</p>
+      <p><strong>Limitations:</strong> {{ validation.get("limitations", []) | join("; ") }}</p>
+
+      <h3>Validation Results</h3>
+      {% if report.get("safe_active_validation_results") %}
+      <table>
+        <thead><tr><th>URL</th><th>Check</th><th>Status</th><th>Indicator</th><th>Evidence Summary</th><th>Manual Validation</th></tr></thead>
+        <tbody>
+          {% for item in report.get("safe_active_validation_results", []) %}
+          <tr>
+            <td>{{ item.get("url") }}</td>
+            <td>{{ item.get("check_name") }}</td>
+            <td>{{ item.get("status") }}</td>
+            <td>{{ item.get("indicator_found") }}</td>
+            <td>{{ item.get("evidence_summary") }}</td>
+            <td>{{ item.get("manual_validation_note") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No safe validation checks were run.</p>
+      {% endif %}
+
+      <h3>Skipped Targets</h3>
+      {% if report.get("safe_active_validation_skipped") %}
+      <table>
+        <thead><tr><th>URL</th><th>Candidate Type</th><th>Reason</th><th>Scope Reason</th></tr></thead>
+        <tbody>
+          {% for item in report.get("safe_active_validation_skipped", []) %}
+          <tr>
+            <td>{{ item.get("url") }}</td>
+            <td>{{ item.get("candidate_type") }}</td>
+            <td>{{ item.get("reason") }}</td>
+            <td>{{ item.get("scope_reason") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No validation targets were skipped.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set owasp = report.get("owasp_top10_summary", {}) %}
     {% if owasp.get("enabled") %}
     <section>

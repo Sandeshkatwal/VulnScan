@@ -108,6 +108,18 @@ Use the words indicator, candidate, and manual validation required when
 reporting these results. Do not treat OWASP mapping as a confirmed
 vulnerability.
 
+## Safe Validation Indicators
+
+Version 18.4 safe validation results can include OWASP indicator metadata:
+
+- reflected input observation -> `A05:2025` Injection indicator
+- CORS indicator -> `A02:2025` Security Misconfiguration indicator
+- directory listing/default public file/HTTP methods -> `A02:2025`
+- open redirect behaviour indicator -> `A06:2025` Insecure Design indicator
+
+These mappings remain indicator-only and do not confirm OWASP vulnerability
+presence.
+
 ## Limitations
 
 - OWASP mapping is indicator-based and does not confirm vulnerability presence.

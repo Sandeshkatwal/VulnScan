@@ -31,8 +31,9 @@ from scanner.bug_bounty_recon import BugBountyReconError, run_bug_bounty_recon
 from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
+from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, RemediationUpdateRequest, ScopeCheckRequest
+from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_remediation import (
     attach_finding_keys,
@@ -50,7 +51,7 @@ from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "18.3"
+API_VERSION = "18.4"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -81,6 +82,7 @@ PROTECTED_PATHS = {
     "/bug-bounty/recon/results/{recon_id}",
     "/bug-bounty/endpoints/analyse",
     "/bug-bounty/endpoints/reports",
+    "/bug-bounty/validate",
     "/owasp/categories",
     "/owasp/map",
     "/remediation",
@@ -329,6 +331,33 @@ def create_app(
     )
     def list_bug_bounty_endpoint_reports() -> dict[str, Any]:
         return {"reports": list_endpoint_reports()}
+
+    @app.post(
+        "/bug-bounty/validate",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Bounty"],
+        summary="Run safe active validation checks",
+        description="Runs limited non-destructive validation checks against authorised in-scope URLs. Does not exploit or submit forms.",
+        responses=ERROR_RESPONSES,
+    )
+    def run_bug_bounty_safe_validation(request: SafeValidationRequest) -> dict[str, Any]:
+        if not request.targets:
+            raise HTTPException(status_code=400, detail="At least one validation target is required.")
+        try:
+            scope_file = str(resolve_scope_file(request.scope_file)) if request.scope_file else None
+            return run_safe_active_validation(
+                targets=[target.model_dump(exclude_none=True) for target in request.targets],
+                scope_file=scope_file,
+                enforce_scope=request.enforce_scope,
+                checks=request.checks,
+                request_delay=request.request_delay,
+                max_requests_per_minute=request.max_requests_per_minute,
+                timeout=request.timeout,
+                max_validation_requests=request.max_validation_requests,
+                safe_active_confirm=request.safe_active_confirm,
+            )
+        except (BugBountyScopeError, SafeActiveValidationError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get(
         "/owasp/categories",

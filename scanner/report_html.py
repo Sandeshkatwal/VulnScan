@@ -155,6 +155,12 @@ def save_html_report(
             {"enabled": False, "limitations": ["OWASP Top 10 mapping was not enabled."]},
         ),
         "owasp_top10_mapped_items": scan_result.get("owasp_top10_mapped_items", []),
+        "safe_active_validation": scan_result.get(
+            "safe_active_validation",
+            {"enabled": False, "limitations": ["Safe active validation was not enabled."]},
+        ),
+        "safe_active_validation_results": scan_result.get("safe_active_validation_results", []),
+        "safe_active_validation_skipped": scan_result.get("safe_active_validation_skipped", []),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),
         "fix_first_dashboard": scan_result.get(

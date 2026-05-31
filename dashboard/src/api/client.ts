@@ -25,6 +25,8 @@ import type {
   OWASPCategoriesResponse,
   OWASPMapRequest,
   OWASPMapResponse,
+  SafeValidationRequest,
+  SafeValidationResponse,
   ScanRequest,
   ScanResponse,
   ScansQuery,
@@ -257,6 +259,14 @@ export function getOWASPCategories(): Promise<OWASPCategoriesResponse> {
 
 export function mapOWASP(payload: OWASPMapRequest): Promise<OWASPMapResponse> {
   return request<OWASPMapResponse>('/owasp/map', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function runSafeValidation(payload: SafeValidationRequest): Promise<SafeValidationResponse> {
+  return request<SafeValidationResponse>('/bug-bounty/validate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

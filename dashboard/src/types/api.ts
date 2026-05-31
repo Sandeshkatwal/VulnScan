@@ -708,3 +708,71 @@ export interface OWASPMapResponse {
   owasp_top10_mapped_items?: OWASPMappedItem[]
   [key: string]: unknown
 }
+
+export interface SafeValidationTarget {
+  url: string
+  candidate_type?: string
+  parameter?: string
+  source?: string
+}
+
+export interface SafeValidationSummary {
+  enabled?: boolean
+  input_targets_count?: number
+  in_scope_targets_count?: number
+  out_of_scope_targets_count?: number
+  checks_requested?: string[]
+  checks_run?: number
+  checks_skipped?: number
+  indicators_found?: number
+  request_count?: number
+  rate_limit_applied?: boolean
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface SafeValidationResult {
+  url?: string
+  candidate_type?: string
+  parameter?: string
+  check_name?: string
+  status?: string
+  indicator_found?: boolean
+  confidence?: string
+  evidence_summary?: ApiRecord
+  request_method?: string
+  status_code?: number | null
+  response_time_ms?: number
+  owasp_categories?: OWASPMapping[]
+  manual_validation_note?: string
+  limitation?: string
+  [key: string]: unknown
+}
+
+export interface SafeValidationSkipped {
+  url?: string
+  candidate_type?: string
+  reason?: string
+  scope_reason?: string
+  [key: string]: unknown
+}
+
+export interface SafeValidationRequest {
+  targets: SafeValidationTarget[]
+  scope_file?: string
+  enforce_scope?: boolean
+  checks?: string[]
+  request_delay?: number
+  max_requests_per_minute?: number
+  timeout?: number
+  max_validation_requests?: number
+  safe_active_confirm?: boolean
+}
+
+export interface SafeValidationResponse {
+  safe_active_validation?: SafeValidationSummary
+  safe_active_validation_results?: SafeValidationResult[]
+  safe_active_validation_skipped?: SafeValidationSkipped[]
+  findings?: Finding[]
+  [key: string]: unknown
+}

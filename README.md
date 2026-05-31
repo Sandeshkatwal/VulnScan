@@ -14,6 +14,7 @@ Use VulScan only on systems and web applications you own or have explicit writte
 - Passive Web DAST for bounded crawling, headers, cookies, forms, robots.txt, sitemap, scope, and politeness reporting.
 - Bug Bounty Scope Manager, Recon Foundation, and Endpoint Discovery for local program rules, safe scope checks, metadata-only probing of provided authorised targets, and manual-validation endpoint/parameter candidates.
 - OWASP Top 10:2025 indicator mapping for existing findings and candidates.
+- Safe Active Validation foundation for limited non-destructive in-scope indicator checks.
 - Vulnerability Intelligence with local rules, local CVE-style feeds, local EPSS metadata, and local exploit-availability metadata as prioritisation signals only.
 - Prioritisation and Fix-First Dashboard data for remediation triage.
 - Local FastAPI API with jobs, filtering, pagination, report access, remediation tracking, and optional API key protection.
@@ -31,6 +32,7 @@ VulScan
 ├── Bug Bounty Recon Foundation
 ├── Endpoint and Parameter Discovery
 ├── OWASP Top 10 Indicator Mapping
+├── Safe Active Validation
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -46,6 +48,7 @@ scan -> JSON/HTML reports -> API report endpoints -> dashboard
 manual recon targets -> scope validation -> safe HTTP metadata -> recon reports
 endpoint URL lists -> scope validation -> endpoint/parameter candidates -> endpoint reports
 findings/candidates -> OWASP indicator mapping -> reports/API/dashboard
+validation targets -> scope enforcement -> safe indicator checks -> validation reports
 ```
 
 ## Quick Start Backend
@@ -140,6 +143,7 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - Bug bounty recon only uses provided/imported targets, skips out-of-scope targets, probes gently, and stores metadata only.
 - Endpoint discovery analyses supplied URLs only. Parameter candidates are not confirmed vulnerabilities.
 - OWASP Top 10 mapping is indicator-only and must not be reported as a confirmed vulnerability without manual validation.
+- Safe active validation is non-destructive, low-rate, scope-aware, and does not confirm exploitability.
 - Vulnerability intelligence is local-file based and does not download exploit code.
 - Exploit availability metadata is a prioritisation signal only.
 - Remediation features track status only and do not patch systems or run commands.
