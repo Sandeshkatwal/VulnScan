@@ -57,6 +57,21 @@ from scanner.safe_active_validation import (
     load_validation_targets,
     run_safe_active_validation,
 )
+from scanner.submission_tracker import (
+    SubmissionTrackerError,
+    add_submission_note,
+    create_retest,
+    create_submission,
+    get_retest,
+    get_submission,
+    get_submission_summary,
+    get_submission_timeline,
+    list_retests,
+    list_submissions,
+    update_payment,
+    update_retest,
+    update_submission_status,
+)
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
 from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH
@@ -162,8 +177,12 @@ app = typer.Typer(
 )
 remediation_app = typer.Typer(help="Track remediation status for saved findings.")
 export_app = typer.Typer(help="Export saved VulScan data.")
+submission_app = typer.Typer(help="Track Security Finding Report submission workflow status.")
+retest_app = typer.Typer(help="Track manual retest workflow status.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
+app.add_typer(submission_app, name="submission")
+app.add_typer(retest_app, name="retest")
 console = Console()
 
 
@@ -240,7 +259,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.4 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.6 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -316,13 +335,161 @@ def evidence_reports() -> None:
     _security_report_command("Evidence & Reports view for local Security Finding Reports.")
 
 
-@app.command("submission")
-def submission_tracker() -> None:
-    """Show submission and retest tracking guidance."""
-    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
-    console.print("[bold]Submission and Retest Tracking[/bold]")
-    console.print("Use Security Finding Reports, remediation records, and manual validation notes as the evidence source for responsible disclosure follow-up.")
-    console.print("[yellow]Do not store secrets, session cookies, tokens, passwords, private keys, or unauthorised client data in submission notes.[/yellow]")
+@submission_app.callback(invoke_without_command=True)
+def submission_tracker(ctx: typer.Context) -> None:
+    """Track Security Finding Report submissions locally."""
+    if ctx.invoked_subcommand is None:
+        console.print("[bold]Submission and Retest Tracking[/bold]")
+        console.print("Tracking only. VulScan does not submit reports or modify targets.")
+        console.print("[yellow]Do not store platform credentials or secrets in notes.[/yellow]")
+
+
+@submission_app.command("create")
+def submission_create(
+    report_id: Annotated[str, typer.Option("--report-id", help="Local report ID or report reference.")],
+    program_name: Annotated[str, typer.Option("--program-name", help="Program or client name.")],
+    platform: Annotated[str, typer.Option("--platform", help="Tracking platform label such as manual.")],
+    status: Annotated[str, typer.Option("--status", help="Initial submission status.")] = "draft",
+    finding_title: Annotated[str | None, typer.Option("--finding-title", help="Finding or report title.")] = None,
+    severity_submitted: Annotated[str | None, typer.Option("--severity-submitted", help="Submitted severity label.")] = None,
+    note: Annotated[str | None, typer.Option("--note", help="Optional redacted local note.")] = None,
+) -> None:
+    """Create a local submission tracking record."""
+    try:
+        record = create_submission(
+            report_id=report_id,
+            program_name=program_name,
+            platform=platform,
+            status=status,
+            finding_title=finding_title,
+            severity_submitted=severity_submitted,
+            notes=note,
+        )
+    except SubmissionTrackerError as exc:
+        console.print(f"[red]Submission error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    _print_submission_record(record)
+
+
+@submission_app.command("list")
+def submission_list(status: Annotated[str | None, typer.Option("--status", help="Optional status filter.")] = None) -> None:
+    """List local submission tracking records."""
+    try:
+        _print_submissions(list_submissions(status=status))
+    except SubmissionTrackerError as exc:
+        console.print(f"[red]Submission error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+
+@submission_app.command("show")
+def submission_show(submission_id: Annotated[str, typer.Option("--submission-id")]) -> None:
+    """Show one local submission tracking record."""
+    record = get_submission(submission_id)
+    if record is None:
+        console.print("[red]Submission record was not found.[/red]")
+        raise typer.Exit(code=1)
+    _print_submission_record(record)
+    _print_submission_timeline(get_submission_timeline(submission_id))
+    _print_retests(list_retests(submission_id=submission_id))
+
+
+@submission_app.command("update-status")
+def submission_update_status(
+    submission_id: Annotated[str, typer.Option("--submission-id")],
+    status: Annotated[str, typer.Option("--status")],
+    note: Annotated[str | None, typer.Option("--note")] = None,
+) -> None:
+    """Update submission status and record a timeline event."""
+    try:
+        record = update_submission_status(submission_id, status, note=note)
+    except SubmissionTrackerError as exc:
+        console.print(f"[red]Submission error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    if record is None:
+        console.print("[red]Submission record was not found.[/red]")
+        raise typer.Exit(code=1)
+    _print_submission_record(record)
+
+
+@submission_app.command("add-note")
+def submission_add_note(
+    submission_id: Annotated[str, typer.Option("--submission-id")],
+    note: Annotated[str, typer.Option("--note")],
+) -> None:
+    """Append a redacted local note to a submission."""
+    try:
+        record = add_submission_note(submission_id, note)
+    except SubmissionTrackerError as exc:
+        console.print(f"[red]Submission error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    if record is None:
+        console.print("[red]Submission record was not found.[/red]")
+        raise typer.Exit(code=1)
+    _print_submission_record(record)
+
+
+@submission_app.command("update-payment")
+def submission_update_payment(
+    submission_id: Annotated[str, typer.Option("--submission-id")],
+    bounty_amount: Annotated[str | None, typer.Option("--bounty-amount")] = None,
+    bounty_currency: Annotated[str | None, typer.Option("--bounty-currency")] = None,
+    status: Annotated[str | None, typer.Option("--status")] = None,
+) -> None:
+    """Track local bounty/payment outcome details."""
+    try:
+        record = update_payment(submission_id, bounty_amount=bounty_amount, bounty_currency=bounty_currency, status=status)
+    except SubmissionTrackerError as exc:
+        console.print(f"[red]Submission error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    if record is None:
+        console.print("[red]Submission record was not found.[/red]")
+        raise typer.Exit(code=1)
+    _print_submission_record(record)
+
+
+@retest_app.command("create")
+def retest_create(
+    submission_id: Annotated[str, typer.Option("--submission-id")],
+    status: Annotated[str, typer.Option("--status")] = "retest_required",
+    note: Annotated[str | None, typer.Option("--note")] = None,
+    report_id: Annotated[str | None, typer.Option("--report-id")] = None,
+    target: Annotated[str | None, typer.Option("--target")] = None,
+    affected_url: Annotated[str | None, typer.Option("--affected-url")] = None,
+    evidence_id: Annotated[str | None, typer.Option("--evidence-id")] = None,
+) -> None:
+    """Create a local retest tracking record."""
+    try:
+        record = create_retest(submission_id=submission_id, status=status, notes=note, report_id=report_id, target=target, affected_url=affected_url, evidence_id=evidence_id)
+    except SubmissionTrackerError as exc:
+        console.print(f"[red]Retest error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    _print_retests([record])
+
+
+@retest_app.command("update")
+def retest_update(
+    retest_id: Annotated[str, typer.Option("--retest-id")],
+    status: Annotated[str | None, typer.Option("--status")] = None,
+    result: Annotated[str | None, typer.Option("--result")] = None,
+    note: Annotated[str | None, typer.Option("--note")] = None,
+    evidence_id: Annotated[str | None, typer.Option("--evidence-id")] = None,
+) -> None:
+    """Update a local retest tracking record."""
+    try:
+        record = update_retest(retest_id, status=status, retest_result=result, notes=note, evidence_id=evidence_id)
+    except SubmissionTrackerError as exc:
+        console.print(f"[red]Retest error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    if record is None:
+        console.print("[red]Retest record was not found.[/red]")
+        raise typer.Exit(code=1)
+    _print_retests([record])
+
+
+@retest_app.command("list")
+def retest_list(submission_id: Annotated[str | None, typer.Option("--submission-id")] = None) -> None:
+    """List local retest tracking records."""
+    _print_retests(list_retests(submission_id=submission_id))
 
 
 @app.command()
@@ -2923,6 +3090,89 @@ def _print_endpoint_skipped(skipped: list[dict[str, Any]]) -> None:
             str(item.get("original_url") or ""),
             str(item.get("reason") or ""),
             str(item.get("scope_reason") or ""),
+        )
+    console.print(table)
+
+
+def _print_submission_record(record: dict[str, Any]) -> None:
+    table = Table(title="Submission Record")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in (
+        "submission_id",
+        "report_id",
+        "finding_title",
+        "program_name",
+        "platform",
+        "status",
+        "severity_submitted",
+        "severity_accepted",
+        "bounty_amount",
+        "bounty_currency",
+        "next_follow_up_date",
+        "updated_at",
+    ):
+        table.add_row(key, str(record.get(key) or ""))
+    console.print(table)
+    if record.get("notes"):
+        console.print(f"[bold]Notes:[/bold] {record.get('notes')}")
+    if record.get("safe_notes_redacted"):
+        console.print("[yellow]One or more note values were redacted before storage.[/yellow]")
+
+
+def _print_submissions(records: list[dict[str, Any]]) -> None:
+    table = Table(title="Submission and Retest Tracking")
+    table.add_column("Submission ID", no_wrap=True)
+    table.add_column("Report")
+    table.add_column("Program")
+    table.add_column("Platform")
+    table.add_column("Status")
+    table.add_column("Bounty")
+    table.add_column("Updated")
+    for record in records:
+        bounty = " ".join(str(record.get(key) or "") for key in ("bounty_amount", "bounty_currency")).strip()
+        table.add_row(
+            str(record.get("submission_id") or ""),
+            str(record.get("report_id") or ""),
+            str(record.get("program_name") or ""),
+            str(record.get("platform") or ""),
+            str(record.get("status") or ""),
+            bounty,
+            str(record.get("updated_at") or ""),
+        )
+    console.print(table)
+
+
+def _print_submission_timeline(events: list[dict[str, Any]]) -> None:
+    if not events:
+        return
+    table = Table(title="Submission Timeline")
+    table.add_column("Time")
+    table.add_column("Event")
+    table.add_column("Status")
+    table.add_column("Note")
+    for event in events:
+        status = f"{event.get('old_status') or ''} -> {event.get('new_status') or ''}".strip(" ->")
+        table.add_row(str(event.get("created_at") or ""), str(event.get("event_type") or ""), status, str(event.get("note") or "")[:80])
+    console.print(table)
+
+
+def _print_retests(records: list[dict[str, Any]]) -> None:
+    table = Table(title="Retest Records")
+    table.add_column("Retest ID", no_wrap=True)
+    table.add_column("Submission ID", no_wrap=True)
+    table.add_column("Status")
+    table.add_column("Result")
+    table.add_column("Evidence")
+    table.add_column("Updated")
+    for record in records:
+        table.add_row(
+            str(record.get("retest_id") or ""),
+            str(record.get("submission_id") or ""),
+            str(record.get("status") or ""),
+            str(record.get("retest_result") or ""),
+            str(record.get("evidence_id") or ""),
+            str(record.get("updated_at") or ""),
         )
     console.print(table)
 

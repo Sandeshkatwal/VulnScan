@@ -34,6 +34,7 @@ from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, b
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
 from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_remediation import (
     attach_finding_keys,
@@ -42,6 +43,20 @@ from scanner.api_remediation import (
     list_remediation_records,
     update_remediation_record,
 )
+from scanner.api_submission_tracker import (
+    add_submission_note,
+    api_create_retest,
+    api_create_submission,
+    api_get_retest,
+    api_get_submission,
+    api_list_retests,
+    api_list_submissions,
+    api_summary,
+    api_update_retest,
+    api_update_submission,
+    get_submission_timeline,
+    update_submission_status,
+)
 from scanner.api_job_store import ApiJobStore, UNAVAILABLE_FINDINGS_MESSAGE, UNAVAILABLE_RESULT_MESSAGE, sanitize_request_payload
 from scanner.api_jobs import run_scan_job
 from scanner.api_runner import run_scan_pipeline
@@ -49,9 +64,10 @@ from scanner.api_security import require_api_key
 from scanner.database import DB_PATH
 from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
+from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "18.4"
+API_VERSION = "18.6"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -83,6 +99,14 @@ PROTECTED_PATHS = {
     "/bug-bounty/endpoints/analyse",
     "/bug-bounty/endpoints/reports",
     "/bug-bounty/validate",
+    "/submissions",
+    "/submissions/summary",
+    "/submissions/{submission_id}",
+    "/submissions/{submission_id}/status",
+    "/submissions/{submission_id}/notes",
+    "/submissions/{submission_id}/timeline",
+    "/retests",
+    "/retests/{retest_id}",
     "/owasp/categories",
     "/owasp/map",
     "/remediation",
@@ -100,6 +124,7 @@ TAGS_METADATA = [
     {"name": "Bug Intelligence", "description": "Local program scope, recon intelligence, endpoint discovery, and safe validation workflows."},
     {"name": "OWASP", "description": "Indicator-only OWASP Top 10:2025 mapping for existing findings and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
+    {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
 ]
 SCAN_REQUEST_EXAMPLE = {
     "target": "127.0.0.1",
@@ -358,6 +383,169 @@ def create_app(
             )
         except (BugBountyScopeError, SafeActiveValidationError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/submissions/summary",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Summarise local submissions and retests",
+        description="Returns local workflow counts only. Does not contact external platforms.",
+        responses=ERROR_RESPONSES,
+    )
+    def submission_summary() -> dict[str, Any]:
+        return api_summary(safe_remediation_db_path)
+
+    @app.get(
+        "/submissions",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="List local submission records",
+        description="Lists local Security Finding Report submission tracking records.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_submissions_endpoint(status: str | None = Query(None, max_length=50)) -> dict[str, Any]:
+        try:
+            return api_list_submissions(status=status, db_path=safe_remediation_db_path)
+        except SubmissionTrackerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/submissions",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Create local submission record",
+        description="Creates a tracking-only submission record. VulScan does not submit reports externally.",
+        responses=ERROR_RESPONSES,
+    )
+    def create_submission_endpoint(request: SubmissionCreateRequest) -> dict[str, Any]:
+        try:
+            return api_create_submission(request.model_dump(exclude_none=True), db_path=safe_remediation_db_path)
+        except SubmissionTrackerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/submissions/{submission_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Get local submission record",
+        responses=ERROR_RESPONSES,
+    )
+    def get_submission_endpoint(submission_id: str) -> dict[str, Any]:
+        record = api_get_submission(submission_id, db_path=safe_remediation_db_path)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Submission record was not found.")
+        return record
+
+    @app.put(
+        "/submissions/{submission_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Update local submission record",
+        responses=ERROR_RESPONSES,
+    )
+    def update_submission_endpoint(submission_id: str, request: SubmissionUpdateRequest) -> dict[str, Any]:
+        try:
+            record = api_update_submission(submission_id, request.model_dump(exclude_none=True), db_path=safe_remediation_db_path)
+        except SubmissionTrackerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if record is None:
+            raise HTTPException(status_code=404, detail="Submission record was not found.")
+        return record
+
+    @app.post(
+        "/submissions/{submission_id}/status",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Update local submission status",
+        responses=ERROR_RESPONSES,
+    )
+    def update_submission_status_endpoint(submission_id: str, request: SubmissionStatusRequest) -> dict[str, Any]:
+        try:
+            record = update_submission_status(submission_id, request.status, note=request.note, db_path=safe_remediation_db_path)
+        except SubmissionTrackerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if record is None:
+            raise HTTPException(status_code=404, detail="Submission record was not found.")
+        return record
+
+    @app.post(
+        "/submissions/{submission_id}/notes",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Add redacted local submission note",
+        responses=ERROR_RESPONSES,
+    )
+    def add_submission_note_endpoint(submission_id: str, request: SubmissionNoteRequest) -> dict[str, Any]:
+        try:
+            record = add_submission_note(submission_id, request.note, db_path=safe_remediation_db_path)
+        except SubmissionTrackerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if record is None:
+            raise HTTPException(status_code=404, detail="Submission record was not found.")
+        return record
+
+    @app.get(
+        "/submissions/{submission_id}/timeline",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Get local submission timeline",
+        responses=ERROR_RESPONSES,
+    )
+    def get_submission_timeline_endpoint(submission_id: str) -> dict[str, Any]:
+        return {"events": get_submission_timeline(submission_id, db_path=safe_remediation_db_path)}
+
+    @app.get(
+        "/retests",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="List local retest records",
+        responses=ERROR_RESPONSES,
+    )
+    def list_retests_endpoint(submission_id: str | None = Query(None, max_length=255)) -> dict[str, Any]:
+        return api_list_retests(submission_id=submission_id, db_path=safe_remediation_db_path)
+
+    @app.post(
+        "/retests",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Create local retest record",
+        description="Creates workflow tracking only. No active tests are run.",
+        responses=ERROR_RESPONSES,
+    )
+    def create_retest_endpoint(request: RetestCreateRequest) -> dict[str, Any]:
+        try:
+            return api_create_retest(request.model_dump(exclude_none=True), db_path=safe_remediation_db_path)
+        except SubmissionTrackerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/retests/{retest_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Get local retest record",
+        responses=ERROR_RESPONSES,
+    )
+    def get_retest_endpoint(retest_id: str) -> dict[str, Any]:
+        record = api_get_retest(retest_id, db_path=safe_remediation_db_path)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Retest record was not found.")
+        return record
+
+    @app.put(
+        "/retests/{retest_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Submission Tracker"],
+        summary="Update local retest record",
+        responses=ERROR_RESPONSES,
+    )
+    def update_retest_endpoint(retest_id: str, request: RetestUpdateRequest) -> dict[str, Any]:
+        try:
+            record = api_update_retest(retest_id, request.model_dump(exclude_none=True), db_path=safe_remediation_db_path)
+        except SubmissionTrackerError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if record is None:
+            raise HTTPException(status_code=404, detail="Retest record was not found.")
+        return record
 
     @app.get(
         "/owasp/categories",

@@ -25,6 +25,8 @@ import type {
   OWASPCategoriesResponse,
   OWASPMapRequest,
   OWASPMapResponse,
+  RetestRecord,
+  RetestsResponse,
   SafeValidationRequest,
   SafeValidationResponse,
   ScanRequest,
@@ -33,6 +35,10 @@ import type {
   ScansResponse,
   ScopeCheckRequest,
   ScopeCheckResponse,
+  SubmissionRecord,
+  SubmissionSummary,
+  SubmissionTimelineResponse,
+  SubmissionsResponse,
   VersionResponse,
 } from '../types/api'
 
@@ -268,6 +274,80 @@ export function mapOWASP(payload: OWASPMapRequest): Promise<OWASPMapResponse> {
 export function runSafeValidation(payload: SafeValidationRequest): Promise<SafeValidationResponse> {
   return request<SafeValidationResponse>('/bug-bounty/validate', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getSubmissions(params: { status?: string } = {}): Promise<SubmissionsResponse> {
+  const search = new URLSearchParams()
+  if (params.status) search.set('status', params.status)
+  const suffix = search.toString() ? `?${search.toString()}` : ''
+  return request<SubmissionsResponse>(`/submissions${suffix}`)
+}
+
+export function getSubmission(submissionId: string): Promise<SubmissionRecord> {
+  return request<SubmissionRecord>(`/submissions/${encodeURIComponent(submissionId)}`)
+}
+
+export function createSubmission(payload: Partial<SubmissionRecord>): Promise<SubmissionRecord> {
+  return request<SubmissionRecord>('/submissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateSubmission(submissionId: string, payload: Partial<SubmissionRecord>): Promise<SubmissionRecord> {
+  return request<SubmissionRecord>(`/submissions/${encodeURIComponent(submissionId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateSubmissionStatus(submissionId: string, payload: { status: string; note?: string }): Promise<SubmissionRecord> {
+  return request<SubmissionRecord>(`/submissions/${encodeURIComponent(submissionId)}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function addSubmissionNote(submissionId: string, note: string): Promise<SubmissionRecord> {
+  return request<SubmissionRecord>(`/submissions/${encodeURIComponent(submissionId)}/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note }),
+  })
+}
+
+export function getSubmissionTimeline(submissionId: string): Promise<SubmissionTimelineResponse> {
+  return request<SubmissionTimelineResponse>(`/submissions/${encodeURIComponent(submissionId)}/timeline`)
+}
+
+export function getSubmissionSummary(): Promise<SubmissionSummary> {
+  return request<SubmissionSummary>('/submissions/summary')
+}
+
+export function getRetests(params: { submission_id?: string } = {}): Promise<RetestsResponse> {
+  const search = new URLSearchParams()
+  if (params.submission_id) search.set('submission_id', params.submission_id)
+  const suffix = search.toString() ? `?${search.toString()}` : ''
+  return request<RetestsResponse>(`/retests${suffix}`)
+}
+
+export function createRetest(payload: Partial<RetestRecord>): Promise<RetestRecord> {
+  return request<RetestRecord>('/retests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateRetest(retestId: string, payload: Partial<RetestRecord>): Promise<RetestRecord> {
+  return request<RetestRecord>(`/retests/${encodeURIComponent(retestId)}`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })

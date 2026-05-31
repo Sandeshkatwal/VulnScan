@@ -235,6 +235,96 @@ def init_db(db_path: Path = DB_PATH) -> None:
             """
         )
         init_api_jobs_table(connection)
+        init_submission_tracker_tables(connection)
+
+
+def init_submission_tracker_tables(connection: sqlite3.Connection | None = None, db_path: Path = DB_PATH) -> None:
+    """Initialise local submission and retest tracking tables."""
+    if connection is None:
+        with get_connection(db_path) as managed_connection:
+            init_submission_tracker_tables(managed_connection, db_path=db_path)
+        return
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS security_submissions (
+            submission_id TEXT PRIMARY KEY,
+            report_id TEXT,
+            evidence_ids_json TEXT,
+            finding_title TEXT,
+            program_name TEXT,
+            platform TEXT,
+            submission_url TEXT,
+            external_reference TEXT,
+            status TEXT,
+            severity_submitted TEXT,
+            severity_accepted TEXT,
+            duplicate_of TEXT,
+            bounty_amount TEXT,
+            bounty_currency TEXT,
+            submitted_at TEXT,
+            triaged_at TEXT,
+            accepted_at TEXT,
+            resolved_at TEXT,
+            paid_at TEXT,
+            next_follow_up_date TEXT,
+            notes TEXT,
+            safe_notes_redacted INTEGER DEFAULT 0,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+    _ensure_column(connection, "security_submissions", "safe_notes_redacted", "INTEGER DEFAULT 0")
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS security_retests (
+            retest_id TEXT PRIMARY KEY,
+            submission_id TEXT,
+            report_id TEXT,
+            target TEXT,
+            affected_url TEXT,
+            status TEXT,
+            requested_at TEXT,
+            retested_at TEXT,
+            retest_result TEXT,
+            evidence_id TEXT,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS security_submission_timeline (
+            event_id TEXT PRIMARY KEY,
+            submission_id TEXT,
+            event_type TEXT,
+            old_status TEXT,
+            new_status TEXT,
+            note TEXT,
+            created_at TEXT
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_security_submissions_updated_at
+        ON security_submissions (updated_at)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_security_retests_submission_id
+        ON security_retests (submission_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_security_submission_timeline_submission_id
+        ON security_submission_timeline (submission_id)
+        """
+    )
 
 
 def init_api_jobs_table(connection: sqlite3.Connection | None = None, db_path: Path = DB_PATH) -> None:

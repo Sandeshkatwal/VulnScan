@@ -129,6 +129,17 @@ controls, result table, skipped targets, and evidence summaries.
 Every result should be treated as: Indicator only. Manual validation required.
 No exploitability confirmed.
 
+## Submission and Retest Tracking
+
+Version 18.6 adds local Submission and Retest Tracking for Security Finding Reports. It tracks status, duplicate or accepted outcomes, bounty/payment notes, follow-up dates, evidence references, timeline events, and retest status.
+
+This is workflow tracking only. VulScan does not automatically submit reports to external platforms, does not integrate platform API tokens, and does not store platform credentials. Retest tracking is manual/status-based unless the user explicitly runs existing Safe Validation and links that evidence.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main submission create --report-id REPORT_ID --program-name "Demo Program" --platform "manual" --status draft
+.\.venv311\Scripts\python.exe -m scanner.main retest create --submission-id SUBMISSION_ID --status retest_required --note "Retest requested."
+```
+
 ## Purpose
 
 Program scope files help VulScan decide whether a target, domain, URL, or IP address is covered by a local program scope file before scanning. Out-of-scope rules override in-scope rules, and unknown targets are out of scope by default.

@@ -66,6 +66,20 @@ Safe validation uses low-rate requests, stores evidence summaries only, and
 does not submit forms, modify state, use exploit payloads, or confirm
 exploitability.
 
+## Submission and Retest Tracking
+
+Version 18.6 adds local workflow tracking for Security Finding Reports. It does not submit reports to external platforms, does not integrate platform API tokens, and does not store platform credentials.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main submission create --report-id REPORT_ID --program-name "Demo Program" --platform "manual" --status draft
+.\.venv311\Scripts\python.exe -m scanner.main submission list
+.\.venv311\Scripts\python.exe -m scanner.main submission update-status --submission-id SUBMISSION_ID --status submitted --note "Submitted through platform."
+.\.venv311\Scripts\python.exe -m scanner.main retest create --submission-id SUBMISSION_ID --status retest_required --note "Retest requested."
+.\.venv311\Scripts\python.exe -m scanner.main retest update --retest-id RETEST_ID --status retest_passed --result issue_no_longer_reproducible --note "Manual retest passed."
+```
+
+Notes are redacted before storage. Retest tracking is manual/status-based unless the user explicitly runs an existing Safe Validation workflow and links that evidence.
+
 ## Program Scope Manager
 
 Version 18.1 includes local program scope management and a safe Recon Intelligence foundation. Scope files live under `data\bug_bounty` for backward compatibility and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.

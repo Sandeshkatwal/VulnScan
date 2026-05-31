@@ -38,6 +38,7 @@ import { ScanJobForm } from './components/ScanJobForm'
 import { SectionHeader } from './components/SectionHeader'
 import { ScreenshotGuide } from './components/ScreenshotGuide'
 import { StatusCard } from './components/StatusCard'
+import { SubmissionTrackerView } from './components/SubmissionTrackerView'
 import { TrendsView } from './components/TrendsView'
 import { VulnerabilityList } from './components/VulnerabilityList'
 import type {
@@ -80,7 +81,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.4-demo', api_version: '18.4' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.6-demo', api_version: '18.6' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -784,17 +785,7 @@ function App() {
   }
 
   function renderSubmissionTracker() {
-    return (
-      <section className="content-grid">
-        <article className="panel panel--wide">
-          <div className="panel-heading">
-            <h2>Submission and Retest Tracking</h2>
-            <p>Tracking workspace for responsible disclosure follow-up and retest readiness.</p>
-          </div>
-          <div className="empty-state">Use Security Finding Reports and remediation records as the evidence source for submission notes, status, owner, and retest outcomes. No secrets, session cookies, tokens, passwords, or private keys should be stored here.</div>
-        </article>
-      </section>
-    )
+    return <SubmissionTrackerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
 
   function renderSettings() {

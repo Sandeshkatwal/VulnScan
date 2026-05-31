@@ -70,6 +70,9 @@ VulScan
 ├── Web DAST Engine
 ├── Program Scope Manager
 ├── Recon Intelligence Foundation
+├── Endpoint Intelligence
+├── Safe Active Validation
+├── Submission and Retest Tracker
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -99,6 +102,13 @@ VulScan
 - `dashboard/src/utils`: formatting, demo mode, risk metrics, trend metrics, and report helpers.
 - `dashboard/src/demo`: fake sample data for demo and portfolio mode.
 - `dashboard/src/components`: dashboard shell, navigation, API status, jobs, scans, vulnerability list, finding drawer, risk overview, trends, Evidence & Reports, remediation, Program Scope, Recon Intelligence, endpoints, Safe Validation, Submission Tracker, settings, portfolio banner, and screenshot guide.
+
+## Version 18.6 Submission and Retest Tracking
+
+- `scanner.submission_tracker` stores local Security Finding Report submission records, retest records, and timeline events in SQLite.
+- `scanner.api_submission_tracker` exposes tracking helpers through protected API routes.
+- API routes under `/submissions` and `/retests` are tracking-only. They do not submit reports externally, accept platform credentials, or run retest activity.
+- The dashboard Submission Tracker view provides summary cards, submission creation, status updates, timeline events, and retest checklist tracking.
 
 The dashboard is local React + Vite + TypeScript tooling. It does not collect credentials and does not expose exploit, brute-force, credentialed scan, or command execution controls.
 

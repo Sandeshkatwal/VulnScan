@@ -146,6 +146,12 @@ Recon results show input counts, in-scope and out-of-scope counts, live assets, 
 
 The recon UI does not include subdomain brute forcing, wordlists, exploit actions, payload controls, credential collection, or public scanning defaults.
 
+## Submission Tracker
+
+The Submission Tracker section provides local Submission and Retest Tracking for Security Finding Reports. It includes summary cards, a submission form, status updates, redacted notes, timeline events, and retest checklist records.
+
+Tracking is local only. VulScan does not submit reports to external platforms, does not integrate platform API tokens, and does not store platform credentials.
+
 ## Safety Note
 
 The dashboard creates safe API scan jobs only. Credentialed Linux and Windows scans remain CLI-only. Remediation updates are local tracking records only and do not patch systems, run commands, restart services, or modify targets.

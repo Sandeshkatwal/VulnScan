@@ -776,3 +776,110 @@ export interface SafeValidationResponse {
   findings?: Finding[]
   [key: string]: unknown
 }
+
+export type SubmissionStatus =
+  | 'draft'
+  | 'ready_for_review'
+  | 'submitted'
+  | 'triaged'
+  | 'accepted'
+  | 'duplicate'
+  | 'informative'
+  | 'not_applicable'
+  | 'resolved'
+  | 'paid'
+  | 'closed'
+
+export type RetestStatus =
+  | 'not_required'
+  | 'retest_required'
+  | 'retest_in_progress'
+  | 'retest_passed'
+  | 'retest_failed'
+  | 'retest_blocked'
+
+export interface SubmissionRecord {
+  submission_id?: string
+  report_id?: string
+  evidence_ids?: string[]
+  finding_title?: string
+  program_name?: string
+  platform?: string
+  submission_url?: string
+  external_reference?: string
+  status?: SubmissionStatus | string
+  severity_submitted?: string
+  severity_accepted?: string
+  duplicate_of?: string
+  bounty_amount?: string
+  bounty_currency?: string
+  submitted_at?: string
+  triaged_at?: string
+  accepted_at?: string
+  resolved_at?: string
+  paid_at?: string
+  next_follow_up_date?: string
+  notes?: string
+  safe_notes_redacted?: boolean
+  created_at?: string
+  updated_at?: string
+  timeline?: SubmissionTimelineEvent[]
+  retests?: RetestRecord[]
+  [key: string]: unknown
+}
+
+export interface SubmissionTimelineEvent {
+  event_id?: string
+  submission_id?: string
+  event_type?: string
+  old_status?: string
+  new_status?: string
+  note?: string
+  created_at?: string
+  [key: string]: unknown
+}
+
+export interface RetestRecord {
+  retest_id?: string
+  submission_id?: string
+  report_id?: string
+  target?: string
+  affected_url?: string
+  status?: RetestStatus | string
+  requested_at?: string
+  retested_at?: string
+  retest_result?: string
+  evidence_id?: string
+  notes?: string
+  created_at?: string
+  updated_at?: string
+  [key: string]: unknown
+}
+
+export interface SubmissionSummary {
+  total_count?: number
+  draft_count?: number
+  submitted_count?: number
+  triaged_count?: number
+  accepted_count?: number
+  duplicate_count?: number
+  resolved_count?: number
+  paid_count?: number
+  retest_required_count?: number
+  retest_passed_count?: number
+  retest_failed_count?: number
+  total_bounty_amount_by_currency?: Record<string, number>
+  [key: string]: unknown
+}
+
+export interface SubmissionsResponse {
+  submissions: SubmissionRecord[]
+}
+
+export interface RetestsResponse {
+  retests: RetestRecord[]
+}
+
+export interface SubmissionTimelineResponse {
+  events: SubmissionTimelineEvent[]
+}

@@ -139,6 +139,23 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/rep
 
 Scope endpoints read local JSON scope files under `data/bug_bounty` only. Recon accepts provided target strings and optional scope files from the same local program scope directory. The `/bug-bounty/...` paths remain as compatibility routes. These endpoints do not fetch live program policies, accept arbitrary filesystem paths, store secrets, brute-force subdomains, use wordlists, launch exploit checks, or modify targets.
 
+## Submission and Retest Tracking Endpoints
+
+- `GET /submissions`
+- `POST /submissions`
+- `GET /submissions/{submission_id}`
+- `PUT /submissions/{submission_id}`
+- `POST /submissions/{submission_id}/status`
+- `POST /submissions/{submission_id}/notes`
+- `GET /submissions/{submission_id}/timeline`
+- `GET /submissions/summary`
+- `GET /retests`
+- `POST /retests`
+- `GET /retests/{retest_id}`
+- `PUT /retests/{retest_id}`
+
+These endpoints are local workflow tracking only. They do not submit reports externally, do not accept platform credentials, and redact notes before storage.
+
 Example:
 
 ```powershell

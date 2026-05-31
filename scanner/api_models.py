@@ -259,6 +259,69 @@ class SafeValidationRequest(StrictApiModel):
     safe_active_confirm: bool = Field(True, description="Required explicit acknowledgement that checks are safe and authorised.", examples=[True])
 
 
+class SubmissionCreateRequest(StrictApiModel):
+    """Create a local submission tracking record. Does not submit externally."""
+
+    report_id: str | None = Field(None, max_length=255)
+    evidence_ids: list[str] = Field(default_factory=list)
+    finding_title: str | None = Field(None, max_length=500)
+    program_name: str | None = Field(None, max_length=255)
+    platform: str | None = Field("manual", max_length=100)
+    submission_url: str | None = Field(None, max_length=1000)
+    external_reference: str | None = Field(None, max_length=255)
+    status: str = Field("draft", max_length=50)
+    severity_submitted: str | None = Field(None, max_length=50)
+    notes: str | None = Field(None, max_length=2000)
+
+
+class SubmissionUpdateRequest(StrictApiModel):
+    report_id: str | None = Field(None, max_length=255)
+    evidence_ids: list[str] | None = Field(None)
+    finding_title: str | None = Field(None, max_length=500)
+    program_name: str | None = Field(None, max_length=255)
+    platform: str | None = Field(None, max_length=100)
+    submission_url: str | None = Field(None, max_length=1000)
+    external_reference: str | None = Field(None, max_length=255)
+    status: str | None = Field(None, max_length=50)
+    severity_submitted: str | None = Field(None, max_length=50)
+    severity_accepted: str | None = Field(None, max_length=50)
+    duplicate_of: str | None = Field(None, max_length=255)
+    bounty_amount: str | None = Field(None, max_length=50)
+    bounty_currency: str | None = Field(None, max_length=10)
+    next_follow_up_date: str | None = Field(None, max_length=64)
+    notes: str | None = Field(None, max_length=2000)
+
+
+class SubmissionStatusRequest(StrictApiModel):
+    status: str = Field(..., max_length=50)
+    note: str | None = Field(None, max_length=2000)
+
+
+class SubmissionNoteRequest(StrictApiModel):
+    note: str = Field(..., min_length=1, max_length=2000)
+
+
+class RetestCreateRequest(StrictApiModel):
+    submission_id: str = Field(..., min_length=1, max_length=255)
+    report_id: str | None = Field(None, max_length=255)
+    target: str | None = Field(None, max_length=255)
+    affected_url: str | None = Field(None, max_length=1000)
+    status: str = Field("retest_required", max_length=50)
+    retest_result: str | None = Field(None, max_length=100)
+    evidence_id: str | None = Field(None, max_length=255)
+    notes: str | None = Field(None, max_length=2000)
+
+
+class RetestUpdateRequest(StrictApiModel):
+    report_id: str | None = Field(None, max_length=255)
+    target: str | None = Field(None, max_length=255)
+    affected_url: str | None = Field(None, max_length=1000)
+    status: str | None = Field(None, max_length=50)
+    retest_result: str | None = Field(None, max_length=100)
+    evidence_id: str | None = Field(None, max_length=255)
+    notes: str | None = Field(None, max_length=2000)
+
+
 class ErrorResponse(StrictApiModel):
     error: str | None = Field(None, description="Short safe error category.", examples=["Request failed."])
     detail: str | None = Field(None, description="User-facing safe error detail without tracebacks or secrets.", examples=["Invalid or missing API key."])

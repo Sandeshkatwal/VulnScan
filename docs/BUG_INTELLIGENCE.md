@@ -4,4 +4,6 @@ This page is the professional terminology entry point for the authorised vulnera
 
 The implementation keeps legacy command flags, API routes, JSON keys, and folders such as `--bug-bounty-scope`, `/bug-bounty/...`, and `data/bug_bounty/` for backward compatibility. User-facing documentation and dashboard navigation use Bug Intelligence, Program Scope, Recon Intelligence, Security Finding Reports, and Submission and Retest Tracking.
 
+Version 18.6 adds local Submission and Retest Tracking for Security Finding Reports. It records workflow status, duplicate or accepted outcomes, payment notes, follow-up dates, evidence references, timeline events, and retest status. It does not submit reports externally and does not store platform credentials or API tokens.
+
 See [BUG_BOUNTY.md](BUG_BOUNTY.md) for the full workflow guide.
