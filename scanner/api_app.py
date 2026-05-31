@@ -30,8 +30,9 @@ from scanner.api_bug_bounty_recon import list_recon_reports, load_recon_report
 from scanner.bug_bounty_recon import BugBountyReconError, run_bug_bounty_recon
 from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
+from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, RemediationUpdateRequest, ScopeCheckRequest
+from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, RemediationUpdateRequest, ScopeCheckRequest
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_remediation import (
     attach_finding_keys,
@@ -49,7 +50,7 @@ from scanner.exporter import export_findings
 from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get_scan_result_by_id
 
 
-API_VERSION = "18.2"
+API_VERSION = "18.3"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -80,6 +81,8 @@ PROTECTED_PATHS = {
     "/bug-bounty/recon/results/{recon_id}",
     "/bug-bounty/endpoints/analyse",
     "/bug-bounty/endpoints/reports",
+    "/owasp/categories",
+    "/owasp/map",
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
@@ -93,6 +96,7 @@ TAGS_METADATA = [
     {"name": "Exports", "description": "Local export metadata for saved findings."},
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
     {"name": "Bug Bounty", "description": "Local bug bounty scope metadata, recon, and endpoint discovery workflows."},
+    {"name": "OWASP", "description": "Indicator-only OWASP Top 10:2025 mapping for existing findings and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
 ]
 SCAN_REQUEST_EXAMPLE = {
@@ -325,6 +329,38 @@ def create_app(
     )
     def list_bug_bounty_endpoint_reports() -> dict[str, Any]:
         return {"reports": list_endpoint_reports()}
+
+    @app.get(
+        "/owasp/categories",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List OWASP Top 10:2025 categories",
+        description="Returns local concise OWASP Top 10:2025 indicator categories. Does not perform testing.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_owasp_categories() -> dict[str, Any]:
+        try:
+            mapping = load_owasp_mapping()
+        except OWASPMappingError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return {"version": mapping.get("version") or "2025", "categories": mapping.get("categories", [])}
+
+    @app.post(
+        "/owasp/map",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Map findings and candidates to OWASP indicators",
+        description="Classifies supplied existing findings and candidates against OWASP Top 10:2025 indicators only.",
+        responses=ERROR_RESPONSES,
+    )
+    def map_owasp_indicators(request: OWASPMapRequest) -> dict[str, Any]:
+        try:
+            mapping = load_owasp_mapping()
+            summary = build_owasp_summary(request.findings, request.endpoint_results, request.parameter_results, mapping)
+            mapped_items = build_owasp_mapped_items(request.findings, request.endpoint_results, request.parameter_results, mapping)
+        except OWASPMappingError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return {"owasp_top10_summary": summary, "owasp_top10_mapped_items": mapped_items}
 
     @app.post(
         "/scans",

@@ -28,6 +28,7 @@ import { Layout } from './components/Layout'
 import { PortfolioFooter } from './components/PortfolioFooter'
 import { PortfolioModeBanner } from './components/PortfolioModeBanner'
 import { ProductHero } from './components/ProductHero'
+import { OWASPMappingView } from './components/OWASPMappingView'
 import { ReportsView } from './components/ReportsView'
 import { RemediationView } from './components/RemediationView'
 import { RiskOverview } from './components/RiskOverview'
@@ -54,7 +55,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -78,7 +79,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.1-demo', api_version: '18.1' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.3-demo', api_version: '18.3' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -99,6 +100,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'bug-bounty', label: 'Bug Bounty' },
   { id: 'bug-bounty-recon', label: 'Recon' },
   { id: 'endpoint-discovery', label: 'Endpoints' },
+  { id: 'owasp', label: 'OWASP Top 10' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -142,6 +144,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'endpoint-discovery': {
     title: 'Endpoint Discovery',
     description: 'Safe endpoint and parameter candidate discovery for manual validation workflows.',
+  },
+  owasp: {
+    title: 'OWASP Top 10',
+    description: 'Indicator-only OWASP Top 10:2025 mapping for findings and bug bounty candidates.',
   },
   settings: {
     title: 'Settings',
@@ -727,6 +733,10 @@ function App() {
     return <EndpointDiscoveryView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
 
+  function renderOWASP() {
+    return <OWASPMappingView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+  }
+
   function renderSettings() {
     return (
       <section className="settings-grid">
@@ -771,6 +781,7 @@ function App() {
     if (currentSection === 'bug-bounty') return renderBugBounty()
     if (currentSection === 'bug-bounty-recon') return renderBugBountyRecon()
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
+    if (currentSection === 'owasp') return renderOWASP()
     return renderSettings()
   }
 

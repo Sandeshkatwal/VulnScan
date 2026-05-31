@@ -150,6 +150,11 @@ def save_html_report(
         "endpoint_results": scan_result.get("endpoint_results", []),
         "parameter_results": scan_result.get("parameter_results", []),
         "endpoint_skipped": scan_result.get("endpoint_skipped", []),
+        "owasp_top10_summary": scan_result.get(
+            "owasp_top10_summary",
+            {"enabled": False, "limitations": ["OWASP Top 10 mapping was not enabled."]},
+        ),
+        "owasp_top10_mapped_items": scan_result.get("owasp_top10_mapped_items", []),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),
         "fix_first_dashboard": scan_result.get(

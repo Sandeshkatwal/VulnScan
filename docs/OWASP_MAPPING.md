@@ -1,0 +1,116 @@
+# OWASP Top 10 Indicator Mapping
+
+Version 18.3 adds OWASP Top 10:2025 indicator mapping for existing VulScan
+findings and bug bounty candidates.
+
+This is classification only. It does not perform active testing, payload
+injection, exploitation, bypass automation, SQL injection testing, XSS testing,
+SSRF testing, or credential attacks.
+
+## Categories
+
+VulScan uses a local concise mapping file:
+
+```text
+data/owasp/owasp_top10_2025_mapping.json
+```
+
+The categories are:
+
+- `A01:2025` Broken Access Control
+- `A02:2025` Security Misconfiguration
+- `A03:2025` Software Supply Chain Failures
+- `A04:2025` Cryptographic Failures
+- `A05:2025` Injection
+- `A06:2025` Insecure Design
+- `A07:2025` Authentication Failures
+- `A08:2025` Software or Data Integrity Failures
+- `A09:2025` Security Logging & Alerting Failures
+- `A10:2025` Mishandling of Exceptional Conditions
+
+Descriptions are short local paraphrases. The mapping file is an indicator
+model, not a copy of OWASP guidance.
+
+## Mapping Logic
+
+VulScan maps using:
+
+- finding source and category
+- finding title, evidence, and recommendation keywords
+- endpoint categories from endpoint discovery
+- parameter intelligence types
+
+Explicit source and structured candidate mappings are preferred over keywords.
+Each item is limited to the top three mapped categories.
+
+Examples:
+
+- missing security header findings map to `A02:2025`
+- vulnerable component or CVE indicators map to `A03:2025`
+- IDOR-style parameters and admin endpoints map to `A01:2025`
+- search/query/comment parameters map to `A05:2025`
+- upload/export workflows map to `A08:2025`
+
+Redirect parameters are not mapped by default because an open redirect
+candidate needs more context before OWASP categorisation.
+
+## Confidence
+
+- `High`: strong source-based indicator such as vulnerability intelligence
+- `Medium`: structured source or endpoint/parameter category indicator
+- `Low`: keyword or candidate-only indicator
+
+Manual validation is required for candidates and most mappings.
+
+## CLI
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --prioritise --owasp-map --json --html
+```
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --owasp-map --json --html
+```
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --owasp-map --json --html
+```
+
+## API
+
+List categories:
+
+```text
+GET /owasp/categories
+```
+
+Map supplied existing results:
+
+```json
+{
+  "findings": [],
+  "endpoint_results": [],
+  "parameter_results": []
+}
+```
+
+```text
+POST /owasp/map
+```
+
+## Dashboard
+
+The dashboard includes an **OWASP Top 10** view with summary cards, category
+coverage, a category count chart, mapped findings and candidates, and coverage
+gaps.
+
+Use the words indicator, candidate, and manual validation required when
+reporting these results. Do not treat OWASP mapping as a confirmed
+vulnerability.
+
+## Limitations
+
+- OWASP mapping is indicator-based and does not confirm vulnerability presence.
+- No indicator does not mean no vulnerability exists.
+- Workflow and design categories require manual review.
+- Mapping depends on the evidence already collected by safe VulScan modules.

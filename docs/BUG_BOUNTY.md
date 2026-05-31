@@ -61,6 +61,26 @@ candidates, parameter intelligence, and skipped URL tables.
 Safety warning: Parameter candidates are not confirmed vulnerabilities. They
 are indicators for authorised manual validation only.
 
+## OWASP Top 10 Indicator Mapping
+
+Version 18.3 can map findings, endpoint candidates, and parameter candidates to
+OWASP Top 10:2025 indicator categories with `--owasp-map` or the OWASP
+dashboard view.
+
+This helps organise bug bounty notes and reports by familiar OWASP themes, but
+it does not confirm vulnerabilities. A mapped IDOR-style parameter, login
+endpoint, debug endpoint, upload endpoint, or missing-header finding remains an
+indicator until manually validated within program rules.
+
+Use:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --owasp-map --json --html
+```
+
+The report includes mapped items, confidence, mapping reason, manual validation
+requirements, coverage gaps, and limitations.
+
 ## Purpose
 
 Bug bounty scope files help VulScan decide whether a target, domain, URL, or IP address is covered by a local program scope file before scanning. Out-of-scope rules override in-scope rules, and unknown targets are out of scope by default.

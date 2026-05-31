@@ -19,6 +19,24 @@ Endpoint discovery is implemented as a local, no-network analysis pipeline:
 The component does not crawl, fuzz, submit forms, send payloads, execute
 exploits, or confirm vulnerabilities.
 
+## Version 18.3 OWASP Mapping
+
+OWASP Top 10 mapping is a report enrichment layer:
+
+- `scanner.owasp_mapping` loads local category data from
+  `data/owasp/owasp_top10_2025_mapping.json`.
+- Findings, endpoint candidates, and parameter candidates are mapped to at most
+  three OWASP Top 10:2025 indicator categories.
+- `attach_owasp_metadata` adds `owasp_top10_summary`,
+  `owasp_top10_mapped_items`, and finding-level `owasp_categories`.
+- CLI commands opt in with `--owasp-map`.
+- FastAPI exposes `GET /owasp/categories` and `POST /owasp/map`.
+- Reports and dashboard render indicator counts, mapped items, confidence, and
+  coverage gaps.
+
+The layer does not perform active security testing and does not confirm OWASP
+vulnerabilities.
+
 VulScan is a local authorised vulnerability scanning and vulnerability management platform. The architecture separates evidence collection, enrichment, prioritisation, storage, API access, and dashboard presentation.
 
 ## High-Level Architecture

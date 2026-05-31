@@ -32,6 +32,22 @@ With bug bounty scope enforcement and reports:
 Parameter candidates are not confirmed vulnerabilities. The command does not
 send payloads, submit forms, exploit issues, or confirm vulnerabilities.
 
+## OWASP Top 10 Mapping
+
+Add `--owasp-map` to scan, web-scan, or endpoint discovery commands to attach
+OWASP Top 10:2025 indicator mapping:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --prioritise --owasp-map --json --html
+```
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --owasp-map --json --html
+```
+
+OWASP mapping is classification only. It uses existing findings and candidates
+and does not claim a confirmed vulnerability.
+
 ## Bug Bounty Scope Manager
 
 Version 18.1 includes local bug bounty scope management and a safe recon foundation. Scope files live under `data\bug_bounty` and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.

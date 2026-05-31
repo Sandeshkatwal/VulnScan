@@ -647,3 +647,64 @@ export interface EndpointDiscoveryResponse {
   findings?: Finding[]
   [key: string]: unknown
 }
+
+export interface OWASPCategory {
+  owasp_id?: string
+  name?: string
+  short_description?: string
+  recommendation_theme?: string
+  limitation?: string
+  [key: string]: unknown
+}
+
+export interface OWASPMapping {
+  owasp_id?: string
+  owasp_name?: string
+  confidence?: string
+  mapping_reason?: string
+  source?: string
+  limitation?: string
+  manual_validation_required?: boolean
+  [key: string]: unknown
+}
+
+export interface OWASPSummary {
+  enabled?: boolean
+  version?: string
+  mapped_findings_count?: number
+  unmapped_findings_count?: number
+  mapped_endpoint_candidates_count?: number
+  mapped_parameter_candidates_count?: number
+  category_counts?: Record<string, number>
+  category_confidence_counts?: Record<string, Record<string, number>>
+  highest_signal_categories?: Array<{ owasp_id?: string; owasp_name?: string; count?: number }>
+  coverage_gaps?: Array<{ owasp_id?: string; owasp_name?: string; explanation?: string }>
+  manual_validation_required_count?: number
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface OWASPMappedItem extends OWASPMapping {
+  item_type?: string
+  item_key?: string
+  title?: string
+  category?: string
+}
+
+export interface OWASPCategoriesResponse {
+  version?: string
+  categories: OWASPCategory[]
+  [key: string]: unknown
+}
+
+export interface OWASPMapRequest {
+  findings?: Finding[]
+  endpoint_results?: EndpointResult[]
+  parameter_results?: ParameterResult[]
+}
+
+export interface OWASPMapResponse {
+  owasp_top10_summary?: OWASPSummary
+  owasp_top10_mapped_items?: OWASPMappedItem[]
+  [key: string]: unknown
+}

@@ -378,6 +378,72 @@
     </section>
     {% endif %}
 
+    {% set owasp = report.get("owasp_top10_summary", {}) %}
+    {% if owasp.get("enabled") %}
+    <section>
+      <h2>OWASP Top 10 Indicator Mapping</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">Mapped Findings</div><div class="value">{{ owasp.get("mapped_findings_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Unmapped Findings</div><div class="value">{{ owasp.get("unmapped_findings_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Manual Validation</div><div class="value">{{ owasp.get("manual_validation_required_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Coverage Gaps</div><div class="value">{{ owasp.get("coverage_gaps", []) | length }}</div></div>
+      </div>
+      <p><strong>Version:</strong> OWASP Top 10:{{ owasp.get("version", "2025") }}</p>
+      <p><strong>Limitations:</strong> {{ owasp.get("limitations", []) | join("; ") }}</p>
+
+      <h3>Category Coverage</h3>
+      <table>
+        <thead><tr><th>Category</th><th>Count</th><th>Confidence</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for category_id, count in owasp.get("category_counts", {}).items() %}
+          {% set confidence = owasp.get("category_confidence_counts", {}).get(category_id, {}) %}
+          <tr>
+            <td>{{ category_id }}</td>
+            <td>{{ count }}</td>
+            <td>High {{ confidence.get("High", 0) }}, Medium {{ confidence.get("Medium", 0) }}, Low {{ confidence.get("Low", 0) }}</td>
+            <td>{{ "Detected indicators" if count else "No indicators" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3>Mapped Findings And Candidates</h3>
+      {% if report.get("owasp_top10_mapped_items") %}
+      <table>
+        <thead><tr><th>Item</th><th>Source</th><th>OWASP Category</th><th>Confidence</th><th>Reason</th><th>Manual Validation</th></tr></thead>
+        <tbody>
+          {% for item in report.get("owasp_top10_mapped_items", [])[:30] %}
+          <tr>
+            <td>{{ item.get("title") }}</td>
+            <td>{{ item.get("source") }}</td>
+            <td>{{ item.get("owasp_id") }} {{ item.get("owasp_name") }}</td>
+            <td>{{ item.get("confidence") }}</td>
+            <td>{{ item.get("mapping_reason") }}</td>
+            <td>{{ item.get("manual_validation_required") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No OWASP indicators were mapped.</p>
+      {% endif %}
+
+      <h3>Coverage Gaps</h3>
+      {% if owasp.get("coverage_gaps") %}
+      <table>
+        <thead><tr><th>Category</th><th>Explanation</th></tr></thead>
+        <tbody>
+          {% for gap in owasp.get("coverage_gaps", []) %}
+          <tr><td>{{ gap.get("owasp_id") }} {{ gap.get("owasp_name") }}</td><td>{{ gap.get("explanation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">All OWASP categories had at least one mapped indicator.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set endpoint_discovery = report.get("endpoint_discovery", {}) %}
     {% if endpoint_discovery.get("enabled") %}
     <section>

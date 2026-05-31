@@ -217,6 +217,27 @@ class EndpointDiscoveryRequest(StrictApiModel):
     )
 
 
+class OWASPMapRequest(StrictApiModel):
+    """Indicator-only OWASP Top 10 mapping request."""
+
+    findings: list[dict[str, Any]] = Field(default_factory=list, description="Existing VulScan finding dictionaries.", examples=[[]])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates.", examples=[[]])
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter intelligence candidates.", examples=[[]])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "findings": [],
+                    "endpoint_results": [{"path": "/admin", "endpoint_category": "admin"}],
+                    "parameter_results": [{"parameter_name": "id", "parameter_type": "idor"}],
+                }
+            ]
+        },
+    )
+
+
 class ErrorResponse(StrictApiModel):
     error: str | None = Field(None, description="Short safe error category.", examples=["Request failed."])
     detail: str | None = Field(None, description="User-facing safe error detail without tracebacks or secrets.", examples=["Invalid or missing API key."])

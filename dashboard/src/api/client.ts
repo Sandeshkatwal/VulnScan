@@ -22,6 +22,9 @@ import type {
   BugBountyScopesResponse,
   EndpointDiscoveryRequest,
   EndpointDiscoveryResponse,
+  OWASPCategoriesResponse,
+  OWASPMapRequest,
+  OWASPMapResponse,
   ScanRequest,
   ScanResponse,
   ScansQuery,
@@ -242,6 +245,18 @@ export function getBugBountyReconResults(): Promise<BugBountyReconReportsRespons
 
 export function analyseEndpoints(payload: EndpointDiscoveryRequest): Promise<EndpointDiscoveryResponse> {
   return request<EndpointDiscoveryResponse>('/bug-bounty/endpoints/analyse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getOWASPCategories(): Promise<OWASPCategoriesResponse> {
+  return request<OWASPCategoriesResponse>('/owasp/categories')
+}
+
+export function mapOWASP(payload: OWASPMapRequest): Promise<OWASPMapResponse> {
+  return request<OWASPMapResponse>('/owasp/map', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

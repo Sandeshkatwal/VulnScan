@@ -14,6 +14,15 @@ URLs, and summary counts.
 Parameter candidates are not confirmed vulnerabilities. The dashboard does not
 add payload testing, exploit, form submission, or brute-force controls.
 
+## OWASP Top 10
+
+The **OWASP Top 10** section shows OWASP Top 10:2025 indicator mapping for the
+selected job result when available. It can also map the loaded result through
+the local API without running any new tests.
+
+The view uses the terms Indicator, Candidate, and Manual validation required.
+It must not be interpreted as confirmed OWASP vulnerability evidence.
+
 ## Requirements
 
 - Node.js LTS

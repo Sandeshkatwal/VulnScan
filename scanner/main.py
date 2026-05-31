@@ -45,6 +45,12 @@ from scanner.endpoint_discovery import (
     run_endpoint_discovery,
 )
 from scanner.finding import assign_sequential_finding_ids, create_finding, create_port_exposure_findings
+from scanner.owasp_mapping import (
+    OWASPMappingError,
+    attach_owasp_metadata,
+    build_owasp_summary,
+    load_owasp_mapping,
+)
 from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
 from scanner.epss_importer import DEFAULT_EPSS_PATH
 from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH
@@ -228,7 +234,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.2 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.3 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -495,6 +501,13 @@ def scan(
         typer.Option(
             "--priority-trends",
             help="Compare current prioritised findings with the latest saved scan for the same target.",
+        ),
+    ] = False,
+    owasp_map: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-map",
+            help="Attach OWASP Top 10:2025 indicator mapping to findings and reports.",
         ),
     ] = False,
     use_asset_criticality: Annotated[
@@ -1112,6 +1125,13 @@ def scan(
         scan_result.get("prioritisation_trends", {}),
         scan_result.get("prioritisation_trend_details", {}),
     )
+    if owasp_map:
+        try:
+            attach_owasp_metadata(scan_result)
+        except OWASPMappingError as exc:
+            console.print(f"[red]OWASP mapping error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_summary(scan_result.get("owasp_top10_summary", {}), scan_result.get("owasp_top10_mapped_items", []))
 
     _print_findings(scan_result["findings"])
 
@@ -1378,6 +1398,13 @@ def web_scan(
         typer.Option(
             "--html",
             help="Save web scan results to an HTML report in the reports folder.",
+        ),
+    ] = False,
+    owasp_map: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-map",
+            help="Attach OWASP Top 10:2025 indicator mapping to web findings and reports.",
         ),
     ] = False,
     bug_bounty_scope: Annotated[
@@ -1675,6 +1702,13 @@ def web_scan(
 
     _print_web_dast_report(scan_result["web_dast_summary"], scan_result["web_dast_sections"])
     _print_bug_bounty_scope_summary(scan_result.get("bug_bounty_scope", {}))
+    if owasp_map:
+        try:
+            attach_owasp_metadata(scan_result)
+        except OWASPMappingError as exc:
+            console.print(f"[red]OWASP mapping error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_summary(scan_result.get("owasp_top10_summary", {}), scan_result.get("owasp_top10_mapped_items", []))
     _print_findings(scan_result["findings"])
 
     if json_report or html_report:
@@ -1898,6 +1932,13 @@ def endpoints(
             help="Save endpoint discovery results to an HTML report in reports/endpoints.",
         ),
     ] = False,
+    owasp_map: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-map",
+            help="Attach OWASP Top 10:2025 indicator mapping to endpoint candidates.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option(
@@ -1948,6 +1989,13 @@ def endpoints(
         "demo_mode": False,
         "demo_notice": "",
     }
+    if owasp_map:
+        try:
+            attach_owasp_metadata(scan_result)
+        except OWASPMappingError as exc:
+            console.print(f"[red]OWASP mapping error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_summary(scan_result.get("owasp_top10_summary", {}), scan_result.get("owasp_top10_mapped_items", []))
     if json_report:
         report_path = save_json_report(
             scan_result=scan_result,
@@ -2668,6 +2716,50 @@ def _print_endpoint_skipped(skipped: list[dict[str, Any]]) -> None:
             str(item.get("scope_reason") or ""),
         )
     console.print(table)
+
+
+def _print_owasp_summary(summary: dict[str, Any], mapped_items: list[dict[str, Any]]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="OWASP Top 10 Indicator Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    highest = ", ".join(
+        f"{item.get('owasp_id')} ({item.get('count')})"
+        for item in summary.get("highest_signal_categories", [])
+    )
+    rows = [
+        ("Version", summary.get("version")),
+        ("Mapped findings", summary.get("mapped_findings_count")),
+        ("Unmapped findings", summary.get("unmapped_findings_count")),
+        ("Mapped endpoints", summary.get("mapped_endpoint_candidates_count")),
+        ("Mapped parameters", summary.get("mapped_parameter_candidates_count")),
+        ("Manual validation required", summary.get("manual_validation_required_count")),
+        ("Top categories", highest),
+        ("Coverage gaps", len(summary.get("coverage_gaps") or [])),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+    category_counts = summary.get("category_counts") or {}
+    if category_counts:
+        category_table = Table(title="OWASP Category Counts")
+        category_table.add_column("Category")
+        category_table.add_column("Count", justify="right")
+        for category_id, count in category_counts.items():
+            if int(count or 0) > 0:
+                category_table.add_row(str(category_id), str(count))
+        console.print(category_table)
+
+    gaps = summary.get("coverage_gaps") or []
+    if gaps:
+        gap_table = Table(title="OWASP Coverage Gaps")
+        gap_table.add_column("Category")
+        gap_table.add_column("Note")
+        for gap in gaps[:10]:
+            gap_table.add_row(str(gap.get("owasp_id") or ""), "No indicator does not mean no vulnerability.")
+        console.print(gap_table)
 
 
 def _print_prioritisation(

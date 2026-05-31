@@ -1209,6 +1209,42 @@ dd {
   background: rgba(14, 165, 233, 0.14);
 }
 
+.owasp-chart {
+  display: grid;
+  gap: 10px;
+}
+
+.owasp-chart__row {
+  display: grid;
+  grid-template-columns: 90px minmax(120px, 1fr) 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.owasp-chart__row span,
+.owasp-chart__row em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.owasp-chart__row div {
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(8, 13, 16, 0.32);
+}
+
+.owasp-chart__row strong {
+  display: block;
+  min-width: 2px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
 .trend-summary-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);

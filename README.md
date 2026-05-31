@@ -13,6 +13,7 @@ Use VulScan only on systems and web applications you own or have explicit writte
 - Credentialed Windows Audit using safe reachability checks and optional read-only WinRM indicators.
 - Passive Web DAST for bounded crawling, headers, cookies, forms, robots.txt, sitemap, scope, and politeness reporting.
 - Bug Bounty Scope Manager, Recon Foundation, and Endpoint Discovery for local program rules, safe scope checks, metadata-only probing of provided authorised targets, and manual-validation endpoint/parameter candidates.
+- OWASP Top 10:2025 indicator mapping for existing findings and candidates.
 - Vulnerability Intelligence with local rules, local CVE-style feeds, local EPSS metadata, and local exploit-availability metadata as prioritisation signals only.
 - Prioritisation and Fix-First Dashboard data for remediation triage.
 - Local FastAPI API with jobs, filtering, pagination, report access, remediation tracking, and optional API key protection.
@@ -29,6 +30,7 @@ VulScan
 ├── Bug Bounty Scope Manager
 ├── Bug Bounty Recon Foundation
 ├── Endpoint and Parameter Discovery
+├── OWASP Top 10 Indicator Mapping
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -43,6 +45,7 @@ scan -> findings -> storage -> API -> dashboard
 scan -> JSON/HTML reports -> API report endpoints -> dashboard
 manual recon targets -> scope validation -> safe HTTP metadata -> recon reports
 endpoint URL lists -> scope validation -> endpoint/parameter candidates -> endpoint reports
+findings/candidates -> OWASP indicator mapping -> reports/API/dashboard
 ```
 
 ## Quick Start Backend
@@ -133,9 +136,10 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - Credentialed scans are CLI-only and are not exposed through the API.
 - The dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, test SQL injection, test XSS, or execute payloads.
-- Bug bounty scope management is local decision support only. Always verify the live program policy before testing.
+- Bug scope management is local decision support only. Always verify the live program policy before testing.
 - Bug bounty recon only uses provided/imported targets, skips out-of-scope targets, probes gently, and stores metadata only.
 - Endpoint discovery analyses supplied URLs only. Parameter candidates are not confirmed vulnerabilities.
+- OWASP Top 10 mapping is indicator-only and must not be reported as a confirmed vulnerability without manual validation.
 - Vulnerability intelligence is local-file based and does not download exploit code.
 - Exploit availability metadata is a prioritisation signal only.
 - Remediation features track status only and do not patch systems or run commands.
@@ -151,6 +155,7 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - [Architecture](docs/ARCHITECTURE.md)
 - [Web DAST](docs/WEB_DAST.md)
 - [Bug Bounty Scope Manager](docs/BUG_BOUNTY.md)
+- [OWASP Mapping](docs/OWASP_MAPPING.md)
 - [Vulnerability Intelligence](docs/VULNERABILITY_INTELLIGENCE.md)
 - [Prioritisation](docs/PRIORITISATION.md)
 - [Demo Guide](docs/DEMO_GUIDE.md)
