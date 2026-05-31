@@ -34,7 +34,16 @@ from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, b
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
 from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
+from scanner.api_duplicates import (
+    api_check_duplicate,
+    api_duplicate_summary,
+    api_fingerprint,
+    api_get_duplicate_group,
+    api_get_fingerprint,
+    api_list_duplicate_groups,
+)
 from scanner.api_reports import decode_report_id, list_report_metadata, load_json_report, report_metadata, report_urls_for_path
 from scanner.api_remediation import (
     attach_finding_keys,
@@ -67,7 +76,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "18.7"
+API_VERSION = "18.8"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -107,6 +116,12 @@ PROTECTED_PATHS = {
     "/submissions/{submission_id}/timeline",
     "/retests",
     "/retests/{retest_id}",
+    "/duplicates/fingerprint",
+    "/duplicates/check",
+    "/duplicates/groups",
+    "/duplicates/groups/{group_id}",
+    "/duplicates/fingerprints/{fingerprint_id}",
+    "/duplicates/summary",
     "/owasp/categories",
     "/owasp/map",
     "/remediation",
@@ -125,6 +140,7 @@ TAGS_METADATA = [
     {"name": "OWASP", "description": "Indicator-only OWASP Top 10:2025 mapping for existing findings and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
     {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
+    {"name": "Duplicate Detection", "description": "Stable local finding fingerprinting and duplicate detection metadata."},
 ]
 SCAN_REQUEST_EXAMPLE = {
     "target": "127.0.0.1",
@@ -546,6 +562,75 @@ def create_app(
         if record is None:
             raise HTTPException(status_code=404, detail="Retest record was not found.")
         return record
+
+    @app.post(
+        "/duplicates/fingerprint",
+        dependencies=[Depends(require_api_key)],
+        tags=["Duplicate Detection"],
+        summary="Build stable finding fingerprint",
+        description="Builds a local stable fingerprint from metadata only. Parameter values and secrets are not accepted.",
+        responses=ERROR_RESPONSES,
+    )
+    def create_duplicate_fingerprint(request: DuplicateFingerprintRequest) -> dict[str, Any]:
+        return api_fingerprint(request.model_dump(exclude_none=True), db_path=safe_remediation_db_path)
+
+    @app.post(
+        "/duplicates/check",
+        dependencies=[Depends(require_api_key)],
+        tags=["Duplicate Detection"],
+        summary="Check duplicate finding metadata",
+        description="Checks metadata against local fingerprints. Results are indicators and require manual review.",
+        responses=ERROR_RESPONSES,
+    )
+    def check_duplicate_endpoint(request: DuplicateCheckRequest) -> dict[str, Any]:
+        return api_check_duplicate(request.model_dump(exclude_none=True), db_path=safe_remediation_db_path)
+
+    @app.get(
+        "/duplicates/groups",
+        dependencies=[Depends(require_api_key)],
+        tags=["Duplicate Detection"],
+        summary="List duplicate groups",
+        description="Lists local duplicate groups and summary counts.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_duplicate_groups_endpoint() -> dict[str, Any]:
+        return api_list_duplicate_groups(db_path=safe_remediation_db_path)
+
+    @app.get(
+        "/duplicates/groups/{group_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Duplicate Detection"],
+        summary="Get duplicate group",
+        responses=ERROR_RESPONSES,
+    )
+    def get_duplicate_group_endpoint(group_id: str) -> dict[str, Any]:
+        group = api_get_duplicate_group(group_id, db_path=safe_remediation_db_path)
+        if group is None:
+            raise HTTPException(status_code=404, detail="Duplicate group was not found.")
+        return group
+
+    @app.get(
+        "/duplicates/fingerprints/{fingerprint_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Duplicate Detection"],
+        summary="Get finding fingerprint",
+        responses=ERROR_RESPONSES,
+    )
+    def get_fingerprint_endpoint(fingerprint_id: str) -> dict[str, Any]:
+        fingerprint = api_get_fingerprint(fingerprint_id, db_path=safe_remediation_db_path)
+        if fingerprint is None:
+            raise HTTPException(status_code=404, detail="Fingerprint was not found.")
+        return fingerprint
+
+    @app.get(
+        "/duplicates/summary",
+        dependencies=[Depends(require_api_key)],
+        tags=["Duplicate Detection"],
+        summary="Summarise duplicate detection metadata",
+        responses=ERROR_RESPONSES,
+    )
+    def duplicate_detection_summary_endpoint() -> dict[str, Any]:
+        return api_duplicate_summary(db_path=safe_remediation_db_path)
 
     @app.get(
         "/owasp/categories",

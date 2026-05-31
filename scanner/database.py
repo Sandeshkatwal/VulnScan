@@ -236,6 +236,7 @@ def init_db(db_path: Path = DB_PATH) -> None:
         )
         init_api_jobs_table(connection)
         init_submission_tracker_tables(connection)
+        init_duplicate_detection_tables(connection)
 
 
 def init_submission_tracker_tables(connection: sqlite3.Connection | None = None, db_path: Path = DB_PATH) -> None:
@@ -325,6 +326,66 @@ def init_submission_tracker_tables(connection: sqlite3.Connection | None = None,
         ON security_submission_timeline (submission_id)
         """
     )
+
+
+def init_duplicate_detection_tables(connection: sqlite3.Connection | None = None, db_path: Path = DB_PATH) -> None:
+    """Initialise local duplicate detection tables."""
+    if connection is None:
+        with get_connection(db_path) as managed_connection:
+            init_duplicate_detection_tables(managed_connection, db_path=db_path)
+        return
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS finding_fingerprints (
+            fingerprint_id TEXT PRIMARY KEY,
+            fingerprint_version TEXT,
+            fingerprint_hash TEXT,
+            item_type TEXT,
+            item_id TEXT,
+            title TEXT,
+            target TEXT,
+            host TEXT,
+            path_normalised TEXT,
+            parameter_names_json TEXT,
+            issue_type TEXT,
+            owasp_category TEXT,
+            source TEXT,
+            cve TEXT,
+            data_json TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS duplicate_groups (
+            duplicate_group_id TEXT PRIMARY KEY,
+            group_hash TEXT,
+            primary_fingerprint_id TEXT,
+            duplicate_status TEXT,
+            confidence TEXT,
+            title TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS duplicate_group_members (
+            duplicate_group_id TEXT,
+            fingerprint_id TEXT,
+            relationship TEXT,
+            confidence TEXT,
+            reason TEXT,
+            created_at TEXT
+        )
+        """
+    )
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_finding_fingerprints_hash ON finding_fingerprints (fingerprint_hash)")
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_finding_fingerprints_host_issue ON finding_fingerprints (host, issue_type)")
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_duplicate_group_members_group ON duplicate_group_members (duplicate_group_id)")
 
 
 def init_api_jobs_table(connection: sqlite3.Connection | None = None, db_path: Path = DB_PATH) -> None:

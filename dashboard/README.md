@@ -1,6 +1,6 @@
 # VulScan Dashboard
 
-The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, Evidence & Reports, remediation tracking, Bug Intelligence, Program Scope, Recon Intelligence, endpoint discovery, Safe Validation, Submission Tracker, settings, demo mode, portfolio mode, and screenshot mode.
+The VulScan dashboard is a local React + Vite + TypeScript interface for authorised vulnerability management workflows. It presents API health, scan jobs, findings, risk overview, trends, Evidence & Reports, remediation tracking, Bug Intelligence, Program Scope, Recon Intelligence, endpoint discovery, Safe Validation, Submission Tracker, Duplicate Detection, settings, demo mode, portfolio mode, and screenshot mode.
 
 The dashboard is local development tooling. It does not collect credentials and does not include exploit, brute-force, credentialed scan, password, token, private key, command execution, or automatic remediation controls.
 
@@ -41,6 +41,12 @@ indicators, known public default files, and HTTP `OPTIONS` method observation.
 The view does not provide SQLi, XSS, SSRF, payload, exploit, upload, auth
 bypass, brute-force, form submission, or destructive method controls. Results
 are indicators only and require manual validation.
+
+## Duplicate Detection
+
+The **Duplicate Detection** section under Bug Intelligence provides stable Finding Fingerprinting, duplicate summary cards, a metadata-only fingerprint checker, duplicate result panel, and duplicate group detail.
+
+Fingerprints use host, normalised path, issue type, source, OWASP category, and parameter names only. Parameter values, secrets, response bodies, platform credentials, and API tokens are not stored. Duplicate status is a local review indicator, not a confirmed platform duplicate decision.
 
 ## Requirements
 

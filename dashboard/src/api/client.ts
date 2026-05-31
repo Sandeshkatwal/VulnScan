@@ -20,6 +20,11 @@ import type {
   BugBountyReconResponse,
   BugBountyScopeDetail,
   BugBountyScopesResponse,
+  DuplicateCheckRequest,
+  DuplicateCheckResponse,
+  DuplicateGroupsResponse,
+  DuplicateSummary,
+  FindingFingerprint,
   EndpointDiscoveryRequest,
   EndpointDiscoveryResponse,
   EndpointReportsResponse,
@@ -333,6 +338,38 @@ export function getSubmissionTimeline(submissionId: string): Promise<SubmissionT
 
 export function getSubmissionSummary(): Promise<SubmissionSummary> {
   return request<SubmissionSummary>('/submissions/summary')
+}
+
+export function fingerprintDuplicate(payload: DuplicateCheckRequest): Promise<{ fingerprint: FindingFingerprint }> {
+  return request<{ fingerprint: FindingFingerprint }>('/duplicates/fingerprint', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function checkDuplicate(payload: DuplicateCheckRequest): Promise<DuplicateCheckResponse> {
+  return request<DuplicateCheckResponse>('/duplicates/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getDuplicateGroups(): Promise<DuplicateGroupsResponse> {
+  return request<DuplicateGroupsResponse>('/duplicates/groups')
+}
+
+export function getDuplicateGroup(groupId: string): Promise<DuplicateGroupsResponse['groups'][number]> {
+  return request<DuplicateGroupsResponse['groups'][number]>(`/duplicates/groups/${encodeURIComponent(groupId)}`)
+}
+
+export function getFingerprint(fingerprintId: string): Promise<FindingFingerprint> {
+  return request<FindingFingerprint>(`/duplicates/fingerprints/${encodeURIComponent(fingerprintId)}`)
+}
+
+export function getDuplicateSummary(): Promise<DuplicateSummary> {
+  return request<DuplicateSummary>('/duplicates/summary')
 }
 
 export function getRetests(params: { submission_id?: string } = {}): Promise<RetestsResponse> {

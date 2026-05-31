@@ -15,6 +15,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from scanner.bug_bounty_scope import get_scope_decision, load_bug_bounty_scope
 from scanner.finding import assign_sequential_finding_ids, create_finding
+from scanner.finding_fingerprint import build_finding_fingerprint
 from scanner.parameter_intelligence import classify_parameter, is_sensitive_parameter_name
 
 
@@ -167,6 +168,31 @@ def run_endpoint_discovery(
             "in_scope": bool(decision.get("in_scope")),
             "scope_reason": decision.get("reason") or "",
         }
+        endpoint_fingerprint = build_finding_fingerprint(
+            {
+                "url": url,
+                "issue_type": category,
+                "parameter_names": [parameter.get("name") for parameter in components["parameters"]],
+                "source": "endpoint_discovery",
+            },
+            item_type="endpoint",
+        )
+        endpoint["fingerprint_id"] = endpoint_fingerprint["fingerprint_id"]
+        endpoint["fingerprint_hash"] = endpoint_fingerprint["fingerprint_hash"]
+        endpoint["fingerprint_short"] = endpoint_fingerprint["fingerprint_short"]
+        for parameter_result in interesting_parameters:
+            parameter_fingerprint = build_finding_fingerprint(
+                {
+                    "url": parameter_result.get("url") or url,
+                    "issue_type": parameter_result.get("parameter_type") or parameter_result.get("potential_issue"),
+                    "parameter_names": [parameter_result.get("parameter_name")],
+                    "source": "parameter_intelligence",
+                },
+                item_type="parameter",
+            )
+            parameter_result["fingerprint_id"] = parameter_fingerprint["fingerprint_id"]
+            parameter_result["fingerprint_hash"] = parameter_fingerprint["fingerprint_hash"]
+            parameter_result["fingerprint_short"] = parameter_fingerprint["fingerprint_short"]
         endpoints.append(endpoint)
         parameter_results.extend(interesting_parameters)
 

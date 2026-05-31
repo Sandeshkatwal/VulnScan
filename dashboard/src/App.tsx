@@ -19,6 +19,7 @@ import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
 import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
 import { DemoModeToggle } from './components/DemoModeToggle'
+import { DuplicateDetectionView } from './components/DuplicateDetectionView'
 import { EndpointDiscoveryView } from './components/EndpointDiscoveryView'
 import { ErrorAlert } from './components/ErrorAlert'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
@@ -58,7 +59,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'submission-tracker' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -82,7 +83,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.7-demo', api_version: '18.7' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.8-demo', api_version: '18.8' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -106,6 +107,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'endpoint-discovery', label: 'Endpoints' },
   { id: 'safe-validation', label: 'Safe Validation' },
   { id: 'submission-tracker', label: 'Submission Tracker' },
+  { id: 'duplicates', label: 'Duplicate Detection' },
   { id: 'owasp', label: 'OWASP Top 10' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -166,6 +168,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'submission-tracker': {
     title: 'Submission and Retest Tracking',
     description: 'Track responsible disclosure status, evidence readiness, retest notes, and report follow-up.',
+  },
+  duplicates: {
+    title: 'Duplicate Detection',
+    description: 'Stable Finding Fingerprinting and duplicate indicators across evidence, reports, submissions, and retests.',
   },
   settings: {
     title: 'Settings',
@@ -767,6 +773,10 @@ function App() {
     return <SubmissionTrackerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
 
+  function renderDuplicates() {
+    return <DuplicateDetectionView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
   function renderSettings() {
     return (
       <section className="settings-grid">
@@ -814,6 +824,7 @@ function App() {
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
     if (currentSection === 'safe-validation') return renderSafeValidation()
     if (currentSection === 'submission-tracker') return renderSubmissionTracker()
+    if (currentSection === 'duplicates') return renderDuplicates()
     if (currentSection === 'owasp') return renderOWASP()
     return renderSettings()
   }

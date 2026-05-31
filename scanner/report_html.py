@@ -161,6 +161,10 @@ def save_html_report(
         ),
         "safe_active_validation_results": scan_result.get("safe_active_validation_results", []),
         "safe_active_validation_skipped": scan_result.get("safe_active_validation_skipped", []),
+        "duplicate_detection_summary": scan_result.get(
+            "duplicate_detection_summary",
+            {"enabled": False, "limitations": ["Duplicate Detection was not enabled for this report."]},
+        ),
         "prioritisation_summary": scan_result.get("prioritisation_summary", {"enabled": False}),
         "prioritised_findings": scan_result.get("prioritised_findings", []),
         "fix_first_dashboard": scan_result.get(

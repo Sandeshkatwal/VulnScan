@@ -943,3 +943,111 @@ export interface NextBestAction {
   sectionId?: string
   reason?: string
 }
+
+export type DuplicateStatus = 'unique' | 'exact_duplicate' | 'likely_duplicate' | 'related' | string
+export type DuplicateConfidence = 'Exact' | 'High' | 'Medium' | 'Low' | string
+
+export interface FindingFingerprint {
+  fingerprint_id?: string
+  fingerprint_version?: string
+  fingerprint_hash?: string
+  fingerprint_short?: string
+  target_normalised?: string
+  host?: string
+  path_normalised?: string
+  parameter_names?: string[]
+  issue_type?: string
+  owasp_category?: string
+  source?: string
+  evidence_type?: string
+  cve?: string
+  service?: string
+  port?: number | string | null
+  method?: string
+  created_at?: string
+  [key: string]: unknown
+}
+
+export interface DuplicateResult {
+  duplicate_status?: DuplicateStatus
+  duplicate_group_id?: string
+  duplicate_confidence?: DuplicateConfidence
+  duplicate_reason?: string
+  existing_item_references?: ApiRecord[]
+  [key: string]: unknown
+}
+
+export interface DuplicateCheckRequest {
+  url?: string
+  target?: string
+  host?: string
+  path?: string
+  title?: string
+  issue_type: string
+  parameter_names?: string[]
+  parameter?: string
+  source?: string
+  owasp_category?: string
+  cve?: string
+  service?: string
+  port?: number
+  method?: string
+  item_type?: string
+  item_id?: string
+  store?: boolean
+}
+
+export interface DuplicateCheckResponse {
+  fingerprint: FindingFingerprint
+  duplicate_result: DuplicateResult
+  [key: string]: unknown
+}
+
+export interface DuplicateGroupMember {
+  duplicate_group_id?: string
+  fingerprint_id?: string
+  relationship?: string
+  confidence?: DuplicateConfidence
+  reason?: string
+  title?: string
+  item_type?: string
+  item_id?: string
+  fingerprint_hash?: string
+  host?: string
+  path_normalised?: string
+  issue_type?: string
+  created_at?: string
+  [key: string]: unknown
+}
+
+export interface DuplicateGroup {
+  duplicate_group_id?: string
+  group_hash?: string
+  primary_fingerprint_id?: string
+  duplicate_status?: DuplicateStatus
+  confidence?: DuplicateConfidence
+  title?: string
+  member_count?: number
+  members?: DuplicateGroupMember[]
+  created_at?: string
+  updated_at?: string
+  [key: string]: unknown
+}
+
+export interface DuplicateSummary {
+  enabled?: boolean
+  total_fingerprints?: number
+  unique_findings?: number
+  exact_duplicates?: number
+  likely_duplicates?: number
+  related_findings?: number
+  duplicate_groups_count?: number
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface DuplicateGroupsResponse {
+  summary?: DuplicateSummary
+  groups: DuplicateGroup[]
+  [key: string]: unknown
+}

@@ -433,6 +433,21 @@
     </section>
     {% endif %}
 
+    {% set duplicate_summary = report.get("duplicate_detection_summary", {}) %}
+    {% if duplicate_summary.get("enabled") %}
+    <section>
+      <h2>Duplicate Detection and Finding Fingerprinting</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">Fingerprints</div><div class="value">{{ duplicate_summary.get("total_fingerprints", duplicate_summary.get("fingerprints_created", 0)) }}</div></div>
+        <div class="metric"><div class="label">Exact Duplicates</div><div class="value">{{ duplicate_summary.get("exact_duplicates", 0) }}</div></div>
+        <div class="metric"><div class="label">Likely Duplicates</div><div class="value">{{ duplicate_summary.get("likely_duplicates", 0) }}</div></div>
+        <div class="metric"><div class="label">Related Findings</div><div class="value">{{ duplicate_summary.get("related_findings", 0) }}</div></div>
+      </div>
+      <p><strong>Limitations:</strong> {{ duplicate_summary.get("limitations", []) | join("; ") }}</p>
+      <p>Duplicate status is based on stable metadata such as host, normalised path, issue type, and parameter names. It is a manual review indicator and does not confirm platform duplicate status.</p>
+    </section>
+    {% endif %}
+
     {% set owasp = report.get("owasp_top10_summary", {}) %}
     {% if owasp.get("enabled") %}
     <section>

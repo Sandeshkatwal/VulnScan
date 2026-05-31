@@ -77,6 +77,14 @@ from scanner.epss_importer import DEFAULT_EPSS_PATH
 from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH
 from scanner.database import database_exists, get_missing_required_tables
 from scanner.diff import compare_latest_two_scans
+from scanner.duplicate_detection import (
+    check_duplicate,
+    duplicate_summary,
+    fingerprint_item,
+    get_duplicate_group,
+    list_duplicate_groups,
+    rebuild_from_submissions,
+)
 from scanner.evidence import redact_nested
 from scanner.exporter import (
     export_assets,
@@ -179,10 +187,12 @@ remediation_app = typer.Typer(help="Track remediation status for saved findings.
 export_app = typer.Typer(help="Export saved VulScan data.")
 submission_app = typer.Typer(help="Track Security Finding Report submission workflow status.")
 retest_app = typer.Typer(help="Track manual retest workflow status.")
+duplicates_app = typer.Typer(help="Fingerprint findings and detect duplicate security findings.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
 app.add_typer(retest_app, name="retest")
+app.add_typer(duplicates_app, name="duplicates")
 console = Console()
 
 
@@ -259,7 +269,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.7 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.8 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -496,6 +506,70 @@ def retest_update(
 def retest_list(submission_id: Annotated[str | None, typer.Option("--submission-id")] = None) -> None:
     """List local retest tracking records."""
     _print_retests(list_retests(submission_id=submission_id))
+
+
+@duplicates_app.callback(invoke_without_command=True)
+def duplicate_detection(ctx: typer.Context) -> None:
+    """Fingerprint findings and check duplicate indicators locally."""
+    if ctx.invoked_subcommand is None:
+        console.print("[bold]Finding Fingerprinting and Duplicate Detection[/bold]")
+        console.print("Metadata-only duplicate checks. Parameter values and secrets are not stored.")
+
+
+@duplicates_app.command("fingerprint")
+def duplicates_fingerprint(
+    url: Annotated[str | None, typer.Option("--url", help="URL to fingerprint. Query values are ignored.")] = None,
+    issue_type: Annotated[str, typer.Option("--issue-type", help="Issue or candidate type.")] = "unknown",
+    parameter: Annotated[str | None, typer.Option("--parameter", help="Parameter name only.")] = None,
+    source: Annotated[str | None, typer.Option("--source", help="Optional local source label.")] = None,
+    host: Annotated[str | None, typer.Option("--host", help="Optional host when no URL is available.")] = None,
+    path: Annotated[str | None, typer.Option("--path", help="Optional path when no URL is available.")] = None,
+) -> None:
+    """Build a stable fingerprint from local metadata."""
+    item = _duplicate_cli_item(url=url, issue_type=issue_type, parameter=parameter, source=source, host=host, path=path)
+    fingerprint = fingerprint_item(item, item_type="candidate", store=False)
+    _print_fingerprint(fingerprint)
+
+
+@duplicates_app.command("check")
+def duplicates_check(
+    url: Annotated[str | None, typer.Option("--url", help="URL to check. Query values are ignored.")] = None,
+    issue_type: Annotated[str, typer.Option("--issue-type", help="Issue or candidate type.")] = "unknown",
+    parameter: Annotated[str | None, typer.Option("--parameter", help="Parameter name only.")] = None,
+    source: Annotated[str | None, typer.Option("--source", help="Optional local source label.")] = None,
+    host: Annotated[str | None, typer.Option("--host", help="Optional host when no URL is available.")] = None,
+    path: Annotated[str | None, typer.Option("--path", help="Optional path when no URL is available.")] = None,
+) -> None:
+    """Check local duplicate metadata and store the fingerprint."""
+    item = _duplicate_cli_item(url=url, issue_type=issue_type, parameter=parameter, source=source, host=host, path=path)
+    result = check_duplicate(item, item_type="candidate", store=True)
+    _print_fingerprint(result["fingerprint"])
+    _print_duplicate_result(result["duplicate_result"])
+
+
+@duplicates_app.command("groups")
+def duplicates_groups() -> None:
+    """List local duplicate groups."""
+    _print_duplicate_summary(duplicate_summary())
+    _print_duplicate_groups(list_duplicate_groups())
+
+
+@duplicates_app.command("show")
+def duplicates_show(group_id: Annotated[str, typer.Option("--group-id", help="Duplicate group ID.")]) -> None:
+    """Show one duplicate group and its members."""
+    group = get_duplicate_group(group_id)
+    if group is None:
+        console.print("[red]Duplicate group was not found.[/red]")
+        raise typer.Exit(code=1)
+    _print_duplicate_groups([group])
+    _print_duplicate_group_members(group.get("members") or [])
+
+
+@duplicates_app.command("rebuild")
+def duplicates_rebuild() -> None:
+    """Rebuild duplicate metadata from stored submission records where possible."""
+    summary = rebuild_from_submissions()
+    console.print(f"[green]Rebuilt fingerprints:[/green] {summary.get('fingerprints_created', 0)}")
 
 
 @app.command()
@@ -3179,6 +3253,110 @@ def _print_retests(records: list[dict[str, Any]]) -> None:
             str(record.get("retest_result") or ""),
             str(record.get("evidence_id") or ""),
             str(record.get("updated_at") or ""),
+        )
+    console.print(table)
+
+
+def _duplicate_cli_item(
+    *,
+    url: str | None,
+    issue_type: str,
+    parameter: str | None,
+    source: str | None,
+    host: str | None,
+    path: str | None,
+) -> dict[str, Any]:
+    params = [part.strip() for part in (parameter or "").split(",") if part.strip()]
+    return {
+        "url": url,
+        "host": host,
+        "path": path,
+        "issue_type": issue_type,
+        "parameter_names": params,
+        "source": source or "cli",
+    }
+
+
+def _print_fingerprint(fingerprint: dict[str, Any]) -> None:
+    table = Table(title="Finding Fingerprint")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in (
+        "fingerprint_id",
+        "fingerprint_short",
+        "fingerprint_version",
+        "host",
+        "path_normalised",
+        "issue_type",
+        "parameter_names",
+        "source",
+    ):
+        table.add_row(key, str(fingerprint.get(key) or ""))
+    console.print(table)
+
+
+def _print_duplicate_result(result: dict[str, Any]) -> None:
+    table = Table(title="Duplicate Detection Result")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("duplicate_status", "duplicate_confidence", "duplicate_group_id", "duplicate_reason"):
+        table.add_row(key, str(result.get(key) or ""))
+    refs = result.get("existing_item_references") or []
+    if refs:
+        table.add_row("existing_item_references", ", ".join(str(ref.get("fingerprint_short") or ref.get("fingerprint_id")) for ref in refs))
+    console.print(table)
+
+
+def _print_duplicate_summary(summary: dict[str, Any]) -> None:
+    table = Table(title="Duplicate Detection Summary")
+    table.add_column("Metric")
+    table.add_column("Value")
+    for key in (
+        "total_fingerprints",
+        "unique_findings",
+        "exact_duplicates",
+        "likely_duplicates",
+        "related_findings",
+        "duplicate_groups_count",
+    ):
+        table.add_row(key, str(summary.get(key, 0)))
+    console.print(table)
+
+
+def _print_duplicate_groups(groups: list[dict[str, Any]]) -> None:
+    table = Table(title="Duplicate Groups")
+    table.add_column("Group ID", no_wrap=True)
+    table.add_column("Status")
+    table.add_column("Confidence")
+    table.add_column("Title")
+    table.add_column("Members")
+    table.add_column("Updated")
+    for group in groups:
+        table.add_row(
+            str(group.get("duplicate_group_id") or ""),
+            str(group.get("duplicate_status") or ""),
+            str(group.get("confidence") or ""),
+            str(group.get("title") or ""),
+            str(group.get("member_count") or len(group.get("members") or [])),
+            str(group.get("updated_at") or ""),
+        )
+    console.print(table)
+
+
+def _print_duplicate_group_members(members: list[dict[str, Any]]) -> None:
+    table = Table(title="Duplicate Group Members")
+    table.add_column("Fingerprint")
+    table.add_column("Relationship")
+    table.add_column("Confidence")
+    table.add_column("Item")
+    table.add_column("Reason")
+    for member in members:
+        table.add_row(
+            str(member.get("fingerprint_id") or ""),
+            str(member.get("relationship") or ""),
+            str(member.get("confidence") or ""),
+            str(member.get("title") or member.get("item_id") or ""),
+            str(member.get("reason") or ""),
         )
     console.print(table)
 

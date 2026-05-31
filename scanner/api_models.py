@@ -322,6 +322,48 @@ class RetestUpdateRequest(StrictApiModel):
     notes: str | None = Field(None, max_length=2000)
 
 
+class DuplicateFingerprintRequest(StrictApiModel):
+    """Create a stable local fingerprint without storing sensitive values."""
+
+    url: str | None = Field(None, max_length=2048, description="URL to normalise for fingerprinting.", examples=["http://127.0.0.1:8000/account?id=123"])
+    target: str | None = Field(None, max_length=2048, description="Optional target or host label.", examples=["127.0.0.1"])
+    host: str | None = Field(None, max_length=255)
+    path: str | None = Field(None, max_length=2048)
+    title: str | None = Field(None, max_length=500)
+    issue_type: str = Field(..., min_length=1, max_length=255, description="Candidate issue type, such as idor_candidate.")
+    parameter_names: list[str] = Field(default_factory=list, description="Parameter names only. Values are not accepted.")
+    parameter: str | None = Field(None, max_length=128, description="Optional single parameter name alias.")
+    source: str | None = Field(None, max_length=255)
+    owasp_category: str | None = Field(None, max_length=50)
+    cve: str | None = Field(None, max_length=64)
+    service: str | None = Field(None, max_length=100)
+    port: int | None = Field(None, ge=1, le=65535)
+    method: str | None = Field(None, max_length=16)
+    item_type: str | None = Field("candidate", max_length=64)
+    item_id: str | None = Field(None, max_length=255)
+    store: bool = Field(False, description="Store the fingerprint locally.")
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "url": "http://127.0.0.1:8000/account?id=123",
+                    "issue_type": "idor_candidate",
+                    "parameter_names": ["id"],
+                    "source": "endpoint_discovery",
+                }
+            ]
+        },
+    )
+
+
+class DuplicateCheckRequest(DuplicateFingerprintRequest):
+    """Create a fingerprint and check it against local duplicate metadata."""
+
+    store: bool = Field(True, description="Duplicate checks store metadata locally for future comparisons.")
+
+
 class ErrorResponse(StrictApiModel):
     error: str | None = Field(None, description="Short safe error category.", examples=["Request failed."])
     detail: str | None = Field(None, description="User-facing safe error detail without tracebacks or secrets.", examples=["Invalid or missing API key."])

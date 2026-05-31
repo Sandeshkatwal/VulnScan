@@ -781,3 +781,14 @@ SSH audit tests use fake fixtures in `tests\fixtures` and mocked command output.
 ## Safety Boundaries
 
 Do not use VulScan against systems you do not own or do not have explicit permission to test. VulScan does not perform SYN scanning, UDP scanning, stealth scanning, crawling, fuzzing, brute forcing, credential attacks, password guessing, exploitation, payload attacks, firewall bypassing, cipher probing, protocol downgrade testing, privilege escalation, or destructive actions.
+## Duplicate Detection
+
+Version 18.8 adds metadata-only Finding Fingerprinting and Duplicate Detection:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main duplicates fingerprint --url "http://127.0.0.1:8000/account?id=123" --issue-type idor_candidate --parameter id
+.\.venv311\Scripts\python.exe -m scanner.main duplicates check --url "http://127.0.0.1:8000/account?id=456" --issue-type idor_candidate --parameter id
+.\.venv311\Scripts\python.exe -m scanner.main duplicates groups
+```
+
+Duplicate Detection does not store parameter values, secrets, response bodies, report IDs, or platform credentials. It provides local review indicators for authorised security testing workflows.

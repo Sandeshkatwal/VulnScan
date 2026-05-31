@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from scanner.database import DB_PATH, get_connection, init_db
+from scanner.duplicate_detection import check_duplicate
 from scanner.evidence import redact_secrets
 
 
@@ -140,7 +141,20 @@ def create_submission(
             record,
         )
         _insert_event(connection, submission_id, "created", None, normalized_status, safe_notes, now)
-    return get_submission(submission_id, db_path) or {}
+    public_record = get_submission(submission_id, db_path) or {}
+    public_record["duplicate_result"] = check_duplicate(
+        {
+            "title": public_record.get("finding_title") or public_record.get("report_id") or "Security Finding Report",
+            "issue_type": public_record.get("finding_title") or "security_finding_report",
+            "source": "submission_tracker",
+            "item_id": submission_id,
+            "target": public_record.get("program_name") or public_record.get("platform") or "",
+        },
+        item_type="submission",
+        db_path=db_path,
+        store=True,
+    )["duplicate_result"]
+    return public_record
 
 
 def list_submissions(status: str | None = None, db_path: Path | str = DB_PATH) -> list[dict[str, Any]]:

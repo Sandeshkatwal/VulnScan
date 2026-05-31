@@ -8,6 +8,8 @@ Version 18.6 adds local Submission and Retest Tracking for Security Finding Repo
 
 Version 18.7 adds the Bug Intelligence Workflow dashboard. It connects Program Scope, Recon Intelligence, Endpoint Intelligence, OWASP Indicator Mapping, Safe Validation, Evidence Capture, Security Finding Reports, Submission, and Retest into one progress view.
 
+Version 18.8 adds Finding Fingerprinting and Duplicate Detection. It creates stable metadata-only fingerprints and local duplicate indicators across findings, candidates, evidence, reports, submissions, and retests. Parameter values and secrets are not used.
+
 The readiness score is workflow completeness only. It is not a severity rating, proof of exploitability, or a guarantee that a report is valid. The workflow supports responsible disclosure, bug bounty, and internal security testing without exploitation or automatic submission.
 
 See [BUG_BOUNTY.md](BUG_BOUNTY.md) for the full workflow guide.

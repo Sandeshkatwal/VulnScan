@@ -158,3 +158,10 @@ Recon reports are written under `reports/recon` when requested. They include sum
 - Vulnerability intelligence uses local files only and does not fetch or execute exploit code.
 - Remediation tracking does not patch or modify systems.
 - Secrets, API keys, `.env` files, local databases, and generated sensitive reports should not be committed.
+## Version 18.8 Duplicate Detection and Fingerprinting
+
+Version 18.8 adds `scanner/finding_fingerprint.py` and `scanner/duplicate_detection.py`.
+
+The fingerprinting layer builds SHA-256 hashes from stable, non-sensitive metadata: host, normalised path, sorted parameter names, issue type, OWASP category, source, CVE, service, port, and method. It intentionally excludes timestamps, report IDs, random IDs, parameter values, response bodies, and secrets.
+
+The duplicate detection layer stores fingerprints in local SQLite tables and groups exact duplicates, likely duplicates, and related findings. API and dashboard views expose these as manual-review indicators only.
