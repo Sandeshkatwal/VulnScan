@@ -1,62 +1,56 @@
-# Python virtual environments
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
 .venv/
 .venv311/
 venv/
 env/
 
-# Python cache
-__pycache__/
-.pytest_cache/
-*.pyc
-*.pyo
-*.pyd
-
-# Environment files
+# Environment / secrets
 .env
-.env.*
-!.env.example
-dashboard/.env
-dashboard/.env.*
-!dashboard/.env.example
+*.env
+secrets.*
+config.local.*
+*.key
+*.pem
 
-# Reports and local data
-reports/*.html
-reports/*.json
-reports/recon/*.html
-reports/recon/*.json
-!reports/.gitkeep
-exports/
-data/*
-!data/.gitkeep
-!data/vuln_intel/
-!data/vuln_intel/sample_vuln_rules.json
-!data/cve_feeds/
-!data/cve_feeds/sample_cve_feed.json
-!data/epss/
-!data/epss/sample_epss.csv
-!data/epss/sample_epss.json
-!data/exploit_metadata/
-!data/exploit_metadata/sample_exploit_metadata.json
-!data/exploit_metadata/sample_exploit_metadata.csv
-!data/asset_context/
-!data/asset_context/sample_asset_criticality.json
-!data/bug_bounty/
-!data/bug_bounty/sample_program_scope.json
-!data/bug_bounty/recon/
-!data/bug_bounty/recon/sample_targets.txt
-data/*.db
-data/*cache*.json
-*.sqlite
-*.db
-
-# VS Code local settings
+# IDE
 .vscode/
-
-# Node / dashboard build output
-node_modules/
-dashboard/node_modules/
-dashboard/dist/
+.idea/
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Reports and generated outputs
+reports/
+exports/
+output/
+outputs/
+results/
+scan_results/
+*.pdf
+*.html
+*.json
+
+# Build/cache
+dist/
+build/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
