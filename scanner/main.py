@@ -259,7 +259,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.6 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.7 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -324,14 +324,20 @@ def security_report() -> None:
 
 
 @app.command("bug-report")
-def bug_report_alias() -> None:
+def bug_report_alias(action: Annotated[str | None, typer.Argument(help="Optional action. Use 'list' to list local reports.")] = None) -> None:
     """Alias for security-report."""
+    if action and action != "list":
+        console.print("[red]Unsupported bug-report action. Use: bug-report list[/red]")
+        raise typer.Exit(code=1)
     _security_report_command("Alias for security-report.")
 
 
 @app.command("evidence")
-def evidence_reports() -> None:
+def evidence_reports(action: Annotated[str | None, typer.Argument(help="Optional action. Use 'list' to list local evidence and reports.")] = None) -> None:
     """List local evidence and Security Finding Reports."""
+    if action and action != "list":
+        console.print("[red]Unsupported evidence action. Use: evidence list[/red]")
+        raise typer.Exit(code=1)
     _security_report_command("Evidence & Reports view for local Security Finding Reports.")
 
 

@@ -80,6 +80,18 @@ Version 18.6 adds local workflow tracking for Security Finding Reports. It does 
 
 Notes are redacted before storage. Retest tracking is manual/status-based unless the user explicitly runs an existing Safe Validation workflow and links that evidence.
 
+## Bug Intelligence Workflow Dashboard
+
+Version 18.7 adds a dashboard workflow overview for:
+
+```text
+Scope -> Recon -> Endpoints -> OWASP -> Validation -> Evidence -> Report -> Submission -> Retest
+```
+
+The view shows step status, summary counts, a workflow readiness score, next best actions, a derived timeline, and quick links into related dashboard sections. The readiness score is workflow completeness only, not vulnerability severity or report validity.
+
+The workflow dashboard does not run exploitation, active payload checks, or automatic external submission.
+
 ## Program Scope Manager
 
 Version 18.1 includes local program scope management and a safe Recon Intelligence foundation. Scope files live under `data\bug_bounty` for backward compatibility and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.

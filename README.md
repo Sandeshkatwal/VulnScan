@@ -18,7 +18,7 @@ Use VulScan only on systems and web applications you own or have explicit writte
 - Vulnerability Intelligence with local rules, local CVE-style feeds, local EPSS metadata, and local exploit-availability metadata as prioritisation signals only.
 - Prioritisation and Fix-First Dashboard data for remediation triage.
 - Local FastAPI API with jobs, filtering, pagination, report access, remediation tracking, and optional API key protection.
-- React Dashboard for jobs, findings, risk overview, trends, reports, settings, remediation, demo mode, and portfolio mode.
+- React Dashboard for jobs, findings, risk overview, trends, Bug Intelligence Workflow, reports, settings, remediation, demo mode, and portfolio mode.
 - JSON and HTML reports plus remediation tracking.
 
 ## Architecture
@@ -34,6 +34,7 @@ VulScan
 ├── OWASP Top 10 Indicator Mapping
 ├── Safe Active Validation
 ├── Submission and Retest Tracker
+├── Bug Intelligence Workflow Dashboard
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -50,6 +51,7 @@ manual recon targets -> scope validation -> safe HTTP metadata -> recon reports
 endpoint URL lists -> scope validation -> endpoint/parameter candidates -> endpoint reports
 findings/candidates -> OWASP indicator mapping -> reports/API/dashboard
 validation targets -> scope enforcement -> safe indicator checks -> validation reports
+workflow records -> readiness score -> next actions -> dashboard
 ```
 
 ## Quick Start Backend

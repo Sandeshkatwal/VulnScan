@@ -648,6 +648,21 @@ export interface EndpointDiscoveryResponse {
   [key: string]: unknown
 }
 
+export interface EndpointReportSummary {
+  report_id?: string
+  path?: string
+  created_at?: string
+  input_urls_count?: number
+  high_interest_count?: number
+  interesting_parameters_count?: number
+  [key: string]: unknown
+}
+
+export interface EndpointReportsResponse {
+  reports: EndpointReportSummary[]
+  [key: string]: unknown
+}
+
 export interface OWASPCategory {
   owasp_id?: string
   name?: string
@@ -882,4 +897,49 @@ export interface RetestsResponse {
 
 export interface SubmissionTimelineResponse {
   events: SubmissionTimelineEvent[]
+}
+
+export type WorkflowStepStatus = 'Not started' | 'Ready' | 'In progress' | 'Completed' | 'Needs review'
+
+export interface WorkflowStep {
+  id: string
+  label: string
+  status: WorkflowStepStatus
+  count?: number | string
+  readiness?: string
+  nextAction?: string
+  sectionId?: string
+  detail?: string
+}
+
+export interface WorkflowSummary {
+  inScopePrograms?: number
+  liveAssets?: number
+  highInterestEndpoints?: number
+  owaspIndicators?: number
+  safeValidationIndicators?: number
+  evidenceRecords?: number
+  draftReports?: number
+  submittedFindings?: number
+  retestsRequired?: number
+  acceptedFindings?: number
+  paidFindings?: number
+}
+
+export interface WorkflowTimelineEvent {
+  event_time?: string
+  event_type?: string
+  title?: string
+  source?: string
+}
+
+export interface WorkflowReadiness {
+  score: number
+  label: string
+}
+
+export interface NextBestAction {
+  label: string
+  sectionId?: string
+  reason?: string
 }

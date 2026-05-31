@@ -73,6 +73,7 @@ VulScan
 ├── Endpoint Intelligence
 ├── Safe Active Validation
 ├── Submission and Retest Tracker
+├── Bug Intelligence Workflow Dashboard
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -109,6 +110,13 @@ VulScan
 - `scanner.api_submission_tracker` exposes tracking helpers through protected API routes.
 - API routes under `/submissions` and `/retests` are tracking-only. They do not submit reports externally, accept platform credentials, or run retest activity.
 - The dashboard Submission Tracker view provides summary cards, submission creation, status updates, timeline events, and retest checklist tracking.
+
+## Version 18.7 Bug Intelligence Workflow Dashboard
+
+- `dashboard/src/components/BugIntelligenceWorkflow.tsx` aggregates existing local API data into a workflow overview.
+- `dashboard/src/utils/workflowMetrics.ts` derives step status, readiness score, next best actions, and a timeline on the client side.
+- The workflow is Scope -> Recon -> Endpoints -> OWASP -> Validation -> Evidence -> Report -> Submission -> Retest.
+- No new active testing or external submission is performed by the dashboard overview.
 
 The dashboard is local React + Vite + TypeScript tooling. It does not collect credentials and does not expose exploit, brute-force, credentialed scan, or command execution controls.
 

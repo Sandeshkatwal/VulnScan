@@ -22,6 +22,7 @@ import type {
   BugBountyScopesResponse,
   EndpointDiscoveryRequest,
   EndpointDiscoveryResponse,
+  EndpointReportsResponse,
   OWASPCategoriesResponse,
   OWASPMapRequest,
   OWASPMapResponse,
@@ -257,6 +258,10 @@ export function analyseEndpoints(payload: EndpointDiscoveryRequest): Promise<End
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+}
+
+export function getEndpointReports(): Promise<EndpointReportsResponse> {
+  return request<EndpointReportsResponse>('/bug-bounty/endpoints/reports')
 }
 
 export function getOWASPCategories(): Promise<OWASPCategoriesResponse> {

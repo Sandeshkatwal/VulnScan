@@ -67,7 +67,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "18.6"
+API_VERSION = "18.7"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {

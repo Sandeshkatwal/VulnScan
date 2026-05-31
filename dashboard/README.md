@@ -4,6 +4,14 @@ The VulScan dashboard is a local React + Vite + TypeScript interface for authori
 
 The dashboard is local development tooling. It does not collect credentials and does not include exploit, brute-force, credentialed scan, password, token, private key, command execution, or automatic remediation controls.
 
+## Bug Intelligence Workflow
+
+The **Bug Intelligence Workflow** section gives a single progress view across Program Scope, Recon, Endpoints, OWASP Mapping, Safe Validation, Evidence, Security Reports, Submission, and Retest.
+
+It shows step status, summary cards, a dashboard-only readiness score, next best actions, a derived timeline, and quick links into the related sections. The readiness score is workflow completeness only, not vulnerability severity or a guarantee of a valid report.
+
+The workflow view does not perform exploitation, payload checks, or automatic external submission. Demo mode shows clearly labelled fake workflow data.
+
 ## Endpoint Discovery
 
 The **Endpoints** section under Bug Intelligence accepts one URL or path per line,

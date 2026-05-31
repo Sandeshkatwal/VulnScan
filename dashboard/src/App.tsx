@@ -15,6 +15,7 @@ import {
 import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
+import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
 import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
 import { DemoModeToggle } from './components/DemoModeToggle'
@@ -81,7 +82,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.6-demo', api_version: '18.6' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.7-demo', api_version: '18.7' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -739,29 +740,7 @@ function App() {
   }
 
   function renderBugIntelligence() {
-    return (
-      <section className="content-grid">
-        <article className="panel panel--wide">
-          <div className="panel-heading">
-            <h2>Bug Intelligence Workflow</h2>
-            <p>Authorised security testing workspace for scope, recon, endpoints, validation, evidence, reporting, and responsible disclosure tracking.</p>
-          </div>
-          <div className="settings-mode-grid">
-            <div><span>Scope control</span><strong>Program Scope</strong></div>
-            <div><span>Discovery</span><strong>Recon and Endpoints</strong></div>
-            <div><span>Validation</span><strong>Indicator only</strong></div>
-            <div><span>Reporting</span><strong>Security Finding Reports</strong></div>
-          </div>
-        </article>
-        <article className="panel">
-          <div className="panel-heading">
-            <h2>Safety Boundary</h2>
-            <p>Manual validation remains required before any submission.</p>
-          </div>
-          <div className="empty-state">This workflow can support bug bounty, internal testing, and responsible disclosure. It does not add exploitation, payload testing, credential attacks, or out-of-scope scanning.</div>
-        </article>
-      </section>
-    )
+    return <BugIntelligenceWorkflow apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} onNavigate={(sectionId) => setCurrentSection(sectionId as DashboardSection)} />
   }
 
   function renderBugBounty() {
