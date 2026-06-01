@@ -2,6 +2,8 @@
 
 Version 18.8 adds metadata-only Finding Fingerprinting and Duplicate Detection for the Bug Intelligence workflow.
 
+Version 18.9 includes duplicate counts and duplicate rates in local Bug Intelligence Metrics and Program Performance. These are local workflow indicators only and do not predict how an external platform will classify a submission.
+
 The feature helps identify repeat findings across endpoint candidates, parameter candidates, evidence records, Security Finding Reports, submissions, and retests. It does not submit to external platforms and does not decide whether a third-party platform will mark a report as duplicate.
 
 ## Fingerprint Fields

@@ -8,6 +8,8 @@ The dashboard is local development tooling. It does not collect credentials and 
 
 The **Bug Intelligence Workflow** section gives a single progress view across Program Scope, Recon, Endpoints, OWASP Mapping, Safe Validation, Evidence, Security Reports, Submission, and Retest.
 
+The **Performance Metrics** section adds local Personal Performance Metrics for evidence records, reports, submissions, accepted outcomes, duplicates, retests, bounty totals, Program Performance, vulnerability classes, monthly activity, outcome distribution, and workflow quality indicators. Metrics are local only and do not access external platforms, credentials, cookies, API keys, or tokens.
+
 It shows step status, summary cards, a dashboard-only readiness score, next best actions, a derived timeline, and quick links into the related sections. The readiness score is workflow completeness only, not vulnerability severity or a guarantee of a valid report.
 
 The workflow view does not perform exploitation, payload checks, or automatic external submission. Demo mode shows clearly labelled fake workflow data.

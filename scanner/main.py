@@ -38,6 +38,11 @@ from scanner.bug_bounty_recon import (
     load_recon_targets,
     run_bug_bounty_recon,
 )
+from scanner.bug_intelligence_metrics import (
+    MetricsDateRangeError,
+    build_bug_intelligence_metrics,
+    export_metrics,
+)
 from scanner.endpoint_discovery import (
     ENDPOINT_REPORTS_DIR,
     EndpointDiscoveryError,
@@ -188,11 +193,13 @@ export_app = typer.Typer(help="Export saved VulScan data.")
 submission_app = typer.Typer(help="Track Security Finding Report submission workflow status.")
 retest_app = typer.Typer(help="Track manual retest workflow status.")
 duplicates_app = typer.Typer(help="Fingerprint findings and detect duplicate security findings.")
+metrics_app = typer.Typer(help="Local Bug Intelligence metrics and personal performance dashboard data.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
 app.add_typer(retest_app, name="retest")
 app.add_typer(duplicates_app, name="duplicates")
+app.add_typer(metrics_app, name="metrics")
 console = Console()
 
 
@@ -269,7 +276,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.8 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 18.9 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -570,6 +577,91 @@ def duplicates_rebuild() -> None:
     """Rebuild duplicate metadata from stored submission records where possible."""
     summary = rebuild_from_submissions()
     console.print(f"[green]Rebuilt fingerprints:[/green] {summary.get('fingerprints_created', 0)}")
+
+
+@metrics_app.command("summary")
+def metrics_summary(
+    range_name: Annotated[str, typer.Option("--range", help="Date range: all-time, last-7-days, last-30-days, last-90-days, this-year, custom.")] = "all-time",
+    start_date: Annotated[str | None, typer.Option("--start-date", help="Custom range start date, YYYY-MM-DD or ISO datetime.")] = None,
+    end_date: Annotated[str | None, typer.Option("--end-date", help="Custom range end date, YYYY-MM-DD or ISO datetime.")] = None,
+    program_name: Annotated[str | None, typer.Option("--program-name", help="Optional Program Scope name filter.")] = None,
+) -> None:
+    """Show local Bug Intelligence Metrics summary."""
+    metrics = _load_metrics_or_exit(range_name, start_date, end_date, program_name)["bug_intelligence_metrics"]
+    _print_metrics_summary(metrics)
+
+
+@metrics_app.command("programs")
+def metrics_programs(
+    range_name: Annotated[str, typer.Option("--range", help="Date range filter.")] = "all-time",
+    start_date: Annotated[str | None, typer.Option("--start-date")] = None,
+    end_date: Annotated[str | None, typer.Option("--end-date")] = None,
+    program_name: Annotated[str | None, typer.Option("--program-name")] = None,
+) -> None:
+    """Show local Program Performance metrics."""
+    metrics = _load_metrics_or_exit(range_name, start_date, end_date, program_name)["bug_intelligence_metrics"]
+    table = Table(title="Program Performance")
+    for column in ("Program", "Submissions", "Accepted", "Duplicates", "Acceptance Rate", "Bounty", "Last Activity"):
+        table.add_column(column)
+    for row in metrics["top_programs"]:
+        table.add_row(
+            str(row.get("program_name") or ""),
+            str(row.get("total_submissions") or 0),
+            str(row.get("accepted") or 0),
+            str(row.get("duplicates") or 0),
+            f"{row.get('acceptance_rate', 0)}%",
+            _format_currency_map(row.get("total_bounty_by_currency") or {}),
+            str(row.get("last_activity") or ""),
+        )
+    console.print(table)
+
+
+@metrics_app.command("classes")
+def metrics_classes(
+    range_name: Annotated[str, typer.Option("--range", help="Date range filter.")] = "all-time",
+    start_date: Annotated[str | None, typer.Option("--start-date")] = None,
+    end_date: Annotated[str | None, typer.Option("--end-date")] = None,
+    program_name: Annotated[str | None, typer.Option("--program-name")] = None,
+) -> None:
+    """Show local vulnerability class metrics."""
+    metrics = _load_metrics_or_exit(range_name, start_date, end_date, program_name)["bug_intelligence_metrics"]
+    table = Table(title="Vulnerability Class Metrics")
+    for column in ("Class", "Count", "Accepted", "Duplicates", "Acceptance Rate", "Avg Severity"):
+        table.add_column(column)
+    for row in metrics["top_vulnerability_classes"]:
+        table.add_row(
+            str(row.get("class_name") or ""),
+            str(row.get("count") or 0),
+            str(row.get("accepted_count") or 0),
+            str(row.get("duplicate_count") or 0),
+            f"{row.get('acceptance_rate', 0)}%",
+            str(row.get("average_severity") or 0),
+        )
+    console.print(table)
+
+
+@metrics_app.command("export")
+def metrics_export(
+    format_name: Annotated[str, typer.Option("--format", help="Export format: json or csv.")] = "json",
+    range_name: Annotated[str, typer.Option("--range", help="Date range filter.")] = "all-time",
+    start_date: Annotated[str | None, typer.Option("--start-date")] = None,
+    end_date: Annotated[str | None, typer.Option("--end-date")] = None,
+    program_name: Annotated[str | None, typer.Option("--program-name")] = None,
+) -> None:
+    """Export local Bug Intelligence Metrics."""
+    try:
+        console.print(
+            export_metrics(
+                format_name=format_name,
+                range_name=range_name,
+                start_date=start_date,
+                end_date=end_date,
+                program_name=program_name,
+            )
+        )
+    except (MetricsDateRangeError, ValueError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()
@@ -3255,6 +3347,48 @@ def _print_retests(records: list[dict[str, Any]]) -> None:
             str(record.get("updated_at") or ""),
         )
     console.print(table)
+
+
+def _load_metrics_or_exit(range_name: str, start_date: str | None, end_date: str | None, program_name: str | None) -> dict[str, Any]:
+    try:
+        return build_bug_intelligence_metrics(
+            range_name=range_name,
+            start_date=start_date,
+            end_date=end_date,
+            program_name=program_name,
+        )
+    except MetricsDateRangeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+
+def _print_metrics_summary(metrics: dict[str, Any]) -> None:
+    console.print(Panel.fit("Bug Intelligence Metrics", style="bold cyan"))
+    table = Table(title="Summary")
+    table.add_column("Metric")
+    table.add_column("Value")
+    rows = [
+        ("Evidence records", metrics.get("total_evidence_records")),
+        ("Reports created", metrics.get("total_reports_created")),
+        ("Submissions", metrics.get("total_submissions")),
+        ("Accepted", metrics.get("total_accepted")),
+        ("Duplicates", metrics.get("total_duplicates")),
+        ("Resolved", metrics.get("total_resolved")),
+        ("Retests passed", metrics.get("retest_passed_count")),
+        ("Acceptance rate", f"{metrics.get('acceptance_rate', 0)}%"),
+        ("Duplicate rate", f"{metrics.get('duplicate_rate', 0)}%"),
+        ("Total bounty", _format_currency_map(metrics.get("total_bounty_by_currency") or {})),
+        ("Quality score", f"{(metrics.get('quality_indicators') or {}).get('score', 0)} - {(metrics.get('quality_indicators') or {}).get('label', '')}"),
+    ]
+    for label, value in rows:
+        table.add_row(label, str(value if value is not None else ""))
+    console.print(table)
+
+
+def _format_currency_map(values: dict[str, Any]) -> str:
+    if not values:
+        return "0"
+    return ", ".join(f"{currency} {amount:g}" if isinstance(amount, (int, float)) else f"{currency} {amount}" for currency, amount in values.items())
 
 
 def _duplicate_cli_item(

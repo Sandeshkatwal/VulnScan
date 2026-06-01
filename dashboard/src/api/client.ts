@@ -18,6 +18,8 @@ import type {
   BugBountyReconReportsResponse,
   BugBountyReconRequest,
   BugBountyReconResponse,
+  BugIntelligenceMetricsResponse,
+  DateRangeOption,
   BugBountyScopeDetail,
   BugBountyScopesResponse,
   DuplicateCheckRequest,
@@ -58,6 +60,13 @@ const apiKey = import.meta.env.VITE_VULSCAN_API_KEY
 export const apiKeyConfigured = Boolean(apiKey)
 
 type QueryValue = boolean | number | string | null | undefined
+
+export interface MetricsQuery {
+  range?: DateRangeOption | string
+  start_date?: string
+  end_date?: string
+  program_name?: string
+}
 
 function buildUrl(path: string, params?: Record<string, QueryValue>): string {
   const url = new URL(`${apiBaseUrl}${path}`)
@@ -377,6 +386,10 @@ export function getRetests(params: { submission_id?: string } = {}): Promise<Ret
   if (params.submission_id) search.set('submission_id', params.submission_id)
   const suffix = search.toString() ? `?${search.toString()}` : ''
   return request<RetestsResponse>(`/retests${suffix}`)
+}
+
+export function getBugIntelligenceMetrics(params: MetricsQuery = {}): Promise<BugIntelligenceMetricsResponse> {
+  return request<BugIntelligenceMetricsResponse>('/bug-intelligence/metrics/summary', {}, { ...params })
 }
 
 export function createRetest(payload: Partial<RetestRecord>): Promise<RetestRecord> {

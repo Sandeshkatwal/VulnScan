@@ -10,6 +10,10 @@ Version 18.7 adds the Bug Intelligence Workflow dashboard. It connects Program S
 
 Version 18.8 adds Finding Fingerprinting and Duplicate Detection. It creates stable metadata-only fingerprints and local duplicate indicators across findings, candidates, evidence, reports, submissions, and retests. Parameter values and secrets are not used.
 
+Version 18.9 adds local Personal Performance Metrics for progress, quality, duplicates, acceptance rate, reporting productivity, retest outcomes, bounty totals, Program Performance, vulnerability classes, monthly activity, and outcome distribution. Metrics are calculated from local VulScan data only and do not access external platforms, browser sessions, credentials, cookies, API keys, or tokens.
+
 The readiness score is workflow completeness only. It is not a severity rating, proof of exploitability, or a guarantee that a report is valid. The workflow supports responsible disclosure, bug bounty, and internal security testing without exploitation or automatic submission.
+
+See [BUG_INTELLIGENCE_METRICS.md](BUG_INTELLIGENCE_METRICS.md) for metrics formulas, CLI examples, API examples, dashboard usage, and privacy notes.
 
 See [BUG_BOUNTY.md](BUG_BOUNTY.md) for the full workflow guide.

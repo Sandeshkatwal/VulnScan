@@ -25,9 +25,18 @@ from scanner.api_filters import (
     validate_sort_order,
 )
 from scanner.api_bug_bounty import check_scope, get_scope_by_program_id, list_scope_files, resolve_scope_file
+from scanner.api_bug_intelligence_metrics import (
+    api_metrics_classes,
+    api_metrics_export,
+    api_metrics_monthly,
+    api_metrics_outcomes,
+    api_metrics_programs,
+    api_metrics_summary,
+)
 from scanner.api_endpoint_discovery import list_endpoint_reports
 from scanner.api_bug_bounty_recon import list_recon_reports, load_recon_report
 from scanner.bug_bounty_recon import BugBountyReconError, run_bug_bounty_recon
+from scanner.bug_intelligence_metrics import MetricsDateRangeError
 from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
@@ -76,7 +85,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "18.8"
+API_VERSION = "18.9"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -122,6 +131,12 @@ PROTECTED_PATHS = {
     "/duplicates/groups/{group_id}",
     "/duplicates/fingerprints/{fingerprint_id}",
     "/duplicates/summary",
+    "/bug-intelligence/metrics/summary",
+    "/bug-intelligence/metrics/programs",
+    "/bug-intelligence/metrics/classes",
+    "/bug-intelligence/metrics/monthly",
+    "/bug-intelligence/metrics/outcomes",
+    "/bug-intelligence/metrics/export",
     "/owasp/categories",
     "/owasp/map",
     "/remediation",
@@ -631,6 +646,128 @@ def create_app(
     )
     def duplicate_detection_summary_endpoint() -> dict[str, Any]:
         return api_duplicate_summary(db_path=safe_remediation_db_path)
+
+    @app.get(
+        "/bug-intelligence/metrics/summary",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Summarise local Bug Intelligence performance metrics",
+        description="Returns local workflow metrics only. Does not access external platforms, credentials, browser sessions, or API tokens.",
+        responses=ERROR_RESPONSES,
+    )
+    def bug_intelligence_metrics_summary(
+        range: str = Query("all-time", max_length=32),
+        start_date: str | None = Query(None, max_length=32),
+        end_date: str | None = Query(None, max_length=32),
+        program_name: str | None = Query(None, max_length=255),
+    ) -> dict[str, Any]:
+        try:
+            return api_metrics_summary(
+                range_name=range,
+                start_date=start_date,
+                end_date=end_date,
+                program_name=program_name,
+                db_path=safe_remediation_db_path,
+            )
+        except MetricsDateRangeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/bug-intelligence/metrics/programs",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="List local Program Performance metrics",
+        responses=ERROR_RESPONSES,
+    )
+    def bug_intelligence_metrics_programs(
+        range: str = Query("all-time", max_length=32),
+        start_date: str | None = Query(None, max_length=32),
+        end_date: str | None = Query(None, max_length=32),
+        program_name: str | None = Query(None, max_length=255),
+    ) -> dict[str, Any]:
+        try:
+            return api_metrics_programs(range_name=range, start_date=start_date, end_date=end_date, program_name=program_name, db_path=safe_remediation_db_path)
+        except MetricsDateRangeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/bug-intelligence/metrics/classes",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="List local vulnerability class metrics",
+        responses=ERROR_RESPONSES,
+    )
+    def bug_intelligence_metrics_classes(
+        range: str = Query("all-time", max_length=32),
+        start_date: str | None = Query(None, max_length=32),
+        end_date: str | None = Query(None, max_length=32),
+        program_name: str | None = Query(None, max_length=255),
+    ) -> dict[str, Any]:
+        try:
+            return api_metrics_classes(range_name=range, start_date=start_date, end_date=end_date, program_name=program_name, db_path=safe_remediation_db_path)
+        except MetricsDateRangeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/bug-intelligence/metrics/monthly",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="List local monthly Bug Intelligence activity",
+        responses=ERROR_RESPONSES,
+    )
+    def bug_intelligence_metrics_monthly(
+        range: str = Query("all-time", max_length=32),
+        start_date: str | None = Query(None, max_length=32),
+        end_date: str | None = Query(None, max_length=32),
+        program_name: str | None = Query(None, max_length=255),
+    ) -> dict[str, Any]:
+        try:
+            return api_metrics_monthly(range_name=range, start_date=start_date, end_date=end_date, program_name=program_name, db_path=safe_remediation_db_path)
+        except MetricsDateRangeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/bug-intelligence/metrics/outcomes",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="List local submission outcome distribution",
+        responses=ERROR_RESPONSES,
+    )
+    def bug_intelligence_metrics_outcomes(
+        range: str = Query("all-time", max_length=32),
+        start_date: str | None = Query(None, max_length=32),
+        end_date: str | None = Query(None, max_length=32),
+        program_name: str | None = Query(None, max_length=255),
+    ) -> dict[str, Any]:
+        try:
+            return api_metrics_outcomes(range_name=range, start_date=start_date, end_date=end_date, program_name=program_name, db_path=safe_remediation_db_path)
+        except MetricsDateRangeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/bug-intelligence/metrics/export",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Export local Bug Intelligence metrics",
+        description="Exports local metrics only and omits sensitive notes.",
+        responses=ERROR_RESPONSES,
+    )
+    def bug_intelligence_metrics_export(
+        format: str = Query("json", max_length=8),
+        range: str = Query("all-time", max_length=32),
+        start_date: str | None = Query(None, max_length=32),
+        end_date: str | None = Query(None, max_length=32),
+        program_name: str | None = Query(None, max_length=255),
+    ) -> Any:
+        if format not in {"json", "csv"}:
+            raise HTTPException(status_code=400, detail="Unsupported metrics export format.")
+        try:
+            exported = api_metrics_export(format_name=format, range_name=range, start_date=start_date, end_date=end_date, program_name=program_name, db_path=safe_remediation_db_path)
+        except MetricsDateRangeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if format == "csv":
+            return JSONResponse(content={"format": "csv", "content": exported})
+        return exported
 
     @app.get(
         "/owasp/categories",

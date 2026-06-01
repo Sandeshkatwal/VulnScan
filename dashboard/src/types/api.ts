@@ -1046,6 +1046,101 @@ export interface DuplicateSummary {
   [key: string]: unknown
 }
 
+export type DateRangeOption = 'all-time' | 'last-7-days' | 'last-30-days' | 'last-90-days' | 'this-year' | 'custom'
+
+export interface MetricsDateRange {
+  range: DateRangeOption | string
+  start_date?: string | null
+  end_date?: string | null
+}
+
+export interface QualityIndicator {
+  score: number
+  label: 'Getting Started' | 'Improving' | 'Strong Workflow' | 'High Quality' | string
+  reasons: string[]
+}
+
+export interface ProgramPerformance {
+  program_name: string
+  total_submissions: number
+  accepted: number
+  duplicates: number
+  informative: number
+  not_applicable: number
+  resolved: number
+  paid: number
+  acceptance_rate: number
+  duplicate_rate: number
+  total_bounty_by_currency: Record<string, number>
+  average_time_to_triage_days?: number | null
+  last_activity?: string
+}
+
+export interface VulnerabilityClassMetric {
+  class_name: string
+  count: number
+  accepted_count: number
+  duplicate_count: number
+  acceptance_rate: number
+  average_severity: number
+}
+
+export interface MonthlyActivityPoint {
+  month: string
+  evidence_created: number
+  reports_created: number
+  submissions_created: number
+  accepted: number
+  duplicates: number
+  resolved: number
+  paid: number
+  retests_completed: number
+}
+
+export interface OutcomeDistribution {
+  outcome: string
+  count: number
+}
+
+export interface BugIntelligenceMetrics {
+  enabled: boolean
+  generated_at: string
+  date_range: MetricsDateRange
+  total_evidence_records: number
+  total_reports_created: number
+  total_submissions: number
+  total_accepted: number
+  total_duplicates: number
+  total_informative: number
+  total_not_applicable: number
+  total_resolved: number
+  total_paid: number
+  total_retests: number
+  retest_passed_count: number
+  retest_failed_count: number
+  acceptance_rate: number
+  duplicate_rate: number
+  informative_rate: number
+  resolution_rate: number
+  average_time_to_report_hours?: number | null
+  average_time_to_triage_days?: number | null
+  average_time_to_resolution_days?: number | null
+  average_time_to_payment_days?: number | null
+  total_bounty_by_currency: Record<string, number>
+  average_bounty_by_currency: Record<string, number>
+  top_programs: ProgramPerformance[]
+  top_vulnerability_classes: VulnerabilityClassMetric[]
+  top_owasp_categories: Array<{ category: string; count: number }>
+  monthly_activity: MonthlyActivityPoint[]
+  outcome_distribution: OutcomeDistribution[]
+  quality_indicators: QualityIndicator
+  limitations: string[]
+}
+
+export interface BugIntelligenceMetricsResponse {
+  bug_intelligence_metrics: BugIntelligenceMetrics
+}
+
 export interface DuplicateGroupsResponse {
   summary?: DuplicateSummary
   groups: DuplicateGroup[]

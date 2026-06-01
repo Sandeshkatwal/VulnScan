@@ -15,6 +15,7 @@ import {
 import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
+import { BugIntelligenceMetricsView } from './components/BugIntelligenceMetricsView'
 import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
 import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
@@ -59,7 +60,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -83,7 +84,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.8-demo', api_version: '18.8' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.9-demo', api_version: '18.9' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -102,6 +103,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'reports', label: 'Evidence & Reports' },
   { id: 'remediation', label: 'Remediation' },
   { id: 'bug-intelligence', label: 'Bug Intelligence' },
+  { id: 'bug-intelligence-metrics', label: 'Performance Metrics' },
   { id: 'bug-bounty', label: 'Program Scope' },
   { id: 'bug-bounty-recon', label: 'Recon' },
   { id: 'endpoint-discovery', label: 'Endpoints' },
@@ -144,6 +146,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'bug-intelligence': {
     title: 'Bug Intelligence',
     description: 'Authorised vulnerability discovery workflow for scope, recon, endpoints, validation, evidence, and submissions.',
+  },
+  'bug-intelligence-metrics': {
+    title: 'Performance Metrics',
+    description: 'Local personal performance metrics for progress, quality, duplicates, acceptance, retest outcomes, and programme performance.',
   },
   'bug-bounty': {
     title: 'Program Scope',
@@ -749,6 +755,10 @@ function App() {
     return <BugIntelligenceWorkflow apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} onNavigate={(sectionId) => setCurrentSection(sectionId as DashboardSection)} />
   }
 
+  function renderBugIntelligenceMetrics() {
+    return <BugIntelligenceMetricsView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
   function renderBugBounty() {
     return <BugBountyScopeView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -819,6 +829,7 @@ function App() {
     if (currentSection === 'reports') return renderReports()
     if (currentSection === 'remediation') return renderRemediation()
     if (currentSection === 'bug-intelligence') return renderBugIntelligence()
+    if (currentSection === 'bug-intelligence-metrics') return renderBugIntelligenceMetrics()
     if (currentSection === 'bug-bounty') return renderBugBounty()
     if (currentSection === 'bug-bounty-recon') return renderBugBountyRecon()
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()

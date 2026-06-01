@@ -1,5 +1,19 @@
 # VulScan Usage
 
+## Bug Intelligence Metrics
+
+Version 18.9 adds local Personal Performance Metrics for the Bug Intelligence workflow.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main metrics summary
+.\.venv311\Scripts\python.exe -m scanner.main metrics summary --range last-30-days
+.\.venv311\Scripts\python.exe -m scanner.main metrics programs
+.\.venv311\Scripts\python.exe -m scanner.main metrics classes
+.\.venv311\Scripts\python.exe -m scanner.main metrics export --format json
+```
+
+Metrics use local VulScan data only and do not contact external platforms.
+
 VulScan is for authorised defensive vulnerability assessment only.
 
 For initial setup, see `docs\INSTALLATION.md`. For local API details, see `docs\API.md`. For dashboard operation, see `dashboard\README.md`.

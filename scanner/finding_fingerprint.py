@@ -136,7 +136,7 @@ def build_finding_fingerprint(item: dict[str, Any], item_type: str = "finding") 
     digest = hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
     now = datetime.now(timezone.utc).isoformat()
     return {
-        "fingerprint_id": f"fp_{uuid.uuid4().hex[:16]}",
+        "fingerprint_id": f"fp_{uuid.uuid4().hex[:16].translate(str.maketrans('0123456789', 'abcdefghij'))}",
         "fingerprint_version": FINGERPRINT_VERSION,
         "fingerprint_hash": digest,
         "fingerprint_short": digest[:12],

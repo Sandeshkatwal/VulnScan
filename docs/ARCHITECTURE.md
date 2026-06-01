@@ -165,3 +165,9 @@ Version 18.8 adds `scanner/finding_fingerprint.py` and `scanner/duplicate_detect
 The fingerprinting layer builds SHA-256 hashes from stable, non-sensitive metadata: host, normalised path, sorted parameter names, issue type, OWASP category, source, CVE, service, port, and method. It intentionally excludes timestamps, report IDs, random IDs, parameter values, response bodies, and secrets.
 
 The duplicate detection layer stores fingerprints in local SQLite tables and groups exact duplicates, likely duplicates, and related findings. API and dashboard views expose these as manual-review indicators only.
+
+## Version 18.9 Bug Intelligence Metrics
+
+Version 18.9 adds `scanner/bug_intelligence_metrics.py`, `scanner/api_bug_intelligence_metrics.py`, CLI commands under `metrics`, protected API routes under `/bug-intelligence/metrics/...`, and `dashboard/src/components/BugIntelligenceMetricsView.tsx`.
+
+The metrics layer is read-only and local. It calculates Personal Performance Metrics from VulScan evidence, reports, submissions, retests, duplicate metadata, OWASP mappings, and validation-derived records. It does not fetch external platform data, scrape dashboards, request credentials, store platform API tokens, or submit reports.

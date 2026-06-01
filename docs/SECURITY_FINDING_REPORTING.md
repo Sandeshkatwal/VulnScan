@@ -6,6 +6,8 @@ Reports may include scan findings, endpoint and parameter candidates, OWASP indi
 
 Submission and Retest Tracking stores local report status, evidence references, follow-up notes, accepted or duplicate outcomes, and retest results. It is tracking only: VulScan does not submit reports to external platforms and does not store platform credentials.
 
+Version 18.9 uses local Security Finding Report and submission metadata for Bug Intelligence Metrics, including reports created, evidence linkage, outcome rates, retest outcomes, Program Performance, bounty totals, and quality indicators. Metrics exports do not include sensitive notes.
+
 The legacy phrase "bug bounty report" may still appear in compatibility route names or historical file paths, but user-facing workflow language should use Security Finding Report, Evidence & Reports, and Submission and Retest Tracking.
 ## Duplicate Detection
 
