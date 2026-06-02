@@ -1,6 +1,6 @@
 # VulScan
 
-VulScan is a local authorised vulnerability scanning and vulnerability management platform. It is designed for defensive assessment, reporting, triage, and remediation tracking on systems you own or have explicit permission to assess.
+VulScan is a local authorised security assessment, vulnerability management, and bug intelligence platform. It is designed for defensive assessment, reporting, triage, and remediation tracking on systems you own or have explicit permission to assess.
 
 ## Safety Statement
 
@@ -12,7 +12,7 @@ Use VulScan only on systems and web applications you own or have explicit writte
 - Credentialed Linux Audit using explicit SSH credentials and read-only checks.
 - Credentialed Windows Audit using safe reachability checks and optional read-only WinRM indicators.
 - Passive Web DAST for bounded crawling, headers, cookies, forms, robots.txt, sitemap, scope, and politeness reporting.
-- Bug Intelligence workflow with Program Scope Manager, Recon Intelligence, Endpoint Intelligence, Safe Validation, Security Finding Reports, and Submission and Retest Tracking for authorised vulnerability discovery.
+- Bug Intelligence Engine with Program Scope, Recon Intelligence, Endpoint Intelligence, Parameter Intelligence, OWASP Indicator Mapping, Safe Validation, Evidence Capture, Security Finding Reports, and Submission and Retest Tracker.
 - Finding Fingerprinting and Duplicate Detection for stable local duplicate indicators across evidence, reports, submissions, and retests.
 - Bug Intelligence Metrics and Personal Performance Dashboard for local progress, quality, duplicate, acceptance, retest, bounty, Program Performance, and vulnerability class metrics.
 - OWASP Top 10:2025 indicator mapping for existing findings and candidates.
@@ -37,6 +37,7 @@ VulScan
 ├── Safe Active Validation
 ├── Submission and Retest Tracker
 ├── Bug Intelligence Workflow Dashboard
+├── Performance Metrics Dashboard
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
 ├── Storage
@@ -84,7 +85,7 @@ The API binds to `127.0.0.1:8088` by default.
 Run Recon Intelligence from the sample manual target list:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\recon\sample_targets.txt --scope-file data\programs\sample_program_scope.json --enforce-scope --json --html
 ```
 
 ## Quick Start Dashboard
@@ -164,7 +165,9 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - [Architecture](docs/ARCHITECTURE.md)
 - [Web DAST](docs/WEB_DAST.md)
 - [Bug Intelligence Workflow](docs/BUG_INTELLIGENCE.md)
+- [Bug Intelligence Workflow Guide](docs/BUG_INTELLIGENCE_WORKFLOW.md)
 - [Bug Intelligence Metrics](docs/BUG_INTELLIGENCE_METRICS.md)
+- [Command Reference](docs/COMMAND_REFERENCE.md)
 - [Security Finding Reporting](docs/SECURITY_FINDING_REPORTING.md)
 - [Submission and Retest Tracking](docs/SUBMISSION_AND_RETEST_TRACKING.md)
 - [OWASP Mapping](docs/OWASP_MAPPING.md)
@@ -175,6 +178,7 @@ Use demo mode for screenshots. Do not show secrets, real client data, real API k
 - [Screenshots](docs/SCREENSHOTS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Release Checklist](docs/RELEASE_CHECKLIST.md)
+- [Release Notes 19.0](docs/RELEASE_NOTES_19_0.md)
 - [Dashboard](dashboard/README.md)
 
 ## Roadmap

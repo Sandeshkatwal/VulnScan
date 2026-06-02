@@ -150,7 +150,7 @@ Screenshot mode adds a compact capture guide. Use it with demo mode and portfoli
 
 ## Program Scope Manager
 
-The Program Scope section lists local scope files from `data/bug_bounty`, shows program metadata, in-scope and out-of-scope rules, forbidden actions, allowed and disallowed test types, rate limits, and a target scope validation panel.
+The Program Scope section lists local scope files from `data/programs` and legacy `data/bug_bounty`, shows program metadata, in-scope and out-of-scope rules, forbidden actions, allowed and disallowed test types, rate limits, and a target scope validation panel.
 
 If a target is out of scope, the panel shows a clear warning.
 

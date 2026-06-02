@@ -85,7 +85,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "18.9"
+API_VERSION = "19.0"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -117,6 +117,15 @@ PROTECTED_PATHS = {
     "/bug-bounty/endpoints/analyse",
     "/bug-bounty/endpoints/reports",
     "/bug-bounty/validate",
+    "/program-scope/scopes",
+    "/program-scope/scopes/{program_id}",
+    "/program-scope/check",
+    "/recon",
+    "/recon/results",
+    "/recon/results/{recon_id}",
+    "/endpoints/analyse",
+    "/endpoints/reports",
+    "/safe-validation",
     "/submissions",
     "/submissions/summary",
     "/submissions/{submission_id}",
@@ -262,22 +271,38 @@ def create_app(
         return {"scanner": "VulScan", "version": __version__, "api_version": API_VERSION}
 
     @app.get(
+        "/program-scope/scopes",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="List local Program Scope files",
+        description="Preferred route. Lists valid local JSON Program Scope files under data/programs and legacy data/bug_bounty.",
+        responses=ERROR_RESPONSES,
+    )
+    @app.get(
         "/bug-bounty/scopes",
         dependencies=[Depends(require_api_key)],
         tags=["Bug Intelligence"],
         summary="List local program scope files",
-        description="Lists valid local JSON program scope files under data/bug_bounty. Does not read arbitrary paths.",
+        description="Legacy route. Lists valid local JSON Program Scope files under data/programs and legacy data/bug_bounty. Does not read arbitrary paths.",
         responses=ERROR_RESPONSES,
     )
     def list_bug_bounty_scopes() -> dict[str, Any]:
         return {"scopes": list_scope_files()}
 
     @app.get(
+        "/program-scope/scopes/{program_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Get local Program Scope detail",
+        description="Preferred route. Returns local Program Scope metadata and rules by program ID.",
+        responses=ERROR_RESPONSES,
+    )
+    @app.get(
         "/bug-bounty/scopes/{program_id}",
         dependencies=[Depends(require_api_key)],
         tags=["Bug Intelligence"],
         summary="Get local program scope",
-        description="Returns local program scope metadata and rules by program ID from data/bug_bounty.",
+        description="Legacy route. Returns local Program Scope metadata and rules by program ID.",
         responses=ERROR_RESPONSES,
     )
     def get_bug_bounty_scope(program_id: str) -> dict[str, Any]:
@@ -287,11 +312,19 @@ def create_app(
         return result
 
     @app.post(
+        "/program-scope/check",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Check a target against local Program Scope",
+        description="Preferred route. Evaluates a target, URL, domain, or IP against one local Program Scope JSON file.",
+        responses=ERROR_RESPONSES,
+    )
+    @app.post(
         "/bug-bounty/scope-check",
         dependencies=[Depends(require_api_key)],
         tags=["Bug Intelligence"],
         summary="Check target against local program scope",
-        description="Evaluates a target, URL, domain, or IP against one local JSON scope file under data/bug_bounty.",
+        description="Legacy route. Evaluates a target, URL, domain, or IP against one local Program Scope JSON file.",
         responses=ERROR_RESPONSES,
     )
     def check_bug_bounty_scope(request: ScopeCheckRequest) -> dict[str, Any]:
@@ -300,6 +333,14 @@ def create_app(
         except BugBountyScopeError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    @app.post(
+        "/recon",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Run safe Recon Intelligence",
+        description="Preferred route. Runs synchronous metadata-only recon for provided targets. Does not brute-force or query third-party APIs.",
+        responses=ERROR_RESPONSES,
+    )
     @app.post(
         "/bug-bounty/recon",
         dependencies=[Depends(require_api_key)],
@@ -328,6 +369,14 @@ def create_app(
         return result
 
     @app.get(
+        "/recon/results",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="List local Recon Intelligence reports",
+        description="Preferred route. Lists local JSON recon reports from reports/recon.",
+        responses=ERROR_RESPONSES,
+    )
+    @app.get(
         "/bug-bounty/recon/results",
         dependencies=[Depends(require_api_key)],
         tags=["Bug Intelligence"],
@@ -338,6 +387,14 @@ def create_app(
     def list_bug_bounty_recon_results() -> dict[str, Any]:
         return {"reports": list_recon_reports()}
 
+    @app.get(
+        "/recon/results/{recon_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Get local Recon Intelligence report",
+        description="Preferred route. Returns a local JSON recon report by recon ID from reports/recon.",
+        responses=ERROR_RESPONSES,
+    )
     @app.get(
         "/bug-bounty/recon/results/{recon_id}",
         dependencies=[Depends(require_api_key)],
@@ -352,6 +409,14 @@ def create_app(
             raise HTTPException(status_code=404, detail="Recon report was not found.")
         return {"recon_id": recon_id, "result": result}
 
+    @app.post(
+        "/endpoints/analyse",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Analyse Endpoint and Parameter Intelligence candidates",
+        description="Preferred route. Analyses provided URLs or paths only and can enforce local Program Scope before returning candidates.",
+        responses=ERROR_RESPONSES,
+    )
     @app.post(
         "/bug-bounty/endpoints/analyse",
         dependencies=[Depends(require_api_key)],
@@ -378,6 +443,14 @@ def create_app(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get(
+        "/endpoints/reports",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="List local Endpoint Intelligence reports",
+        description="Preferred route. Lists local JSON endpoint discovery reports from reports/endpoints.",
+        responses=ERROR_RESPONSES,
+    )
+    @app.get(
         "/bug-bounty/endpoints/reports",
         dependencies=[Depends(require_api_key)],
         tags=["Bug Intelligence"],
@@ -388,6 +461,14 @@ def create_app(
     def list_bug_bounty_endpoint_reports() -> dict[str, Any]:
         return {"reports": list_endpoint_reports()}
 
+    @app.post(
+        "/safe-validation",
+        dependencies=[Depends(require_api_key)],
+        tags=["Bug Intelligence"],
+        summary="Run Safe Validation",
+        description="Preferred route. Runs limited non-destructive validation checks with scope enforcement supported.",
+        responses=ERROR_RESPONSES,
+    )
     @app.post(
         "/bug-bounty/validate",
         dependencies=[Depends(require_api_key)],

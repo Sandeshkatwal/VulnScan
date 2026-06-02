@@ -12,13 +12,13 @@ interface BugBountyScopeViewProps {
 }
 
 const demoScope: BugBountyScopeSummary = {
-  program_id: 'demo-bug-bounty-program',
+  program_id: 'demo-program-scope',
   program_name: 'Demo Program Scope',
   platform: 'local-demo',
   policy_url: 'local-only',
   scope_version: '1.0',
   last_updated: 'demo-local',
-  scope_file: 'data/bug_bounty/sample_program_scope.json',
+  scope_file: 'data/programs/sample_program_scope.json',
 }
 
 const demoDetail: BugBountyScopeDetail = {
@@ -105,7 +105,7 @@ export function BugBountyScopeView({ apiOnline, demoMode = false }: BugBountySco
       <article className="panel">
         <div className="panel-heading">
           <h2>Programs</h2>
-          <p>Local program scope files under data/bug_bounty.</p>
+          <p>Local Program Scope files under data/programs, with legacy data/bug_bounty compatibility.</p>
         </div>
         <ErrorAlert message={error} />
         {loading ? <div className="empty-state">Loading scope files...</div> : null}

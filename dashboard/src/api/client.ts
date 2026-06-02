@@ -239,15 +239,15 @@ export function createScan(requestBody: ScanRequest): Promise<ScanResponse> {
 }
 
 export function getBugBountyScopes(): Promise<BugBountyScopesResponse> {
-  return request<BugBountyScopesResponse>('/bug-bounty/scopes')
+  return request<BugBountyScopesResponse>('/program-scope/scopes')
 }
 
 export function getBugBountyScope(programId: string): Promise<BugBountyScopeDetail> {
-  return request<BugBountyScopeDetail>(`/bug-bounty/scopes/${encodeURIComponent(programId)}`)
+  return request<BugBountyScopeDetail>(`/program-scope/scopes/${encodeURIComponent(programId)}`)
 }
 
 export function checkBugBountyScope(payload: ScopeCheckRequest): Promise<ScopeCheckResponse> {
-  return request<ScopeCheckResponse>('/bug-bounty/scope-check', {
+  return request<ScopeCheckResponse>('/program-scope/check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -255,7 +255,7 @@ export function checkBugBountyScope(payload: ScopeCheckRequest): Promise<ScopeCh
 }
 
 export function runBugBountyRecon(payload: BugBountyReconRequest): Promise<BugBountyReconResponse> {
-  return request<BugBountyReconResponse>('/bug-bounty/recon', {
+  return request<BugBountyReconResponse>('/recon', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -263,11 +263,11 @@ export function runBugBountyRecon(payload: BugBountyReconRequest): Promise<BugBo
 }
 
 export function getBugBountyReconResults(): Promise<BugBountyReconReportsResponse> {
-  return request<BugBountyReconReportsResponse>('/bug-bounty/recon/results')
+  return request<BugBountyReconReportsResponse>('/recon/results')
 }
 
 export function analyseEndpoints(payload: EndpointDiscoveryRequest): Promise<EndpointDiscoveryResponse> {
-  return request<EndpointDiscoveryResponse>('/bug-bounty/endpoints/analyse', {
+  return request<EndpointDiscoveryResponse>('/endpoints/analyse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -275,7 +275,7 @@ export function analyseEndpoints(payload: EndpointDiscoveryRequest): Promise<End
 }
 
 export function getEndpointReports(): Promise<EndpointReportsResponse> {
-  return request<EndpointReportsResponse>('/bug-bounty/endpoints/reports')
+  return request<EndpointReportsResponse>('/endpoints/reports')
 }
 
 export function getOWASPCategories(): Promise<OWASPCategoriesResponse> {
@@ -291,7 +291,7 @@ export function mapOWASP(payload: OWASPMapRequest): Promise<OWASPMapResponse> {
 }
 
 export function runSafeValidation(payload: SafeValidationRequest): Promise<SafeValidationResponse> {
-  return request<SafeValidationResponse>('/bug-bounty/validate', {
+  return request<SafeValidationResponse>('/safe-validation', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

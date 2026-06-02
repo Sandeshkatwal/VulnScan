@@ -88,8 +88,8 @@ VulScan
 - `scanner.ssh_audit`, `scanner.package_audit`, `scanner.linux_config_audit`: read-only Linux credentialed audit checks.
 - `scanner.windows_audit`, `scanner.windows_result`, `scanner.windows_*`: Windows reachability, optional WinRM validation, and read-only indicators.
 - `scanner.web_*`: passive Web DAST crawling, scope, rate limiting, robots, sitemap, headers, cookies, forms, and passive summary reporting.
-- `scanner.bug_bounty_scope` and `scanner.api_bug_bounty`: local program scope loading, validation, scope decisions, API listing, and target checks. Module names are retained for backward compatibility.
-- `scanner.bug_bounty_recon` and `scanner.api_bug_bounty_recon`: manually provided target import, scope-aware safe HTTP/HTTPS metadata probing, recon report listing, and recon result retrieval.
+- `scanner.bug_bounty_scope` and `scanner.api_bug_bounty`: local Program Scope loading, validation, scope decisions, API listing, and target checks. Module names are retained for backward compatibility.
+- `scanner.bug_bounty_recon` and `scanner.api_bug_bounty_recon`: manually provided target import, scope-aware safe HTTP/HTTPS metadata probing, Recon Intelligence report listing, and recon result retrieval. Module names are retained for backward compatibility.
 - `scanner.software_inventory`, `scanner.vuln_intel`, `scanner.cve_feed`, `scanner.epss_importer`, `scanner.exploit_metadata`: local vulnerability intelligence and metadata enrichment.
 - `scanner.risk_score`, `scanner.asset_criticality`, `scanner.prioritisation`, `scanner.prioritisation_report`, `scanner.prioritisation_trends`: risk scoring, business context, fix-first reporting, and trend tracking.
 - `scanner.database`, `scanner.history`, `scanner.remediation`, `scanner.assets`, `scanner.exporter`: local SQLite storage, remediation records, asset inventory, and exports.
@@ -154,7 +154,7 @@ Recon reports are written under `reports/recon` when requested. They include sum
 - Dashboard does not collect credentials.
 - Passive Web DAST does not submit forms, authenticate, fuzz, or send attack payloads.
 - Bug bounty scope decisions are local decision support and do not replace live program policy verification.
-- Bug bounty recon only accepts provided targets, applies scope checks before probing, uses gentle HTTP/HTTPS GET requests, and stores metadata only.
+- Recon Intelligence only accepts provided targets, applies Program Scope checks before probing when enabled, uses gentle HTTP/HTTPS GET requests, and stores metadata only.
 - Vulnerability intelligence uses local files only and does not fetch or execute exploit code.
 - Remediation tracking does not patch or modify systems.
 - Secrets, API keys, `.env` files, local databases, and generated sensitive reports should not be committed.
@@ -171,3 +171,13 @@ The duplicate detection layer stores fingerprints in local SQLite tables and gro
 Version 18.9 adds `scanner/bug_intelligence_metrics.py`, `scanner/api_bug_intelligence_metrics.py`, CLI commands under `metrics`, protected API routes under `/bug-intelligence/metrics/...`, and `dashboard/src/components/BugIntelligenceMetricsView.tsx`.
 
 The metrics layer is read-only and local. It calculates Personal Performance Metrics from VulScan evidence, reports, submissions, retests, duplicate metadata, OWASP mappings, and validation-derived records. It does not fetch external platform data, scrape dashboards, request credentials, store platform API tokens, or submit reports.
+
+## Version 19.0 Release Hardening
+
+Version 19.0 adds preferred professional command and API aliases while retaining compatibility:
+
+- CLI: `scope list`, `scope check`, and `--scope-file`.
+- Data: preferred sample directories under `data/programs`, `data/recon`, `data/endpoints`, and `data/validation`.
+- API: `/program-scope/...`, `/recon`, `/endpoints/...`, and `/safe-validation`.
+
+Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as aliases. The API remains localhost-first and protected endpoints use API key enforcement when configured.

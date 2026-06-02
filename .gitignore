@@ -46,6 +46,10 @@ scan_results/
 *.pdf
 *.html
 *.json
+!data/programs/
+!data/programs/*.json
+!data/validation/
+!data/validation/*.json
 
 # Build/cache
 dist/

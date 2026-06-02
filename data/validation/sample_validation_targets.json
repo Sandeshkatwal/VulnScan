@@ -1,0 +1,26 @@
+{
+  "targets": [
+    {
+      "url": "http://127.0.0.1:8000/redirect?next=/dashboard",
+      "candidate_type": "open_redirect",
+      "parameter": "next",
+      "source": "endpoint_discovery"
+    },
+    {
+      "url": "http://127.0.0.1:8000/search?q=test",
+      "candidate_type": "reflected_input",
+      "parameter": "q",
+      "source": "parameter_intelligence"
+    },
+    {
+      "url": "http://127.0.0.1:8000/",
+      "candidate_type": "cors",
+      "source": "manual"
+    },
+    {
+      "url": "http://127.0.0.1:8000/uploads/",
+      "candidate_type": "directory_listing",
+      "source": "manual"
+    }
+  ]
+}

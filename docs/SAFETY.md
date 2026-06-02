@@ -11,6 +11,8 @@ VulScan is for authorised defensive vulnerability assessment only. Use it only o
 - Web DAST is passive: it uses bounded GET requests, scope controls, robots/sitemap awareness, and polite rate limiting. It does not submit forms, authenticate, fuzz, send payloads, test SQL injection, test XSS, or prove exploitability.
 - Vulnerability intelligence uses local files only. It does not download exploit code or execute exploit checks.
 - Report access endpoints serve only `.json` and `.html` files from the local `reports` directory and block path traversal.
+- Bug Intelligence release commands prefer Program Scope enforcement with `--scope-file` and `--enforce-scope`. Legacy `--bug-bounty-scope` remains an alias only.
+- Preferred API routes remain local and protected when `VULSCAN_API_KEY` is configured. Legacy `/bug-bounty/...` routes are compatibility aliases.
 - Remediation features update local tracking records only. They do not patch systems, restart services, run commands, or modify targets.
 
 ## Secrets

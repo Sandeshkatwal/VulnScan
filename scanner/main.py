@@ -18,6 +18,7 @@ from scanner.audit_profiles import (
 )
 from scanner.api_runner import run_api_server
 from scanner.api_security import API_KEY_ENV_VAR, LOCAL_DEVELOPMENT_WARNING, get_configured_api_key
+from scanner.api_bug_bounty import check_scope as api_check_scope, list_scope_files as api_list_scope_files
 from scanner.assets import get_asset_services, get_assets
 from scanner.asset_criticality import (
     DEFAULT_ASSET_CRITICALITY_PATH,
@@ -194,12 +195,14 @@ submission_app = typer.Typer(help="Track Security Finding Report submission work
 retest_app = typer.Typer(help="Track manual retest workflow status.")
 duplicates_app = typer.Typer(help="Fingerprint findings and detect duplicate security findings.")
 metrics_app = typer.Typer(help="Local Bug Intelligence metrics and personal performance dashboard data.")
+scope_app = typer.Typer(help="Manage local Program Scope files.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
 app.add_typer(retest_app, name="retest")
 app.add_typer(duplicates_app, name="duplicates")
 app.add_typer(metrics_app, name="metrics")
+app.add_typer(scope_app, name="scope")
 console = Console()
 
 
@@ -276,15 +279,22 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 18.9 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]Version 19.0 API is for local development only and does not expose credentialed scans.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
 def _list_program_scope_files() -> list[Path]:
-    root = Path("data") / "bug_bounty"
-    if not root.exists():
-        return []
-    return sorted(path for path in root.glob("*.json") if path.is_file())
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for root in (Path("data") / "programs", Path("data") / "bug_bounty"):
+        if not root.exists():
+            continue
+        for path in sorted(root.glob("*.json")):
+            key = str(path.resolve())
+            if path.is_file() and key not in seen:
+                paths.append(path)
+                seen.add(key)
+    return paths
 
 
 def _program_scope_command(alias_note: str | None = None) -> None:
@@ -304,16 +314,48 @@ def _program_scope_command(alias_note: str | None = None) -> None:
     console.print(table)
 
 
+def _warn_legacy_scope_alias(scope_file: str | None = None) -> None:
+    if "--bug-bounty-scope" in sys.argv or (scope_file and "data/bug_bounty" in scope_file.replace("\\", "/")):
+        console.print("[yellow]Alias retained for compatibility. Prefer --scope-file.[/yellow]")
+
+
 @app.command("program-scope")
 def program_scope() -> None:
     """List local program scope files."""
     _program_scope_command()
 
 
-@app.command("scope")
-def scope_alias() -> None:
-    """Alias for program-scope."""
-    _program_scope_command("Alias for program-scope.")
+@scope_app.callback(invoke_without_command=True)
+def scope_group(ctx: typer.Context) -> None:
+    """Manage local Program Scope files."""
+    if ctx.invoked_subcommand is None:
+        _program_scope_command("Alias retained for compatibility. Prefer: scope list.")
+
+
+@scope_app.command("list")
+def scope_list() -> None:
+    """List local Program Scope files."""
+    _program_scope_command()
+
+
+@scope_app.command("check")
+def scope_check(
+    target: Annotated[str, typer.Option("--target", help="Target, URL, domain, or IP to evaluate against Program Scope.")],
+    scope_file: Annotated[str, typer.Option("--scope-file", "--bug-bounty-scope", help="Local Program Scope JSON file. Legacy --bug-bounty-scope is retained for compatibility.")],
+) -> None:
+    """Check whether a target is allowed by a local Program Scope file."""
+    _warn_legacy_scope_alias(scope_file)
+    try:
+        decision = api_check_scope(target, scope_file)
+    except BugBountyScopeError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    table = Table(title="Program Scope Decision")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("target", "in_scope", "decision", "matched_rule", "reason"):
+        table.add_row(key.replace("_", " ").title(), str(decision.get(key, "")))
+    console.print(table)
 
 
 def _security_report_command(alias_note: str | None = None) -> None:
@@ -335,8 +377,11 @@ def _security_report_command(alias_note: str | None = None) -> None:
 
 
 @app.command("security-report")
-def security_report() -> None:
+def security_report(action: Annotated[str | None, typer.Argument(help="Optional action. Use 'list' to list local reports.")] = None) -> None:
     """List local Security Finding Reports."""
+    if action and action != "list":
+        console.print("[red]Unsupported security-report action. Use: security-report list[/red]")
+        raise typer.Exit(code=1)
     _security_report_command()
 
 
@@ -346,7 +391,7 @@ def bug_report_alias(action: Annotated[str | None, typer.Argument(help="Optional
     if action and action != "list":
         console.print("[red]Unsupported bug-report action. Use: bug-report list[/red]")
         raise typer.Exit(code=1)
-    _security_report_command("Alias for security-report.")
+    _security_report_command("Alias retained for compatibility. Prefer security-report list.")
 
 
 @app.command("evidence")
@@ -1016,8 +1061,9 @@ def scan(
     bug_bounty_scope: Annotated[
         Path | None,
         typer.Option(
+            "--scope-file",
             "--bug-bounty-scope",
-            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
+            help="Path to a local Program Scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
@@ -1836,8 +1882,9 @@ def web_scan(
     bug_bounty_scope: Annotated[
         Path | None,
         typer.Option(
+            "--scope-file",
             "--bug-bounty-scope",
-            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
+            help="Path to a local Program Scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
@@ -2180,8 +2227,9 @@ def recon(
     bug_bounty_scope: Annotated[
         Path | None,
         typer.Option(
+            "--scope-file",
             "--bug-bounty-scope",
-            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
+            help="Path to a local Program Scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
@@ -2333,8 +2381,9 @@ def endpoints(
     bug_bounty_scope: Annotated[
         Path | None,
         typer.Option(
+            "--scope-file",
             "--bug-bounty-scope",
-            help="Path to a local program scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
+            help="Path to a local Program Scope JSON file. Legacy --bug-bounty-scope name is retained for compatibility.",
         ),
     ] = None,
     enforce_scope: Annotated[
@@ -2464,7 +2513,7 @@ def validate(
     ] = None,
     bug_bounty_scope: Annotated[
         Path | None,
-        typer.Option("--bug-bounty-scope", help="Path to a local program scope JSON file. Legacy option name is retained for compatibility."),
+        typer.Option("--scope-file", "--bug-bounty-scope", help="Path to a local Program Scope JSON file. Legacy option name is retained for compatibility."),
     ] = None,
     enforce_scope: Annotated[
         bool,

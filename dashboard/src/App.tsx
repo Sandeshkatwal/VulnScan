@@ -84,7 +84,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '18.9-demo', api_version: '18.9' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '19.0-demo', api_version: '19.0' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -105,8 +105,8 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'bug-intelligence', label: 'Bug Intelligence' },
   { id: 'bug-intelligence-metrics', label: 'Performance Metrics' },
   { id: 'bug-bounty', label: 'Program Scope' },
-  { id: 'bug-bounty-recon', label: 'Recon' },
-  { id: 'endpoint-discovery', label: 'Endpoints' },
+  { id: 'bug-bounty-recon', label: 'Recon Intelligence' },
+  { id: 'endpoint-discovery', label: 'Endpoint Intelligence' },
   { id: 'safe-validation', label: 'Safe Validation' },
   { id: 'submission-tracker', label: 'Submission Tracker' },
   { id: 'duplicates', label: 'Duplicate Detection' },
@@ -160,8 +160,8 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
     description: 'Scope-aware HTTP/HTTPS metadata probing for manually provided authorised targets.',
   },
   'endpoint-discovery': {
-    title: 'Endpoint Discovery',
-    description: 'Safe endpoint and parameter candidate discovery for manual validation workflows.',
+    title: 'Endpoint Intelligence',
+    description: 'Safe Endpoint Intelligence and Parameter Intelligence candidate discovery for manual validation workflows.',
   },
   'safe-validation': {
     title: 'Safe Validation',

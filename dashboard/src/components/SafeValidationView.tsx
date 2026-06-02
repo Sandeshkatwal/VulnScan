@@ -16,7 +16,7 @@ interface SafeValidationViewProps {
 
 const checks = ['reflected_input_observation', 'open_redirect_indicator', 'cors_indicator', 'directory_listing_indicator', 'default_file_exposure_indicator', 'http_methods_indicator']
 
-const demoScopes: BugBountyScopeSummary[] = [{ program_id: 'demo-bug-bounty-program', program_name: 'Demo Program Scope', scope_file: 'data/bug_bounty/sample_program_scope.json' }]
+const demoScopes: BugBountyScopeSummary[] = [{ program_id: 'demo-program-scope', program_name: 'Demo Program Scope', scope_file: 'data/programs/sample_program_scope.json' }]
 
 const demoResult: SafeValidationResponse = {
   safe_active_validation: { enabled: true, input_targets_count: 1, in_scope_targets_count: 1, checks_run: 1, checks_skipped: 0, indicators_found: 1, request_count: 1, rate_limit_applied: true },

@@ -15,7 +15,9 @@ from urllib.parse import urlsplit, urlunsplit
 from scanner.finding import create_finding
 
 
+PROGRAM_SCOPE_DIR = Path("data") / "programs"
 BUG_BOUNTY_SCOPE_DIR = Path("data") / "bug_bounty"
+DEFAULT_PROGRAM_SCOPE_PATH = PROGRAM_SCOPE_DIR / "sample_program_scope.json"
 DEFAULT_BUG_BOUNTY_SCOPE_PATH = BUG_BOUNTY_SCOPE_DIR / "sample_program_scope.json"
 SCOPE_LIMITATION = "Local scope files may become stale or incomplete. Always verify the live program policy before testing."
 

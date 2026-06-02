@@ -128,7 +128,22 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/rep
 - `GET /remediation/{finding_key}`
 - `PUT /remediation/{finding_key}`
 
-## Bug Intelligence Scope Endpoints
+## Bug Intelligence Endpoints
+
+Preferred routes:
+
+- `GET /program-scope/scopes`
+- `GET /program-scope/scopes/{program_id}`
+- `POST /program-scope/check`
+- `POST /recon`
+- `GET /recon/results`
+- `GET /recon/results/{recon_id}`
+- `POST /endpoints/analyse`
+- `GET /endpoints/reports`
+- `POST /safe-validation`
+- `GET /bug-intelligence/metrics/summary`
+
+Legacy aliases:
 
 - `GET /bug-bounty/scopes`
 - `GET /bug-bounty/scopes/{program_id}`
@@ -136,8 +151,13 @@ curl -H "X-VulScan-API-Key: change-this-local-dev-key" http://127.0.0.1:8088/rep
 - `POST /bug-bounty/recon`
 - `GET /bug-bounty/recon/results`
 - `GET /bug-bounty/recon/results/{recon_id}`
+- `POST /bug-bounty/endpoints/analyse`
+- `GET /bug-bounty/endpoints/reports`
+- `POST /bug-bounty/validate`
 
-Scope endpoints read local JSON scope files under `data/bug_bounty` only. Recon accepts provided target strings and optional scope files from the same local program scope directory. The `/bug-bounty/...` paths remain as compatibility routes. These endpoints do not fetch live program policies, accept arbitrary filesystem paths, store secrets, brute-force subdomains, use wordlists, launch exploit checks, or modify targets.
+Legacy bug-bounty routes are aliases and may be removed later.
+
+Program Scope endpoints read local JSON scope files under `data/programs` and legacy `data/bug_bounty`. Recon accepts provided target strings and optional scope files from the same local Program Scope directories. These endpoints do not fetch live programme policies, accept arbitrary filesystem paths, store secrets, brute-force subdomains, use wordlists, launch exploit checks, or modify targets.
 
 ## Submission and Retest Tracking Endpoints
 
@@ -159,13 +179,13 @@ These endpoints are local workflow tracking only. They do not submit reports ext
 Example:
 
 ```powershell
-curl -X POST http://127.0.0.1:8088/bug-bounty/scope-check -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"target\":\"https://demo-web.local/\",\"scope_file\":\"data/bug_bounty/sample_program_scope.json\"}"
+curl -X POST http://127.0.0.1:8088/program-scope/check -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"target\":\"https://demo-web.local/\",\"scope_file\":\"data/programs/sample_program_scope.json\"}"
 ```
 
 Run safe synchronous recon:
 
 ```powershell
-curl -X POST http://127.0.0.1:8088/bug-bounty/recon -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"targets\":[\"http://127.0.0.1:8000/\",\"demo-web.local\"],\"scope_file\":\"data/bug_bounty/sample_program_scope.json\",\"enforce_scope\":true,\"request_delay\":1.0,\"max_requests_per_minute\":30,\"timeout\":5}"
+curl -X POST http://127.0.0.1:8088/recon -H "Content-Type: application/json" -H "X-VulScan-API-Key: change-this-local-dev-key" -d "{\"targets\":[\"http://127.0.0.1:8000/\",\"demo-web.local\"],\"scope_file\":\"data/programs/sample_program_scope.json\",\"enforce_scope\":true,\"request_delay\":1.0,\"max_requests_per_minute\":30,\"timeout\":5}"
 ```
 
 Recon responses include `bug_bounty_recon`, `bug_bounty_recon_results`, `bug_bounty_recon_skipped`, and informational findings. Recon stores metadata only and does not return response bodies, cookies, tokens, passwords, or private keys.

@@ -148,7 +148,7 @@ class ScopeCheckRequest(StrictApiModel):
     """Local program scope decision request."""
 
     target: str = Field(..., min_length=1, max_length=2048, description="Target, domain, IP, or URL to check.", examples=["https://demo-web.local/"])
-    scope_file: str = Field(..., min_length=1, max_length=512, description="Local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
+    scope_file: str = Field(..., min_length=1, max_length=512, description="Local Program Scope JSON file under data/programs or legacy data/bug_bounty.", examples=["data/programs/sample_program_scope.json"])
 
     model_config = ConfigDict(
         extra="forbid",
@@ -167,7 +167,7 @@ class BugBountyReconRequest(StrictApiModel):
     """Synchronous Recon Intelligence request."""
 
     targets: list[str] = Field(default_factory=list, description="Manual targets, one item per provided string.", examples=[["http://127.0.0.1:8000/", "demo-web.local"]])
-    scope_file: str | None = Field(None, max_length=512, description="Optional local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
+    scope_file: str | None = Field(None, max_length=512, description="Optional local Program Scope JSON file under data/programs or legacy data/bug_bounty.", examples=["data/programs/sample_program_scope.json"])
     enforce_scope: bool = Field(True, description="Skip out-of-scope targets before probing.", examples=[True])
     request_delay: float = Field(1.0, ge=0, le=30, description="Seconds to wait between requests.", examples=[1.0])
     max_requests_per_minute: int = Field(30, ge=1, le=120, description="Maximum request rate.", examples=[30])
@@ -196,7 +196,7 @@ class EndpointDiscoveryRequest(StrictApiModel):
 
     urls: list[str] = Field(default_factory=list, description="URLs or paths to analyse, one item per string.", examples=[["http://127.0.0.1:8000/account?id=123"]])
     base_url: str | None = Field(None, max_length=2048, description="Base URL for path-only entries.", examples=["http://127.0.0.1:8000"])
-    scope_file: str | None = Field(None, max_length=512, description="Optional local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
+    scope_file: str | None = Field(None, max_length=512, description="Optional local Program Scope JSON file under data/programs or legacy data/bug_bounty.", examples=["data/programs/sample_program_scope.json"])
     enforce_scope: bool = Field(True, description="Skip out-of-scope URLs before returning candidates.", examples=[True])
 
     model_config = ConfigDict(
@@ -249,7 +249,7 @@ class SafeValidationRequest(StrictApiModel):
     """Synchronous safe active validation request."""
 
     targets: list[SafeValidationTarget] = Field(default_factory=list, description="Validation targets.")
-    scope_file: str | None = Field(None, max_length=512, description="Optional local scope JSON file under data/bug_bounty.", examples=["data/bug_bounty/sample_program_scope.json"])
+    scope_file: str | None = Field(None, max_length=512, description="Optional local Program Scope JSON file under data/programs or legacy data/bug_bounty.", examples=["data/programs/sample_program_scope.json"])
     enforce_scope: bool = Field(True, description="Skip out-of-scope targets before making requests.", examples=[True])
     checks: list[str] | None = Field(None, description="Optional safe check names to run.", examples=[["reflected_input_observation"]])
     request_delay: float = Field(1.0, ge=0, le=30, description="Seconds to wait between requests.", examples=[1.0])

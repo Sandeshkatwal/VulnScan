@@ -34,13 +34,13 @@ For initial setup, see `docs\INSTALLATION.md`. For local API details, see `docs\
 Run safe endpoint and parameter discovery from a local URL list:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000
 ```
 
 With program scope enforcement and reports:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\bug_bounty\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --base-url http://127.0.0.1:8000 --scope-file data\programs\sample_program_scope.json --enforce-scope --json --html
 ```
 
 Parameter candidates are not confirmed vulnerabilities. The command does not
@@ -67,13 +67,13 @@ and does not claim a confirmed vulnerability.
 Run limited non-destructive validation checks from the sample target file:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\bug_bounty\validation\sample_validation_targets.json
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json
 ```
 
 With scope enforcement and reports:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\bug_bounty\validation\sample_validation_targets.json --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --scope-file data\programs\sample_program_scope.json --enforce-scope --json --html
 ```
 
 Safe validation uses low-rate requests, stores evidence summaries only, and
@@ -108,24 +108,24 @@ The workflow dashboard does not run exploitation, active payload checks, or auto
 
 ## Program Scope Manager
 
-Version 18.1 includes local program scope management and a safe Recon Intelligence foundation. Scope files live under `data\bug_bounty` for backward compatibility and can define in-scope domains, URLs, API base URLs, IP ranges, out-of-scope rules, forbidden actions, rate limits, allowed test types, disallowed test types, and notes.
+Version 18.1 includes local Program Scope management and a safe Recon Intelligence foundation. Scope files live under `data\programs`; legacy `data\bug_bounty` files remain supported for backward compatibility.
 
 Load a scope file and show the decision without blocking:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --bug-bounty-scope data\bug_bounty\sample_program_scope.json
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --scope-file data\programs\sample_program_scope.json
 ```
 
 Enforce scope and block out-of-scope targets:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --scope-file data\programs\sample_program_scope.json --enforce-scope
 ```
 
 Use scope with passive Web DAST:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --crawl --headers --cookies --forms --passive-summary --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --scope-file data\programs\sample_program_scope.json --enforce-scope --crawl --headers --cookies --forms --passive-summary --json --html
 ```
 
 Out-of-scope rules override in-scope rules. Unknown targets are out of scope by default. See `docs\BUG_BOUNTY.md`.
@@ -137,13 +137,13 @@ Recon imports known targets from a local text file or comma-separated CLI input,
 Run recon from the sample local file:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\recon\sample_targets.txt
 ```
 
 Run scope-aware recon and save reports:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\bug_bounty\recon\sample_targets.txt --bug-bounty-scope data\bug_bounty\sample_program_scope.json --enforce-scope --json --html
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\recon\sample_targets.txt --scope-file data\programs\sample_program_scope.json --enforce-scope --json --html
 ```
 
 Recon reports include `bug_bounty_recon`, `bug_bounty_recon_results`, `bug_bounty_recon_skipped`, and informational findings.
