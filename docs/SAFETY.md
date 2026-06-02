@@ -2,6 +2,8 @@
 
 VulScan is for authorised defensive vulnerability assessment only. Use it only on systems, networks, and web applications you own or have explicit written permission to assess.
 
+For public screenshots and portfolio demos, use demo mode and follow [SCREENSHOT_CHECKLIST.md](SCREENSHOT_CHECKLIST.md).
+
 ## Safe Defaults
 
 - The API binds to `127.0.0.1` by default.

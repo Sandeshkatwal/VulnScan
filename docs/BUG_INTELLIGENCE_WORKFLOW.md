@@ -2,6 +2,8 @@
 
 VulScan supports a local authorised Bug Intelligence Engine for responsible disclosure, bug bounty programme compatibility, and internal security testing.
 
+For screenshots, use demo mode and follow [SCREENSHOT_CHECKLIST.md](SCREENSHOT_CHECKLIST.md).
+
 Use only on systems you own or have explicit permission to test.
 
 ## Workflow

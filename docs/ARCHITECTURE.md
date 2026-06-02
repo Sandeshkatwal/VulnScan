@@ -1,5 +1,7 @@
 # VulScan Architecture
 
+For a recruiter-friendly overview, see [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md). Architecture image placeholders live under `assets/architecture/`.
+
 ## Version 18.2 Endpoint Discovery
 
 Endpoint discovery is implemented as a local, no-network analysis pipeline:

@@ -2,6 +2,8 @@
 
 VulScan is developed for local authorised testing on Windows with PowerShell.
 
+For portfolio setup and demo guidance, see [PORTFOLIO_GUIDE.md](PORTFOLIO_GUIDE.md) and [SCREENSHOT_CHECKLIST.md](SCREENSHOT_CHECKLIST.md).
+
 ## Backend Requirements
 
 - Windows 11

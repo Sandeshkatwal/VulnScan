@@ -1,5 +1,7 @@
 # VulScan Usage
 
+For a concise professional command list, see [COMMAND_REFERENCE.md](COMMAND_REFERENCE.md). For portfolio demo flow, see [PORTFOLIO_GUIDE.md](PORTFOLIO_GUIDE.md).
+
 ## Bug Intelligence Metrics
 
 Version 18.9 adds local Personal Performance Metrics for the Bug Intelligence workflow.

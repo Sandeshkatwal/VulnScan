@@ -37,3 +37,5 @@ Version 19.0 is a Bug Intelligence release hardening pass.
 - Some internal module names, JSON keys, and legacy route paths still contain `bug_bounty` for compatibility.
 - Security Finding Report generation remains file/report based; no external platform submission is performed.
 - Performance Metrics are local workflow indicators only and do not guarantee platform success or vulnerability validity.
+
+See [RELEASE_NOTES_19_1.md](RELEASE_NOTES_19_1.md) for final GitHub portfolio polish.

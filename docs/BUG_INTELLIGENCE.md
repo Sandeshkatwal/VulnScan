@@ -2,6 +2,8 @@
 
 This page is the professional terminology entry point for the authorised vulnerability discovery workflow.
 
+For the release-ready portfolio flow, see [BUG_INTELLIGENCE_WORKFLOW.md](BUG_INTELLIGENCE_WORKFLOW.md), [COMMAND_REFERENCE.md](COMMAND_REFERENCE.md), and [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md).
+
 The implementation keeps legacy command flags, API routes, JSON keys, and folders such as `--bug-bounty-scope`, `/bug-bounty/...`, and `data/bug_bounty/` for backward compatibility. User-facing documentation and dashboard navigation use Bug Intelligence, Program Scope, Recon Intelligence, Security Finding Reports, and Submission and Retest Tracking.
 
 Version 19.0 hardens the Bug Intelligence chapter for release. Prefer `scope list`, `scope check`, `--scope-file`, `data/programs/`, `data/recon/`, `data/endpoints/`, and `data/validation/`. Legacy `bug-bounty` command flags, routes, JSON keys, and directories remain compatibility aliases and may be removed later.

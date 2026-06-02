@@ -34,6 +34,13 @@
 - [ ] Dashboard demo mode works
 - [ ] Legacy `bug-report list` alias works
 - [ ] Legacy `/bug-bounty/...` API routes are documented as aliases
+- [ ] README screenshot placeholders reviewed
+- [ ] `assets/screenshots/.gitkeep` present
+- [ ] `assets/architecture/.gitkeep` present
+- [ ] `assets/demo/.gitkeep` present
+- [ ] Portfolio guide reviewed
+- [ ] Interview talking points reviewed
+- [ ] Limitations and roadmap reviewed
 
 Recommended command:
 

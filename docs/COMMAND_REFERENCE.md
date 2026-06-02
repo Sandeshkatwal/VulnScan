@@ -2,6 +2,25 @@
 
 These commands use the preferred Bug Intelligence terminology. Legacy aliases remain available for compatibility.
 
+## Backend
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
+```
+
+## API
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main api
+```
+
+## Dashboard
+
+```powershell
+cd dashboard
+npm run dev
+```
+
 ## Program Scope
 
 ```powershell

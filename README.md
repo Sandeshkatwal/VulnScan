@@ -1,27 +1,53 @@
 # VulScan
 
-VulScan is a local authorised security assessment, vulnerability management, and bug intelligence platform. It is designed for defensive assessment, reporting, triage, and remediation tracking on systems you own or have explicit permission to assess.
+Local authorised security assessment, vulnerability management, and bug intelligence platform.
 
-## Safety Statement
+![Python 3.11](https://img.shields.io/badge/Python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-local%20API-green)
+![React](https://img.shields.io/badge/React-dashboard-61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-dashboard-3178c6)
+![SQLite](https://img.shields.io/badge/SQLite-persistence-lightgrey)
+![Security Tooling](https://img.shields.io/badge/Security%20Tooling-authorised%20use-red)
+![Local First](https://img.shields.io/badge/Local%20First-no%20cloud%20required-informational)
+![Authorised Testing Only](https://img.shields.io/badge/Authorised%20Testing-Only-critical)
 
-Use VulScan only on systems and web applications you own or have explicit written permission to test. The project is intentionally scoped for safe local operation and must not be used for exploitation, credential attacks, brute forcing, destructive checks, or unauthorised scanning.
+## Safety Notice
 
-## Feature Overview
+VulScan is designed for systems you own or have explicit permission to test. It is not intended for unauthorised scanning, exploitation, brute force, credential attacks, or destructive testing.
 
-- Discovery Engine for safe TCP connect scanning and service identification.
-- Credentialed Linux Audit using explicit SSH credentials and read-only checks.
-- Credentialed Windows Audit using safe reachability checks and optional read-only WinRM indicators.
-- Passive Web DAST for bounded crawling, headers, cookies, forms, robots.txt, sitemap, scope, and politeness reporting.
-- Bug Intelligence Engine with Program Scope, Recon Intelligence, Endpoint Intelligence, Parameter Intelligence, OWASP Indicator Mapping, Safe Validation, Evidence Capture, Security Finding Reports, and Submission and Retest Tracker.
-- Finding Fingerprinting and Duplicate Detection for stable local duplicate indicators across evidence, reports, submissions, and retests.
-- Bug Intelligence Metrics and Personal Performance Dashboard for local progress, quality, duplicate, acceptance, retest, bounty, Program Performance, and vulnerability class metrics.
-- OWASP Top 10:2025 indicator mapping for existing findings and candidates.
-- Safe Active Validation foundation for limited non-destructive in-scope indicator checks.
-- Vulnerability Intelligence with local rules, local CVE-style feeds, local EPSS metadata, and local exploit-availability metadata as prioritisation signals only.
-- Prioritisation and Fix-First Dashboard data for remediation triage.
-- Local FastAPI API with jobs, filtering, pagination, report access, remediation tracking, and optional API key protection.
-- React Dashboard for jobs, findings, risk overview, trends, Bug Intelligence Workflow, reports, settings, remediation, demo mode, and portfolio mode.
-- JSON and HTML reports plus remediation tracking.
+## Project Overview
+
+VulScan is a local platform for authorised security assessment and vulnerability management. It combines discovery, credentialed audit foundations, passive web assessment, local vulnerability intelligence, prioritisation, reporting, remediation tracking, and dashboard visualisation.
+
+The project exists to show how scanner output can become a practical security workflow instead of a raw list of findings. It stores results locally, enriches findings with risk and prioritisation context, produces JSON/HTML reports, exposes a local FastAPI API, and presents the workflow in a React dashboard.
+
+VulScan is intended for security learners, junior security engineers, portfolio reviewers, and authorised internal testing labs. The Bug Intelligence Engine supports responsible disclosure, bug bounty workflow compatibility, and internal security testing through Program Scope, Recon Intelligence, Endpoint Intelligence, OWASP Indicator Mapping, Safe Validation, Evidence Capture, Security Finding Reports, Submission and Retest Tracker, Duplicate Detection, and Performance Metrics.
+
+## Key Features
+
+| Area | Capability | Status |
+|---|---|---|
+| Discovery Engine | Safe TCP connect scanning and service identification | Working |
+| Credentialed Linux Audit | SSH-based read-only Linux audit checks | Working |
+| Windows Audit | Safe Windows reachability and optional read-only WinRM indicators | Working |
+| Passive Web DAST | Bounded crawl, headers, cookies, forms, robots, sitemap, and scope-aware reporting | Working |
+| Vulnerability Intelligence | Local rules and local advisory-style matching | Working |
+| CVSS/EPSS/Exploit Metadata | Local prioritisation signals only, no exploit download or execution | Working |
+| Prioritisation Engine | Risk scoring, asset context, and fix-first guidance | Working |
+| Fix-First Dashboard | Prioritised remediation dashboard data | Working |
+| Trend Tracking | Latest scan comparison and trend context | Working |
+| API | Local FastAPI API with jobs, reports, filtering, persistence, and remediation | Working |
+| React Dashboard | Local dashboard for jobs, findings, risk, trends, reports, remediation, and Bug Intelligence | Working |
+| Program Scope | Local scope files, in-scope/out-of-scope decisions, compatibility aliases | Working |
+| Recon Intelligence | Scope-aware metadata-only recon for provided targets | Working |
+| Endpoint Intelligence | URL/path analysis and endpoint candidate discovery | Working |
+| OWASP Mapping | Indicator-only OWASP Top 10 mapping | Working |
+| Safe Validation | Limited non-destructive validation checks | Working |
+| Evidence Capture | Redacted, report-safe evidence summaries | Working |
+| Security Finding Reports | Local report listing and evidence/report workflow | Working |
+| Submission and Retest Tracker | Local status, follow-up, retest, and payment tracking | Working |
+| Duplicate Detection | Metadata-only Finding Fingerprinting and duplicate groups | Working |
+| Performance Metrics | Local Bug Intelligence progress, quality, outcome, and programme metrics | Working |
 
 ## Architecture
 
@@ -30,67 +56,42 @@ VulScan
 ├── Discovery Engine
 ├── Credentialed Scan Engine
 ├── Web DAST Engine
-├── Program Scope Manager
-├── Recon Intelligence Foundation
-├── Endpoint and Parameter Discovery
-├── OWASP Top 10 Indicator Mapping
-├── Safe Active Validation
-├── Submission and Retest Tracker
-├── Bug Intelligence Workflow Dashboard
-├── Performance Metrics Dashboard
 ├── Vulnerability Intelligence Engine
 ├── Prioritisation Engine
+├── Bug Intelligence Engine
 ├── Storage
 ├── API
 └── Dashboard
 ```
 
-Data flow:
+![Architecture Diagram](assets/architecture/vulscan-architecture.png)
 
-```text
-scan -> findings -> storage -> API -> dashboard
-scan -> JSON/HTML reports -> API report endpoints -> dashboard
-manual recon targets -> scope validation -> safe HTTP metadata -> recon reports
-endpoint URL lists -> scope validation -> endpoint/parameter candidates -> endpoint reports
-findings/candidates -> OWASP indicator mapping -> reports/API/dashboard
-validation targets -> scope enforcement -> safe indicator checks -> validation reports
-workflow records -> readiness score -> next actions -> dashboard
-```
+Architecture diagram placeholder. Add screenshot/image before final portfolio release.
 
-## Quick Start Backend
+## Dashboard Preview
 
-From the project root in PowerShell:
+![Dashboard Overview](assets/screenshots/dashboard-overview.png)
+![Jobs](assets/screenshots/dashboard-jobs.png)
+![Vulnerabilities](assets/screenshots/dashboard-vulnerabilities.png)
+![Risk](assets/screenshots/dashboard-risk.png)
+![Reports](assets/screenshots/dashboard-reports.png)
+![Bug Intelligence Workflow](assets/screenshots/bug-intelligence-workflow.png)
+![Performance Metrics](assets/screenshots/performance-metrics.png)
+
+Screenshot placeholders. Use demo mode and add final images before public portfolio release.
+
+## Quick Start
+
+Backend:
 
 ```powershell
 python -m venv .venv311
-.\.venv311\Scripts\python.exe -m pip install --upgrade pip
 .\.venv311\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv311\Scripts\python.exe -m pytest
-```
-
-Run a safe localhost scan:
-
-```powershell
 .\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
-```
-
-Run the local API:
-
-```powershell
 .\.venv311\Scripts\python.exe -m scanner.main api
 ```
 
-The API binds to `127.0.0.1:8088` by default.
-
-Run Recon Intelligence from the sample manual target list:
-
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\recon\sample_targets.txt --scope-file data\programs\sample_program_scope.json --enforce-scope --json --html
-```
-
-## Quick Start Dashboard
-
-Start the backend first, then in a second PowerShell terminal:
+Dashboard:
 
 ```powershell
 cd dashboard
@@ -104,89 +105,100 @@ Open:
 http://localhost:5173
 ```
 
-Copy `dashboard/.env.example` to `dashboard/.env` for local dashboard settings. Do not commit `.env`.
+## Demo Mode
 
-## Demo And Portfolio Mode
+Dashboard demo mode uses fake sample data only. It is intended for screenshots, UI review, and portfolio presentation.
 
-Dashboard demo mode uses fake sample data only and does not scan a real target. It is intended for screenshots, portfolio presentation, and UI review.
-
-Example dashboard `.env` values:
+Example dashboard environment values:
 
 ```text
-VITE_VULSCAN_API_URL=http://127.0.0.1:8088
-VITE_VULSCAN_API_KEY=
 VITE_VULSCAN_DEMO_MODE=true
 VITE_VULSCAN_PORTFOLIO_MODE=true
 VITE_VULSCAN_SCREENSHOT_MODE=true
 ```
 
-## Screenshots
+Do not commit `.env` files or secrets.
 
-Suggested portfolio screenshots:
+## Example Commands
 
-- Dashboard Overview
-- Jobs page
-- Vulnerability list
-- Finding detail drawer
-- Risk overview
-- Trends view
-- Reports view
-- Remediation view
-- Settings page
-- HTML report output
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --headers --cookies --forms --passive-summary
+.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\recon\sample_targets.txt --scope-file data\programs\sample_program_scope.json --enforce-scope
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --scope-file data\programs\sample_program_scope.json --enforce-scope
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --scope-file data\programs\sample_program_scope.json --enforce-scope
+.\.venv311\Scripts\python.exe -m scanner.main evidence list
+.\.venv311\Scripts\python.exe -m scanner.main security-report list
+.\.venv311\Scripts\python.exe -m scanner.main submission list
+.\.venv311\Scripts\python.exe -m scanner.main metrics summary
+.\.venv311\Scripts\python.exe -m scanner.main api
+cd dashboard
+npm run dev
+```
 
-Use demo mode for screenshots. Do not show secrets, real client data, real API keys, or sensitive local paths.
+## Bug Intelligence Workflow
 
-## Safety And Limitations
+```text
+Program Scope -> Recon -> Endpoints -> OWASP Mapping -> Safe Validation -> Evidence -> Security Report -> Submission -> Retest -> Metrics
+```
 
-- Local and authorised use only.
-- API binds to localhost by default.
-- Dashboard is local development tooling, not a hardened public deployment.
-- Credentialed scans are CLI-only and are not exposed through the API.
-- The dashboard does not collect credentials.
-- Passive Web DAST does not submit forms, authenticate, fuzz, test SQL injection, test XSS, or execute payloads.
-- Program scope management is local decision support only. Always verify the live program policy before testing.
-- Recon Intelligence only uses provided/imported targets, skips out-of-scope targets, probes gently, and stores metadata only.
-- Endpoint discovery analyses supplied URLs only. Parameter candidates are not confirmed vulnerabilities.
-- OWASP Top 10 mapping is indicator-only and must not be reported as a confirmed vulnerability without manual validation.
-- Safe active validation is non-destructive, low-rate, scope-aware, and does not confirm exploitability.
-- Vulnerability intelligence is local-file based and does not download exploit code.
-- Exploit availability metadata is a prioritisation signal only.
-- Remediation features track status only and do not patch systems or run commands.
-- Report endpoints serve only JSON and HTML files from the local `reports` directory.
-- Do not commit `.env`, API keys, passwords, tokens, private keys, client data, or local databases.
+This workflow supports responsible disclosure, bug bounty workflow compatibility, and internal security testing. It is local and tracking-oriented: VulScan does not submit reports to external platforms, store platform tokens, scrape dashboards, or execute exploit payloads.
+
+## Reports and Evidence
+
+VulScan produces local JSON and HTML reports for scanner output and workflow modules. Evidence Capture stores concise, redacted summaries designed for review and reporting. Security Finding Reports organise evidence, impact, reproduction notes, remediation guidance, and submission tracking context.
+
+Report access through the local API is restricted to files under the local `reports` directory and blocks path traversal. Sensitive values such as passwords, tokens, cookies, private keys, and authorisation headers are redacted where evidence/report helpers process text.
+
+## Limitations
+
+- VulScan is not a replacement for Nessus, Qualys, Burp Suite, or a full enterprise vulnerability management platform.
+- It is not an exploitation framework.
+- Local/offline vulnerability intelligence can become stale.
+- Findings and indicators require manual validation.
+- Demo mode uses fake data only.
+- VulScan does not submit to external disclosure platforms.
+- Enterprise RBAC, hardened deployment, and multi-user workflows are not implemented yet.
+
+## Roadmap
+
+- Docker or dev container setup.
+- CI/CD workflow.
+- PDF reporting.
+- Stronger authentication and deployment hardening.
+- Plugin system.
+- SBOM support.
+- Optional safe active check expansion.
+- Broader test coverage and dashboard visual regression checks.
+
+## What This Project Demonstrates
+
+- Python security tooling and safe scanner design.
+- FastAPI API design with local-first safety controls.
+- React and TypeScript dashboard development.
+- SQLite persistence and report workflows.
+- Vulnerability management and remediation tracking.
+- OWASP indicator mapping and prioritisation logic.
+- Responsible disclosure workflow modelling.
+- Safety-focused engineering, documentation, and release discipline.
 
 ## Documentation
 
 - [Installation](docs/INSTALLATION.md)
 - [Usage](docs/USAGE.md)
-- [Safety](docs/SAFETY.md)
-- [API](docs/API.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- [Web DAST](docs/WEB_DAST.md)
-- [Bug Intelligence Workflow](docs/BUG_INTELLIGENCE.md)
-- [Bug Intelligence Workflow Guide](docs/BUG_INTELLIGENCE_WORKFLOW.md)
-- [Bug Intelligence Metrics](docs/BUG_INTELLIGENCE_METRICS.md)
+- [Safety](docs/SAFETY.md)
+- [Bug Intelligence](docs/BUG_INTELLIGENCE.md)
+- [Bug Intelligence Workflow](docs/BUG_INTELLIGENCE_WORKFLOW.md)
 - [Command Reference](docs/COMMAND_REFERENCE.md)
-- [Security Finding Reporting](docs/SECURITY_FINDING_REPORTING.md)
-- [Submission and Retest Tracking](docs/SUBMISSION_AND_RETEST_TRACKING.md)
-- [OWASP Mapping](docs/OWASP_MAPPING.md)
-- [Duplicate Detection](docs/DUPLICATE_DETECTION.md)
-- [Vulnerability Intelligence](docs/VULNERABILITY_INTELLIGENCE.md)
-- [Prioritisation](docs/PRIORITISATION.md)
-- [Demo Guide](docs/DEMO_GUIDE.md)
-- [Screenshots](docs/SCREENSHOTS.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Release Checklist](docs/RELEASE_CHECKLIST.md)
-- [Release Notes 19.0](docs/RELEASE_NOTES_19_0.md)
+- [Portfolio Guide](docs/PORTFOLIO_GUIDE.md)
+- [Screenshot Checklist](docs/SCREENSHOT_CHECKLIST.md)
+- [Interview Talking Points](docs/INTERVIEW_TALKING_POINTS.md)
+- [Limitations](docs/LIMITATIONS.md)
+- [Future Roadmap](docs/FUTURE_ROADMAP.md)
+- [Project Summary](docs/PROJECT_SUMMARY.md)
 - [Dashboard](dashboard/README.md)
-
-## Roadmap
-
-Completed major milestones include the core scanner, storage and reporting, Linux SSH audit, Windows audit, passive Web DAST, vulnerability intelligence, prioritisation engine, API, dashboard, and packaging/release preparation.
-
-Planned areas include persistent dashboard preferences, dashboard authentication hardening, CI/CD testing, Docker or dev container support, more robust CVE feed import, SBOM import, role-based dashboard access, plugin architecture, report PDF export, and optional safe active web checks with strict scope.
 
 ## License
 
-License not selected yet.
+License not selected yet. Add a `LICENSE` file before public release.

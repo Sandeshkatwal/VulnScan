@@ -13,11 +13,16 @@ env/
 
 # Environment / secrets
 .env
+.env.*
+!.env.example
 *.env
 secrets.*
 config.local.*
 *.key
 *.pem
+dashboard/.env
+dashboard/.env.*
+!dashboard/.env.example
 
 # IDE
 .vscode/
@@ -38,6 +43,9 @@ logs/
 
 # Reports and generated outputs
 reports/
+reports/*.html
+reports/*.json
+reports/*.pdf
 exports/
 output/
 outputs/
@@ -50,8 +58,14 @@ scan_results/
 !data/programs/*.json
 !data/validation/
 !data/validation/*.json
+!assets/screenshots/.gitkeep
+!assets/architecture/.gitkeep
+!assets/demo/.gitkeep
 
 # Build/cache
+node_modules/
+dashboard/node_modules/
+dashboard/dist/
 dist/
 build/
 .cache/
