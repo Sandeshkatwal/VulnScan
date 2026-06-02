@@ -23,3 +23,6 @@ See [BUG_INTELLIGENCE_METRICS.md](BUG_INTELLIGENCE_METRICS.md) for metrics formu
 See [BUG_INTELLIGENCE_WORKFLOW.md](BUG_INTELLIGENCE_WORKFLOW.md) and [COMMAND_REFERENCE.md](COMMAND_REFERENCE.md) for the release-hardened workflow and command set.
 
 See [BUG_BOUNTY.md](BUG_BOUNTY.md) for the full workflow guide.
+## Version 20.0 OWASP Assessment
+
+Endpoint intelligence, parameter intelligence, safe validation results, and manual notes can be converted into OWASP Evidence, OWASP Category Results, OWASP Coverage, and Manual Validation Required outputs with `--owasp-assess`.

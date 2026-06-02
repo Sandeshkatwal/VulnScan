@@ -42,6 +42,7 @@ VulScan is intended for security learners, junior security engineers, portfolio 
 | Recon Intelligence | Scope-aware metadata-only recon for provided targets | Working |
 | Endpoint Intelligence | URL/path analysis and endpoint candidate discovery | Working |
 | OWASP Mapping | Indicator-only OWASP Top 10 mapping | Working |
+| OWASP Assessment Engine | OWASP Top 10:2025 evidence, category results, confidence, coverage gaps, and manual validation workflow | Foundation |
 | Safe Validation | Limited non-destructive validation checks | Working |
 | Evidence Capture | Redacted, report-safe evidence summaries | Working |
 | Security Finding Reports | Local report listing and evidence/report workflow | Working |
@@ -202,3 +203,12 @@ Report access through the local API is restricted to files under the local `repo
 ## License
 
 License not selected yet. Add a `LICENSE` file before public release.
+## OWASP Assessment Engine
+
+Version 20.0 adds an OWASP Top 10:2025 assessment foundation for category-level evidence, confidence, coverage gaps, and manual validation workflow.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --owasp-assess --json --html
+```
+
+The OWASP assessment score measures coverage and evidence quality. It is not a security rating, and no indicator found does not mean the category is secure.

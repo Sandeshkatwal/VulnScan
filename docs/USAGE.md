@@ -808,3 +808,15 @@ Version 18.8 adds metadata-only Finding Fingerprinting and Duplicate Detection:
 ```
 
 Duplicate Detection does not store parameter values, secrets, response bodies, report IDs, or platform credentials. It provides local review indicators for authorised security testing workflows.
+## OWASP Assessment Engine
+
+Use `--owasp-assess` to build OWASP Top 10:2025 category-level evidence, confidence, coverage, and manual-validation results from existing VulScan evidence.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --prioritise --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --owasp-assess --json --html
+```
+
+No indicator found does not mean a category is secure. It may mean the category was not assessed or requires authenticated/manual testing.

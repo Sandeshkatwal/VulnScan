@@ -238,6 +238,31 @@ class OWASPMapRequest(StrictApiModel):
     )
 
 
+class OWASPAssessmentBuildRequest(StrictApiModel):
+    """Build OWASP Assessment Engine results from supplied local evidence."""
+
+    findings: list[dict[str, Any]] = Field(default_factory=list, description="Existing VulScan finding dictionaries.", examples=[[]])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates.", examples=[[]])
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter intelligence candidates.", examples=[[]])
+    safe_validation_results: list[dict[str, Any]] = Field(default_factory=list, description="Safe validation result dictionaries.", examples=[[]])
+    evidence_records: list[dict[str, Any]] = Field(default_factory=list, description="Manual evidence records without secrets or full response bodies.", examples=[[]])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "findings": [],
+                    "endpoint_results": [{"path": "/admin", "endpoint_category": "admin"}],
+                    "parameter_results": [{"url": "http://127.0.0.1/account?id=1", "parameter_name": "id", "parameter_type": "idor"}],
+                    "safe_validation_results": [],
+                    "evidence_records": [],
+                }
+            ]
+        },
+    )
+
+
 class SafeValidationTarget(StrictApiModel):
     url: str = Field(..., min_length=1, max_length=2048, description="Authorised HTTP/HTTPS URL to validate.", examples=["http://127.0.0.1:8000/search?q=test"])
     candidate_type: str = Field("manual", max_length=64, description="Candidate type such as reflected_input, open_redirect, cors, directory_listing, default_file, or http_methods.", examples=["reflected_input"])

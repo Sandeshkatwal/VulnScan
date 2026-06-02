@@ -107,3 +107,13 @@ npm run dev
 ```
 
 The API binds to localhost by default. Do not expose it remotely unless you explicitly understand and accept the risk for an authorised local-network environment.
+## OWASP Assessment Engine
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --prioritise --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --owasp-assess --json --html
+```
+
+`--owasp-assess` builds report-ready OWASP Evidence, Category Results, Coverage, and Manual Validation Required sections from existing evidence only.

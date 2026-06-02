@@ -183,3 +183,10 @@ Version 19.0 adds preferred professional command and API aliases while retaining
 - API: `/program-scope/...`, `/recon`, `/endpoints/...`, and `/safe-validation`.
 
 Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as aliases. The API remains localhost-first and protected endpoints use API key enforcement when configured.
+## OWASP Assessment Engine
+
+- `scanner.owasp_rules` loads local OWASP Top 10:2025 assessment rules from `data/owasp/owasp_top10_2025_rules.json`.
+- `scanner.owasp_evidence` classifies existing findings, endpoint candidates, parameter candidates, safe validation results, vulnerability intelligence, and manual records into OWASP Evidence.
+- `scanner.owasp_assessment` builds OWASP Category Results, OWASP Coverage gaps, and an assessment quality score.
+- CLI commands opt in with `--owasp-assess`. JSON and HTML reports include `owasp_assessment_summary`, `owasp_category_results`, `owasp_evidence_items`, and `owasp_coverage_gaps`.
+- FastAPI exposes `GET /owasp/assessment/rules` and `POST /owasp/assessment/build`.

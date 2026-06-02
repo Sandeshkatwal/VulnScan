@@ -448,6 +448,105 @@
     </section>
     {% endif %}
 
+    {% set assessment = report.get("owasp_assessment_summary", {}) %}
+    {% if assessment.get("enabled") %}
+    <section>
+      <h2>OWASP Assessment Engine</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">OWASP Version</div><div class="value">{{ assessment.get("owasp_version", "2025") }}</div></div>
+        <div class="metric"><div class="label">Evidence Items</div><div class="value">{{ assessment.get("total_evidence_items", 0) }}</div></div>
+        <div class="metric"><div class="label">Strong Indicators</div><div class="value">{{ assessment.get("strong_indicators_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Coverage Gaps</div><div class="value">{{ assessment.get("coverage_gaps_count", 0) }}</div></div>
+      </div>
+      <p><strong>Confirmed findings:</strong> {{ assessment.get("confirmed_findings_count", 0) }}</p>
+      <p><strong>Weak indicators:</strong> {{ assessment.get("weak_indicators_count", 0) }}</p>
+      <p><strong>Manual Validation Required:</strong> {{ assessment.get("manual_validation_required_count", 0) }}</p>
+      <p><strong>Assessment quality score:</strong> {{ assessment.get("assessment_quality_score", 0) }} - {{ assessment.get("assessment_quality_label", "Limited") }}</p>
+      <p><strong>Important:</strong> No indicator found does not mean the category is secure. It may mean the category was not assessed or requires authenticated/manual testing.</p>
+      <p><strong>Limitations:</strong> {{ assessment.get("limitations", []) | join("; ") }}</p>
+
+      <h3>OWASP Coverage Matrix</h3>
+      <table>
+        <thead><tr><th>Category</th><th>Assessment Status</th><th>Coverage Status</th><th>Evidence</th><th>Confidence</th><th>Manual Validation</th><th>Top Recommendation</th></tr></thead>
+        <tbody>
+          {% for result in report.get("owasp_category_results", []) %}
+          <tr>
+            <td>{{ result.get("owasp_id") }} {{ result.get("name") }}</td>
+            <td>{{ result.get("assessment_status") }}</td>
+            <td>{{ result.get("coverage_status") }}</td>
+            <td>{{ result.get("evidence_count", 0) }}</td>
+            <td>{{ result.get("highest_confidence") }}</td>
+            <td>{{ result.get("manual_validation_required_count", 0) }}</td>
+            <td>{{ result.get("recommendation_themes", []) | first }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3>OWASP Category Results</h3>
+      {% for result in report.get("owasp_category_results", []) %}
+      <div class="risk-card">
+        <p><strong>{{ result.get("owasp_id") }} {{ result.get("name") }}</strong></p>
+        <p>Status: {{ result.get("assessment_status") }} | Coverage: {{ result.get("coverage_status") }} | Confidence: {{ result.get("highest_confidence") }}</p>
+        <p>Evidence: {{ result.get("evidence_count", 0) }} | Strong indicators: {{ result.get("strong_indicator_count", 0) }} | Weak indicators: {{ result.get("weak_indicator_count", 0) }} | Confirmed: {{ result.get("confirmed_count", 0) }}</p>
+        <p><strong>Limitations:</strong> {{ result.get("limitations") }}</p>
+      </div>
+      {% endfor %}
+
+      <h3>OWASP Evidence</h3>
+      {% if report.get("owasp_evidence_items") %}
+      <table>
+        <thead><tr><th>Title</th><th>Source</th><th>Affected URL</th><th>OWASP Category</th><th>Evidence Strength</th><th>Confidence</th><th>Status</th><th>Manual Validation</th></tr></thead>
+        <tbody>
+          {% for item in report.get("owasp_evidence_items", [])[:50] %}
+          <tr>
+            <td>{{ item.get("title") }}</td>
+            <td>{{ item.get("source") }}</td>
+            <td>{{ item.get("affected_url") }}</td>
+            <td>{{ item.get("owasp_id") }} {{ item.get("owasp_name") }}</td>
+            <td>{{ item.get("evidence_strength") }}</td>
+            <td>{{ item.get("confidence") }}</td>
+            <td>{{ item.get("assessment_status") }}</td>
+            <td>{{ "Yes" if item.get("manual_validation_required") else "No" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No OWASP Assessment Engine evidence items were generated.</p>
+      {% endif %}
+
+      <h3>Manual Validation Required</h3>
+      {% set manual_items = report.get("owasp_evidence_items", []) | selectattr("manual_validation_required") | list %}
+      {% if manual_items %}
+      <table>
+        <thead><tr><th>Category</th><th>Evidence</th><th>Reason</th></tr></thead>
+        <tbody>
+          {% for item in manual_items[:30] %}
+          <tr><td>{{ item.get("owasp_id") }} {{ item.get("owasp_name") }}</td><td>{{ item.get("title") }}</td><td>{{ item.get("limitation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No manual validation requirements were attached to generated OWASP evidence.</p>
+      {% endif %}
+
+      <h3>Coverage Gaps</h3>
+      {% if report.get("owasp_coverage_gaps") %}
+      <table>
+        <thead><tr><th>Category</th><th>Coverage</th><th>Explanation</th></tr></thead>
+        <tbody>
+          {% for gap in report.get("owasp_coverage_gaps", []) %}
+          <tr><td>{{ gap.get("owasp_id") }} {{ gap.get("owasp_name") }}</td><td>{{ gap.get("coverage_status") }}</td><td>{{ gap.get("explanation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No OWASP coverage gaps were generated.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set owasp = report.get("owasp_top10_summary", {}) %}
     {% if owasp.get("enabled") %}
     <section>

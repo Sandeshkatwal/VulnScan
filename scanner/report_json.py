@@ -153,6 +153,13 @@ def save_json_report(
             {"enabled": False, "limitations": ["OWASP Top 10 mapping was not enabled."]},
         ),
         "owasp_top10_mapped_items": scan_result.get("owasp_top10_mapped_items", []),
+        "owasp_assessment_summary": scan_result.get(
+            "owasp_assessment_summary",
+            {"enabled": False, "limitations": ["OWASP Assessment Engine was not enabled."]},
+        ),
+        "owasp_category_results": scan_result.get("owasp_category_results", []),
+        "owasp_evidence_items": scan_result.get("owasp_evidence_items", []),
+        "owasp_coverage_gaps": scan_result.get("owasp_coverage_gaps", []),
         "safe_active_validation": scan_result.get(
             "safe_active_validation",
             {"enabled": False, "limitations": ["Safe active validation was not enabled."]},

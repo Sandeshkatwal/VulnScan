@@ -724,6 +724,101 @@ export interface OWASPMapResponse {
   [key: string]: unknown
 }
 
+export type OWASPEvidenceStrength = 'weak_indicator' | 'strong_indicator' | 'confirmed_finding' | 'informational' | 'not_assessed'
+export type OWASPAssessmentStatus = 'detected_indicator' | 'needs_manual_validation' | 'confirmed' | 'not_detected' | 'not_assessed' | 'coverage_gap'
+export type OWASPCoverageStatus = 'assessed' | 'partially_assessed' | 'not_assessed' | 'manual_only' | 'coverage_gap'
+
+export interface OWASPEvidenceItem {
+  evidence_id?: string
+  source?: string
+  source_id?: string
+  title?: string
+  affected_url?: string
+  affected_parameter?: string
+  endpoint_category?: string
+  finding_category?: string
+  observed_signal?: string
+  owasp_id?: string
+  owasp_name?: string
+  confidence?: 'Low' | 'Medium' | 'High' | string
+  evidence_strength?: OWASPEvidenceStrength | string
+  assessment_status?: OWASPAssessmentStatus | string
+  manual_validation_required?: boolean
+  evidence_summary?: string
+  recommendation_theme?: string
+  limitation?: string
+  created_at?: string
+  [key: string]: unknown
+}
+
+export interface OWASPCategoryResult {
+  owasp_id?: string
+  name?: string
+  assessment_status?: OWASPAssessmentStatus | string
+  highest_confidence?: 'Low' | 'Medium' | 'High' | string
+  evidence_count?: number
+  confirmed_count?: number
+  strong_indicator_count?: number
+  weak_indicator_count?: number
+  manual_validation_required_count?: number
+  coverage_status?: OWASPCoverageStatus | string
+  top_evidence?: OWASPEvidenceItem[]
+  recommendation_themes?: string[]
+  limitations?: string
+  [key: string]: unknown
+}
+
+export interface OWASPCoverageGap {
+  owasp_id?: string
+  owasp_name?: string
+  coverage_status?: OWASPCoverageStatus | string
+  explanation?: string
+  manual_validation_required?: boolean
+  [key: string]: unknown
+}
+
+export interface OWASPAssessmentSummary {
+  enabled?: boolean
+  owasp_version?: string
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  confirmed_findings_count?: number
+  strong_indicators_count?: number
+  weak_indicators_count?: number
+  manual_validation_required_count?: number
+  categories_assessed_count?: number
+  categories_with_indicators_count?: number
+  coverage_gaps_count?: number
+  highest_signal_categories?: Array<{ owasp_id?: string; owasp_name?: string; evidence_count?: number; highest_confidence?: string }>
+  assessment_quality_score?: number
+  assessment_quality_label?: string
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface OWASPAssessmentBuildRequest {
+  findings?: Finding[]
+  endpoint_results?: EndpointResult[]
+  parameter_results?: ParameterResult[]
+  safe_validation_results?: SafeValidationResult[]
+  evidence_records?: ApiRecord[]
+}
+
+export interface OWASPAssessmentResponse {
+  owasp_assessment_summary?: OWASPAssessmentSummary
+  owasp_category_results?: OWASPCategoryResult[]
+  owasp_evidence_items?: OWASPEvidenceItem[]
+  owasp_coverage_gaps?: OWASPCoverageGap[]
+  [key: string]: unknown
+}
+
+export interface OWASPAssessmentRulesResponse {
+  version?: string
+  categories?: OWASPCategory[]
+  [key: string]: unknown
+}
+
 export interface SafeValidationTarget {
   url: string
   candidate_type?: string

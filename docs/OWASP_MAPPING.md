@@ -126,3 +126,8 @@ presence.
 - No indicator does not mean no vulnerability exists.
 - Workflow and design categories require manual review.
 - Mapping depends on the evidence already collected by safe VulScan modules.
+## Version 20.0 OWASP Assessment Engine
+
+The existing OWASP mapping remains indicator-only. Version 20.0 adds the OWASP Assessment Engine as a separate evidence and coverage layer. Use `--owasp-assess` to build OWASP Evidence, OWASP Category Results, OWASP Coverage, Manual Validation Required counts, and report-ready coverage gaps from existing VulScan results.
+
+See `docs/OWASP_ASSESSMENT.md`.

@@ -57,6 +57,8 @@ from scanner.owasp_mapping import (
     build_owasp_summary,
     load_owasp_mapping,
 )
+from scanner.owasp_assessment import attach_owasp_assessment
+from scanner.owasp_rules import OWASPAssessmentRulesError
 from scanner.safe_active_validation import (
     VALIDATION_REPORTS_DIR,
     SafeActiveValidationError,
@@ -981,6 +983,13 @@ def scan(
             help="Attach OWASP Top 10:2025 indicator mapping to findings and reports.",
         ),
     ] = False,
+    owasp_assess: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-assess",
+            help="Build OWASP Assessment Engine category results from existing evidence.",
+        ),
+    ] = False,
     use_asset_criticality: Annotated[
         bool,
         typer.Option(
@@ -1597,13 +1606,20 @@ def scan(
         scan_result.get("prioritisation_trends", {}),
         scan_result.get("prioritisation_trend_details", {}),
     )
-    if owasp_map:
+    if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
         except OWASPMappingError as exc:
             console.print(f"[red]OWASP mapping error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_owasp_summary(scan_result.get("owasp_top10_summary", {}), scan_result.get("owasp_top10_mapped_items", []))
+    if owasp_assess:
+        try:
+            attach_owasp_assessment(scan_result)
+        except OWASPAssessmentRulesError as exc:
+            console.print(f"[red]OWASP assessment error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
 
     _print_findings(scan_result["findings"])
 
@@ -1877,6 +1893,13 @@ def web_scan(
         typer.Option(
             "--owasp-map",
             help="Attach OWASP Top 10:2025 indicator mapping to web findings and reports.",
+        ),
+    ] = False,
+    owasp_assess: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-assess",
+            help="Build OWASP Assessment Engine category results from existing web evidence.",
         ),
     ] = False,
     bug_bounty_scope: Annotated[
@@ -2175,13 +2198,20 @@ def web_scan(
 
     _print_web_dast_report(scan_result["web_dast_summary"], scan_result["web_dast_sections"])
     _print_bug_bounty_scope_summary(scan_result.get("bug_bounty_scope", {}))
-    if owasp_map:
+    if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
         except OWASPMappingError as exc:
             console.print(f"[red]OWASP mapping error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_owasp_summary(scan_result.get("owasp_top10_summary", {}), scan_result.get("owasp_top10_mapped_items", []))
+    if owasp_assess:
+        try:
+            attach_owasp_assessment(scan_result)
+        except OWASPAssessmentRulesError as exc:
+            console.print(f"[red]OWASP assessment error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
     _print_findings(scan_result["findings"])
 
     if json_report or html_report:
@@ -2414,6 +2444,13 @@ def endpoints(
             help="Attach OWASP Top 10:2025 indicator mapping to endpoint candidates.",
         ),
     ] = False,
+    owasp_assess: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-assess",
+            help="Build OWASP Assessment Engine category results from endpoint candidates.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option(
@@ -2464,13 +2501,20 @@ def endpoints(
         "demo_mode": False,
         "demo_notice": "",
     }
-    if owasp_map:
+    if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
         except OWASPMappingError as exc:
             console.print(f"[red]OWASP mapping error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_owasp_summary(scan_result.get("owasp_top10_summary", {}), scan_result.get("owasp_top10_mapped_items", []))
+    if owasp_assess:
+        try:
+            attach_owasp_assessment(scan_result)
+        except OWASPAssessmentRulesError as exc:
+            console.print(f"[red]OWASP assessment error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
     if json_report:
         report_path = save_json_report(
             scan_result=scan_result,
@@ -2551,6 +2595,13 @@ def validate(
         bool,
         typer.Option("--html", help="Save validation results to an HTML report in reports/validation."),
     ] = False,
+    owasp_assess: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-assess",
+            help="Build OWASP Assessment Engine category results from validation evidence.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option("--save-db", help="Accepted for workflow consistency; validation reports are file-based in Version 18.4."),
@@ -2607,6 +2658,15 @@ def validate(
         "demo_mode": False,
         "demo_notice": "",
     }
+    if owasp_assess:
+        try:
+            attach_owasp_metadata(scan_result)
+            attach_owasp_assessment(scan_result)
+        except (OWASPMappingError, OWASPAssessmentRulesError) as exc:
+            console.print(f"[red]OWASP assessment error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_summary(scan_result.get("owasp_top10_summary", {}), scan_result.get("owasp_top10_mapped_items", []))
+        _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
     if json_report:
         report_path = save_json_report(scan_result=scan_result, scanner_name="VulScan", scanner_version=__version__, scan_start_time=scan_start_time, scan_end_time=scan_end_time, reports_dir=VALIDATION_REPORTS_DIR)
         console.print(f"[bold]JSON validation report saved:[/bold] {report_path}")
@@ -3586,6 +3646,44 @@ def _print_owasp_summary(summary: dict[str, Any], mapped_items: list[dict[str, A
         for gap in gaps[:10]:
             gap_table.add_row(str(gap.get("owasp_id") or ""), "No indicator does not mean no vulnerability.")
         console.print(gap_table)
+
+
+def _print_owasp_assessment_summary(summary: dict[str, Any], category_results: list[dict[str, Any]]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="OWASP Assessment Engine Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("OWASP version", summary.get("owasp_version")),
+        ("Evidence items", summary.get("total_evidence_items")),
+        ("Confirmed findings", summary.get("confirmed_findings_count")),
+        ("Strong indicators", summary.get("strong_indicators_count")),
+        ("Weak indicators", summary.get("weak_indicators_count")),
+        ("Manual validation required", summary.get("manual_validation_required_count")),
+        ("Coverage gaps", summary.get("coverage_gaps_count")),
+        ("Assessment quality", f"{summary.get('assessment_quality_score', 0)} - {summary.get('assessment_quality_label', 'Limited')}"),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+    if category_results:
+        category_table = Table(title="OWASP Category Results")
+        category_table.add_column("Category")
+        category_table.add_column("Status")
+        category_table.add_column("Coverage")
+        category_table.add_column("Evidence", justify="right")
+        category_table.add_column("Confidence")
+        for result in category_results:
+            category_table.add_row(
+                f"{result.get('owasp_id')} {result.get('name')}",
+                str(result.get("assessment_status") or ""),
+                str(result.get("coverage_status") or ""),
+                str(result.get("evidence_count") or 0),
+                str(result.get("highest_confidence") or "Low"),
+            )
+        console.print(category_table)
 
 
 def _print_safe_validation_summary(summary: dict[str, Any]) -> None:

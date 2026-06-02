@@ -31,6 +31,9 @@ import type {
   EndpointDiscoveryResponse,
   EndpointReportsResponse,
   OWASPCategoriesResponse,
+  OWASPAssessmentBuildRequest,
+  OWASPAssessmentResponse,
+  OWASPAssessmentRulesResponse,
   OWASPMapRequest,
   OWASPMapResponse,
   RetestRecord,
@@ -284,6 +287,18 @@ export function getOWASPCategories(): Promise<OWASPCategoriesResponse> {
 
 export function mapOWASP(payload: OWASPMapRequest): Promise<OWASPMapResponse> {
   return request<OWASPMapResponse>('/owasp/map', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getOWASPAssessmentRules(): Promise<OWASPAssessmentRulesResponse> {
+  return request<OWASPAssessmentRulesResponse>('/owasp/assessment/rules')
+}
+
+export function buildOWASPAssessment(payload: OWASPAssessmentBuildRequest): Promise<OWASPAssessmentResponse> {
+  return request<OWASPAssessmentResponse>('/owasp/assessment/build', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

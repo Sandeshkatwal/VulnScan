@@ -40,9 +40,11 @@ from scanner.bug_intelligence_metrics import MetricsDateRangeError
 from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
+from scanner.owasp_assessment import build_owasp_assessment
+from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment_rules
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -85,7 +87,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "19.0"
+API_VERSION = "20.0"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -148,6 +150,8 @@ PROTECTED_PATHS = {
     "/bug-intelligence/metrics/export",
     "/owasp/categories",
     "/owasp/map",
+    "/owasp/assessment/rules",
+    "/owasp/assessment/build",
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
@@ -161,7 +165,7 @@ TAGS_METADATA = [
     {"name": "Exports", "description": "Local export metadata for saved findings."},
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
     {"name": "Bug Intelligence", "description": "Local program scope, recon intelligence, endpoint discovery, and safe validation workflows."},
-    {"name": "OWASP", "description": "Indicator-only OWASP Top 10:2025 mapping for existing findings and candidates."},
+    {"name": "OWASP", "description": "OWASP Top 10:2025 indicator mapping and assessment results for existing evidence and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
     {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
     {"name": "Duplicate Detection", "description": "Stable local finding fingerprinting and duplicate detection metadata."},
@@ -881,6 +885,43 @@ def create_app(
         except OWASPMappingError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
         return {"owasp_top10_summary": summary, "owasp_top10_mapped_items": mapped_items}
+
+    @app.get(
+        "/owasp/assessment/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List OWASP Assessment Engine rules",
+        description="Returns local OWASP Top 10:2025 assessment rules. Does not perform testing or accept file paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_owasp_assessment_rules() -> dict[str, Any]:
+        try:
+            return load_owasp_assessment_rules()
+        except OWASPAssessmentRulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/assessment/build",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build OWASP Assessment Engine results",
+        description="Builds category-level OWASP assessment results from supplied existing findings, endpoint candidates, parameter candidates, safe validation results, and manual evidence.",
+        responses=ERROR_RESPONSES,
+    )
+    def build_owasp_assessment_endpoint(request: OWASPAssessmentBuildRequest) -> dict[str, Any]:
+        try:
+            return build_owasp_assessment(
+                {
+                    "host": "api-supplied-evidence",
+                    "findings": request.findings,
+                    "endpoint_results": request.endpoint_results,
+                    "parameter_results": request.parameter_results,
+                    "safe_active_validation_results": request.safe_validation_results,
+                    "evidence_records": request.evidence_records,
+                }
+            )
+        except OWASPAssessmentRulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post(
         "/scans",

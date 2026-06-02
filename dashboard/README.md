@@ -145,3 +145,6 @@ Metrics are local-only and do not access external platforms, browser sessions, c
 ## Screenshot Guidance
 
 See [../docs/SCREENSHOT_CHECKLIST.md](../docs/SCREENSHOT_CHECKLIST.md).
+## OWASP Assessment
+
+Version 20.0 adds an OWASP Assessment view for OWASP Top 10:2025 evidence, category results, coverage matrix, manual validation requirements, coverage gaps, and the existing OWASP indicator mapping. Use `/owasp/assessment/rules` and `/owasp/assessment/build`, or select a job result that already includes `owasp_assessment_summary`.

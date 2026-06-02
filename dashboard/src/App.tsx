@@ -84,7 +84,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '19.0-demo', api_version: '19.0' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '20.0-demo', api_version: '20.0' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
