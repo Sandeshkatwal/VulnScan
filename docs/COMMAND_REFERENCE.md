@@ -117,3 +117,13 @@ The API binds to localhost by default. Do not expose it remotely unless you expl
 ```
 
 `--owasp-assess` builds report-ready OWASP Evidence, Category Results, Coverage, and Manual Validation Required sections from existing evidence only.
+
+## A04 Cryptographic Failures
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a04-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a04-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a04-checks --owasp-assess --json --html
+```
+
+`--a04-checks` adds safe A04 Cryptographic Failures evidence for transport security indicators, HSTS, cookie security evidence, sensitive data over cleartext indicators, mixed content indicators, and TLS metadata.

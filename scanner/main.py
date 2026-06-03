@@ -58,6 +58,7 @@ from scanner.owasp_mapping import (
     load_owasp_mapping,
 )
 from scanner.owasp_assessment import attach_owasp_assessment
+from scanner.owasp_a04_crypto import A04RulesError, attach_a04_crypto
 from scanner.owasp_rules import OWASPAssessmentRulesError
 from scanner.safe_active_validation import (
     VALIDATION_REPORTS_DIR,
@@ -1902,6 +1903,13 @@ def web_scan(
             help="Build OWASP Assessment Engine category results from existing web evidence.",
         ),
     ] = False,
+    a04_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a04-checks",
+            help="Run safe A04 Cryptographic Failures and transport security evidence checks.",
+        ),
+    ] = False,
     bug_bounty_scope: Annotated[
         Path | None,
         typer.Option(
@@ -2151,6 +2159,8 @@ def web_scan(
     summary = web_result["web_scan_summary"]
     scan_result = {
         "host": summary["allowed_host"],
+        "target": url,
+        "url": url,
         "resolved_ip": "",
         "scan_mode": "web-dast",
         "duration_seconds": summary["duration_seconds"],
@@ -2198,6 +2208,13 @@ def web_scan(
 
     _print_web_dast_report(scan_result["web_dast_summary"], scan_result["web_dast_sections"])
     _print_bug_bounty_scope_summary(scan_result.get("bug_bounty_scope", {}))
+    if a04_checks:
+        try:
+            attach_a04_crypto(scan_result)
+        except A04RulesError as exc:
+            console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
     if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -2451,6 +2468,13 @@ def endpoints(
             help="Build OWASP Assessment Engine category results from endpoint candidates.",
         ),
     ] = False,
+    a04_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a04-checks",
+            help="Run safe A04 Cryptographic Failures and transport security evidence checks on supplied URLs.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option(
@@ -2501,6 +2525,13 @@ def endpoints(
         "demo_mode": False,
         "demo_notice": "",
     }
+    if a04_checks:
+        try:
+            attach_a04_crypto(scan_result, collect_tls=False)
+        except A04RulesError as exc:
+            console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
     if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -2602,6 +2633,13 @@ def validate(
             help="Build OWASP Assessment Engine category results from validation evidence.",
         ),
     ] = False,
+    a04_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a04-checks",
+            help="Run safe A04 Cryptographic Failures and transport security evidence checks on validation targets.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option("--save-db", help="Accepted for workflow consistency; validation reports are file-based in Version 18.4."),
@@ -2658,6 +2696,13 @@ def validate(
         "demo_mode": False,
         "demo_notice": "",
     }
+    if a04_checks:
+        try:
+            attach_a04_crypto(scan_result, collect_tls=False)
+        except A04RulesError as exc:
+            console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
     if owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -3684,6 +3729,31 @@ def _print_owasp_assessment_summary(summary: dict[str, Any], category_results: l
                 str(result.get("highest_confidence") or "Low"),
             )
         console.print(category_table)
+
+
+def _print_a04_crypto_summary(summary: dict[str, Any]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="A04 Cryptographic Failures Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Evidence items", summary.get("total_evidence_items")),
+        ("Strong indicators", summary.get("strong_indicators_count")),
+        ("Weak indicators", summary.get("weak_indicators_count")),
+        ("Informational", summary.get("informational_count")),
+        ("Manual validation required", summary.get("manual_validation_required_count")),
+        ("HTTP URLs", summary.get("http_urls_count")),
+        ("HTTPS URLs", summary.get("https_urls_count")),
+        ("Insecure cookies", summary.get("insecure_cookie_count")),
+        ("HSTS issues", summary.get("hsts_issue_count")),
+        ("Mixed content indicators", summary.get("mixed_content_indicator_count")),
+        ("TLS metadata available", summary.get("tls_metadata_available")),
+        ("Highest confidence", summary.get("highest_confidence")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
 
 
 def _print_safe_validation_summary(summary: dict[str, Any]) -> None:

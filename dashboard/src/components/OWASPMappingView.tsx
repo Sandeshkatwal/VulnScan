@@ -11,7 +11,11 @@ import type {
   OWASPMapResponse,
   OWASPMappedItem,
   OWASPSummary,
+  A04CryptoEvidenceItem,
+  A04CryptoSummary,
+  A04TlsMetadata,
 } from '../types/api'
+import { A04CryptoView } from './A04CryptoView'
 import { ErrorAlert } from './ErrorAlert'
 import { OWASPCategoryTable } from './OWASPCategoryTable'
 import { OWASPCoverageChart } from './OWASPCoverageChart'
@@ -125,6 +129,9 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
   const existingCategoryResults = resultPayload?.owasp_category_results as OWASPCategoryResult[] | undefined
   const existingEvidenceItems = resultPayload?.owasp_evidence_items as OWASPEvidenceItem[] | undefined
   const existingCoverageGaps = resultPayload?.owasp_coverage_gaps as OWASPCoverageGap[] | undefined
+  const a04Summary = resultPayload?.a04_crypto_summary as A04CryptoSummary | undefined
+  const a04Evidence = (resultPayload?.a04_crypto_evidence as A04CryptoEvidenceItem[] | undefined) || []
+  const a04TlsMetadata = (resultPayload?.a04_tls_metadata as A04TlsMetadata[] | undefined) || []
 
   const summary = existingSummary || mapped?.owasp_top10_summary
   const items = existingItems || mapped?.owasp_top10_mapped_items || []
@@ -199,6 +206,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
         </div>
         <AssessmentCoverageMatrix categories={categories} categoryResults={categoryResults} />
       </article>
+
+      <A04CryptoView summary={a04Summary} evidence={a04Evidence} tlsMetadata={a04TlsMetadata} />
 
       <article className="panel panel--wide">
         <div className="panel-heading">

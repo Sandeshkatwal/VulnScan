@@ -547,6 +547,85 @@
     </section>
     {% endif %}
 
+    {% set a04 = report.get("a04_crypto_summary", {}) %}
+    {% if a04.get("enabled") %}
+    <section>
+      <h2>A04 Cryptographic Failures and Transport Security</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">A04 Evidence</div><div class="value">{{ a04.get("total_evidence_items", 0) }}</div></div>
+        <div class="metric"><div class="label">Strong Indicators</div><div class="value">{{ a04.get("strong_indicators_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Insecure Cookies</div><div class="value">{{ a04.get("insecure_cookie_count", 0) }}</div></div>
+        <div class="metric"><div class="label">TLS Metadata</div><div class="value">{{ "Available" if a04.get("tls_metadata_available") else "Limited" }}</div></div>
+      </div>
+      <p><strong>HTTP URLs:</strong> {{ a04.get("http_urls_count", 0) }} | <strong>HTTPS URLs:</strong> {{ a04.get("https_urls_count", 0) }}</p>
+      <p><strong>Weak indicators:</strong> {{ a04.get("weak_indicators_count", 0) }} | <strong>Informational:</strong> {{ a04.get("informational_count", 0) }} | <strong>Manual validation required:</strong> {{ a04.get("manual_validation_required_count", 0) }}</p>
+      <p><strong>HSTS issues:</strong> {{ a04.get("hsts_issue_count", 0) }} | <strong>Mixed content indicators:</strong> {{ a04.get("mixed_content_indicator_count", 0) }} | <strong>Highest confidence:</strong> {{ a04.get("highest_confidence", "Low") }}</p>
+
+      <h3>Transport Security Evidence</h3>
+      {% set transport_items = report.get("a04_crypto_evidence", []) | selectattr("rule_group", "in", ["transport_security", "cleartext_sensitive_workflows", "hsts"]) | list %}
+      {% if transport_items %}
+      <table>
+        <thead><tr><th>URL</th><th>Scheme</th><th>Issue</th><th>Confidence</th><th>Evidence Strength</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in transport_items[:40] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("scheme") }}</td><td>{{ item.get("title") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("evidence_strength") }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No transport security indicators were generated from available evidence.</p>
+      {% endif %}
+
+      <h3>Cookie Security Evidence</h3>
+      {% set cookie_items = report.get("a04_crypto_evidence", []) | selectattr("rule_group", "equalto", "cookie_security") | list %}
+      {% if cookie_items %}
+      <table>
+        <thead><tr><th>URL</th><th>Cookie Name</th><th>Missing Attributes</th><th>Confidence</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in cookie_items[:40] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("cookie_name") }}</td><td>{{ item.get("missing_attributes", []) | join(", ") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No cookie security evidence was generated from available metadata.</p>
+      {% endif %}
+
+      <h3>Mixed Content Indicators</h3>
+      {% set mixed_items = report.get("a04_crypto_evidence", []) | selectattr("rule_group", "equalto", "mixed_content_indicators") | list %}
+      {% if mixed_items %}
+      <table>
+        <thead><tr><th>URL</th><th>Resource Type</th><th>Resource Scheme</th><th>Confidence</th><th>Manual Validation</th></tr></thead>
+        <tbody>
+          {% for item in mixed_items[:40] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("resource_type") }}</td><td>{{ item.get("resource_scheme") }}</td><td>{{ item.get("confidence") }}</td><td>{{ "Required" if item.get("manual_validation_required") else "Not required" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No mixed content indicators were generated from available evidence.</p>
+      {% endif %}
+
+      <h3>TLS Metadata</h3>
+      {% if report.get("a04_tls_metadata") %}
+      <table>
+        <thead><tr><th>Host</th><th>Issuer</th><th>Subject</th><th>Expiry</th><th>Days Until Expiry</th><th>Self-Signed Indicator</th><th>Hostname Match</th><th>Limitation</th></tr></thead>
+        <tbody>
+          {% for item in report.get("a04_tls_metadata", []) %}
+          <tr><td>{{ item.get("host") }}</td><td>{{ item.get("issuer_common_name") }}</td><td>{{ item.get("subject_common_name") }}</td><td>{{ item.get("not_after") }}</td><td>{{ item.get("days_until_expiry") }}</td><td>{{ item.get("self_signed_indicator") }}</td><td>{{ item.get("hostname_match") }}</td><td>{{ item.get("error") or (item.get("limitations", []) | join("; ")) }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">TLS metadata was not available for this A04 assessment.</p>
+      {% endif %}
+
+      <h3>Recommendations and Limitations</h3>
+      <p><strong>Recommendations:</strong> {{ a04.get("recommendations", []) | join("; ") }}</p>
+      <p><strong>Limitations:</strong> {{ a04.get("limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
     {% set owasp = report.get("owasp_top10_summary", {}) %}
     {% if owasp.get("enabled") %}
     <section>

@@ -81,3 +81,8 @@ Use assessment wording: Indicator, Evidence, Confidence, Manual Validation Requi
 - Local vulnerability intelligence depends on local inventory and metadata quality.
 - Passive evidence may show indicators without proving impact.
 - Assessment quality reflects coverage and evidence depth, not whether the target is safe or secure.
+# Version 20.2 A04 Cryptographic Failures
+
+`--a04-checks` adds dedicated A04 Cryptographic Failures evidence to the OWASP Assessment Engine. Evidence covers transport security indicators, cookie security evidence, sensitive data over cleartext indicators, HSTS, mixed content indicators, and TLS metadata. When `--owasp-assess` is also used, A04 evidence feeds `owasp_evidence_items` and the `A04:2025` category result.
+
+The module is indicator-based and may require manual validation. It does not submit forms, capture credentials, store cookie values, store secrets, test weak TLS ciphers, or perform downgrade testing.

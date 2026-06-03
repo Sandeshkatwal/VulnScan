@@ -1520,6 +1520,61 @@ dd {
   background: var(--accent);
 }
 
+.a04-panel h3 {
+  margin: 20px 0 12px;
+  font-size: 16px;
+}
+
+.a04-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.a04-confidence {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: var(--panel-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.a04-confidence--high {
+  color: #ffd1d1;
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(127, 29, 29, 0.28);
+}
+
+.a04-confidence--medium {
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(120, 53, 15, 0.28);
+}
+
+.a04-confidence--low {
+  color: #bfdbfe;
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(30, 64, 175, 0.2);
+}
+
+.a04-recommendations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.a04-recommendations span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: var(--muted);
+  background: var(--panel-soft);
+  font-size: 13px;
+}
+
 .summary-grid,
 .category-card-grid,
 .manual-validation-grid {

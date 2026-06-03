@@ -820,3 +820,14 @@ Use `--owasp-assess` to build OWASP Top 10:2025 category-level evidence, confide
 ```
 
 No indicator found does not mean a category is secure. It may mean the category was not assessed or requires authenticated/manual testing.
+# A04 Cryptographic Failures Checks
+
+Run safe A04 Cryptographic Failures and transport security checks with:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a04-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a04-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a04-checks --owasp-assess --json --html
+```
+
+The checks collect metadata only. Cookie values, secrets, tokens, passwords, private keys, and full sensitive response bodies are not stored.

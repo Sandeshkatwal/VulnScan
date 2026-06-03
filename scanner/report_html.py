@@ -162,6 +162,12 @@ def save_html_report(
         "owasp_category_results": scan_result.get("owasp_category_results", []),
         "owasp_evidence_items": scan_result.get("owasp_evidence_items", []),
         "owasp_coverage_gaps": scan_result.get("owasp_coverage_gaps", []),
+        "a04_crypto_summary": scan_result.get(
+            "a04_crypto_summary",
+            {"enabled": False, "limitations": ["A04 Cryptographic Failures checks were not enabled."]},
+        ),
+        "a04_crypto_evidence": scan_result.get("a04_crypto_evidence", []),
+        "a04_tls_metadata": scan_result.get("a04_tls_metadata", []),
         "safe_active_validation": scan_result.get(
             "safe_active_validation",
             {"enabled": False, "limitations": ["Safe active validation was not enabled."]},

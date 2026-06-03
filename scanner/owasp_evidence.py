@@ -47,6 +47,8 @@ def build_owasp_evidence_items(
         items.extend(_items_from_validation(result, index, categories))
     for index, record in enumerate(evidence_records if evidence_records is not None else scan_result.get("evidence_records", []) or []):
         items.extend(_items_from_manual_evidence(record, index, categories))
+    for index, record in enumerate(scan_result.get("a04_crypto_evidence", []) or []):
+        items.extend(_items_from_a04_evidence(record, index, categories))
     return _dedupe(items)
 
 
@@ -217,6 +219,30 @@ def _items_from_manual_evidence(record: dict[str, Any], index: int, categories: 
             strength = "strong_indicator"
         results.append(make_evidence_item(source="manual_evidence", source_id=f"manual-{index}", title=str(record.get("title") or "Manual evidence"), owasp_id=owasp_id, categories=categories, confidence=str(record.get("confidence") or "Medium"), evidence_strength=strength, observed_signal=str(record.get("observed_signal") or record.get("title") or "Manual evidence"), affected_url=str(record.get("affected_url") or ""), affected_parameter=str(record.get("affected_parameter") or ""), manual_validation_required=bool(record.get("manual_validation_required", categories[owasp_id].get("manual_validation_required"))), evidence_summary=str(record.get("evidence_summary") or record.get("summary") or "")))
     return results
+
+
+def _items_from_a04_evidence(record: dict[str, Any], index: int, categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    if "A04:2025" not in categories:
+        return []
+    strength = str(record.get("evidence_strength") or "weak_indicator")
+    confidence = str(record.get("confidence") or "Medium")
+    return [
+        make_evidence_item(
+            source="owasp_a04",
+            source_id=str(record.get("evidence_id") or f"a04-{index}"),
+            title=str(record.get("title") or "A04 Cryptographic Failures indicator"),
+            owasp_id="A04:2025",
+            categories=categories,
+            confidence=confidence,
+            evidence_strength=strength,
+            observed_signal=str(record.get("safe_evidence_summary") or record.get("observed_value") or record.get("title") or ""),
+            affected_url=str(record.get("affected_url") or ""),
+            manual_validation_required=bool(record.get("manual_validation_required", True)),
+            evidence_summary=str(record.get("safe_evidence_summary") or ""),
+            recommendation_theme=str(record.get("recommendation") or "Review A04 Cryptographic Failures evidence and apply transport/security hardening."),
+            limitation="A04 evidence is indicator-based and may require manual validation.",
+        )
+    ]
 
 
 def _category_ids_from_text(text: str, source: str, categories: dict[str, dict[str, Any]]) -> list[str]:

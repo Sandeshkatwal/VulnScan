@@ -34,6 +34,8 @@ import type {
   OWASPAssessmentBuildRequest,
   OWASPAssessmentResponse,
   OWASPAssessmentRulesResponse,
+  A04AssessmentRequest,
+  A04AssessmentResponse,
   OWASPMapRequest,
   OWASPMapResponse,
   RetestRecord,
@@ -299,6 +301,14 @@ export function getOWASPAssessmentRules(): Promise<OWASPAssessmentRulesResponse>
 
 export function buildOWASPAssessment(payload: OWASPAssessmentBuildRequest): Promise<OWASPAssessmentResponse> {
   return request<OWASPAssessmentResponse>('/owasp/assessment/build', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function assessA04Crypto(payload: A04AssessmentRequest): Promise<A04AssessmentResponse> {
+  return request<A04AssessmentResponse>('/owasp/a04/assess', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

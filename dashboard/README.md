@@ -148,3 +148,12 @@ See [../docs/SCREENSHOT_CHECKLIST.md](../docs/SCREENSHOT_CHECKLIST.md).
 ## OWASP Assessment
 
 Version 20.0 adds an OWASP Assessment view for OWASP Top 10:2025 evidence, category results, coverage matrix, manual validation requirements, coverage gaps, and the existing OWASP indicator mapping. Use `/owasp/assessment/rules` and `/owasp/assessment/build`, or select a job result that already includes `owasp_assessment_summary`.
+# A04 Cryptographic Failures View
+
+The OWASP Assessment dashboard renders A04 Cryptographic Failures evidence when a selected scan result includes `a04_crypto_summary`, `a04_crypto_evidence`, and optional `a04_tls_metadata`. The view shows summary cards, transport evidence, cookie security evidence, TLS metadata, mixed content indicators, recommendations, limitations, indicator confidence, and manual validation notes.
+
+Build check:
+
+```powershell
+npm run build
+```

@@ -41,10 +41,11 @@ from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
+from scanner.owasp_a04_crypto import A04RulesError, assess_a04_crypto, load_a04_rules
 from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment_rules
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import A04AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -921,6 +922,46 @@ def create_app(
                 }
             )
         except OWASPAssessmentRulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get(
+        "/owasp/a04/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List A04 Cryptographic Failures rules",
+        description="Returns local A04 Cryptographic Failures indicator rules. Does not perform testing or accept file paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_a04_rules() -> dict[str, Any]:
+        try:
+            return load_a04_rules()
+        except A04RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a04/assess",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build A04 Cryptographic Failures evidence",
+        description="Builds safe A04 transport, HSTS, cookie, cleartext workflow, mixed content, and TLS metadata indicators from supplied metadata. Cookie values and secrets are not returned.",
+        responses=ERROR_RESPONSES,
+    )
+    def assess_a04_endpoint(request: A04AssessmentRequest) -> dict[str, Any]:
+        try:
+            payload = assess_a04_crypto(
+                target=request.target,
+                urls=request.urls,
+                headers=request.headers,
+                set_cookie_headers=request.set_cookie_headers,
+                forms=request.forms,
+                html_snippet=request.html_snippet,
+                collect_tls=False,
+            )
+            return {
+                "a04_crypto_summary": payload["a04_crypto_summary"],
+                "a04_crypto_evidence": payload["a04_crypto_evidence"],
+            }
+        except A04RulesError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post(

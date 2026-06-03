@@ -212,3 +212,12 @@ Version 20.0 adds an OWASP Top 10:2025 assessment foundation for category-level 
 ```
 
 The OWASP assessment score measures coverage and evidence quality. It is not a security rating, and no indicator found does not mean the category is secure.
+# Version 20.2 A04 Cryptographic Failures
+
+VulScan includes safe OWASP A04 Cryptographic Failures checks for authorised web assessments:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a04-checks --owasp-assess --json --html
+```
+
+The module reports transport security indicators, cookie security evidence, sensitive data over cleartext indicators, HSTS evidence, mixed content indicators, and TLS metadata. It does not submit forms, capture credentials, store cookie values, store secrets, test weak TLS ciphers, or perform downgrade testing.

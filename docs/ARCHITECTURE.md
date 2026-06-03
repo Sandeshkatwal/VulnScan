@@ -190,3 +190,12 @@ Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as 
 - `scanner.owasp_assessment` builds OWASP Category Results, OWASP Coverage gaps, and an assessment quality score.
 - CLI commands opt in with `--owasp-assess`. JSON and HTML reports include `owasp_assessment_summary`, `owasp_category_results`, `owasp_evidence_items`, and `owasp_coverage_gaps`.
 - FastAPI exposes `GET /owasp/assessment/rules` and `POST /owasp/assessment/build`.
+
+## Version 20.2 A04 Cryptographic Failures
+
+- `scanner.owasp_a04_crypto` loads `data/owasp/a04/a04_rules.json` and builds `a04_crypto_summary`, `a04_crypto_evidence`, grouped findings, and optional TLS metadata.
+- `scanner.tls_metadata` collects certificate metadata with a normal TLS handshake only.
+- `--a04-checks` runs safe A04 checks from available URL, header, cookie, form, endpoint, validation, mixed content, and TLS metadata evidence.
+- A04 evidence feeds `scanner.owasp_evidence` as `A04:2025` OWASP evidence when `--owasp-assess` is used.
+- JSON and HTML reports include A04 summary, evidence, TLS metadata, recommendations, and limitations.
+- FastAPI exposes `GET /owasp/a04/rules` and `POST /owasp/a04/assess`.

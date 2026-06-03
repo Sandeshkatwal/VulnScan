@@ -819,6 +819,83 @@ export interface OWASPAssessmentRulesResponse {
   [key: string]: unknown
 }
 
+export interface A04CryptoSummary {
+  enabled?: boolean
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  strong_indicators_count?: number
+  weak_indicators_count?: number
+  informational_count?: number
+  manual_validation_required_count?: number
+  rule_group_counts?: Record<string, number>
+  https_urls_count?: number
+  http_urls_count?: number
+  insecure_cookie_count?: number
+  hsts_issue_count?: number
+  mixed_content_indicator_count?: number
+  tls_metadata_available?: boolean
+  highest_confidence?: string
+  top_risks?: string[]
+  recommendations?: string[]
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface A04CryptoEvidenceItem {
+  evidence_id?: string
+  rule_id?: string
+  rule_group?: string
+  title?: string
+  affected_url?: string
+  affected_host?: string
+  scheme?: string
+  evidence_strength?: string
+  confidence?: string
+  observed_value?: string
+  safe_evidence_summary?: string
+  recommendation?: string
+  manual_validation_required?: boolean
+  source?: string
+  created_at?: string
+  cookie_name?: string
+  missing_attributes?: string[]
+  resource_type?: string
+  resource_scheme?: string
+  [key: string]: unknown
+}
+
+export interface A04TlsMetadata {
+  host?: string
+  port?: number
+  metadata_available?: boolean
+  subject_common_name?: string
+  issuer_common_name?: string
+  not_before?: string
+  not_after?: string
+  expired?: boolean | null
+  days_until_expiry?: number | null
+  hostname_match?: boolean | null
+  self_signed_indicator?: boolean | null
+  error?: string
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface A04AssessmentRequest {
+  target?: string
+  headers?: Record<string, unknown>
+  set_cookie_headers?: string[]
+  urls?: string[]
+  forms?: Array<Record<string, unknown>>
+  html_snippet?: string
+}
+
+export interface A04AssessmentResponse {
+  a04_crypto_summary?: A04CryptoSummary
+  a04_crypto_evidence?: A04CryptoEvidenceItem[]
+}
+
 export interface SafeValidationTarget {
   url: string
   candidate_type?: string
