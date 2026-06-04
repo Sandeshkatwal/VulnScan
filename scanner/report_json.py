@@ -166,6 +166,11 @@ def save_json_report(
         ),
         "a04_crypto_evidence": scan_result.get("a04_crypto_evidence", []),
         "a04_tls_metadata": scan_result.get("a04_tls_metadata", []),
+        "a07_authentication_summary": scan_result.get(
+            "a07_authentication_summary",
+            {"enabled": False, "limitations": ["A07 Authentication Failures checks were not enabled."]},
+        ),
+        "a07_authentication_evidence": scan_result.get("a07_authentication_evidence", []),
         "safe_active_validation": scan_result.get(
             "safe_active_validation",
             {"enabled": False, "limitations": ["Safe active validation was not enabled."]},

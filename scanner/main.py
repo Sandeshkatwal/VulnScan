@@ -59,6 +59,7 @@ from scanner.owasp_mapping import (
 )
 from scanner.owasp_assessment import attach_owasp_assessment
 from scanner.owasp_a04_crypto import A04RulesError, attach_a04_crypto
+from scanner.owasp_a07_authentication import A07RulesError, attach_a07_authentication
 from scanner.owasp_rules import OWASPAssessmentRulesError
 from scanner.safe_active_validation import (
     VALIDATION_REPORTS_DIR,
@@ -1903,11 +1904,25 @@ def web_scan(
             help="Build OWASP Assessment Engine category results from existing web evidence.",
         ),
     ] = False,
+    a02_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a02-checks",
+            help="Accepted for Version 20.1 compatibility; A02 evidence is built from existing passive web and OWASP assessment evidence.",
+        ),
+    ] = False,
     a04_checks: Annotated[
         bool,
         typer.Option(
             "--a04-checks",
             help="Run safe A04 Cryptographic Failures and transport security evidence checks.",
+        ),
+    ] = False,
+    a07_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a07-checks",
+            help="Run safe A07 Authentication Failures and session indicator checks.",
         ),
     ] = False,
     bug_bounty_scope: Annotated[
@@ -2215,6 +2230,13 @@ def web_scan(
             console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
+    if a07_checks:
+        try:
+            attach_a07_authentication(scan_result)
+        except A07RulesError as exc:
+            console.print(f"[red]A07 Authentication Failures error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a07_authentication_summary(scan_result.get("a07_authentication_summary", {}))
     if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -2475,6 +2497,13 @@ def endpoints(
             help="Run safe A04 Cryptographic Failures and transport security evidence checks on supplied URLs.",
         ),
     ] = False,
+    a07_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a07-checks",
+            help="Run safe A07 Authentication Failures and session indicator checks on supplied URLs.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option(
@@ -2532,6 +2561,13 @@ def endpoints(
             console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
+    if a07_checks:
+        try:
+            attach_a07_authentication(scan_result)
+        except A07RulesError as exc:
+            console.print(f"[red]A07 Authentication Failures error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a07_authentication_summary(scan_result.get("a07_authentication_summary", {}))
     if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -2640,6 +2676,13 @@ def validate(
             help="Run safe A04 Cryptographic Failures and transport security evidence checks on validation targets.",
         ),
     ] = False,
+    a07_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a07-checks",
+            help="Run safe A07 Authentication Failures and session indicator checks on validation targets.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option("--save-db", help="Accepted for workflow consistency; validation reports are file-based in Version 18.4."),
@@ -2703,6 +2746,13 @@ def validate(
             console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
+    if a07_checks:
+        try:
+            attach_a07_authentication(scan_result)
+        except A07RulesError as exc:
+            console.print(f"[red]A07 Authentication Failures error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a07_authentication_summary(scan_result.get("a07_authentication_summary", {}))
     if owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -3749,6 +3799,32 @@ def _print_a04_crypto_summary(summary: dict[str, Any]) -> None:
         ("HSTS issues", summary.get("hsts_issue_count")),
         ("Mixed content indicators", summary.get("mixed_content_indicator_count")),
         ("TLS metadata available", summary.get("tls_metadata_available")),
+        ("Highest confidence", summary.get("highest_confidence")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_a07_authentication_summary(summary: dict[str, Any]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="A07 Authentication Failures Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Evidence items", summary.get("total_evidence_items")),
+        ("Strong indicators", summary.get("strong_indicators_count")),
+        ("Weak indicators", summary.get("weak_indicators_count")),
+        ("Informational", summary.get("informational_count")),
+        ("Manual validation required", summary.get("manual_validation_required_count")),
+        ("Auth endpoints", summary.get("auth_endpoint_count")),
+        ("Login forms", summary.get("login_form_count")),
+        ("Password reset endpoints", summary.get("password_reset_endpoint_count")),
+        ("Session cookie indicators", summary.get("session_cookie_indicator_count")),
+        ("Remember-me indicators", summary.get("remember_me_indicator_count")),
+        ("Rate-limit indicators", summary.get("rate_limit_indicator_count")),
+        ("Protocol surface indicators", summary.get("protocol_surface_indicator_count")),
         ("Highest confidence", summary.get("highest_confidence")),
     ]
     for label, value in rows:

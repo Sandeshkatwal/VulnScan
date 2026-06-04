@@ -49,6 +49,8 @@ def build_owasp_evidence_items(
         items.extend(_items_from_manual_evidence(record, index, categories))
     for index, record in enumerate(scan_result.get("a04_crypto_evidence", []) or []):
         items.extend(_items_from_a04_evidence(record, index, categories))
+    for index, record in enumerate(scan_result.get("a07_authentication_evidence", []) or []):
+        items.extend(_items_from_a07_evidence(record, index, categories))
     return _dedupe(items)
 
 
@@ -241,6 +243,31 @@ def _items_from_a04_evidence(record: dict[str, Any], index: int, categories: dic
             evidence_summary=str(record.get("safe_evidence_summary") or ""),
             recommendation_theme=str(record.get("recommendation") or "Review A04 Cryptographic Failures evidence and apply transport/security hardening."),
             limitation="A04 evidence is indicator-based and may require manual validation.",
+        )
+    ]
+
+
+def _items_from_a07_evidence(record: dict[str, Any], index: int, categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    if "A07:2025" not in categories:
+        return []
+    strength = str(record.get("evidence_strength") or "weak_indicator")
+    confidence = str(record.get("confidence") or "Medium")
+    return [
+        make_evidence_item(
+            source="owasp_a07",
+            source_id=str(record.get("evidence_id") or f"a07-{index}"),
+            title=str(record.get("title") or "A07 Authentication Failures indicator"),
+            owasp_id="A07:2025",
+            categories=categories,
+            confidence=confidence,
+            evidence_strength=strength,
+            observed_signal=str(record.get("safe_evidence_summary") or record.get("observed_value") or record.get("title") or ""),
+            affected_url=str(record.get("affected_url") or ""),
+            affected_parameter=str(record.get("affected_parameter") or ""),
+            manual_validation_required=bool(record.get("manual_validation_required", True)),
+            evidence_summary=str(record.get("safe_evidence_summary") or ""),
+            recommendation_theme=str(record.get("recommendation") or "Review A07 Authentication Failures evidence and manually validate authentication workflow controls."),
+            limitation="A07 evidence is indicator-based and does not perform login attempts or brute force.",
         )
     ]
 

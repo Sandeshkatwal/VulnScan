@@ -42,10 +42,11 @@ from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_disc
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_a04_crypto import A04RulesError, assess_a04_crypto, load_a04_rules
+from scanner.owasp_a07_authentication import A07RulesError, assess_a07_authentication, load_a07_rules
 from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment_rules
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A04AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import A04AssessmentRequest, A07AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -962,6 +963,46 @@ def create_app(
                 "a04_crypto_evidence": payload["a04_crypto_evidence"],
             }
         except A04RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get(
+        "/owasp/a07/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List A07 Authentication Failures rules",
+        description="Returns local A07 Authentication Failures indicator rules. Does not perform testing or accept file paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_a07_rules() -> dict[str, Any]:
+        try:
+            return load_a07_rules()
+        except A07RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a07/assess",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build A07 Authentication Failures evidence",
+        description="Builds safe authentication endpoint, cookie/session, auth form, reset-flow, rate-limit header, and auth protocol indicators from supplied metadata. No login attempts are made and secrets are not returned.",
+        responses=ERROR_RESPONSES,
+    )
+    def assess_a07_endpoint(request: A07AssessmentRequest) -> dict[str, Any]:
+        try:
+            payload = assess_a07_authentication(
+                target=request.target,
+                urls=request.urls,
+                headers=request.headers,
+                set_cookie_headers=request.set_cookie_headers,
+                forms=request.forms,
+                endpoint_results=request.endpoint_results,
+                parameter_results=request.parameter_results,
+            )
+            return {
+                "a07_authentication_summary": payload["a07_authentication_summary"],
+                "a07_authentication_evidence": payload["a07_authentication_evidence"],
+            }
+        except A07RulesError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post(

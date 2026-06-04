@@ -199,3 +199,12 @@ Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as 
 - A04 evidence feeds `scanner.owasp_evidence` as `A04:2025` OWASP evidence when `--owasp-assess` is used.
 - JSON and HTML reports include A04 summary, evidence, TLS metadata, recommendations, and limitations.
 - FastAPI exposes `GET /owasp/a04/rules` and `POST /owasp/a04/assess`.
+
+## Version 20.3 A07 Authentication Failures
+
+- `scanner.owasp_a07_authentication` loads `data/owasp/a07/a07_rules.json` and builds `a07_authentication_summary`, `a07_authentication_evidence`, and grouped findings.
+- `--a07-checks` runs safe A07 checks from available URL, header, cookie, form, endpoint, parameter, and validation metadata.
+- A07 evidence feeds `scanner.owasp_evidence` as `A07:2025` OWASP evidence when `--owasp-assess` is used.
+- JSON and HTML reports include A07 summary, authentication endpoints, session cookie evidence, auth form indicators, password reset indicators, rate-limit header indicators, recommendations, and limitations.
+- FastAPI exposes `GET /owasp/a07/rules` and `POST /owasp/a07/assess`.
+- The module does not submit forms, perform login attempts, create accounts, reset passwords, or perform repeated rate-limit testing.

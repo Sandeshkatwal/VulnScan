@@ -221,3 +221,13 @@ VulScan includes safe OWASP A04 Cryptographic Failures checks for authorised web
 ```
 
 The module reports transport security indicators, cookie security evidence, sensitive data over cleartext indicators, HSTS evidence, mixed content indicators, and TLS metadata. It does not submit forms, capture credentials, store cookie values, store secrets, test weak TLS ciphers, or perform downgrade testing.
+
+# Version 20.3 A07 Authentication Failures
+
+VulScan includes safe OWASP A07 Authentication Failures checks for authorised web assessments:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a07-checks --owasp-assess --json --html
+```
+
+The module reports authentication indicators, session management indicators, login workflow evidence, password reset workflow evidence, cookie/session evidence, rate-limit header indicators, and manual validation needs. It does not perform login attempts, brute force, credential stuffing, password guessing, MFA bypass testing, account creation, password reset, or form submission.

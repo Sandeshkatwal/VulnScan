@@ -157,3 +157,7 @@ Build check:
 ```powershell
 npm run build
 ```
+
+# A07 Authentication Failures View
+
+The OWASP Assessment dashboard renders A07 Authentication Failures evidence when a selected scan result includes `a07_authentication_summary` and `a07_authentication_evidence`. The view shows summary cards, authentication endpoint indicators, session cookie evidence, auth form indicators, rate-limit header indicators, recommendations, limitations, indicator confidence, and a manual validation checklist.

@@ -290,6 +290,35 @@ class A04AssessmentRequest(StrictApiModel):
     )
 
 
+class A07AssessmentRequest(StrictApiModel):
+    """Build A07 Authentication Failures evidence from supplied safe metadata."""
+
+    target: str = Field("", max_length=2048, description="Authorised target URL.", examples=["https://127.0.0.1:8000"])
+    urls: list[str] = Field(default_factory=list, description="Known HTTP/HTTPS URLs to assess.", examples=[[]])
+    headers: dict[str, Any] = Field(default_factory=dict, description="Response headers for the target URL.", examples=[{}])
+    set_cookie_headers: list[str] = Field(default_factory=list, description="Set-Cookie header values. Cookie values are redacted and not returned.", examples=[[]])
+    forms: list[dict[str, Any]] = Field(default_factory=list, description="Form metadata from safe discovery. Forms are not submitted.", examples=[[]])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates.", examples=[[]])
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter intelligence candidates.", examples=[[]])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "https://127.0.0.1:8000",
+                    "urls": ["https://127.0.0.1:8000/login"],
+                    "headers": {},
+                    "set_cookie_headers": [],
+                    "forms": [],
+                    "endpoint_results": [],
+                    "parameter_results": [],
+                }
+            ]
+        },
+    )
+
+
 class SafeValidationTarget(StrictApiModel):
     url: str = Field(..., min_length=1, max_length=2048, description="Authorised HTTP/HTTPS URL to validate.", examples=["http://127.0.0.1:8000/search?q=test"])
     candidate_type: str = Field("manual", max_length=64, description="Candidate type such as reflected_input, open_redirect, cors, directory_listing, default_file, or http_methods.", examples=["reflected_input"])

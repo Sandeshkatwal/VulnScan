@@ -896,6 +896,74 @@ export interface A04AssessmentResponse {
   a04_crypto_evidence?: A04CryptoEvidenceItem[]
 }
 
+export interface A07AuthenticationSummary {
+  enabled?: boolean
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  strong_indicators_count?: number
+  weak_indicators_count?: number
+  informational_count?: number
+  manual_validation_required_count?: number
+  auth_endpoint_count?: number
+  login_form_count?: number
+  password_reset_endpoint_count?: number
+  session_cookie_indicator_count?: number
+  remember_me_indicator_count?: number
+  csrf_indicator_count?: number
+  rate_limit_indicator_count?: number
+  protocol_surface_indicator_count?: number
+  rule_group_counts?: Record<string, number>
+  highest_confidence?: string
+  top_risks?: string[]
+  recommendations?: string[]
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface A07AuthenticationEvidenceItem {
+  evidence_id?: string
+  rule_id?: string
+  rule_group?: string
+  title?: string
+  affected_url?: string
+  affected_host?: string
+  affected_parameter?: string
+  evidence_strength?: string
+  confidence?: string
+  observed_value?: string
+  safe_evidence_summary?: string
+  recommendation?: string
+  manual_validation_required?: boolean
+  source?: string
+  created_at?: string
+  endpoint_type?: string
+  cookie_name?: string
+  missing_attributes?: string[]
+  persistence_indicator?: boolean
+  password_field_detected?: boolean
+  csrf_like_field_detected?: boolean
+  csrf_like_field_names?: string[]
+  form_action_scheme?: string
+  remember_me_checkbox?: boolean
+  [key: string]: unknown
+}
+
+export interface A07AssessmentRequest {
+  target?: string
+  urls?: string[]
+  headers?: Record<string, unknown>
+  set_cookie_headers?: string[]
+  forms?: Array<Record<string, unknown>>
+  endpoint_results?: Array<Record<string, unknown>>
+  parameter_results?: Array<Record<string, unknown>>
+}
+
+export interface A07AssessmentResponse {
+  a07_authentication_summary?: A07AuthenticationSummary
+  a07_authentication_evidence?: A07AuthenticationEvidenceItem[]
+}
+
 export interface SafeValidationTarget {
   url: string
   candidate_type?: string

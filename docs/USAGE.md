@@ -831,3 +831,15 @@ Run safe A04 Cryptographic Failures and transport security checks with:
 ```
 
 The checks collect metadata only. Cookie values, secrets, tokens, passwords, private keys, and full sensitive response bodies are not stored.
+
+# A07 Authentication Failures Checks
+
+Run safe A07 Authentication Failures and session indicator checks with:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a07-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a07-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a07-checks --owasp-assess --json --html
+```
+
+The checks collect metadata only. No login attempts, brute force, credential stuffing, password guessing, account creation, password reset, or form submission is performed.
