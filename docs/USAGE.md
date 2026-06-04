@@ -843,3 +843,15 @@ Run safe A07 Authentication Failures and session indicator checks with:
 ```
 
 The checks collect metadata only. No login attempts, brute force, credential stuffing, password guessing, account creation, password reset, or form submission is performed.
+
+# A10 Mishandling of Exceptional Conditions Checks
+
+Run safe A10 error-handling and exception-exposure checks with:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a10-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a10-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a10-checks --owasp-assess --json --html
+```
+
+The checks analyse already observed response snippets, status codes, endpoint metadata, and validation results only. No errors are forced and no payloads are sent. Full response bodies are not stored; snippets are redacted and bounded.

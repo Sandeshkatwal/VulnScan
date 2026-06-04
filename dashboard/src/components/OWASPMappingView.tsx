@@ -16,9 +16,12 @@ import type {
   A04TlsMetadata,
   A07AuthenticationEvidenceItem,
   A07AuthenticationSummary,
+  A10ErrorHandlingEvidenceItem,
+  A10ErrorHandlingSummary,
 } from '../types/api'
 import { A04CryptoView } from './A04CryptoView'
 import { A07AuthenticationView } from './A07AuthenticationView'
+import { A10ErrorHandlingView } from './A10ErrorHandlingView'
 import { ErrorAlert } from './ErrorAlert'
 import { OWASPCategoryTable } from './OWASPCategoryTable'
 import { OWASPCoverageChart } from './OWASPCoverageChart'
@@ -137,6 +140,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
   const a04TlsMetadata = (resultPayload?.a04_tls_metadata as A04TlsMetadata[] | undefined) || []
   const a07Summary = resultPayload?.a07_authentication_summary as A07AuthenticationSummary | undefined
   const a07Evidence = (resultPayload?.a07_authentication_evidence as A07AuthenticationEvidenceItem[] | undefined) || []
+  const a10Summary = resultPayload?.a10_error_handling_summary as A10ErrorHandlingSummary | undefined
+  const a10Evidence = (resultPayload?.a10_error_handling_evidence as A10ErrorHandlingEvidenceItem[] | undefined) || []
 
   const summary = existingSummary || mapped?.owasp_top10_summary
   const items = existingItems || mapped?.owasp_top10_mapped_items || []
@@ -215,6 +220,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
       <A04CryptoView summary={a04Summary} evidence={a04Evidence} tlsMetadata={a04TlsMetadata} />
 
       <A07AuthenticationView summary={a07Summary} evidence={a07Evidence} />
+
+      <A10ErrorHandlingView summary={a10Summary} evidence={a10Evidence} />
 
       <article className="panel panel--wide">
         <div className="panel-heading">

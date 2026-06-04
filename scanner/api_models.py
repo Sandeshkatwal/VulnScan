@@ -319,6 +319,36 @@ class A07AssessmentRequest(StrictApiModel):
     )
 
 
+class A10ResponseObservation(StrictApiModel):
+    url: str = Field(..., min_length=1, max_length=2048)
+    status_code: int | None = Field(None, ge=100, le=599)
+    body_snippet: str = Field("", max_length=20000)
+    headers: dict[str, Any] = Field(default_factory=dict)
+    source: str | None = Field(None, max_length=128)
+    endpoint_category: str | None = Field(None, max_length=128)
+
+
+class A10AssessmentRequest(StrictApiModel):
+    """Build A10 error-handling evidence from supplied observed metadata."""
+
+    target: str = Field("", max_length=2048, description="Authorised target URL.", examples=["http://127.0.0.1:8000"])
+    responses: list[A10ResponseObservation] = Field(default_factory=list, description="Observed response snippets and status codes. Full bodies should not be supplied.")
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates.", examples=[[]])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "http://127.0.0.1:8000",
+                    "responses": [{"url": "http://127.0.0.1:8000/error", "status_code": 500, "body_snippet": "Traceback ...", "headers": {}}],
+                    "endpoint_results": [],
+                }
+            ]
+        },
+    )
+
+
 class SafeValidationTarget(StrictApiModel):
     url: str = Field(..., min_length=1, max_length=2048, description="Authorised HTTP/HTTPS URL to validate.", examples=["http://127.0.0.1:8000/search?q=test"])
     candidate_type: str = Field("manual", max_length=64, description="Candidate type such as reflected_input, open_redirect, cors, directory_listing, default_file, or http_methods.", examples=["reflected_input"])

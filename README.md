@@ -231,3 +231,13 @@ VulScan includes safe OWASP A07 Authentication Failures checks for authorised we
 ```
 
 The module reports authentication indicators, session management indicators, login workflow evidence, password reset workflow evidence, cookie/session evidence, rate-limit header indicators, and manual validation needs. It does not perform login attempts, brute force, credential stuffing, password guessing, MFA bypass testing, account creation, password reset, or form submission.
+
+# Version 20.4 A10 Mishandling of Exceptional Conditions
+
+VulScan includes safe OWASP A10 Mishandling of Exceptional Conditions checks for authorised web assessments:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a10-checks --owasp-assess --json --html
+```
+
+The module reports error-handling indicators, exception exposure evidence, verbose error evidence, framework debug indicators, status code patterns, sensitive error content, fail-safe review required notes, and manual validation required status. It analyses already observed evidence only and does not force errors, send payloads, submit forms, modify server-side state, perform crash testing, or perform DoS testing.

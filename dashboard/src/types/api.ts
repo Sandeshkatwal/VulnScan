@@ -964,6 +964,73 @@ export interface A07AssessmentResponse {
   a07_authentication_evidence?: A07AuthenticationEvidenceItem[]
 }
 
+export interface A10ErrorHandlingSummary {
+  enabled?: boolean
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  strong_indicators_count?: number
+  weak_indicators_count?: number
+  informational_count?: number
+  manual_validation_required_count?: number
+  stack_trace_count?: number
+  database_error_count?: number
+  framework_error_count?: number
+  debug_page_count?: number
+  status_5xx_count?: number
+  fail_safe_review_count?: number
+  sensitive_error_content_count?: number
+  rule_group_counts?: Record<string, number>
+  highest_confidence?: string
+  top_risks?: string[]
+  recommendations?: string[]
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface A10ErrorHandlingEvidenceItem {
+  evidence_id?: string
+  rule_id?: string
+  rule_group?: string
+  title?: string
+  affected_url?: string
+  affected_host?: string
+  status_code?: number | null
+  evidence_strength?: string
+  confidence?: string
+  observed_pattern?: string
+  safe_evidence_summary?: string
+  redacted_snippet?: string
+  recommendation?: string
+  manual_validation_required?: boolean
+  source?: string
+  created_at?: string
+  framework_hint?: string
+  pattern_matched?: string
+  endpoint_category?: string
+  [key: string]: unknown
+}
+
+export interface A10ResponseObservation {
+  url?: string
+  status_code?: number | null
+  body_snippet?: string
+  headers?: Record<string, unknown>
+  source?: string
+  endpoint_category?: string
+}
+
+export interface A10AssessmentRequest {
+  target?: string
+  responses?: A10ResponseObservation[]
+  endpoint_results?: Array<Record<string, unknown>>
+}
+
+export interface A10AssessmentResponse {
+  a10_error_handling_summary?: A10ErrorHandlingSummary
+  a10_error_handling_evidence?: A10ErrorHandlingEvidenceItem[]
+}
+
 export interface SafeValidationTarget {
   url: string
   candidate_type?: string

@@ -208,3 +208,12 @@ Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as 
 - JSON and HTML reports include A07 summary, authentication endpoints, session cookie evidence, auth form indicators, password reset indicators, rate-limit header indicators, recommendations, and limitations.
 - FastAPI exposes `GET /owasp/a07/rules` and `POST /owasp/a07/assess`.
 - The module does not submit forms, perform login attempts, create accounts, reset passwords, or perform repeated rate-limit testing.
+
+## Version 20.4 A10 Mishandling of Exceptional Conditions
+
+- `scanner.owasp_a10_error_handling` loads `data/owasp/a10/a10_rules.json` and builds `a10_error_handling_summary`, `a10_error_handling_evidence`, and grouped findings.
+- `--a10-checks` analyses already observed response snippets, status codes, endpoint metadata, and validation metadata for safe A10 error-handling indicators.
+- A10 evidence feeds `scanner.owasp_evidence` as `A10:2025` OWASP evidence when `--owasp-assess` is used.
+- JSON and HTML reports include A10 summary, verbose error evidence, framework debug indicators, database error indicators, status code pattern analysis, fail-safe review guidance, redaction notes, recommendations, and limitations.
+- FastAPI exposes `GET /owasp/a10/rules` and `POST /owasp/a10/assess`.
+- The module does not force application errors, send payloads, submit forms, perform crash testing, or perform DoS testing.

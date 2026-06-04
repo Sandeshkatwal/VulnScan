@@ -161,3 +161,7 @@ npm run build
 # A07 Authentication Failures View
 
 The OWASP Assessment dashboard renders A07 Authentication Failures evidence when a selected scan result includes `a07_authentication_summary` and `a07_authentication_evidence`. The view shows summary cards, authentication endpoint indicators, session cookie evidence, auth form indicators, rate-limit header indicators, recommendations, limitations, indicator confidence, and a manual validation checklist.
+
+# A10 Error Handling View
+
+The OWASP Assessment dashboard renders A10 Mishandling of Exceptional Conditions evidence when a selected scan result includes `a10_error_handling_summary` and `a10_error_handling_evidence`. The view shows summary cards, error evidence, status code pattern analysis, framework debug indicators, fail-safe checklist, recommendations, limitations, indicator confidence, redacted snippets, and manual validation required notes.

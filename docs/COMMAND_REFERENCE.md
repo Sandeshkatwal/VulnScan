@@ -137,3 +137,13 @@ The API binds to localhost by default. Do not expose it remotely unless you expl
 ```
 
 `--a07-checks` adds safe A07 Authentication Failures evidence for authentication indicators, session management indicators, login workflow evidence, password reset workflow evidence, cookie/session evidence, rate-limit header indicators, and manual validation needs.
+
+## A10 Mishandling of Exceptional Conditions
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a10-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a10-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a10-checks --owasp-assess --json --html
+```
+
+`--a10-checks` adds safe A10 Mishandling of Exceptional Conditions evidence for error-handling indicators, exception exposure evidence, verbose error evidence, framework debug indicators, status code patterns, sensitive error content, and fail-safe review required notes. It does not force errors or send payloads.

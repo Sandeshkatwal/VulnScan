@@ -60,6 +60,7 @@ from scanner.owasp_mapping import (
 from scanner.owasp_assessment import attach_owasp_assessment
 from scanner.owasp_a04_crypto import A04RulesError, attach_a04_crypto
 from scanner.owasp_a07_authentication import A07RulesError, attach_a07_authentication
+from scanner.owasp_a10_error_handling import A10RulesError, attach_a10_error_handling
 from scanner.owasp_rules import OWASPAssessmentRulesError
 from scanner.safe_active_validation import (
     VALIDATION_REPORTS_DIR,
@@ -1925,6 +1926,13 @@ def web_scan(
             help="Run safe A07 Authentication Failures and session indicator checks.",
         ),
     ] = False,
+    a10_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a10-checks",
+            help="Run safe A10 Mishandling of Exceptional Conditions error-handling checks.",
+        ),
+    ] = False,
     bug_bounty_scope: Annotated[
         Path | None,
         typer.Option(
@@ -2237,6 +2245,13 @@ def web_scan(
             console.print(f"[red]A07 Authentication Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a07_authentication_summary(scan_result.get("a07_authentication_summary", {}))
+    if a10_checks:
+        try:
+            attach_a10_error_handling(scan_result)
+        except A10RulesError as exc:
+            console.print(f"[red]A10 Mishandling of Exceptional Conditions error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a10_error_handling_summary(scan_result.get("a10_error_handling_summary", {}))
     if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -2504,6 +2519,13 @@ def endpoints(
             help="Run safe A07 Authentication Failures and session indicator checks on supplied URLs.",
         ),
     ] = False,
+    a10_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a10-checks",
+            help="Run safe A10 Mishandling of Exceptional Conditions error-handling checks on supplied metadata.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option(
@@ -2568,6 +2590,13 @@ def endpoints(
             console.print(f"[red]A07 Authentication Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a07_authentication_summary(scan_result.get("a07_authentication_summary", {}))
+    if a10_checks:
+        try:
+            attach_a10_error_handling(scan_result)
+        except A10RulesError as exc:
+            console.print(f"[red]A10 Mishandling of Exceptional Conditions error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a10_error_handling_summary(scan_result.get("a10_error_handling_summary", {}))
     if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -2683,6 +2712,13 @@ def validate(
             help="Run safe A07 Authentication Failures and session indicator checks on validation targets.",
         ),
     ] = False,
+    a10_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a10-checks",
+            help="Run safe A10 Mishandling of Exceptional Conditions error-handling checks on validation observations.",
+        ),
+    ] = False,
     save_db: Annotated[
         bool,
         typer.Option("--save-db", help="Accepted for workflow consistency; validation reports are file-based in Version 18.4."),
@@ -2753,6 +2789,13 @@ def validate(
             console.print(f"[red]A07 Authentication Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a07_authentication_summary(scan_result.get("a07_authentication_summary", {}))
+    if a10_checks:
+        try:
+            attach_a10_error_handling(scan_result)
+        except A10RulesError as exc:
+            console.print(f"[red]A10 Mishandling of Exceptional Conditions error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a10_error_handling_summary(scan_result.get("a10_error_handling_summary", {}))
     if owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -3825,6 +3868,32 @@ def _print_a07_authentication_summary(summary: dict[str, Any]) -> None:
         ("Remember-me indicators", summary.get("remember_me_indicator_count")),
         ("Rate-limit indicators", summary.get("rate_limit_indicator_count")),
         ("Protocol surface indicators", summary.get("protocol_surface_indicator_count")),
+        ("Highest confidence", summary.get("highest_confidence")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_a10_error_handling_summary(summary: dict[str, Any]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="A10 Error Handling Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Evidence items", summary.get("total_evidence_items")),
+        ("Strong indicators", summary.get("strong_indicators_count")),
+        ("Weak indicators", summary.get("weak_indicators_count")),
+        ("Informational", summary.get("informational_count")),
+        ("Manual validation required", summary.get("manual_validation_required_count")),
+        ("Stack traces", summary.get("stack_trace_count")),
+        ("Database errors", summary.get("database_error_count")),
+        ("Framework errors", summary.get("framework_error_count")),
+        ("Debug pages", summary.get("debug_page_count")),
+        ("5xx observations", summary.get("status_5xx_count")),
+        ("Fail-safe reviews", summary.get("fail_safe_review_count")),
+        ("Sensitive error content", summary.get("sensitive_error_content_count")),
         ("Highest confidence", summary.get("highest_confidence")),
     ]
     for label, value in rows:

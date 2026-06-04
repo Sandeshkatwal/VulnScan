@@ -43,10 +43,11 @@ from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, b
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_a04_crypto import A04RulesError, assess_a04_crypto, load_a04_rules
 from scanner.owasp_a07_authentication import A07RulesError, assess_a07_authentication, load_a07_rules
+from scanner.owasp_a10_error_handling import A10RulesError, assess_a10_error_handling, load_a10_rules
 from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment_rules
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A04AssessmentRequest, A07AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import A04AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -1003,6 +1004,42 @@ def create_app(
                 "a07_authentication_evidence": payload["a07_authentication_evidence"],
             }
         except A07RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get(
+        "/owasp/a10/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List A10 Mishandling of Exceptional Conditions rules",
+        description="Returns local A10 error-handling indicator rules. Does not perform testing or accept file paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_a10_rules() -> dict[str, Any]:
+        try:
+            return load_a10_rules()
+        except A10RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a10/assess",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build A10 error-handling evidence",
+        description="Builds safe error-handling indicators from supplied observed snippets, status codes, and endpoint metadata. No errors are forced and snippets are redacted.",
+        responses=ERROR_RESPONSES,
+    )
+    def assess_a10_endpoint(request: A10AssessmentRequest) -> dict[str, Any]:
+        try:
+            payload = assess_a10_error_handling(
+                target=request.target,
+                responses=[item.model_dump() for item in request.responses],
+                endpoint_results=request.endpoint_results,
+            )
+            return {
+                "a10_error_handling_summary": payload["a10_error_handling_summary"],
+                "a10_error_handling_evidence": payload["a10_error_handling_evidence"],
+            }
+        except A10RulesError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post(

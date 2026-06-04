@@ -92,3 +92,9 @@ The module is indicator-based and may require manual validation. It does not sub
 `--a07-checks` adds dedicated A07 Authentication Failures evidence to the OWASP Assessment Engine. Evidence covers authentication endpoints, login workflow evidence, password reset workflow evidence, cookie/session evidence, rate-limit header indicators, protocol surface indicators, and manual validation needs. When `--owasp-assess` is also used, A07 evidence feeds `owasp_evidence_items` and the `A07:2025` category result.
 
 The module is indicator-based and may require manual validation. It does not perform login attempts, brute force, credential stuffing, password guessing, MFA bypass testing, account creation, password reset, or form submission.
+
+# Version 20.4 A10 Mishandling of Exceptional Conditions
+
+`--a10-checks` adds dedicated A10 Mishandling of Exceptional Conditions evidence to the OWASP Assessment Engine. Evidence covers error-handling indicators, exception exposure evidence, verbose error evidence, framework debug indicators, database error indicators, status code patterns, sensitive error content, and fail-safe review required signals. When `--owasp-assess` is also used, A10 evidence feeds `owasp_evidence_items` and the `A10:2025` category result.
+
+The module is observation-based and may require manual validation. It does not force application errors, send payloads, submit forms, modify server-side state, perform crash testing, or perform DoS testing.

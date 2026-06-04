@@ -171,6 +171,11 @@ def save_json_report(
             {"enabled": False, "limitations": ["A07 Authentication Failures checks were not enabled."]},
         ),
         "a07_authentication_evidence": scan_result.get("a07_authentication_evidence", []),
+        "a10_error_handling_summary": scan_result.get(
+            "a10_error_handling_summary",
+            {"enabled": False, "limitations": ["A10 Mishandling of Exceptional Conditions checks were not enabled."]},
+        ),
+        "a10_error_handling_evidence": scan_result.get("a10_error_handling_evidence", []),
         "safe_active_validation": scan_result.get(
             "safe_active_validation",
             {"enabled": False, "limitations": ["Safe active validation was not enabled."]},

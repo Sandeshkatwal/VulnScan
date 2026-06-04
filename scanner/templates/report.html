@@ -716,6 +716,64 @@
     </section>
     {% endif %}
 
+    {% set a10 = report.get("a10_error_handling_summary", {}) %}
+    {% if a10.get("enabled") %}
+    <section>
+      <h2>A10 Error Handling and Exception Exposure</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">A10 Evidence</div><div class="value">{{ a10.get("total_evidence_items", 0) }}</div></div>
+        <div class="metric"><div class="label">Strong Indicators</div><div class="value">{{ a10.get("strong_indicators_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Stack Traces</div><div class="value">{{ a10.get("stack_trace_count", 0) }}</div></div>
+        <div class="metric"><div class="label">5xx Observations</div><div class="value">{{ a10.get("status_5xx_count", 0) }}</div></div>
+      </div>
+      <p><strong>Weak indicators:</strong> {{ a10.get("weak_indicators_count", 0) }} | <strong>Informational:</strong> {{ a10.get("informational_count", 0) }} | <strong>Manual validation required:</strong> {{ a10.get("manual_validation_required_count", 0) }}</p>
+      <p><strong>Database errors:</strong> {{ a10.get("database_error_count", 0) }} | <strong>Framework debug indicators:</strong> {{ a10.get("framework_error_count", 0) }} | <strong>Debug pages:</strong> {{ a10.get("debug_page_count", 0) }} | <strong>Sensitive error content:</strong> {{ a10.get("sensitive_error_content_count", 0) }}</p>
+
+      <h3>Error Evidence</h3>
+      {% if report.get("a10_error_handling_evidence") %}
+      <table>
+        <thead><tr><th>URL</th><th>Status</th><th>Pattern</th><th>Strength</th><th>Confidence</th><th>Redacted Snippet</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in report.get("a10_error_handling_evidence", [])[:60] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("status_code") }}</td><td>{{ item.get("observed_pattern") }}</td><td>{{ item.get("evidence_strength") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("redacted_snippet") }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No A10 error-handling indicators were generated from available observations.</p>
+      {% endif %}
+
+      <h3>Framework and Database Indicators</h3>
+      {% set framework_items = report.get("a10_error_handling_evidence", []) | selectattr("rule_group", "in", ["framework_error_indicators", "database_error_indicators", "sensitive_error_content"]) | list %}
+      {% if framework_items %}
+      <table>
+        <thead><tr><th>URL</th><th>Framework Hint</th><th>Pattern Matched</th><th>Confidence</th><th>Manual Validation</th></tr></thead>
+        <tbody>
+          {% for item in framework_items[:40] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("framework_hint") }}</td><td>{{ item.get("pattern_matched") or item.get("observed_pattern") }}</td><td>{{ item.get("confidence") }}</td><td>{{ "Required" if item.get("manual_validation_required") else "Not required" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No framework debug or database error indicators were generated.</p>
+      {% endif %}
+
+      <h3>Fail-Safe Review Checklist</h3>
+      <ul>
+        <li>Review authentication endpoints for fail-closed behaviour.</li>
+        <li>Review payment and billing error handling.</li>
+        <li>Review password reset error handling.</li>
+        <li>Review admin endpoints.</li>
+        <li>Ensure generic user-facing error messages.</li>
+        <li>Log diagnostic details safely server-side.</li>
+        <li>Avoid exposing stack traces, internal paths, framework versions, and database errors.</li>
+      </ul>
+      <p><strong>Redaction:</strong> snippets are capped and redacted. Full response bodies are not stored.</p>
+      <p><strong>Recommendations:</strong> {{ a10.get("recommendations", []) | join("; ") }}</p>
+      <p><strong>Limitations:</strong> {{ a10.get("limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
     {% set owasp = report.get("owasp_top10_summary", {}) %}
     {% if owasp.get("enabled") %}
     <section>
