@@ -244,3 +244,6 @@ The module is deliberately offline for package intelligence in Version 20.7. It 
 The A08 Software or Data Integrity Failures engine is a passive OWASP assessment module. `scanner/integrity_indicators.py` classifies workflow and trusted-data boundary indicators, `scanner/sri_analysis.py` analyses supplied script/stylesheet metadata for Subresource Integrity evidence, and `scanner/owasp_a08_integrity.py` orchestrates summaries, grouped findings, manual validation plans, report templates, and OWASP assessment integration.
 
 The engine does not submit forms, upload files, trigger callbacks/webhooks, call update endpoints, fetch external resources, or execute payloads.
+## Version 21.0 Authenticated Web Assessment Foundation
+
+VulScan 21.0 adds redacted Session Profiles, Authentication Context summaries, Authenticated Scope boundary checks, Auth-Required Endpoint classification, and Role/Permission Notes. The foundation is local-only and report-safe: raw auth material is not included in JSON, HTML, dashboard, API, or terminal output.

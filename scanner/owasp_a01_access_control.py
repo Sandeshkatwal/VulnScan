@@ -83,6 +83,18 @@ def attach_a01_access_control(scan_result: dict[str, Any]) -> dict[str, Any]:
         parameter_results=scan_result.get("parameter_results") or _parameters_from_validation(scan_result.get("safe_active_validation_results") or []),
         evidence_records=scan_result.get("evidence_records") or [],
     )
+    auth_summary = scan_result.get("auth_context_summary") or {}
+    role_label = str(auth_summary.get("role_label") or (auth_summary.get("session_profile") or {}).get("role_label") or "")
+    auth_classified = {str(item.get("normalised_url") or item.get("url") or ""): item for item in scan_result.get("endpoint_results", []) or [] if item.get("auth_required_likely")}
+    if role_label or auth_classified:
+        for item in payload.get("a01_access_control_evidence", []) or []:
+            url = str(item.get("affected_url") or item.get("url") or "")
+            if role_label:
+                item["role_label"] = role_label
+                item["role_permission_notes"] = "Manual validation should consider this Session Profile role label."
+            if url in auth_classified:
+                item["auth_required_likely"] = True
+                item["auth_context_note"] = "Endpoint was classified as Auth-Required likely from existing metadata."
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)

@@ -190,3 +190,12 @@ Generate the unified OWASP Assessment Markdown report with `--owasp-report` afte
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a01-checks --a02-checks --a03-checks --a04-checks --a05-checks --a07-checks --a08-checks --a10-checks --owasp-assess --owasp-report --json --html
 ```
+
+# Version 21.0 Authenticated Web Assessment Foundation
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main auth profiles
+.\.venv311\Scripts\python.exe -m scanner.main auth show --profile-file data\auth_profiles\sample_session_profile.redacted.json
+.\.venv311\Scripts\python.exe -m scanner.main auth validate --profile-file data\auth_profiles\sample_session_profile.redacted.json
+.\.venv311\Scripts\python.exe -m scanner.main auth check-url --profile-file data\auth_profiles\sample_session_profile.redacted.json --url http://127.0.0.1:8000/dashboard
+```

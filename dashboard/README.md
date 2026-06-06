@@ -12,6 +12,8 @@ Version 20.8 adds an A08 Software/Data Integrity view under OWASP Assessment. It
 
 The dashboard is local development tooling. It does not collect credentials, does not expose exploit buttons, does not request external platform API tokens, and does not submit reports to external platforms.
 
+Version 21.0 adds an Authenticated Assessment dashboard section for redacted Session Profile summaries, Authenticated Scope boundary checks, Auth-Required Endpoint classification, and Role/Permission Notes. It does not display raw cookies, bearer tokens, auth headers, passwords, or login automation controls.
+
 ## Pages And Sections
 
 - Overview

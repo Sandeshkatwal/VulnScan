@@ -66,3 +66,5 @@ If manual validation confirms an issue, enforce server-side authorization checks
 
 A01 Broken Access Control frequently requires authenticated, role-aware, and tenant-aware manual validation. VulScan identifies candidates and helps plan validation; it does not confirm broken access control without manually supplied evidence.
 Version 20.9 reporting note: A01 evidence is consolidated into the unified OWASP Assessment report with coverage status, evidence strength, confidence, developer remediation guidance, and manual validation checklist items for object ownership, tenant boundaries, and admin/function authorization.
+
+Version 21.0 note: A01 can include redacted role labels and Auth-Required Endpoint classification from a Session Profile. VulScan does not compare profiles or automate cross-account testing in this version.

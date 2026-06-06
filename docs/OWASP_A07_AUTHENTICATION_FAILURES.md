@@ -71,3 +71,5 @@ The OWASP Assessment screen includes an A07 Authentication Failures section when
 
 A07 evidence is based on available metadata and may require manual validation. Missing evidence does not mean authentication is secure; it may mean the workflow was not assessed, was not reachable, or requires authenticated/manual review.
 Version 20.9 reporting note: A07 evidence is consolidated into the unified OWASP Assessment report with manual validation checklist items for login, session, password reset, MFA/2FA where applicable, lockout, and rate limiting.
+
+Version 21.0 note: A07 can use redacted Session Profile cookie names and expiry hints to support manual session management review. VulScan does not test session fixation, expiry, MFA, or login workflows automatically.

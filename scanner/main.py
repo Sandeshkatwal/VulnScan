@@ -18,6 +18,9 @@ from scanner.audit_profiles import (
 )
 from scanner.api_runner import run_api_server
 from scanner.api_security import API_KEY_ENV_VAR, LOCAL_DEVELOPMENT_WARNING, get_configured_api_key
+from scanner.auth_context import build_auth_context
+from scanner.authenticated_scope import classify_auth_boundary, classify_auth_required_endpoints
+from scanner.session_profiles import SessionProfileError, ensure_auth_profile_dirs, list_session_profiles, load_session_profile, validate_session_profile
 from scanner.api_bug_bounty import check_scope as api_check_scope, list_scope_files as api_list_scope_files
 from scanner.assets import get_asset_services, get_assets
 from scanner.asset_criticality import (
@@ -208,6 +211,7 @@ duplicates_app = typer.Typer(help="Fingerprint findings and detect duplicate sec
 metrics_app = typer.Typer(help="Local Bug Intelligence metrics and personal performance dashboard data.")
 scope_app = typer.Typer(help="Manage local Program Scope files.")
 sbom_app = typer.Typer(help="Analyse local SBOM files and build A03 software supply chain evidence.")
+auth_app = typer.Typer(help="Manage redacted Authenticated Web Assessment Session Profiles.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -216,6 +220,7 @@ app.add_typer(duplicates_app, name="duplicates")
 app.add_typer(metrics_app, name="metrics")
 app.add_typer(scope_app, name="scope")
 app.add_typer(sbom_app, name="sbom")
+app.add_typer(auth_app, name="auth")
 console = Console()
 
 
@@ -330,6 +335,73 @@ def _program_scope_command(alias_note: str | None = None) -> None:
 def _warn_legacy_scope_alias(scope_file: str | None = None) -> None:
     if "--bug-bounty-scope" in sys.argv or (scope_file and "data/bug_bounty" in scope_file.replace("\\", "/")):
         console.print("[yellow]Alias retained for compatibility. Prefer --scope-file.[/yellow]")
+
+
+@auth_app.command("profiles")
+def auth_profiles() -> None:
+    """List local redacted Session Profiles."""
+    ensure_auth_profile_dirs()
+    table = Table(title="Session Profiles")
+    for column in ("Profile", "Target", "Auth Type", "Role", "Redaction", "Updated"):
+        table.add_column(column)
+    for profile in list_session_profiles():
+        table.add_row(
+            str(profile.get("profile_name") or ""),
+            str(profile.get("target_base_url") or ""),
+            str(profile.get("auth_type") or ""),
+            str(profile.get("role_label") or ""),
+            str(profile.get("redaction_status") or ""),
+            str(profile.get("updated_at") or ""),
+        )
+    console.print(table)
+
+
+@auth_app.command("show")
+def auth_show(profile_file: Annotated[Path, typer.Option("--profile-file", help="Session Profile JSON under data/auth_profiles.")]) -> None:
+    """Show a redacted Session Profile summary."""
+    try:
+        context = build_auth_context(load_session_profile(profile_file))
+    except SessionProfileError as exc:
+        console.print(f"[red]Session Profile error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    _print_auth_context(context)
+
+
+@auth_app.command("validate")
+def auth_validate(profile_file: Annotated[Path, typer.Option("--profile-file", help="Session Profile JSON under data/auth_profiles.")]) -> None:
+    """Validate a Session Profile without printing raw auth material."""
+    try:
+        validation = validate_session_profile(load_session_profile(profile_file))
+    except SessionProfileError as exc:
+        console.print(f"[red]Session Profile error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[bold]Valid:[/bold] {validation.get('valid')}")
+    for warning in validation.get("warnings") or []:
+        console.print(f"[yellow]Warning:[/yellow] {warning}")
+    for error in validation.get("errors") or []:
+        console.print(f"[red]Error:[/red] {error}")
+    _print_auth_profile_summary(validation.get("session_profile") or {})
+    if not validation.get("valid"):
+        raise typer.Exit(code=1)
+
+
+@auth_app.command("check-url")
+def auth_check_url(
+    profile_file: Annotated[Path, typer.Option("--profile-file", help="Session Profile JSON under data/auth_profiles.")],
+    url: Annotated[str, typer.Option("--url", help="URL to check against the Authenticated Scope.")],
+) -> None:
+    """Check whether a URL is inside the Authenticated Scope boundary."""
+    try:
+        result = classify_auth_boundary(url, load_session_profile(profile_file))
+    except SessionProfileError as exc:
+        console.print(f"[red]Session Profile error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    table = Table(title="Authenticated Scope Boundary")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("url", "allowed_by_profile", "blocked_by_profile", "reason", "matched_rule", "auth_profile_id", "role_label"):
+        table.add_row(key.replace("_", " ").title(), str(result.get(key, "")))
+    console.print(table)
 
 
 @sbom_app.command("analyse")
@@ -2748,6 +2820,20 @@ def endpoints(
             help="Generate a unified Markdown-ready OWASP Assessment report from endpoint candidates.",
         ),
     ] = False,
+    auth_profile: Annotated[
+        Path | None,
+        typer.Option(
+            "--auth-profile",
+            help="Redacted Session Profile JSON under data/auth_profiles for Authenticated Web Assessment context.",
+        ),
+    ] = None,
+    classify_auth: Annotated[
+        bool,
+        typer.Option(
+            "--classify-auth",
+            help="Classify supplied endpoints for Auth-Required Endpoint signals without making requests.",
+        ),
+    ] = False,
     a04_checks: Annotated[
         bool,
         typer.Option(
@@ -2870,6 +2956,30 @@ def endpoints(
         "demo_mode": False,
         "demo_notice": "",
     }
+    if auth_profile or classify_auth:
+        try:
+            profile = load_session_profile(auth_profile) if auth_profile else {}
+            if profile:
+                validation = validate_session_profile(profile)
+                if not validation.get("valid"):
+                    console.print(f"[red]Session Profile validation failed:[/red] {', '.join(validation.get('errors') or [])}")
+                    raise typer.Exit(code=1)
+                scan_result["auth_context_summary"] = build_auth_context(profile)
+                scan_result["redaction_status"] = "redacted"
+                boundary_results = []
+                for endpoint in scan_result.get("endpoint_results", []):
+                    url = str(endpoint.get("normalised_url") or endpoint.get("url") or "")
+                    if url:
+                        boundary_results.append(classify_auth_boundary(url, profile))
+                scan_result["auth_boundary_results"] = boundary_results
+            if classify_auth:
+                classification = classify_auth_required_endpoints(scan_result.get("endpoint_results", []), profile)
+                scan_result["auth_required_endpoint_classification"] = classification["auth_required_endpoint_classification"]
+                scan_result["endpoint_results"] = classification["classified_endpoints"]
+                _print_auth_endpoint_classification(scan_result["auth_required_endpoint_classification"])
+        except SessionProfileError as exc:
+            console.print(f"[red]Session Profile error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
     if a01_checks:
         try:
             attach_a01_access_control(scan_result)
@@ -4211,6 +4321,36 @@ def _print_owasp_assessment_summary(summary: dict[str, Any], category_results: l
                 str(result.get("highest_confidence") or "Low"),
             )
         console.print(category_table)
+
+
+def _print_auth_profile_summary(profile: dict[str, Any]) -> None:
+    table = Table(title="Session Profile Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("profile_name", "target_base_url", "auth_type", "role_label", "redaction_status", "cookie_names", "header_names", "allowed_hosts", "allowed_paths", "blocked_paths"):
+        value = profile.get(key)
+        if isinstance(value, list):
+            value = ", ".join(str(item) for item in value)
+        table.add_row(key.replace("_", " ").title(), str(value or ""))
+    console.print(table)
+
+
+def _print_auth_context(context: dict[str, Any]) -> None:
+    _print_auth_profile_summary(context.get("session_profile") or {})
+    for warning in context.get("warnings") or []:
+        console.print(f"[yellow]Warning:[/yellow] {warning}")
+    console.print("[yellow]Authenticated Web Assessment context is redacted and local-only. Raw auth material is not printed.[/yellow]")
+
+
+def _print_auth_endpoint_classification(summary: dict[str, Any]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="Auth-Required Endpoint Classification")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("total_endpoints", "auth_required_likely_count", "public_likely_count", "unknown_count", "role_label"):
+        table.add_row(key.replace("_", " ").title(), str(summary.get(key, "")))
+    console.print(table)
 
 
 def _generate_owasp_markdown_report(scan_result: dict[str, Any]) -> Path:

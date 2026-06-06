@@ -34,3 +34,6 @@ Store local API keys in environment variables or untracked `.env` files only.
 ## Deployment Limitations
 
 Do not expose the dashboard or API publicly without a separate security review, authentication design, transport security, logging review, secret handling review, and deployment hardening. The current dashboard is local development and portfolio tooling.
+# Authenticated Assessment Safety
+
+Authenticated Web Assessment requires explicit authorisation. Do not store real credentials, raw session cookies, bearer tokens, API keys, HAR files, Burp exports, or cookie jars in the repository. VulScan 21.0 redacts auth material from UI, reports, API responses, and terminal output, and does not perform login automation, unauthorised authentication testing, or state-changing authenticated requests.

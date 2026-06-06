@@ -18,6 +18,9 @@ import type {
   BugBountyReconReportsResponse,
   BugBountyReconRequest,
   BugBountyReconResponse,
+  AuthBoundaryResult,
+  AuthEndpointClassificationResponse,
+  AuthProfilesResponse,
   BugIntelligenceMetricsResponse,
   DateRangeOption,
   BugBountyScopeDetail,
@@ -300,6 +303,26 @@ export function analyseEndpoints(payload: EndpointDiscoveryRequest): Promise<End
 
 export function getEndpointReports(): Promise<EndpointReportsResponse> {
   return request<EndpointReportsResponse>('/endpoints/reports')
+}
+
+export function getAuthProfiles(): Promise<AuthProfilesResponse> {
+  return request<AuthProfilesResponse>('/auth/profiles')
+}
+
+export function checkAuthBoundary(profile: Record<string, unknown>, url: string): Promise<AuthBoundaryResult> {
+  return request<AuthBoundaryResult>('/auth/boundary/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profile, url }),
+  })
+}
+
+export function classifyAuthEndpoints(profile: Record<string, unknown>, endpointResults: Array<Record<string, unknown>>): Promise<AuthEndpointClassificationResponse> {
+  return request<AuthEndpointClassificationResponse>('/auth/endpoints/classify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profile, endpoint_results: endpointResults }),
+  })
 }
 
 export function getOWASPCategories(): Promise<OWASPCategoriesResponse> {

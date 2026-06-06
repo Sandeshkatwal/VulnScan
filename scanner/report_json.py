@@ -146,6 +146,10 @@ def save_json_report(
             {"enabled": False, "limitations": ["Endpoint discovery was not enabled."]},
         ),
         "endpoint_results": scan_result.get("endpoint_results", []),
+        "auth_context_summary": scan_result.get("auth_context_summary", {"enabled": False, "limitations": ["Authenticated Web Assessment context was not provided."]}),
+        "auth_boundary_results": scan_result.get("auth_boundary_results", []),
+        "auth_required_endpoint_classification": scan_result.get("auth_required_endpoint_classification", {"enabled": False}),
+        "redaction_status": scan_result.get("redaction_status", "not_applicable"),
         "parameter_results": scan_result.get("parameter_results", []),
         "endpoint_skipped": scan_result.get("endpoint_skipped", []),
         "owasp_top10_summary": scan_result.get(

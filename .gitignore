@@ -23,6 +23,14 @@ config.local.*
 dashboard/.env
 dashboard/.env.*
 !dashboard/.env.example
+data/auth_profiles/*.local.json
+data/auth_profiles/*.secret.json
+data/auth_profiles/*.private.json
+data/auth_profiles/*real*.json
+*.har
+*.burp
+*.cookies
+cookies.txt
 
 # IDE
 .vscode/
@@ -67,6 +75,9 @@ scan_results/
 !data/owasp/a05/a05_rules.json
 !data/owasp/a08/
 !data/owasp/a08/a08_rules.json
+!data/auth_profiles/
+!data/auth_profiles/README.md
+!data/auth_profiles/sample_session_profile.redacted.json
 !data/sbom/
 !data/sbom/*.json
 !assets/screenshots/.gitkeep

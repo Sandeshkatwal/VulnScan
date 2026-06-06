@@ -4,6 +4,8 @@ VulScan Version 20.0 adds the OWASP Assessment Engine foundation for authorised 
 
 Version 20.9 adds a unified OWASP Assessment report model and Markdown export. The report includes executive summary, A01-A10 coverage matrix, evidence strength summary, manual validation checklist, developer remediation guidance, coverage gaps, limitations, and safe testing statement. See `docs/OWASP_ASSESSMENT_REPORTING.md`.
 
+Version 21.0 adds Authenticated Web Assessment context support. Redacted Session Profile metadata can improve A01/A07 evidence context and Auth-Required Endpoint classification. Manual validation remains required for access-control and authentication conclusions.
+
 The engine does not exploit, brute force, bypass authentication, submit destructive payloads, or scan out-of-scope assets. Results are evidence and coverage oriented.
 
 ## OWASP Top 10:2025 Categories

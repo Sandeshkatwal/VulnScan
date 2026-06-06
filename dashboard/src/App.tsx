@@ -15,6 +15,7 @@ import {
 import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
+import { AuthContextView } from './components/AuthContextView'
 import { BugIntelligenceMetricsView } from './components/BugIntelligenceMetricsView'
 import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
 import { BugBountyReconView } from './components/BugBountyReconView'
@@ -60,7 +61,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -108,6 +109,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'bug-bounty-recon', label: 'Recon Intelligence' },
   { id: 'endpoint-discovery', label: 'Endpoint Intelligence' },
   { id: 'safe-validation', label: 'Safe Validation' },
+  { id: 'authenticated-assessment', label: 'Authenticated Assessment' },
   { id: 'submission-tracker', label: 'Submission Tracker' },
   { id: 'duplicates', label: 'Duplicate Detection' },
   { id: 'owasp', label: 'OWASP Top 10' },
@@ -166,6 +168,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'safe-validation': {
     title: 'Safe Validation',
     description: 'Limited non-destructive validation checks for authorised in-scope URLs.',
+  },
+  'authenticated-assessment': {
+    title: 'Authenticated Assessment',
+    description: 'Redacted Session Profile, Authentication Context, Authenticated Scope, and Auth-Required Endpoint classification.',
   },
   owasp: {
     title: 'OWASP Top 10',
@@ -779,6 +785,10 @@ function App() {
     return <OWASPMappingView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
   }
 
+  function renderAuthenticatedAssessment() {
+    return <AuthContextView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+  }
+
   function renderSubmissionTracker() {
     return <SubmissionTrackerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -834,6 +844,7 @@ function App() {
     if (currentSection === 'bug-bounty-recon') return renderBugBountyRecon()
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
     if (currentSection === 'safe-validation') return renderSafeValidation()
+    if (currentSection === 'authenticated-assessment') return renderAuthenticatedAssessment()
     if (currentSection === 'submission-tracker') return renderSubmissionTracker()
     if (currentSection === 'duplicates') return renderDuplicates()
     if (currentSection === 'owasp') return renderOWASP()

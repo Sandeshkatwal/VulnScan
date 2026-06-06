@@ -663,6 +663,52 @@ export interface EndpointReportsResponse {
   [key: string]: unknown
 }
 
+export interface SessionProfileSummary {
+  profile_id?: string
+  profile_name?: string
+  target_base_url?: string
+  auth_type?: string
+  redaction_status?: string
+  safe_display_name?: string
+  cookies_redacted?: boolean
+  headers_redacted?: boolean
+  auth_headers_present?: boolean
+  cookie_names?: string[]
+  header_names?: string[]
+  role_label?: string
+  permission_notes?: string
+  expiry_hint?: string
+  allowed_hosts?: string[]
+  allowed_paths?: string[]
+  blocked_paths?: string[]
+  notes?: string
+  local_only?: boolean
+  updated_at?: string
+  [key: string]: unknown
+}
+
+export interface AuthProfilesResponse {
+  profiles: SessionProfileSummary[]
+  [key: string]: unknown
+}
+
+export interface AuthBoundaryResult {
+  url?: string
+  allowed_by_profile?: boolean
+  blocked_by_profile?: boolean
+  reason?: string
+  matched_rule?: string
+  auth_profile_id?: string
+  role_label?: string
+  [key: string]: unknown
+}
+
+export interface AuthEndpointClassificationResponse {
+  auth_required_endpoint_classification?: ApiRecord
+  classified_endpoints?: ApiRecord[]
+  [key: string]: unknown
+}
+
 export interface OWASPCategory {
   owasp_id?: string
   name?: string

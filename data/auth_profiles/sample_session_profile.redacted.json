@@ -1,0 +1,18 @@
+{
+  "profile_name": "Demo authenticated user",
+  "target_base_url": "http://127.0.0.1:8000",
+  "auth_type": "cookie",
+  "cookies": {
+    "sessionid": "[REDACTED]"
+  },
+  "headers": {
+    "Authorization": "Bearer [REDACTED]"
+  },
+  "role_label": "standard_user",
+  "permission_notes": "Demo profile only. Do not store real secrets in repository.",
+  "allowed_hosts": ["127.0.0.1"],
+  "allowed_paths": ["/"],
+  "blocked_paths": ["/logout", "/delete", "/admin/delete", "/payment"],
+  "notes": "Redacted sample profile.",
+  "local_only": true
+}

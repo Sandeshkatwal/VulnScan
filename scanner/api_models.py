@@ -217,6 +217,26 @@ class EndpointDiscoveryRequest(StrictApiModel):
     )
 
 
+class AuthProfileValidateRequest(StrictApiModel):
+    """Validate a redacted Session Profile object."""
+
+    profile: dict[str, Any] = Field(default_factory=dict, description="Redacted Session Profile object. Raw secrets are not required.", examples=[{}])
+
+
+class AuthBoundaryCheckRequest(StrictApiModel):
+    """Check a URL against a redacted Session Profile boundary."""
+
+    profile: dict[str, Any] = Field(default_factory=dict, description="Redacted Session Profile object.", examples=[{}])
+    url: str = Field(..., min_length=1, max_length=2048, description="URL to check against the Authenticated Scope.", examples=["http://127.0.0.1:8000/dashboard"])
+
+
+class AuthEndpointClassifyRequest(StrictApiModel):
+    """Classify supplied endpoint metadata for Auth-Required Endpoint signals."""
+
+    profile: dict[str, Any] = Field(default_factory=dict, description="Redacted Session Profile object.", examples=[{}])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Existing endpoint result dictionaries.", examples=[[]])
+
+
 class OWASPMapRequest(StrictApiModel):
     """Indicator-only OWASP Top 10 mapping request."""
 

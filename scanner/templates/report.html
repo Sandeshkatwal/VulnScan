@@ -286,6 +286,34 @@
       {% endif %}
     </section>
 
+    {% set auth_context = report.get("auth_context_summary", {}) %}
+    {% if auth_context.get("enabled") %}
+    <section>
+      <h2>Authenticated Assessment Context</h2>
+      {% set profile = auth_context.get("session_profile", {}) %}
+      <div class="grid">
+        <div class="metric"><div class="label">Session Profile</div><div class="value">{{ profile.get("profile_name") }}</div></div>
+        <div class="metric"><div class="label">Auth Type</div><div class="value">{{ profile.get("auth_type") }}</div></div>
+        <div class="metric"><div class="label">Role Label</div><div class="value">{{ profile.get("role_label") }}</div></div>
+        <div class="metric"><div class="label">Redaction</div><div class="value">{{ profile.get("redaction_status") }}</div></div>
+      </div>
+      <p><strong>Target base URL:</strong> {{ profile.get("target_base_url") }}</p>
+      <p><strong>Cookie names:</strong> {{ profile.get("cookie_names", []) | join(", ") }}</p>
+      <p><strong>Header names:</strong> {{ profile.get("header_names", []) | join(", ") }}</p>
+      <p><strong>Allowed hosts:</strong> {{ profile.get("allowed_hosts", []) | join(", ") }}</p>
+      <p><strong>Allowed paths:</strong> {{ profile.get("allowed_paths", []) | join(", ") }}</p>
+      <p><strong>Blocked paths:</strong> {{ profile.get("blocked_paths", []) | join(", ") }}</p>
+      <p><strong>Role/Permission Notes:</strong> {{ profile.get("permission_notes") }}</p>
+      <p><strong>Safety:</strong> Raw cookies, tokens, passwords, and auth headers are not included in this report.</p>
+      {% set auth_classification = report.get("auth_required_endpoint_classification", {}) %}
+      {% if auth_classification.get("enabled") %}
+      <h3>Auth-Required Endpoint Summary</h3>
+      <p><strong>Total endpoints:</strong> {{ auth_classification.get("total_endpoints", 0) }} | <strong>Auth-required likely:</strong> {{ auth_classification.get("auth_required_likely_count", 0) }} | <strong>Public likely:</strong> {{ auth_classification.get("public_likely_count", 0) }} | <strong>Unknown:</strong> {{ auth_classification.get("unknown_count", 0) }}</p>
+      <p><strong>Limitations:</strong> {{ auth_classification.get("limitations", []) | join("; ") }}</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>

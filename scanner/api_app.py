@@ -39,6 +39,7 @@ from scanner.bug_bounty_recon import BugBountyReconError, run_bug_bounty_recon
 from scanner.bug_intelligence_metrics import MetricsDateRangeError
 from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
+from scanner.api_auth_context import api_check_auth_boundary, api_classify_auth_endpoints, api_list_auth_profiles, api_validate_auth_profile
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_report_builder import (
@@ -59,7 +60,7 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -102,7 +103,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "20.9"
+API_VERSION = "21.0"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -163,6 +164,10 @@ PROTECTED_PATHS = {
     "/bug-intelligence/metrics/monthly",
     "/bug-intelligence/metrics/outcomes",
     "/bug-intelligence/metrics/export",
+    "/auth/profiles",
+    "/auth/profile/validate",
+    "/auth/boundary/check",
+    "/auth/endpoints/classify",
     "/owasp/categories",
     "/owasp/map",
     "/owasp/assessment/rules",
@@ -193,6 +198,7 @@ TAGS_METADATA = [
     {"name": "Exports", "description": "Local export metadata for saved findings."},
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
     {"name": "Bug Intelligence", "description": "Local program scope, recon intelligence, endpoint discovery, and safe validation workflows."},
+    {"name": "Authenticated Assessment", "description": "Redacted local Session Profile, Authentication Context, and Authenticated Scope helpers."},
     {"name": "OWASP", "description": "OWASP Top 10:2025 indicator mapping and assessment results for existing evidence and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
     {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
@@ -440,6 +446,50 @@ def create_app(
         if result is None:
             raise HTTPException(status_code=404, detail="Recon report was not found.")
         return {"recon_id": recon_id, "result": result}
+
+    @app.get(
+        "/auth/profiles",
+        dependencies=[Depends(require_api_key)],
+        tags=["Authenticated Assessment"],
+        summary="List local redacted Session Profiles",
+        description="Lists safe Session Profile summaries under data/auth_profiles. Raw auth material is never returned.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_auth_profiles() -> dict[str, Any]:
+        return api_list_auth_profiles()
+
+    @app.post(
+        "/auth/profile/validate",
+        dependencies=[Depends(require_api_key)],
+        tags=["Authenticated Assessment"],
+        summary="Validate a redacted Session Profile",
+        description="Validates profile structure and returns a redacted Authentication Context summary.",
+        responses=ERROR_RESPONSES,
+    )
+    def validate_auth_profile(request: AuthProfileValidateRequest) -> dict[str, Any]:
+        return api_validate_auth_profile(request.profile)
+
+    @app.post(
+        "/auth/boundary/check",
+        dependencies=[Depends(require_api_key)],
+        tags=["Authenticated Assessment"],
+        summary="Check an Authenticated Scope boundary",
+        description="Checks whether a URL is allowed by the supplied redacted Session Profile. Blocked paths override allowed paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def check_auth_boundary(request: AuthBoundaryCheckRequest) -> dict[str, Any]:
+        return api_check_auth_boundary(request.profile, request.url)
+
+    @app.post(
+        "/auth/endpoints/classify",
+        dependencies=[Depends(require_api_key)],
+        tags=["Authenticated Assessment"],
+        summary="Classify Auth-Required Endpoints",
+        description="Classifies supplied endpoint metadata only. Does not bypass authentication or perform live requests.",
+        responses=ERROR_RESPONSES,
+    )
+    def classify_auth_endpoints(request: AuthEndpointClassifyRequest) -> dict[str, Any]:
+        return api_classify_auth_endpoints(request.profile, request.endpoint_results)
 
     @app.post(
         "/endpoints/analyse",

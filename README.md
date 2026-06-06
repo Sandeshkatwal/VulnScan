@@ -23,6 +23,8 @@ The project exists to show how scanner output can become a practical security wo
 
 VulScan is intended for security learners, junior security engineers, portfolio reviewers, and authorised internal testing labs. The Bug Intelligence Engine supports responsible disclosure, bug bounty workflow compatibility, and internal security testing through Program Scope, Recon Intelligence, Endpoint Intelligence, OWASP Indicator Mapping, Safe Validation, Evidence Capture, Security Finding Reports, Submission and Retest Tracker, Duplicate Detection, and Performance Metrics.
 
+Version 21.0 adds Authenticated Web Assessment foundation: redacted Session Profiles, Authentication Context, Authenticated Scope boundaries, Auth-Required Endpoint classification, and Role/Permission Notes. It does not perform login automation, unauthorised authentication testing, or state-changing authenticated requests. See `docs/AUTHENTICATED_ASSESSMENT.md`.
+
 ## Key Features
 
 | Area | Capability | Status |

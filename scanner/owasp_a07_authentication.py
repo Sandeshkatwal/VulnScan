@@ -114,6 +114,28 @@ def attach_a07_authentication(scan_result: dict[str, Any]) -> dict[str, Any]:
         parameter_results=scan_result.get("parameter_results") or [],
         validation_results=scan_result.get("safe_active_validation_results") or [],
     )
+    auth_summary = scan_result.get("auth_context_summary") or {}
+    profile = auth_summary.get("session_profile") or {}
+    cookie_names = list(profile.get("cookie_names") or auth_summary.get("cookie_names") or [])
+    if cookie_names:
+        extra_evidence = [
+            _evidence(
+                rule_id="session_profile_cookie_name_observed",
+                rule_group="session_cookie_indicators",
+                title="Session Profile cookie name available",
+                affected_url=str(profile.get("target_base_url") or target),
+                confidence="Medium",
+                evidence_strength="informational",
+                observed_value=f"cookie_name={name}; value=[REDACTED]",
+                safe_evidence_summary=f"Session Profile includes cookie name {name}. Cookie value was not stored in the report.",
+                recommendation="Use the cookie name to manually review session lifecycle, expiry, and invalidation.",
+                manual_validation_required=True,
+                extra={"cookie_name": name, "role_label": profile.get("role_label") or ""},
+            )
+            for name in cookie_names
+        ]
+        payload["a07_authentication_evidence"] = list(payload.get("a07_authentication_evidence", [])) + extra_evidence
+        payload["a07_authentication_summary"] = build_a07_summary(target=target, evidence=payload["a07_authentication_evidence"])
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)
