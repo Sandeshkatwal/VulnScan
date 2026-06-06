@@ -43,6 +43,7 @@ VulScan is intended for security learners, junior security engineers, portfolio 
 | Endpoint Intelligence | URL/path analysis and endpoint candidate discovery | Working |
 | OWASP Mapping | Indicator-only OWASP Top 10 mapping | Working |
 | OWASP Assessment Engine | OWASP Top 10:2025 evidence, category results, confidence, coverage gaps, and manual validation workflow | Foundation |
+| A03 Software Supply Chain | Component exposure indicators, dependency metadata indicators, SBOM analysis, and local CVE/CPE enrichment | Working |
 | Safe Validation | Limited non-destructive validation checks | Working |
 | Evidence Capture | Redacted, report-safe evidence summaries | Working |
 | Security Finding Reports | Local report listing and evidence/report workflow | Working |

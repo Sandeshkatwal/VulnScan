@@ -4,6 +4,8 @@ The VulScan dashboard is a local React + Vite + TypeScript interface for authori
 
 It presents API health, scan jobs, findings, risk overview, trends, Evidence & Reports, remediation tracking, Program Scope, Recon Intelligence, Endpoint Intelligence, Safe Validation, Submission Tracker, Duplicate Detection, Performance Metrics, settings, demo mode, portfolio mode, and screenshot mode.
 
+Version 20.7 adds an A03 Software Supply Chain view under OWASP Assessment. It displays component exposure indicators, dependency metadata indicators, SBOM analysis, CVE/CPE enrichment, source map/build artifact indicators, third-party script review, and recommendations. The dashboard uses wording such as indicator, evidence, confidence, and manual validation required; it does not expose exploit actions or external registry fetching.
+
 ## Safety Note
 
 The dashboard is local development tooling. It does not collect credentials, does not expose exploit buttons, does not request external platform API tokens, and does not submit reports to external platforms.

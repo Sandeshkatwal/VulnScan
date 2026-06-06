@@ -167,6 +167,11 @@ def save_html_report(
             {"enabled": False, "limitations": ["A01 Broken Access Control candidate checks were not enabled."]},
         ),
         "a01_access_control_evidence": scan_result.get("a01_access_control_evidence", []),
+        "a03_supply_chain_summary": scan_result.get(
+            "a03_supply_chain_summary",
+            {"enabled": False, "limitations": ["A03 Software Supply Chain checks were not enabled."]},
+        ),
+        "a03_supply_chain_evidence": scan_result.get("a03_supply_chain_evidence", []),
         "a04_crypto_summary": scan_result.get(
             "a04_crypto_summary",
             {"enabled": False, "limitations": ["A04 Cryptographic Failures checks were not enabled."]},

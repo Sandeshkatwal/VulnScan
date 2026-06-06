@@ -879,3 +879,24 @@ Run candidate-only A01 Broken Access Control analysis from existing endpoint, pa
 ```
 
 A01 checks identify access-control candidates and generate manual validation plans only. Use authorised test accounts and programme-approved test data.
+## Version 20.7 A03 Software Supply Chain
+
+Run A03 checks from web metadata:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a03-checks --owasp-assess --json --html
+```
+
+Run A03 checks from supplied endpoint URLs:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a03-checks --owasp-assess --json --html
+```
+
+Run local SBOM analysis:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main sbom analyse --sbom-file data\sbom\sample_cyclonedx_sbom.json --a03-checks --owasp-assess --json --html
+```
+
+A03 checks are passive and local-data based. They do not fetch external package registries, perform dependency confusion testing, or download exploit code.

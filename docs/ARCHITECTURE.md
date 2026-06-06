@@ -230,3 +230,12 @@ Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as 
 `scanner/owasp_a01_access_control.py` orchestrates A01 Broken Access Control candidate assessment. `scanner/access_control_candidates.py` contains passive classifiers for object identifiers, function surfaces, tenant boundaries, sensitive resources, role/permission indicators, and API access-control candidates.
 
 The A01 module attaches `a01_access_control_summary`, `a01_access_control_evidence`, grouped informational findings, duplicate fingerprints, manual validation plans, and evidence templates. `scanner/owasp_evidence.py` maps A01 candidate evidence into the OWASP Assessment Engine for `A01:2025`.
+## Version 20.7 A03 Module
+
+The A03 Software Supply Chain module has three layers:
+
+- `scanner/component_exposure.py` classifies JavaScript library hints, component/version exposure, dependency metadata exposure, source maps, build artifacts, and third-party script indicators from existing metadata.
+- `scanner/sbom_import.py` parses local CycloneDX/SPDX JSON SBOM files and normalises component metadata without storing raw hashes.
+- `scanner/owasp_a03_supply_chain.py` orchestrates evidence, summary, grouped findings, local CVE/CPE enrichment, OWASP Assessment integration, and report payloads.
+
+The module is deliberately offline for package intelligence in Version 20.7. It accepts observed metadata and local files only.

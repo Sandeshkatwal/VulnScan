@@ -1842,6 +1842,54 @@ dd {
   padding-left: 1.1rem;
 }
 
+.a03-panel h3 {
+  margin: 1.25rem 0 0.75rem;
+  font-size: 1rem;
+}
+
+.a03-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.a03-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.a03-mini-grid > div,
+.a03-list-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: var(--surface-muted);
+}
+
+.a03-mini-grid strong {
+  display: block;
+  font-size: 1.25rem;
+}
+
+.a03-mini-grid span,
+.a03-list-item small {
+  color: var(--muted);
+}
+
+.a03-list,
+.a03-sbom-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.a03-list-item {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .snippet-cell {
   max-width: 360px;
   word-break: break-word;

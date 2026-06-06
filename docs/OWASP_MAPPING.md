@@ -150,3 +150,8 @@ Version 20.5 adds dedicated A05 Injection evidence from parameter candidates, fo
 Version 20.6 deepens A01 Broken Access Control with a dedicated candidate engine. A01 evidence uses professional candidate wording, including object-level authorization candidate, function-level authorization candidate, IDOR candidate, tenant boundary candidate, admin surface indicator, manual validation required, and indicator confidence.
 
 The A01 engine is candidate-only and does not perform auth bypass automation, cross-account testing, or state-changing requests.
+## Version 20.7 A03 Software Supply Chain
+
+A03:2025 maps to software supply chain evidence including component exposure indicators, dependency metadata indicators, SBOM analysis, local CVE/CPE enrichment, source map indicators, and third-party script manual review indicators.
+
+Use the wording `A03 Software Supply Chain Failures`, `component exposure indicator`, `dependency metadata indicator`, `vulnerable component evidence`, `SBOM analysis`, `manual validation required`, and `indicator confidence`. Do not describe A03 output as exploit validation or package attack simulation.

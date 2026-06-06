@@ -1,0 +1,16 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "name": "VulScan sample SPDX SBOM",
+  "packages": [
+    {
+      "name": "bootstrap",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "NOASSERTION",
+      "externalRefs": [
+        {"referenceType": "purl", "referenceLocator": "pkg:npm/bootstrap@5.3.0"},
+        {"referenceType": "cpe23Type", "referenceLocator": "cpe:2.3:a:getbootstrap:bootstrap:5.3.0"}
+      ],
+      "licenseConcluded": "MIT"
+    }
+  ]
+}

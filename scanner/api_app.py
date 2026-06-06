@@ -42,14 +42,16 @@ from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_disc
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_a01_access_control import A01RulesError, assess_a01_access_control, build_a01_manual_plan_response, load_a01_rules
+from scanner.owasp_a03_supply_chain import A03RulesError, assess_a03_supply_chain, load_a03_rules
 from scanner.owasp_a05_injection import A05RulesError, assess_a05_injection, load_a05_rules
 from scanner.owasp_a04_crypto import A04RulesError, assess_a04_crypto, load_a04_rules
 from scanner.owasp_a07_authentication import A07RulesError, assess_a07_authentication, load_a07_rules
 from scanner.owasp_a10_error_handling import A10RulesError, assess_a10_error_handling, load_a10_rules
 from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment_rules
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
+from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -92,7 +94,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "20.6"
+API_VERSION = "20.7"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -160,6 +162,9 @@ PROTECTED_PATHS = {
     "/owasp/a01/rules",
     "/owasp/a01/assess",
     "/owasp/a01/manual-plan",
+    "/owasp/a03/rules",
+    "/owasp/a03/assess",
+    "/sbom/analyse",
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
@@ -978,6 +983,70 @@ def create_app(
     )
     def a01_manual_plan_endpoint(request: A01ManualPlanRequest) -> dict[str, Any]:
         return build_a01_manual_plan_response(request.evidence_item)
+
+    @app.get(
+        "/owasp/a03/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List A03 Software Supply Chain rules",
+        description="Returns local A03 Software Supply Chain Failures indicator rules. Does not perform package registry fetching, dependency confusion testing, or exploit validation.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_a03_rules() -> dict[str, Any]:
+        try:
+            return load_a03_rules()
+        except A03RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a03/assess",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build A03 Software Supply Chain evidence",
+        description="Builds component exposure indicators, dependency metadata indicators, SBOM analysis, and local vulnerability-intelligence enrichment from supplied metadata only. No external package registry fetching or exploit code use is performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def assess_a03_endpoint(request: A03AssessmentRequest) -> dict[str, Any]:
+        try:
+            payload = assess_a03_supply_chain(
+                target=request.target,
+                headers=request.headers,
+                html_snippet=request.html_snippet,
+                scripts=request.scripts,
+                endpoint_results=request.endpoint_results,
+                sbom_components=request.sbom_components,
+                vuln_intel=request.vuln_intel,
+            )
+            return {
+                "a03_supply_chain_summary": payload["a03_supply_chain_summary"],
+                "a03_supply_chain_evidence": payload["a03_supply_chain_evidence"],
+            }
+        except A03RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/sbom/analyse",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Analyse a supplied SBOM document",
+        description="Parses a CycloneDX or SPDX SBOM JSON body and builds A03 SBOM analysis evidence. The API does not accept arbitrary file paths, fetch package registries, or download exploit code.",
+        responses=ERROR_RESPONSES,
+    )
+    def analyse_sbom_endpoint(request: SBOMAnalyseRequest) -> dict[str, Any]:
+        try:
+            components = parse_sbom(request.sbom)
+            payload = assess_a03_supply_chain(
+                target="api-sbom-analysis",
+                sbom_components=components,
+                vuln_intel=request.vuln_intel if request.use_vuln_intel else {},
+            )
+            return {
+                "components": components,
+                "a03_supply_chain_summary": payload["a03_supply_chain_summary"],
+                "a03_supply_chain_evidence": payload["a03_supply_chain_evidence"],
+            }
+        except (A03RulesError, SBOMImportError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get(
         "/owasp/a04/rules",

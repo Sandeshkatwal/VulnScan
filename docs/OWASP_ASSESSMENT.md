@@ -106,3 +106,8 @@ Version 20.5 adds A05 Injection candidate and reflection analysis. A05 evidence 
 Version 20.6 adds dedicated A01 Broken Access Control candidate evidence. When `--a01-checks` is enabled, A01 candidates feed `owasp_evidence_items`, `owasp_category_results`, and `owasp_assessment_summary` as manual-validation-required evidence.
 
 See [OWASP_A01_BROKEN_ACCESS_CONTROL.md](OWASP_A01_BROKEN_ACCESS_CONTROL.md) for the candidate-only A01 workflow.
+## Version 20.7 A03 Software Supply Chain
+
+The OWASP Assessment Engine now consumes A03 Software Supply Chain evidence from `a03_supply_chain_evidence`. A03 category results become stronger when dependency metadata is exposed, SBOM components match local CVE/CPE intelligence, component version exposure has local vulnerability-intelligence evidence, source maps are observed, or vulnerable component evidence includes CVSS/EPSS metadata.
+
+A03 checks are evidence-based and manual-validation oriented. They do not perform dependency confusion testing, package registry fetching, malicious package testing, package takeover simulation, CI/CD attack simulation, or exploit validation.

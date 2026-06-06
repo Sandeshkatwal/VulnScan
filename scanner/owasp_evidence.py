@@ -49,6 +49,8 @@ def build_owasp_evidence_items(
         items.extend(_items_from_manual_evidence(record, index, categories))
     for index, record in enumerate(scan_result.get("a04_crypto_evidence", []) or []):
         items.extend(_items_from_a04_evidence(record, index, categories))
+    for index, record in enumerate(scan_result.get("a03_supply_chain_evidence", []) or []):
+        items.extend(_items_from_a03_evidence(record, index, categories))
     for index, record in enumerate(scan_result.get("a07_authentication_evidence", []) or []):
         items.extend(_items_from_a07_evidence(record, index, categories))
     for index, record in enumerate(scan_result.get("a05_injection_evidence", []) or []):
@@ -337,6 +339,33 @@ def _items_from_a05_evidence(record: dict[str, Any], index: int, categories: dic
             evidence_summary=str(record.get("safe_evidence_summary") or ""),
             recommendation_theme=str(record.get("recommendation") or "Review A05 Injection candidates and manually validate input handling controls."),
             limitation="A05 evidence is candidate/indicator-based and does not confirm exploitability.",
+        )
+    ]
+
+
+def _items_from_a03_evidence(record: dict[str, Any], index: int, categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    if "A03:2025" not in categories:
+        return []
+    strength = str(record.get("evidence_strength") or "informational")
+    confidence = str(record.get("confidence") or "Low")
+    if record.get("cve_ids") and record.get("component_version"):
+        strength = "strong_indicator" if strength != "confirmed_finding" else strength
+        confidence = "High" if confidence != "High" else confidence
+    return [
+        make_evidence_item(
+            source="owasp_a03",
+            source_id=str(record.get("evidence_id") or f"a03-{index}"),
+            title=str(record.get("title") or "A03 Software Supply Chain indicator"),
+            owasp_id="A03:2025",
+            categories=categories,
+            confidence=confidence,
+            evidence_strength=strength,
+            observed_signal=str(record.get("safe_evidence_summary") or record.get("component_name") or record.get("title") or ""),
+            affected_url=str(record.get("affected_url") or ""),
+            manual_validation_required=bool(record.get("manual_validation_required", True)),
+            evidence_summary=str(record.get("safe_evidence_summary") or ""),
+            recommendation_theme=str(record.get("recommendation") or "Review A03 software supply chain evidence and validate component patch status."),
+            limitation=str(record.get("limitation") or "A03 evidence is metadata-based and does not perform package registry analysis or exploit validation."),
         )
     ]
 

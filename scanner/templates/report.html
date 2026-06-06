@@ -626,6 +626,85 @@
     </section>
     {% endif %}
 
+    {% set a03 = report.get("a03_supply_chain_summary", {}) %}
+    {% if a03.get("enabled") %}
+    <section>
+      <h2>A03 Software Supply Chain and Component Exposure</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">A03 Evidence</div><div class="value">{{ a03.get("total_evidence_items", 0) }}</div></div>
+        <div class="metric"><div class="label">Component Hints</div><div class="value">{{ a03.get("component_hint_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Dependency Metadata</div><div class="value">{{ a03.get("dependency_metadata_exposure_count", 0) }}</div></div>
+        <div class="metric"><div class="label">CVE Matches</div><div class="value">{{ a03.get("cve_match_count", 0) }}</div></div>
+      </div>
+      <p><strong>Version exposures:</strong> {{ a03.get("version_exposure_count", 0) }} | <strong>SBOM components:</strong> {{ a03.get("sbom_component_count", 0) }} | <strong>Source map indicators:</strong> {{ a03.get("source_map_indicator_count", 0) }} | <strong>Third-party scripts:</strong> {{ a03.get("third_party_script_count", 0) }}</p>
+      <p><strong>Highest indicator confidence:</strong> {{ a03.get("highest_confidence", "Low") }}. Evidence-based component review only; no external registry fetching or exploit code was used.</p>
+
+      <h3>Component Hints and Version Exposures</h3>
+      {% set a03_component_items = report.get("a03_supply_chain_evidence", []) | selectattr("rule_group", "in", ["javascript_library_hints", "component_version_exposure"]) | list %}
+      {% if a03_component_items %}
+      <table>
+        <thead><tr><th>Component</th><th>Version</th><th>Source URL</th><th>Confidence</th><th>CVE Count</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in a03_component_items[:80] %}
+          <tr><td>{{ item.get("component_name") }}</td><td>{{ item.get("component_version") }}</td><td>{{ item.get("affected_url") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("cve_ids", []) | length }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No component hint or version exposure indicators were generated.</p>
+      {% endif %}
+
+      <h3>Dependency Metadata Exposure</h3>
+      {% set a03_metadata_items = report.get("a03_supply_chain_evidence", []) | selectattr("rule_group", "equalto", "dependency_metadata_exposure") | list %}
+      {% if a03_metadata_items %}
+      <table>
+        <thead><tr><th>File</th><th>URL/source</th><th>Exposure Type</th><th>Confidence</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in a03_metadata_items[:60] %}
+          <tr><td>{{ item.get("metadata_filename") or item.get("component_name") }}</td><td>{{ item.get("affected_url") }}</td><td>{{ item.get("rule_id") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No dependency metadata exposure indicators were generated.</p>
+      {% endif %}
+
+      <h3>SBOM Analysis and CVE/CPE Enrichment</h3>
+      {% set a03_sbom_items = report.get("a03_supply_chain_evidence", []) | selectattr("rule_group", "in", ["sbom_analysis", "cve_cpe_enrichment"]) | list %}
+      {% if a03_sbom_items %}
+      <table>
+        <thead><tr><th>Component</th><th>Version</th><th>CPE/PURL</th><th>CVE IDs</th><th>CVSS</th><th>EPSS</th><th>Confidence</th></tr></thead>
+        <tbody>
+          {% for item in a03_sbom_items[:80] %}
+          <tr><td>{{ item.get("component_name") }}</td><td>{{ item.get("component_version") }}</td><td>{{ item.get("cpe") or item.get("purl") }}</td><td>{{ item.get("cve_ids", []) | join(", ") }}</td><td>{{ item.get("cvss_score") }}</td><td>{{ item.get("epss_score") }}</td><td>{{ item.get("confidence") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No SBOM component or CVE/CPE enrichment evidence was generated.</p>
+      {% endif %}
+
+      <h3>Source Map, Build Artifact, and Third-Party Script Review</h3>
+      {% set a03_process_items = report.get("a03_supply_chain_evidence", []) | selectattr("rule_group", "equalto", "supply_chain_process_manual_review") | list %}
+      {% if a03_process_items %}
+      <table>
+        <thead><tr><th>Indicator</th><th>URL/source</th><th>Type</th><th>Confidence</th><th>Manual Validation</th><th>Limitation</th></tr></thead>
+        <tbody>
+          {% for item in a03_process_items[:80] %}
+          <tr><td>{{ item.get("title") }}</td><td>{{ item.get("affected_url") }}</td><td>{{ item.get("component_type") }}</td><td>{{ item.get("confidence") }}</td><td>{{ "Required" if item.get("manual_validation_required") else "Not required" }}</td><td>{{ item.get("limitation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No source map, build artifact, or third-party script review indicators were generated.</p>
+      {% endif %}
+
+      <h3>Recommendations and Limitations</h3>
+      <p><strong>Recommendations:</strong> {{ a03.get("recommendations", []) | join("; ") }}</p>
+      <p><strong>Limitations:</strong> {{ a03.get("limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
     {% set a01 = report.get("a01_access_control_summary", {}) %}
     {% if a01.get("enabled") %}
     <section>

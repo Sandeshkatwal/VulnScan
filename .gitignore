@@ -61,8 +61,12 @@ scan_results/
 !data/owasp/
 !data/owasp/a01/
 !data/owasp/a01/a01_rules.json
+!data/owasp/a03/
+!data/owasp/a03/a03_rules.json
 !data/owasp/a05/
 !data/owasp/a05/a05_rules.json
+!data/sbom/
+!data/sbom/*.json
 !assets/screenshots/.gitkeep
 !assets/architecture/.gitkeep
 !assets/demo/.gitkeep

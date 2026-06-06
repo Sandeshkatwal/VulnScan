@@ -1,0 +1,80 @@
+{
+  "owasp_id": "A03:2025",
+  "name": "A03 Software Supply Chain Failures",
+  "ruleset_name": "VulScan A03 Software Supply Chain Rules",
+  "ruleset_version": "20.7",
+  "description": "Passive component exposure, dependency metadata, SBOM, and local vulnerability intelligence enrichment rules.",
+  "safety": {
+    "candidate_only": true,
+    "manual_validation_required": true,
+    "no_dependency_confusion_testing": true,
+    "no_malicious_package_testing": true,
+    "no_external_registry_fetching": true,
+    "no_exploit_code_download": true
+  },
+  "rule_groups": {
+    "javascript_library_hints": [
+      "jquery_detected",
+      "bootstrap_detected",
+      "angular_detected",
+      "react_detected",
+      "vue_detected",
+      "lodash_detected",
+      "moment_detected",
+      "axios_detected",
+      "express_client_hint",
+      "library_version_exposed"
+    ],
+    "component_version_exposure": [
+      "server_version_exposed",
+      "framework_version_exposed",
+      "cms_version_exposed",
+      "generator_meta_tag_detected",
+      "asset_path_version_detected",
+      "source_map_detected"
+    ],
+    "dependency_metadata_exposure": [
+      "package_json_exposed",
+      "package_lock_exposed",
+      "yarn_lock_exposed",
+      "pnpm_lock_exposed",
+      "composer_json_exposed",
+      "composer_lock_exposed",
+      "requirements_txt_exposed",
+      "pyproject_toml_exposed",
+      "go_mod_exposed",
+      "cargo_toml_exposed",
+      "gemfile_exposed"
+    ],
+    "sbom_analysis": [
+      "cyclonedx_component_detected",
+      "spdx_component_detected",
+      "component_without_version",
+      "component_with_cve_match",
+      "outdated_component_indicator",
+      "component_license_metadata_present",
+      "component_purl_present"
+    ],
+    "cve_cpe_enrichment": [
+      "cpe_match_detected",
+      "cve_match_detected",
+      "cvss_available",
+      "epss_available",
+      "exploit_metadata_available",
+      "stale_vulnerability_intelligence"
+    ],
+    "supply_chain_process_manual_review": [
+      "build_metadata_exposed",
+      "ci_cd_metadata_exposed",
+      "source_map_exposed",
+      "debug_build_artifact_indicator",
+      "unsigned_update_mechanism_manual_review",
+      "third_party_script_manual_review"
+    ]
+  },
+  "limitations": [
+    "Rules evaluate discovered or explicitly supplied metadata only.",
+    "No dependency confusion testing, package takeover simulation, CI/CD attack simulation, package registry fetching, or exploit code download is performed.",
+    "Vulnerability intelligence enrichment uses local metadata only and requires manual validation."
+  ]
+}

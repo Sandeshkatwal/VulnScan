@@ -392,6 +392,60 @@ class A01ManualPlanRequest(StrictApiModel):
     )
 
 
+class A03AssessmentRequest(StrictApiModel):
+    """Build A03 Software Supply Chain evidence from supplied safe metadata."""
+
+    target: str = Field("", max_length=2048, description="Authorised target URL.", examples=["http://127.0.0.1:8000"])
+    headers: dict[str, Any] = Field(default_factory=dict, description="Observed response headers. Secrets should not be supplied.", examples=[{}])
+    html_snippet: str = Field("", max_length=20000, description="Limited HTML snippet for script and generator hints. Full response bodies should not be supplied.", examples=[""])
+    scripts: list[Any] = Field(default_factory=list, description="Observed script URLs or script metadata. External scripts are not fetched.", examples=[["/static/jquery-3.6.0.min.js"]])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates or discovered asset URLs.", examples=[[]])
+    sbom_components: list[dict[str, Any]] = Field(default_factory=list, description="Local SBOM components already parsed by the caller.", examples=[[]])
+    vuln_intel: dict[str, Any] = Field(default_factory=dict, description="Optional local vulnerability-intelligence metadata. No external registries are queried.", examples=[{}])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "http://127.0.0.1:8000",
+                    "headers": {"Server": "nginx/1.24.0"},
+                    "html_snippet": "<script src=\"/static/jquery-3.6.0.min.js\"></script>",
+                    "scripts": ["/static/jquery-3.6.0.min.js"],
+                    "endpoint_results": [{"url": "http://127.0.0.1:8000/package.json"}],
+                    "sbom_components": [],
+                    "vuln_intel": {},
+                }
+            ]
+        },
+    )
+
+
+class SBOMAnalyseRequest(StrictApiModel):
+    """Analyse a supplied SBOM document body without accepting server-side paths."""
+
+    sbom: dict[str, Any] = Field(default_factory=dict, description="CycloneDX or SPDX JSON SBOM document body.", examples=[{}])
+    use_vuln_intel: bool = Field(False, description="Use supplied local vulnerability-intelligence metadata if provided.", examples=[False])
+    vuln_intel: dict[str, Any] = Field(default_factory=dict, description="Optional local vulnerability-intelligence metadata supplied in the request body.", examples=[{}])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "sbom": {
+                        "bomFormat": "CycloneDX",
+                        "specVersion": "1.5",
+                        "components": [{"type": "library", "name": "jquery", "version": "3.6.0"}],
+                    },
+                    "use_vuln_intel": False,
+                    "vuln_intel": {},
+                }
+            ]
+        },
+    )
+
+
 class A10ResponseObservation(StrictApiModel):
     url: str = Field(..., min_length=1, max_length=2048)
     status_code: int | None = Field(None, ge=100, le=599)

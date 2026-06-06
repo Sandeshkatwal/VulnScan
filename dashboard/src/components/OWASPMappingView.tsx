@@ -13,6 +13,8 @@ import type {
   OWASPSummary,
   A01AccessControlEvidenceItem,
   A01AccessControlSummary,
+  A03SupplyChainEvidenceItem,
+  A03SupplyChainSummary,
   A04CryptoEvidenceItem,
   A04CryptoSummary,
   A04TlsMetadata,
@@ -24,6 +26,7 @@ import type {
   A10ErrorHandlingSummary,
 } from '../types/api'
 import { A01AccessControlView } from './A01AccessControlView'
+import { A03SupplyChainView } from './A03SupplyChainView'
 import { A04CryptoView } from './A04CryptoView'
 import { A05InjectionView } from './A05InjectionView'
 import { A07AuthenticationView } from './A07AuthenticationView'
@@ -143,6 +146,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
   const existingCoverageGaps = resultPayload?.owasp_coverage_gaps as OWASPCoverageGap[] | undefined
   const a01Summary = resultPayload?.a01_access_control_summary as A01AccessControlSummary | undefined
   const a01Evidence = (resultPayload?.a01_access_control_evidence as A01AccessControlEvidenceItem[] | undefined) || []
+  const a03Summary = resultPayload?.a03_supply_chain_summary as A03SupplyChainSummary | undefined
+  const a03Evidence = (resultPayload?.a03_supply_chain_evidence as A03SupplyChainEvidenceItem[] | undefined) || []
   const a04Summary = resultPayload?.a04_crypto_summary as A04CryptoSummary | undefined
   const a04Evidence = (resultPayload?.a04_crypto_evidence as A04CryptoEvidenceItem[] | undefined) || []
   const a04TlsMetadata = (resultPayload?.a04_tls_metadata as A04TlsMetadata[] | undefined) || []
@@ -228,6 +233,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
       </article>
 
       <A01AccessControlView summary={a01Summary} evidence={a01Evidence} />
+
+      <A03SupplyChainView summary={a03Summary} evidence={a03Evidence} />
 
       <A04CryptoView summary={a04Summary} evidence={a04Evidence} tlsMetadata={a04TlsMetadata} />
 

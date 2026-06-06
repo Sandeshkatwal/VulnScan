@@ -163,3 +163,13 @@ The API binds to localhost by default. Do not expose it remotely unless you expl
 `--a01-checks` enables safe candidate discovery and manual validation planning for A01 Broken Access Control. It is available for `endpoints`, `web-scan`, and `validate`.
 
 The option does not perform auth bypass automation, cross-account testing, credential attacks, privilege escalation attempts, or state-changing requests.
+## Version 20.7 A03 Commands
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a03-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a03-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1 --vuln-intel --a03-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main sbom analyse --sbom-file data\sbom\sample_cyclonedx_sbom.json --a03-checks --owasp-assess --json --html
+```
+
+`--a03-checks` classifies available component/header/endpoint/SBOM/vulnerability-intelligence evidence. It does not perform dependency confusion testing, external registry fetching, malicious package testing, package takeover simulation, or exploit validation.

@@ -38,6 +38,8 @@ import type {
   A01AssessmentResponse,
   A01ManualPlanRequest,
   A01ManualPlanResponse,
+  A03AssessmentRequest,
+  A03AssessmentResponse,
   A04AssessmentRequest,
   A04AssessmentResponse,
   A07AssessmentRequest,
@@ -56,6 +58,8 @@ import type {
   ScanResponse,
   ScansQuery,
   ScansResponse,
+  SBOMAnalyseRequest,
+  SBOMAnalyseResponse,
   ScopeCheckRequest,
   ScopeCheckResponse,
   SubmissionRecord,
@@ -327,6 +331,22 @@ export function assessA01AccessControl(payload: A01AssessmentRequest): Promise<A
 
 export function buildA01ManualPlan(payload: A01ManualPlanRequest): Promise<A01ManualPlanResponse> {
   return request<A01ManualPlanResponse>('/owasp/a01/manual-plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function assessA03SupplyChain(payload: A03AssessmentRequest): Promise<A03AssessmentResponse> {
+  return request<A03AssessmentResponse>('/owasp/a03/assess', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function analyseSBOM(payload: SBOMAnalyseRequest): Promise<SBOMAnalyseResponse> {
+  return request<SBOMAnalyseResponse>('/sbom/analyse', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

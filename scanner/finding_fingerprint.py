@@ -134,7 +134,7 @@ def build_finding_fingerprint(item: dict[str, Any], item_type: str = "finding") 
         "method": _norm(item.get("method") or item.get("method_hint")),
     }
     digest = hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     return {
         "fingerprint_id": f"fp_{uuid.uuid4().hex[:16].translate(str.maketrans('0123456789', 'abcdefghij'))}",
         "fingerprint_version": FINGERPRINT_VERSION,

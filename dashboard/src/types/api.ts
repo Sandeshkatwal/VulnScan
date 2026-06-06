@@ -905,6 +905,87 @@ export interface A01ManualPlanResponse {
   evidence_template?: A01EvidenceTemplate
 }
 
+export interface A03SupplyChainSummary {
+  enabled?: boolean
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  strong_indicators_count?: number
+  weak_indicators_count?: number
+  informational_count?: number
+  manual_validation_required_count?: number
+  component_hint_count?: number
+  version_exposure_count?: number
+  dependency_metadata_exposure_count?: number
+  sbom_component_count?: number
+  cve_match_count?: number
+  cpe_match_count?: number
+  source_map_indicator_count?: number
+  third_party_script_count?: number
+  rule_group_counts?: Record<string, number>
+  highest_confidence?: string
+  top_risks?: string[]
+  recommendations?: string[]
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface A03SupplyChainEvidenceItem {
+  evidence_id?: string
+  rule_id?: string
+  rule_group?: string
+  title?: string
+  affected_url?: string
+  affected_host?: string
+  component_name?: string
+  component_version?: string
+  component_type?: string
+  package_ecosystem?: string
+  cpe?: string
+  purl?: string
+  cve_ids?: string[]
+  cvss_score?: number | string | null
+  epss_score?: number | string | null
+  exploit_metadata?: ApiRecord
+  evidence_strength?: string
+  confidence?: string
+  safe_evidence_summary?: string
+  recommendation?: string
+  manual_validation_required?: boolean
+  source?: string
+  created_at?: string
+  limitation?: string
+  metadata_filename?: string
+  [key: string]: unknown
+}
+
+export interface A03AssessmentRequest {
+  target?: string
+  headers?: ApiRecord
+  html_snippet?: string
+  scripts?: unknown[]
+  endpoint_results?: ApiRecord[]
+  sbom_components?: ApiRecord[]
+  vuln_intel?: ApiRecord
+}
+
+export interface A03AssessmentResponse {
+  a03_supply_chain_summary?: A03SupplyChainSummary
+  a03_supply_chain_evidence?: A03SupplyChainEvidenceItem[]
+}
+
+export interface SBOMAnalyseRequest {
+  sbom?: ApiRecord
+  use_vuln_intel?: boolean
+  vuln_intel?: ApiRecord
+}
+
+export interface SBOMAnalyseResponse {
+  components?: ApiRecord[]
+  a03_supply_chain_summary?: A03SupplyChainSummary
+  a03_supply_chain_evidence?: A03SupplyChainEvidenceItem[]
+}
+
 export interface A04CryptoSummary {
   enabled?: boolean
   target?: string

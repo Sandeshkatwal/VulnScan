@@ -59,6 +59,7 @@ from scanner.owasp_mapping import (
 )
 from scanner.owasp_assessment import attach_owasp_assessment
 from scanner.owasp_a01_access_control import A01RulesError, attach_a01_access_control
+from scanner.owasp_a03_supply_chain import A03RulesError, analyse_sbom_file, attach_a03_supply_chain
 from scanner.owasp_a05_injection import A05RulesError, attach_a05_injection
 from scanner.owasp_a04_crypto import A04RulesError, attach_a04_crypto
 from scanner.owasp_a07_authentication import A07RulesError, attach_a07_authentication
@@ -85,7 +86,7 @@ from scanner.submission_tracker import (
     update_retest,
     update_submission_status,
 )
-from scanner.cve_feed import DEFAULT_CVE_FEED_PATH
+from scanner.cve_feed import DEFAULT_CVE_FEED_PATH, CveFeedError, load_cve_feed
 from scanner.epss_importer import DEFAULT_EPSS_PATH
 from scanner.exploit_metadata import DEFAULT_EXPLOIT_METADATA_PATH
 from scanner.database import database_exists, get_missing_required_tables
@@ -137,6 +138,7 @@ from scanner.remediation import (
     update_remediation_status,
 )
 from scanner.software_inventory import build_software_inventory
+from scanner.sbom_import import SBOMImportError
 from scanner.ssh_audit import (
     SshAuditConfigurationError,
     audit_ssh_host,
@@ -203,6 +205,7 @@ retest_app = typer.Typer(help="Track manual retest workflow status.")
 duplicates_app = typer.Typer(help="Fingerprint findings and detect duplicate security findings.")
 metrics_app = typer.Typer(help="Local Bug Intelligence metrics and personal performance dashboard data.")
 scope_app = typer.Typer(help="Manage local Program Scope files.")
+sbom_app = typer.Typer(help="Analyse local SBOM files and build A03 software supply chain evidence.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -210,6 +213,7 @@ app.add_typer(retest_app, name="retest")
 app.add_typer(duplicates_app, name="duplicates")
 app.add_typer(metrics_app, name="metrics")
 app.add_typer(scope_app, name="scope")
+app.add_typer(sbom_app, name="sbom")
 console = Console()
 
 
@@ -324,6 +328,115 @@ def _program_scope_command(alias_note: str | None = None) -> None:
 def _warn_legacy_scope_alias(scope_file: str | None = None) -> None:
     if "--bug-bounty-scope" in sys.argv or (scope_file and "data/bug_bounty" in scope_file.replace("\\", "/")):
         console.print("[yellow]Alias retained for compatibility. Prefer --scope-file.[/yellow]")
+
+
+@sbom_app.command("analyse")
+def sbom_analyse(
+    sbom_file: Annotated[
+        Path,
+        typer.Option("--sbom-file", help="Path to a local CycloneDX or SPDX JSON SBOM file."),
+    ],
+    a03_checks: Annotated[
+        bool,
+        typer.Option("--a03-checks", help="Build A03 Software Supply Chain evidence from the local SBOM."),
+    ] = False,
+    owasp_assess: Annotated[
+        bool,
+        typer.Option("--owasp-assess", help="Build OWASP Assessment Engine category results from SBOM/A03 evidence."),
+    ] = False,
+    json_report: Annotated[
+        bool,
+        typer.Option("--json", help="Save SBOM analysis results to a JSON report."),
+    ] = False,
+    html_report: Annotated[
+        bool,
+        typer.Option("--html", help="Save SBOM analysis results to an HTML report."),
+    ] = False,
+    use_cve_feed: Annotated[
+        bool,
+        typer.Option("--use-cve-feed", help="Enable local CVE feed enrichment for SBOM components."),
+    ] = False,
+    cve_feed: Annotated[
+        Path,
+        typer.Option("--cve-feed", help="Path to a local CVE-style JSON feed file."),
+    ] = DEFAULT_CVE_FEED_PATH,
+    epss_file: Annotated[
+        Path | None,
+        typer.Option("--epss-file", help="Accepted for command compatibility. EPSS values are read from local CVE feed metadata in this version."),
+    ] = None,
+    exploit_metadata_file: Annotated[
+        Path | None,
+        typer.Option("--exploit-metadata-file", help="Accepted for command compatibility. No exploit code is downloaded or executed."),
+    ] = None,
+    component_intel: Annotated[
+        Path | None,
+        typer.Option("--component-intel", help="Reserved for future local component intelligence files. External registry fetching is not performed."),
+    ] = None,
+) -> None:
+    """Analyse a local SBOM and generate A03 software supply chain evidence."""
+    console.print(Panel.fit(f"VulScan version {__version__}", style="bold cyan"))
+    console.print("[bold]SBOM Analysis[/bold]")
+    console.print("[yellow]A03 safety:[/yellow] local SBOM only; no package registry fetching, dependency confusion testing, or exploit code use.")
+    scan_start_time = datetime.now().astimezone()
+    try:
+        payload = analyse_sbom_file(sbom_file, vuln_intel=_build_a03_vuln_intel(use_cve_feed, cve_feed))
+    except (A03RulesError, CveFeedError, SBOMImportError) as exc:
+        console.print(f"[red]SBOM analysis error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    scan_end_time = datetime.now().astimezone()
+    if not a03_checks:
+        console.print("[yellow]--a03-checks was not supplied; A03 evidence was still generated from the local SBOM for report consistency.[/yellow]")
+    scan_result = {
+        "host": "sbom-analysis",
+        "target": str(sbom_file),
+        "resolved_ip": "",
+        "scan_mode": "sbom-analysis",
+        "duration_seconds": round((scan_end_time - scan_start_time).total_seconds(), 3),
+        "open_ports": [],
+        "findings": list(payload.get("findings", [])),
+        "sbom_components": payload.get("sbom_components", []),
+        "a03_supply_chain_summary": payload.get("a03_supply_chain_summary", {}),
+        "a03_supply_chain_evidence": payload.get("a03_supply_chain_evidence", []),
+        "demo_mode": False,
+        "demo_notice": "",
+        "scan_start_time": scan_start_time.isoformat(timespec="seconds"),
+        "scan_end_time": scan_end_time.isoformat(timespec="seconds"),
+    }
+    _print_a03_supply_chain_summary(scan_result.get("a03_supply_chain_summary", {}))
+    if owasp_assess:
+        try:
+            attach_owasp_assessment(scan_result)
+        except OWASPAssessmentRulesError as exc:
+            console.print(f"[red]OWASP assessment error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
+    _print_findings(scan_result["findings"])
+    if epss_file:
+        console.print("[yellow]EPSS note:[/yellow] Version 20.7 SBOM analysis reads EPSS values only from local vulnerability-intelligence metadata.")
+    if exploit_metadata_file:
+        console.print("[yellow]Exploit metadata note:[/yellow] No exploit code is downloaded or executed.")
+    if component_intel:
+        console.print("[yellow]Component intelligence note:[/yellow] --component-intel is reserved for future local-only enrichment.")
+    if json_report:
+        report_path = save_json_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+            reports_dir=Path("reports") / "owasp" / "a03",
+        )
+        console.print(f"[bold]JSON SBOM report saved:[/bold] {report_path}")
+    if html_report:
+        report_path = save_html_report(
+            scan_result=scan_result,
+            scanner_name="VulScan",
+            scanner_version=__version__,
+            scan_start_time=scan_start_time,
+            scan_end_time=scan_end_time,
+            reports_dir=Path("reports") / "owasp" / "a03",
+        )
+        console.print(f"[bold]HTML SBOM report saved:[/bold] {report_path}")
 
 
 @app.command("program-scope")
@@ -995,6 +1108,13 @@ def scan(
             help="Build OWASP Assessment Engine category results from existing evidence.",
         ),
     ] = False,
+    a03_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a03-checks",
+            help="Run safe A03 Software Supply Chain and component exposure checks from local evidence.",
+        ),
+    ] = False,
     use_asset_criticality: Annotated[
         bool,
         typer.Option(
@@ -1611,6 +1731,13 @@ def scan(
         scan_result.get("prioritisation_trends", {}),
         scan_result.get("prioritisation_trend_details", {}),
     )
+    if a03_checks:
+        try:
+            attach_a03_supply_chain(scan_result, vuln_intel=_build_a03_vuln_intel(use_cve_feed, cve_feed))
+        except (A03RulesError, CveFeedError) as exc:
+            console.print(f"[red]A03 Software Supply Chain error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a03_supply_chain_summary(scan_result.get("a03_supply_chain_summary", {}))
     if owasp_map or owasp_assess:
         try:
             attach_owasp_metadata(scan_result)
@@ -1919,6 +2046,13 @@ def web_scan(
         typer.Option(
             "--a01-checks",
             help="Run safe A01 Broken Access Control candidate discovery and manual validation planning.",
+        ),
+    ] = False,
+    a03_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a03-checks",
+            help="Run safe A03 Software Supply Chain and component exposure checks from observed web metadata.",
         ),
     ] = False,
     a04_checks: Annotated[
@@ -2269,6 +2403,13 @@ def web_scan(
             console.print(f"[red]A01 Broken Access Control error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a01_access_control_summary(scan_result.get("a01_access_control_summary", {}))
+    if a03_checks:
+        try:
+            attach_a03_supply_chain(scan_result)
+        except A03RulesError as exc:
+            console.print(f"[red]A03 Software Supply Chain error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a03_supply_chain_summary(scan_result.get("a03_supply_chain_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result)
@@ -2564,6 +2705,13 @@ def endpoints(
             help="Run safe A01 Broken Access Control candidate discovery and manual validation planning.",
         ),
     ] = False,
+    a03_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a03-checks",
+            help="Run safe A03 Software Supply Chain and component exposure checks from supplied/discovered URLs.",
+        ),
+    ] = False,
     a05_checks: Annotated[
         bool,
         typer.Option(
@@ -2665,6 +2813,13 @@ def endpoints(
             console.print(f"[red]A01 Broken Access Control error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a01_access_control_summary(scan_result.get("a01_access_control_summary", {}))
+    if a03_checks:
+        try:
+            attach_a03_supply_chain(scan_result)
+        except A03RulesError as exc:
+            console.print(f"[red]A03 Software Supply Chain error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a03_supply_chain_summary(scan_result.get("a03_supply_chain_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result, collect_tls=False)
@@ -4055,6 +4210,38 @@ def _print_a01_access_control_summary(summary: dict[str, Any]) -> None:
     table.add_row("Highest indicator confidence", str(summary.get("highest_confidence", "Low")))
     console.print(table)
     console.print("[yellow]A01 safety:[/yellow] candidate discovery only; manual validation required; no auth bypass automation, cross-account testing, or state-changing requests performed.")
+
+
+def _print_a03_supply_chain_summary(summary: dict[str, Any]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="A03 Software Supply Chain Summary")
+    table.add_column("Metric")
+    table.add_column("Value")
+    rows = [
+        ("Evidence items", summary.get("total_evidence_items", 0)),
+        ("Strong indicators", summary.get("strong_indicators_count", 0)),
+        ("Weak indicators", summary.get("weak_indicators_count", 0)),
+        ("Component hints", summary.get("component_hint_count", 0)),
+        ("Version exposures", summary.get("version_exposure_count", 0)),
+        ("Dependency metadata exposures", summary.get("dependency_metadata_exposure_count", 0)),
+        ("SBOM components", summary.get("sbom_component_count", 0)),
+        ("CVE matches", summary.get("cve_match_count", 0)),
+        ("Source map indicators", summary.get("source_map_indicator_count", 0)),
+        ("Third-party scripts", summary.get("third_party_script_count", 0)),
+        ("Manual validation required", summary.get("manual_validation_required_count", 0)),
+        ("Highest indicator confidence", summary.get("highest_confidence", "Low")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+    console.print("[yellow]A03 safety:[/yellow] evidence-based component review only; no dependency confusion testing, external registry fetching, or exploit code used.")
+
+
+def _build_a03_vuln_intel(use_cve_feed: bool, cve_feed: Path | None) -> dict[str, Any]:
+    if not use_cve_feed or cve_feed is None:
+        return {}
+    return {"cve_feed": load_cve_feed(cve_feed)}
 
 
 def _print_a10_error_handling_summary(summary: dict[str, Any]) -> None:
