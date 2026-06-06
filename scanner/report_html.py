@@ -162,6 +162,11 @@ def save_html_report(
         "owasp_category_results": scan_result.get("owasp_category_results", []),
         "owasp_evidence_items": scan_result.get("owasp_evidence_items", []),
         "owasp_coverage_gaps": scan_result.get("owasp_coverage_gaps", []),
+        "a01_access_control_summary": scan_result.get(
+            "a01_access_control_summary",
+            {"enabled": False, "limitations": ["A01 Broken Access Control candidate checks were not enabled."]},
+        ),
+        "a01_access_control_evidence": scan_result.get("a01_access_control_evidence", []),
         "a04_crypto_summary": scan_result.get(
             "a04_crypto_summary",
             {"enabled": False, "limitations": ["A04 Cryptographic Failures checks were not enabled."]},

@@ -101,3 +101,8 @@ The module is observation-based and may require manual validation. It does not f
 ## Version 20.5 A05 Injection
 
 Version 20.5 adds A05 Injection candidate and reflection analysis. A05 evidence feeds `owasp_evidence_items`, `owasp_category_results` for `A05:2025`, and `owasp_assessment_summary` when `--a05-checks --owasp-assess` is used. A05 checks are candidate/indicator-based, use no exploit payloads, and require manual validation.
+## Version 20.6 A01 Broken Access Control
+
+Version 20.6 adds dedicated A01 Broken Access Control candidate evidence. When `--a01-checks` is enabled, A01 candidates feed `owasp_evidence_items`, `owasp_category_results`, and `owasp_assessment_summary` as manual-validation-required evidence.
+
+See [OWASP_A01_BROKEN_ACCESS_CONTROL.md](OWASP_A01_BROKEN_ACCESS_CONTROL.md) for the candidate-only A01 workflow.

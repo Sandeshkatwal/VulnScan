@@ -34,6 +34,10 @@ import type {
   OWASPAssessmentBuildRequest,
   OWASPAssessmentResponse,
   OWASPAssessmentRulesResponse,
+  A01AssessmentRequest,
+  A01AssessmentResponse,
+  A01ManualPlanRequest,
+  A01ManualPlanResponse,
   A04AssessmentRequest,
   A04AssessmentResponse,
   A07AssessmentRequest,
@@ -307,6 +311,22 @@ export function getOWASPAssessmentRules(): Promise<OWASPAssessmentRulesResponse>
 
 export function buildOWASPAssessment(payload: OWASPAssessmentBuildRequest): Promise<OWASPAssessmentResponse> {
   return request<OWASPAssessmentResponse>('/owasp/assessment/build', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function assessA01AccessControl(payload: A01AssessmentRequest): Promise<A01AssessmentResponse> {
+  return request<A01AssessmentResponse>('/owasp/a01/assess', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function buildA01ManualPlan(payload: A01ManualPlanRequest): Promise<A01ManualPlanResponse> {
+  return request<A01ManualPlanResponse>('/owasp/a01/manual-plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

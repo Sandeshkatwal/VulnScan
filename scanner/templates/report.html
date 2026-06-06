@@ -626,6 +626,98 @@
     </section>
     {% endif %}
 
+    {% set a01 = report.get("a01_access_control_summary", {}) %}
+    {% if a01.get("enabled") %}
+    <section>
+      <h2>A01 Broken Access Control Candidate Engine</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">A01 Candidates</div><div class="value">{{ a01.get("total_evidence_items", 0) }}</div></div>
+        <div class="metric"><div class="label">High Interest</div><div class="value">{{ a01.get("high_interest_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Object ID</div><div class="value">{{ a01.get("object_id_candidate_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Manual Validation</div><div class="value">{{ a01.get("manual_validation_required_count", 0) }}</div></div>
+      </div>
+      <p><strong>Tenant boundary candidates:</strong> {{ a01.get("tenant_boundary_candidate_count", 0) }} | <strong>Function-level candidates:</strong> {{ a01.get("function_level_candidate_count", 0) }} | <strong>Sensitive resources:</strong> {{ a01.get("sensitive_resource_candidate_count", 0) }} | <strong>Role/permission indicators:</strong> {{ a01.get("role_permission_indicator_count", 0) }}</p>
+      <p><strong>Highest indicator confidence:</strong> {{ a01.get("highest_confidence", "Low") }}. Candidate requiring manual validation; no auth bypass automation or cross-account testing was performed.</p>
+
+      <h3>Object ID Candidates</h3>
+      {% set a01_object_items = report.get("a01_access_control_evidence", []) | selectattr("rule_group", "equalto", "object_level_authorization_candidates") | list %}
+      {% if a01_object_items %}
+      <table>
+        <thead><tr><th>Endpoint/path</th><th>Parameter</th><th>Object Type Hint</th><th>Score</th><th>Confidence</th><th>Manual Validation</th></tr></thead>
+        <tbody>
+          {% for item in a01_object_items[:60] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("affected_parameter") }}</td><td>{{ item.get("object_type_hint") }}</td><td>{{ item.get("candidate_score") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("manual_test_plan_id") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No object-level authorization candidates were generated.</p>
+      {% endif %}
+
+      <h3>Function-Level and Admin Surface Candidates</h3>
+      {% set a01_function_items = report.get("a01_access_control_evidence", []) | selectattr("rule_group", "equalto", "function_level_authorization_candidates") | list %}
+      {% if a01_function_items %}
+      <table>
+        <thead><tr><th>Endpoint</th><th>Function Type</th><th>Candidate Reason</th><th>Score</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in a01_function_items[:60] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("endpoint_category") }}</td><td>{{ item.get("safe_evidence_summary") }}</td><td>{{ item.get("candidate_score") }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No function-level authorization candidates were generated.</p>
+      {% endif %}
+
+      <h3>Tenant Boundary and Role/Permission Indicators</h3>
+      {% set a01_boundary_items = report.get("a01_access_control_evidence", []) | selectattr("rule_group", "in", ["tenant_boundary_candidates", "role_and_permission_indicators"]) | list %}
+      {% if a01_boundary_items %}
+      <table>
+        <thead><tr><th>Type</th><th>Endpoint</th><th>Indicator</th><th>Score</th><th>Manual Plan</th><th>Limitation</th></tr></thead>
+        <tbody>
+          {% for item in a01_boundary_items[:60] %}
+          <tr><td>{{ item.get("access_control_candidate_type") }}</td><td>{{ item.get("affected_url") }}</td><td>{{ item.get("affected_parameter") or item.get("object_type_hint") }}</td><td>{{ item.get("candidate_score") }}</td><td>{{ item.get("manual_test_plan_id") }}</td><td>{{ item.get("limitation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No tenant boundary or role/permission indicators were generated.</p>
+      {% endif %}
+
+      <h3>Sensitive Resource and API Candidates</h3>
+      {% set a01_api_items = report.get("a01_access_control_evidence", []) | selectattr("rule_group", "in", ["sensitive_resource_candidates", "api_access_control_candidates"]) | list %}
+      {% if a01_api_items %}
+      <table>
+        <thead><tr><th>Endpoint</th><th>Parameter</th><th>Candidate Type</th><th>Score</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in a01_api_items[:60] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("affected_parameter") }}</td><td>{{ item.get("access_control_candidate_type") }}</td><td>{{ item.get("candidate_score") }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No sensitive resource or API access-control candidates were generated.</p>
+      {% endif %}
+
+      <h3>Manual Validation Plans and Evidence Templates</h3>
+      {% if report.get("a01_access_control_evidence") %}
+      <table>
+        <thead><tr><th>Candidate</th><th>Plan</th><th>Safe Manual Steps</th><th>Expected Secure Behaviour</th><th>Evidence Needed</th></tr></thead>
+        <tbody>
+          {% for item in report.get("a01_access_control_evidence", [])[:20] %}
+          {% set template = item.get("evidence_template", {}) %}
+          <tr><td>{{ item.get("title") }}</td><td>{{ item.get("manual_test_plan_id") }}</td><td>{{ item.get("recommended_manual_steps", []) | join("; ") }}</td><td>{{ template.get("expected_secure_behaviour") }}</td><td>{{ template.get("evidence_needed_for_confirmation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      <h3>Recommendations and Limitations</h3>
+      <p><strong>Recommendations:</strong> {{ a01.get("recommendations", []) | join("; ") }}</p>
+      <p><strong>Limitations:</strong> {{ a01.get("limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
     {% set a05 = report.get("a05_injection_summary", {}) %}
     {% if a05.get("enabled") %}
     <section>

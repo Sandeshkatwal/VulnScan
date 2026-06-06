@@ -158,3 +158,8 @@ The API binds to localhost by default. Do not expose it remotely unless you expl
 ```
 
 `--safe-reflection` uses harmless GET markers only. A05 output is candidate/indicator-based and requires manual validation.
+## A01 Broken Access Control
+
+`--a01-checks` enables safe candidate discovery and manual validation planning for A01 Broken Access Control. It is available for `endpoints`, `web-scan`, and `validate`.
+
+The option does not perform auth bypass automation, cross-account testing, credential attacks, privilege escalation attempts, or state-changing requests.

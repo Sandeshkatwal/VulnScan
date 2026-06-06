@@ -55,6 +55,8 @@ def build_owasp_evidence_items(
         items.extend(_items_from_a05_evidence(record, index, categories))
     for index, record in enumerate(scan_result.get("a10_error_handling_evidence", []) or []):
         items.extend(_items_from_a10_evidence(record, index, categories))
+    for index, record in enumerate(scan_result.get("a01_access_control_evidence", []) or []):
+        items.extend(_items_from_a01_evidence(record, index, categories))
     return _dedupe(items)
 
 
@@ -247,6 +249,44 @@ def _items_from_a04_evidence(record: dict[str, Any], index: int, categories: dic
             evidence_summary=str(record.get("safe_evidence_summary") or ""),
             recommendation_theme=str(record.get("recommendation") or "Review A04 Cryptographic Failures evidence and apply transport/security hardening."),
             limitation="A04 evidence is indicator-based and may require manual validation.",
+        )
+    ]
+
+
+def _items_from_a01_evidence(record: dict[str, Any], index: int, categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    if "A01:2025" not in categories:
+        return []
+    strength = str(record.get("evidence_strength") or "weak_indicator")
+    confidence = str(record.get("confidence") or "Medium")
+    score = int(record.get("candidate_score") or 0)
+    if record.get("evidence_strength") != "confirmed_finding":
+        strong_signals = {
+            "tenant_boundary_candidates",
+            "role_and_permission_indicators",
+            "sensitive_resource_candidates",
+            "api_access_control_candidates",
+        }
+        if record.get("rule_group") in strong_signals and score >= 45:
+            strength = "strong_indicator"
+        elif score >= 70:
+            strength = "strong_indicator"
+    return [
+        make_evidence_item(
+            source="owasp_a01",
+            source_id=str(record.get("evidence_id") or f"a01-{index}"),
+            title=str(record.get("title") or "A01 Broken Access Control candidate"),
+            owasp_id="A01:2025",
+            categories=categories,
+            confidence=confidence,
+            evidence_strength=strength,
+            observed_signal=str(record.get("safe_evidence_summary") or record.get("title") or ""),
+            affected_url=str(record.get("affected_url") or ""),
+            affected_parameter=str(record.get("affected_parameter") or ""),
+            endpoint_category=str(record.get("endpoint_category") or record.get("access_control_candidate_type") or ""),
+            manual_validation_required=bool(record.get("manual_validation_required", True)),
+            evidence_summary=str(record.get("safe_evidence_summary") or "A01 access-control candidate requiring manual validation."),
+            recommendation_theme=str(record.get("recommendation") or "Review A01 Broken Access Control candidates using authorised test accounts only."),
+            limitation=str(record.get("limitation") or "A01 evidence is candidate-based and does not perform auth bypass or cross-account testing."),
         )
     ]
 

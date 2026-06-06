@@ -254,3 +254,8 @@ Optional safe reflection:
 ```
 
 The module reports A05 Injection candidates, input handling indicators, parameter intelligence, form input candidates, API input candidates, and optional harmless marker reflection observations. It does not use exploit payloads, submit forms, modify state, or confirm exploitability. Manual validation is required.
+## Version 20.6 A01 Broken Access Control
+
+Version 20.6 adds an A01 Broken Access Control Candidate Engine for safe, authorised OWASP-focused assessment. It identifies access-control candidates from endpoints, parameters, URL structures, object identifiers, admin/function surfaces, tenant indicators, export/download workflows, APIs, and evidence records, then generates candidate evidence, confidence scoring, manual validation plans, and report-ready templates.
+
+The A01 engine is candidate-only: no auth bypass automation, no cross-account testing, no credential attacks, no privilege escalation attempts, and no state-changing requests. See `docs/OWASP_A01_BROKEN_ACCESS_CONTROL.md`.

@@ -346,6 +346,52 @@ class A05AssessmentRequest(StrictApiModel):
     )
 
 
+class A01AssessmentRequest(StrictApiModel):
+    """Build A01 Broken Access Control candidate evidence from supplied safe metadata."""
+
+    target: str = Field("", max_length=2048, description="Authorised target URL.", examples=["http://127.0.0.1:8000"])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates.", examples=[[]])
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter intelligence candidates. Parameter values are not required.", examples=[[]])
+    evidence_records: list[dict[str, Any]] = Field(default_factory=list, description="Optional manual evidence records without secrets, cookies, tokens, or full response bodies.", examples=[[]])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "http://127.0.0.1:8000",
+                    "endpoint_results": [{"url": "http://127.0.0.1:8000/api/users/123"}],
+                    "parameter_results": [{"url": "http://127.0.0.1:8000/account?id=123", "parameter_name": "id"}],
+                    "evidence_records": [],
+                }
+            ]
+        },
+    )
+
+
+class A01ManualPlanRequest(StrictApiModel):
+    """Generate an A01 manual validation plan and evidence template for a candidate."""
+
+    evidence_item: dict[str, Any] = Field(default_factory=dict, description="A01 candidate evidence item. Do not include secrets or sensitive response bodies.", examples=[{}])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "evidence_item": {
+                        "title": "Object-level authorization candidate: id",
+                        "affected_url": "http://127.0.0.1:8000/account?id",
+                        "affected_parameter": "id",
+                        "access_control_candidate_type": "object-level authorization candidate",
+                        "manual_test_plan_id": "horizontal_access_control_review",
+                    }
+                }
+            ]
+        },
+    )
+
+
 class A10ResponseObservation(StrictApiModel):
     url: str = Field(..., min_length=1, max_length=2048)
     status_code: int | None = Field(None, ge=100, le=599)

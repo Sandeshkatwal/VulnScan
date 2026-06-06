@@ -868,3 +868,14 @@ Optional harmless marker reflection observation for GET parameters:
 ```
 
 A05 checks identify candidates and indicators only. No exploit payloads are used and manual validation is required.
+## A01 Broken Access Control Candidates
+
+Run candidate-only A01 Broken Access Control analysis from existing endpoint, parameter, and evidence metadata:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a01-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a01-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a01-checks --owasp-assess --json --html
+```
+
+A01 checks identify access-control candidates and generate manual validation plans only. Use authorised test accounts and programme-approved test data.

@@ -58,6 +58,7 @@ from scanner.owasp_mapping import (
     load_owasp_mapping,
 )
 from scanner.owasp_assessment import attach_owasp_assessment
+from scanner.owasp_a01_access_control import A01RulesError, attach_a01_access_control
 from scanner.owasp_a05_injection import A05RulesError, attach_a05_injection
 from scanner.owasp_a04_crypto import A04RulesError, attach_a04_crypto
 from scanner.owasp_a07_authentication import A07RulesError, attach_a07_authentication
@@ -1913,6 +1914,13 @@ def web_scan(
             help="Accepted for Version 20.1 compatibility; A02 evidence is built from existing passive web and OWASP assessment evidence.",
         ),
     ] = False,
+    a01_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a01-checks",
+            help="Run safe A01 Broken Access Control candidate discovery and manual validation planning.",
+        ),
+    ] = False,
     a04_checks: Annotated[
         bool,
         typer.Option(
@@ -2254,6 +2262,13 @@ def web_scan(
 
     _print_web_dast_report(scan_result["web_dast_summary"], scan_result["web_dast_sections"])
     _print_bug_bounty_scope_summary(scan_result.get("bug_bounty_scope", {}))
+    if a01_checks:
+        try:
+            attach_a01_access_control(scan_result)
+        except A01RulesError as exc:
+            console.print(f"[red]A01 Broken Access Control error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a01_access_control_summary(scan_result.get("a01_access_control_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result)
@@ -2542,6 +2557,13 @@ def endpoints(
             help="Run safe A04 Cryptographic Failures and transport security evidence checks on supplied URLs.",
         ),
     ] = False,
+    a01_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a01-checks",
+            help="Run safe A01 Broken Access Control candidate discovery and manual validation planning.",
+        ),
+    ] = False,
     a05_checks: Annotated[
         bool,
         typer.Option(
@@ -2636,6 +2658,13 @@ def endpoints(
         "demo_mode": False,
         "demo_notice": "",
     }
+    if a01_checks:
+        try:
+            attach_a01_access_control(scan_result)
+        except A01RulesError as exc:
+            console.print(f"[red]A01 Broken Access Control error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a01_access_control_summary(scan_result.get("a01_access_control_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result, collect_tls=False)
@@ -2772,6 +2801,13 @@ def validate(
             help="Run safe A04 Cryptographic Failures and transport security evidence checks on validation targets.",
         ),
     ] = False,
+    a01_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a01-checks",
+            help="Run safe A01 Broken Access Control candidate discovery and manual validation planning.",
+        ),
+    ] = False,
     a05_checks: Annotated[
         bool,
         typer.Option(
@@ -2864,6 +2900,13 @@ def validate(
         "demo_mode": False,
         "demo_notice": "",
     }
+    if a01_checks:
+        try:
+            attach_a01_access_control(scan_result)
+        except A01RulesError as exc:
+            console.print(f"[red]A01 Broken Access Control error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a01_access_control_summary(scan_result.get("a01_access_control_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result, collect_tls=False)
@@ -3992,6 +4035,26 @@ def _print_a05_injection_summary(summary: dict[str, Any]) -> None:
     for label, value in rows:
         table.add_row(label, "" if value is None else str(value))
     console.print(table)
+
+
+def _print_a01_access_control_summary(summary: dict[str, Any]) -> None:
+    if not summary.get("enabled"):
+        return
+    table = Table(title="A01 Broken Access Control Candidate Summary")
+    table.add_column("Metric")
+    table.add_column("Value")
+    table.add_row("Total candidates", str(summary.get("total_evidence_items", 0)))
+    table.add_row("High interest", str(summary.get("high_interest_count", 0)))
+    table.add_row("Medium interest", str(summary.get("medium_interest_count", 0)))
+    table.add_row("Object-level authorization candidates", str(summary.get("object_id_candidate_count", 0)))
+    table.add_row("Function-level authorization candidates", str(summary.get("function_level_candidate_count", 0)))
+    table.add_row("Tenant boundary candidates", str(summary.get("tenant_boundary_candidate_count", 0)))
+    table.add_row("Sensitive resource candidates", str(summary.get("sensitive_resource_candidate_count", 0)))
+    table.add_row("Role/permission indicators", str(summary.get("role_permission_indicator_count", 0)))
+    table.add_row("Manual validation required", str(summary.get("manual_validation_required_count", 0)))
+    table.add_row("Highest indicator confidence", str(summary.get("highest_confidence", "Low")))
+    console.print(table)
+    console.print("[yellow]A01 safety:[/yellow] candidate discovery only; manual validation required; no auth bypass automation, cross-account testing, or state-changing requests performed.")
 
 
 def _print_a10_error_handling_summary(summary: dict[str, Any]) -> None:

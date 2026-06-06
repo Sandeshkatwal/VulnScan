@@ -41,6 +41,7 @@ from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
+from scanner.owasp_a01_access_control import A01RulesError, assess_a01_access_control, build_a01_manual_plan_response, load_a01_rules
 from scanner.owasp_a05_injection import A05RulesError, assess_a05_injection, load_a05_rules
 from scanner.owasp_a04_crypto import A04RulesError, assess_a04_crypto, load_a04_rules
 from scanner.owasp_a07_authentication import A07RulesError, assess_a07_authentication, load_a07_rules
@@ -48,7 +49,7 @@ from scanner.owasp_a10_error_handling import A10RulesError, assess_a10_error_han
 from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment_rules
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -91,7 +92,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "20.0"
+API_VERSION = "20.6"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -156,6 +157,9 @@ PROTECTED_PATHS = {
     "/owasp/map",
     "/owasp/assessment/rules",
     "/owasp/assessment/build",
+    "/owasp/a01/rules",
+    "/owasp/a01/assess",
+    "/owasp/a01/manual-plan",
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
@@ -926,6 +930,54 @@ def create_app(
             )
         except OWASPAssessmentRulesError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get(
+        "/owasp/a01/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List A01 Broken Access Control candidate rules",
+        description="Returns local A01 Broken Access Control candidate rules. Candidate-only; does not perform auth testing or accept file paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_a01_rules() -> dict[str, Any]:
+        try:
+            return load_a01_rules()
+        except A01RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a01/assess",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build A01 Broken Access Control candidate evidence",
+        description="Classifies access-control candidates from supplied endpoint, parameter, and evidence metadata. No auth bypass automation, cross-account testing, or state-changing requests are performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def assess_a01_endpoint(request: A01AssessmentRequest) -> dict[str, Any]:
+        try:
+            payload = assess_a01_access_control(
+                target=request.target,
+                endpoint_results=request.endpoint_results,
+                parameter_results=request.parameter_results,
+                evidence_records=request.evidence_records,
+            )
+            return {
+                "a01_access_control_summary": payload["a01_access_control_summary"],
+                "a01_access_control_evidence": payload["a01_access_control_evidence"],
+            }
+        except A01RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a01/manual-plan",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Generate an A01 manual validation plan",
+        description="Generates safe manual validation guidance and a report-ready evidence template for an A01 candidate. No auth testing is performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def a01_manual_plan_endpoint(request: A01ManualPlanRequest) -> dict[str, Any]:
+        return build_a01_manual_plan_response(request.evidence_item)
 
     @app.get(
         "/owasp/a04/rules",

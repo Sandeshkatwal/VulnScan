@@ -168,3 +168,6 @@ The OWASP Assessment dashboard renders A10 Mishandling of Exceptional Conditions
 ## OWASP A05 Injection View
 
 Version 20.5 adds an OWASP A05 Injection view under OWASP Assessment. It shows A05 evidence summary cards, parameter candidates, harmless marker reflection indicators, form input candidates, API input candidates, manual validation checklist, recommendations, and limitations. The view uses candidate/indicator wording and does not present exploitability as confirmed.
+## Version 20.6 A01 Broken Access Control
+
+Version 20.6 adds an A01 Broken Access Control view under OWASP Assessment. Reports that include `a01_access_control_summary` and `a01_access_control_evidence` show A01 summary cards, object ID candidates, admin/function surfaces, tenant boundary candidates, sensitive resource/API/role indicators, a manual test planner, evidence template, recommendations, and limitations.

@@ -1,0 +1,88 @@
+{
+  "owasp_id": "A01:2025",
+  "name": "A01 Broken Access Control",
+  "ruleset_name": "VulScan A01 Broken Access Control Candidate Rules",
+  "ruleset_version": "20.6",
+  "description": "Candidate-only rules for identifying access-control review points from existing endpoint, parameter, URL, API, and evidence metadata.",
+  "safety": {
+    "candidate_only": true,
+    "manual_validation_required": true,
+    "no_auth_bypass": true,
+    "no_cross_account_testing": true,
+    "no_state_changing_requests": true,
+    "no_privilege_escalation_attempts": true
+  },
+  "rule_groups": {
+    "object_level_authorization_candidates": [
+      "idor_parameter_detected",
+      "numeric_object_id_path_detected",
+      "uuid_object_id_path_detected",
+      "account_id_parameter_detected",
+      "user_id_parameter_detected",
+      "order_id_parameter_detected",
+      "invoice_id_parameter_detected",
+      "customer_id_parameter_detected",
+      "profile_id_parameter_detected",
+      "object_reference_in_url_detected"
+    ],
+    "function_level_authorization_candidates": [
+      "admin_endpoint_detected",
+      "management_endpoint_detected",
+      "settings_endpoint_detected",
+      "role_endpoint_detected",
+      "permissions_endpoint_detected",
+      "user_management_endpoint_detected",
+      "export_endpoint_detected",
+      "import_endpoint_detected",
+      "delete_update_action_endpoint_detected"
+    ],
+    "tenant_boundary_candidates": [
+      "tenant_id_parameter_detected",
+      "org_id_parameter_detected",
+      "organisation_id_parameter_detected",
+      "workspace_id_parameter_detected",
+      "team_id_parameter_detected",
+      "project_id_parameter_detected",
+      "company_id_parameter_detected",
+      "multi_tenant_path_detected"
+    ],
+    "sensitive_resource_candidates": [
+      "file_download_endpoint_detected",
+      "report_export_endpoint_detected",
+      "invoice_download_endpoint_detected",
+      "document_endpoint_detected",
+      "attachment_endpoint_detected",
+      "private_api_endpoint_detected"
+    ],
+    "role_and_permission_indicators": [
+      "role_parameter_detected",
+      "admin_parameter_detected",
+      "permission_parameter_detected",
+      "is_admin_parameter_detected",
+      "access_level_parameter_detected",
+      "scope_parameter_detected"
+    ],
+    "api_access_control_candidates": [
+      "rest_object_endpoint_detected",
+      "api_user_endpoint_detected",
+      "api_account_endpoint_detected",
+      "api_order_endpoint_detected",
+      "api_admin_endpoint_detected",
+      "api_bulk_action_endpoint_detected",
+      "graphql_endpoint_access_control_review"
+    ],
+    "manual_validation_plans": [
+      "horizontal_access_control_review",
+      "vertical_access_control_review",
+      "object_ownership_review",
+      "tenant_boundary_review",
+      "function_authorization_review",
+      "sensitive_export_review"
+    ]
+  },
+  "limitations": [
+    "Rules identify access-control candidates only.",
+    "No auth bypass automation, cross-account testing, destructive action, or state-changing request is performed.",
+    "Manual validation with authorised test accounts and programme-approved test data is required before confirming impact."
+  ]
+}

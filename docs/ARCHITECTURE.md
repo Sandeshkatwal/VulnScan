@@ -225,3 +225,8 @@ Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as 
 - A05 evidence feeds `scanner.owasp_evidence` as `A05:2025` OWASP evidence when `--owasp-assess` is used.
 - FastAPI exposes `GET /owasp/a05/rules` and `POST /owasp/a05/assess`.
 - The module does not submit forms, send exploit payloads, modify state, probe SSRF, perform schema fuzzing, or confirm exploitability.
+## Version 20.6 A01 Candidate Engine
+
+`scanner/owasp_a01_access_control.py` orchestrates A01 Broken Access Control candidate assessment. `scanner/access_control_candidates.py` contains passive classifiers for object identifiers, function surfaces, tenant boundaries, sensitive resources, role/permission indicators, and API access-control candidates.
+
+The A01 module attaches `a01_access_control_summary`, `a01_access_control_evidence`, grouped informational findings, duplicate fingerprints, manual validation plans, and evidence templates. `scanner/owasp_evidence.py` maps A01 candidate evidence into the OWASP Assessment Engine for `A01:2025`.

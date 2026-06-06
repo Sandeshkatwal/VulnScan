@@ -819,6 +819,92 @@ export interface OWASPAssessmentRulesResponse {
   [key: string]: unknown
 }
 
+export interface A01AccessControlSummary {
+  enabled?: boolean
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  high_interest_count?: number
+  medium_interest_count?: number
+  low_interest_count?: number
+  informational_count?: number
+  manual_validation_required_count?: number
+  object_id_candidate_count?: number
+  function_level_candidate_count?: number
+  tenant_boundary_candidate_count?: number
+  sensitive_resource_candidate_count?: number
+  role_permission_indicator_count?: number
+  api_access_control_candidate_count?: number
+  rule_group_counts?: Record<string, number>
+  highest_confidence?: string
+  top_candidates?: ApiRecord[]
+  recommendations?: string[]
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface A01EvidenceTemplate {
+  candidate_title?: string
+  affected_endpoint?: string
+  parameter_or_object_identifier?: string
+  candidate_type?: string
+  why_it_may_matter?: string
+  safe_manual_validation_steps?: string[]
+  expected_secure_behaviour?: string
+  evidence_needed_for_confirmation?: string
+  risk_if_confirmed?: string
+  recommendation?: string
+  [key: string]: unknown
+}
+
+export interface A01AccessControlEvidenceItem {
+  evidence_id?: string
+  rule_id?: string
+  rule_group?: string
+  title?: string
+  affected_url?: string
+  affected_host?: string
+  affected_parameter?: string
+  endpoint_category?: string
+  object_type_hint?: string
+  access_control_candidate_type?: string
+  evidence_strength?: string
+  candidate_score?: number
+  interest_label?: string
+  confidence?: string
+  safe_evidence_summary?: string
+  manual_validation_required?: boolean
+  manual_test_plan_id?: string
+  recommended_manual_steps?: string[]
+  recommendation?: string
+  limitation?: string
+  evidence_template?: A01EvidenceTemplate
+  source?: string
+  created_at?: string
+  [key: string]: unknown
+}
+
+export interface A01AssessmentRequest {
+  target?: string
+  endpoint_results?: ApiRecord[]
+  parameter_results?: ApiRecord[]
+  evidence_records?: ApiRecord[]
+}
+
+export interface A01AssessmentResponse {
+  a01_access_control_summary?: A01AccessControlSummary
+  a01_access_control_evidence?: A01AccessControlEvidenceItem[]
+}
+
+export interface A01ManualPlanRequest {
+  evidence_item?: ApiRecord
+}
+
+export interface A01ManualPlanResponse {
+  manual_validation_plan?: ApiRecord
+  evidence_template?: A01EvidenceTemplate
+}
+
 export interface A04CryptoSummary {
   enabled?: boolean
   target?: string
