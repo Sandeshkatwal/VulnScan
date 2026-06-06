@@ -241,3 +241,16 @@ VulScan includes safe OWASP A10 Mishandling of Exceptional Conditions checks for
 ```
 
 The module reports error-handling indicators, exception exposure evidence, verbose error evidence, framework debug indicators, status code patterns, sensitive error content, fail-safe review required notes, and manual validation required status. It analyses already observed evidence only and does not force errors, send payloads, submit forms, modify server-side state, perform crash testing, or perform DoS testing.
+### OWASP A05 Injection Candidate Analysis
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --owasp-assess --json --html
+```
+
+Optional safe reflection:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --safe-reflection --max-reflection-checks 10 --owasp-assess --json --html
+```
+
+The module reports A05 Injection candidates, input handling indicators, parameter intelligence, form input candidates, API input candidates, and optional harmless marker reflection observations. It does not use exploit payloads, submit forms, modify state, or confirm exploitability. Manual validation is required.

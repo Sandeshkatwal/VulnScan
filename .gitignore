@@ -58,6 +58,9 @@ scan_results/
 !data/programs/*.json
 !data/validation/
 !data/validation/*.json
+!data/owasp/
+!data/owasp/a05/
+!data/owasp/a05/a05_rules.json
 !assets/screenshots/.gitkeep
 !assets/architecture/.gitkeep
 !assets/demo/.gitkeep

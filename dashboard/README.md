@@ -165,3 +165,6 @@ The OWASP Assessment dashboard renders A07 Authentication Failures evidence when
 # A10 Error Handling View
 
 The OWASP Assessment dashboard renders A10 Mishandling of Exceptional Conditions evidence when a selected scan result includes `a10_error_handling_summary` and `a10_error_handling_evidence`. The view shows summary cards, error evidence, status code pattern analysis, framework debug indicators, fail-safe checklist, recommendations, limitations, indicator confidence, redacted snippets, and manual validation required notes.
+## OWASP A05 Injection View
+
+Version 20.5 adds an OWASP A05 Injection view under OWASP Assessment. It shows A05 evidence summary cards, parameter candidates, harmless marker reflection indicators, form input candidates, API input candidates, manual validation checklist, recommendations, and limitations. The view uses candidate/indicator wording and does not present exploitability as confirmed.

@@ -173,6 +173,11 @@ def save_html_report(
             {"enabled": False, "limitations": ["A07 Authentication Failures checks were not enabled."]},
         ),
         "a07_authentication_evidence": scan_result.get("a07_authentication_evidence", []),
+        "a05_injection_summary": scan_result.get(
+            "a05_injection_summary",
+            {"enabled": False, "limitations": ["A05 Injection checks were not enabled."]},
+        ),
+        "a05_injection_evidence": scan_result.get("a05_injection_evidence", []),
         "a10_error_handling_summary": scan_result.get(
             "a10_error_handling_summary",
             {"enabled": False, "limitations": ["A10 Mishandling of Exceptional Conditions checks were not enabled."]},

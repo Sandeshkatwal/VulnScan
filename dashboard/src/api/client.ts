@@ -38,6 +38,8 @@ import type {
   A04AssessmentResponse,
   A07AssessmentRequest,
   A07AssessmentResponse,
+  A05AssessmentRequest,
+  A05AssessmentResponse,
   A10AssessmentRequest,
   A10AssessmentResponse,
   OWASPMapRequest,
@@ -321,6 +323,14 @@ export function assessA04Crypto(payload: A04AssessmentRequest): Promise<A04Asses
 
 export function assessA07Authentication(payload: A07AssessmentRequest): Promise<A07AssessmentResponse> {
   return request<A07AssessmentResponse>('/owasp/a07/assess', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function assessA05Injection(payload: A05AssessmentRequest): Promise<A05AssessmentResponse> {
+  return request<A05AssessmentResponse>('/owasp/a05/assess', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

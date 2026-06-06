@@ -147,3 +147,14 @@ The API binds to localhost by default. Do not expose it remotely unless you expl
 ```
 
 `--a10-checks` adds safe A10 Mishandling of Exceptional Conditions evidence for error-handling indicators, exception exposure evidence, verbose error evidence, framework debug indicators, status code patterns, sensitive error content, and fail-safe review required notes. It does not force errors or send payloads.
+## A05 Injection
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --owasp-assess --json --html
+```
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --safe-reflection --max-reflection-checks 10 --owasp-assess --json --html
+```
+
+`--safe-reflection` uses harmless GET markers only. A05 output is candidate/indicator-based and requires manual validation.

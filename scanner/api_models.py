@@ -319,6 +319,33 @@ class A07AssessmentRequest(StrictApiModel):
     )
 
 
+class A05AssessmentRequest(StrictApiModel):
+    """Build A05 Injection candidate evidence from supplied safe metadata."""
+
+    target: str = Field("", max_length=2048, description="Authorised target URL.", examples=["http://127.0.0.1:8000"])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates.", examples=[[]])
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter intelligence candidates.", examples=[[]])
+    forms: list[dict[str, Any]] = Field(default_factory=list, description="Form metadata from safe discovery. Forms are not submitted.", examples=[[]])
+    safe_reflection: bool = Field(False, description="Run harmless marker reflection observation for selected GET parameters.")
+    max_reflection_checks: int = Field(10, ge=0, le=50)
+    request_delay: float = Field(1.0, ge=0.0, le=30.0)
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "http://127.0.0.1:8000",
+                    "endpoint_results": [],
+                    "parameter_results": [{"url": "http://127.0.0.1:8000/search?q=test", "parameter_name": "q"}],
+                    "forms": [],
+                    "safe_reflection": False,
+                }
+            ]
+        },
+    )
+
+
 class A10ResponseObservation(StrictApiModel):
     url: str = Field(..., min_length=1, max_length=2048)
     status_code: int | None = Field(None, ge=100, le=599)

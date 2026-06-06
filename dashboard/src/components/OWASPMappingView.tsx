@@ -16,10 +16,13 @@ import type {
   A04TlsMetadata,
   A07AuthenticationEvidenceItem,
   A07AuthenticationSummary,
+  A05InjectionEvidenceItem,
+  A05InjectionSummary,
   A10ErrorHandlingEvidenceItem,
   A10ErrorHandlingSummary,
 } from '../types/api'
 import { A04CryptoView } from './A04CryptoView'
+import { A05InjectionView } from './A05InjectionView'
 import { A07AuthenticationView } from './A07AuthenticationView'
 import { A10ErrorHandlingView } from './A10ErrorHandlingView'
 import { ErrorAlert } from './ErrorAlert'
@@ -140,6 +143,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
   const a04TlsMetadata = (resultPayload?.a04_tls_metadata as A04TlsMetadata[] | undefined) || []
   const a07Summary = resultPayload?.a07_authentication_summary as A07AuthenticationSummary | undefined
   const a07Evidence = (resultPayload?.a07_authentication_evidence as A07AuthenticationEvidenceItem[] | undefined) || []
+  const a05Summary = resultPayload?.a05_injection_summary as A05InjectionSummary | undefined
+  const a05Evidence = (resultPayload?.a05_injection_evidence as A05InjectionEvidenceItem[] | undefined) || []
   const a10Summary = resultPayload?.a10_error_handling_summary as A10ErrorHandlingSummary | undefined
   const a10Evidence = (resultPayload?.a10_error_handling_evidence as A10ErrorHandlingEvidenceItem[] | undefined) || []
 
@@ -218,6 +223,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
       </article>
 
       <A04CryptoView summary={a04Summary} evidence={a04Evidence} tlsMetadata={a04TlsMetadata} />
+
+      <A05InjectionView summary={a05Summary} evidence={a05Evidence} />
 
       <A07AuthenticationView summary={a07Summary} evidence={a07Evidence} />
 

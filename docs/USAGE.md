@@ -855,3 +855,16 @@ Run safe A10 error-handling and exception-exposure checks with:
 ```
 
 The checks analyse already observed response snippets, status codes, endpoint metadata, and validation results only. No errors are forced and no payloads are sent. Full response bodies are not stored; snippets are redacted and bounded.
+## OWASP A05 Injection Candidate Analysis
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --owasp-assess --json --html
+```
+
+Optional harmless marker reflection observation for GET parameters:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --safe-reflection --max-reflection-checks 10 --owasp-assess --json --html
+```
+
+A05 checks identify candidates and indicators only. No exploit payloads are used and manual validation is required.

@@ -98,3 +98,6 @@ The module is indicator-based and may require manual validation. It does not per
 `--a10-checks` adds dedicated A10 Mishandling of Exceptional Conditions evidence to the OWASP Assessment Engine. Evidence covers error-handling indicators, exception exposure evidence, verbose error evidence, framework debug indicators, database error indicators, status code patterns, sensitive error content, and fail-safe review required signals. When `--owasp-assess` is also used, A10 evidence feeds `owasp_evidence_items` and the `A10:2025` category result.
 
 The module is observation-based and may require manual validation. It does not force application errors, send payloads, submit forms, modify server-side state, perform crash testing, or perform DoS testing.
+## Version 20.5 A05 Injection
+
+Version 20.5 adds A05 Injection candidate and reflection analysis. A05 evidence feeds `owasp_evidence_items`, `owasp_category_results` for `A05:2025`, and `owasp_assessment_summary` when `--a05-checks --owasp-assess` is used. A05 checks are candidate/indicator-based, use no exploit payloads, and require manual validation.

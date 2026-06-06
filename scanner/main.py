@@ -58,6 +58,7 @@ from scanner.owasp_mapping import (
     load_owasp_mapping,
 )
 from scanner.owasp_assessment import attach_owasp_assessment
+from scanner.owasp_a05_injection import A05RulesError, attach_a05_injection
 from scanner.owasp_a04_crypto import A04RulesError, attach_a04_crypto
 from scanner.owasp_a07_authentication import A07RulesError, attach_a07_authentication
 from scanner.owasp_a10_error_handling import A10RulesError, attach_a10_error_handling
@@ -1919,6 +1920,28 @@ def web_scan(
             help="Run safe A04 Cryptographic Failures and transport security evidence checks.",
         ),
     ] = False,
+    a05_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a05-checks",
+            help="Run safe A05 Injection candidate and reflection analysis.",
+        ),
+    ] = False,
+    safe_reflection: Annotated[
+        bool,
+        typer.Option(
+            "--safe-reflection",
+            help="Run limited harmless marker reflection observation for selected GET parameters.",
+        ),
+    ] = False,
+    max_reflection_checks: Annotated[
+        int,
+        typer.Option(
+            "--max-reflection-checks",
+            min=0,
+            help="Maximum harmless reflection observations when --safe-reflection is enabled.",
+        ),
+    ] = 10,
     a07_checks: Annotated[
         bool,
         typer.Option(
@@ -2238,6 +2261,13 @@ def web_scan(
             console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
+    if a05_checks:
+        try:
+            attach_a05_injection(scan_result, safe_reflection=safe_reflection, max_reflection_checks=max_reflection_checks, request_delay=request_delay)
+        except A05RulesError as exc:
+            console.print(f"[red]A05 Injection error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a05_injection_summary(scan_result.get("a05_injection_summary", {}))
     if a07_checks:
         try:
             attach_a07_authentication(scan_result)
@@ -2512,6 +2542,36 @@ def endpoints(
             help="Run safe A04 Cryptographic Failures and transport security evidence checks on supplied URLs.",
         ),
     ] = False,
+    a05_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a05-checks",
+            help="Run safe A05 Injection candidate and reflection analysis.",
+        ),
+    ] = False,
+    safe_reflection: Annotated[
+        bool,
+        typer.Option(
+            "--safe-reflection",
+            help="Run limited harmless marker reflection observation for selected GET parameters.",
+        ),
+    ] = False,
+    max_reflection_checks: Annotated[
+        int,
+        typer.Option(
+            "--max-reflection-checks",
+            min=0,
+            help="Maximum harmless reflection observations when --safe-reflection is enabled.",
+        ),
+    ] = 10,
+    request_delay: Annotated[
+        float,
+        typer.Option(
+            "--request-delay",
+            min=0.0,
+            help="Delay in seconds between safe reflection requests.",
+        ),
+    ] = 1.0,
     a07_checks: Annotated[
         bool,
         typer.Option(
@@ -2583,6 +2643,13 @@ def endpoints(
             console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
+    if a05_checks:
+        try:
+            attach_a05_injection(scan_result, safe_reflection=safe_reflection, max_reflection_checks=max_reflection_checks, request_delay=request_delay)
+        except A05RulesError as exc:
+            console.print(f"[red]A05 Injection error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a05_injection_summary(scan_result.get("a05_injection_summary", {}))
     if a07_checks:
         try:
             attach_a07_authentication(scan_result)
@@ -2705,6 +2772,28 @@ def validate(
             help="Run safe A04 Cryptographic Failures and transport security evidence checks on validation targets.",
         ),
     ] = False,
+    a05_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a05-checks",
+            help="Run safe A05 Injection candidate and reflection analysis.",
+        ),
+    ] = False,
+    safe_reflection: Annotated[
+        bool,
+        typer.Option(
+            "--safe-reflection",
+            help="Run limited harmless marker reflection observation for selected GET parameters.",
+        ),
+    ] = False,
+    max_reflection_checks: Annotated[
+        int,
+        typer.Option(
+            "--max-reflection-checks",
+            min=0,
+            help="Maximum harmless reflection observations when --safe-reflection is enabled.",
+        ),
+    ] = 10,
     a07_checks: Annotated[
         bool,
         typer.Option(
@@ -2782,6 +2871,13 @@ def validate(
             console.print(f"[red]A04 Cryptographic Failures error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a04_crypto_summary(scan_result.get("a04_crypto_summary", {}))
+    if a05_checks:
+        try:
+            attach_a05_injection(scan_result, safe_reflection=safe_reflection, max_reflection_checks=max_reflection_checks, request_delay=request_delay)
+        except A05RulesError as exc:
+            console.print(f"[red]A05 Injection error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a05_injection_summary(scan_result.get("a05_injection_summary", {}))
     if a07_checks:
         try:
             attach_a07_authentication(scan_result)
@@ -3868,6 +3964,29 @@ def _print_a07_authentication_summary(summary: dict[str, Any]) -> None:
         ("Remember-me indicators", summary.get("remember_me_indicator_count")),
         ("Rate-limit indicators", summary.get("rate_limit_indicator_count")),
         ("Protocol surface indicators", summary.get("protocol_surface_indicator_count")),
+        ("Highest confidence", summary.get("highest_confidence")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+
+
+def _print_a05_injection_summary(summary: dict[str, Any]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="A05 Injection Candidate Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    rows = [
+        ("Evidence items", summary.get("total_evidence_items")),
+        ("Strong indicators", summary.get("strong_indicators_count")),
+        ("Weak indicators", summary.get("weak_indicators_count")),
+        ("Informational", summary.get("informational_count")),
+        ("Manual validation required", summary.get("manual_validation_required_count")),
+        ("Parameter candidates", summary.get("parameter_candidate_count")),
+        ("Form input candidates", summary.get("form_input_candidate_count")),
+        ("API input candidates", summary.get("api_input_candidate_count")),
+        ("Reflections observed", summary.get("reflection_observed_count")),
         ("Highest confidence", summary.get("highest_confidence")),
     ]
     for label, value in rows:

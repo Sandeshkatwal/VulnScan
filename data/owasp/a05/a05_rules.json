@@ -1,0 +1,72 @@
+{
+  "owasp_id": "A05:2025",
+  "name": "A05 Injection",
+  "version": "20.5",
+  "purpose": "Candidate and reflection analysis for authorised OWASP A05 Injection assessment.",
+  "safety": {
+    "candidate_only": true,
+    "no_payloads": true,
+    "no_exploitation": true,
+    "no_form_submission": true,
+    "manual_validation_required": true
+  },
+  "rule_groups": {
+    "parameter_candidates": [
+      {"rule_id": "query_parameter_detected", "title": "Query parameter detected"},
+      {"rule_id": "search_parameter_detected", "title": "Search parameter detected"},
+      {"rule_id": "comment_parameter_detected", "title": "Comment parameter detected"},
+      {"rule_id": "message_parameter_detected", "title": "Message parameter detected"},
+      {"rule_id": "filter_parameter_detected", "title": "Filter parameter detected"},
+      {"rule_id": "sort_parameter_detected", "title": "Sort parameter detected"},
+      {"rule_id": "json_parameter_detected", "title": "JSON parameter detected"},
+      {"rule_id": "callback_parameter_detected", "title": "Callback parameter detected"},
+      {"rule_id": "expression_parameter_detected", "title": "Expression parameter detected"},
+      {"rule_id": "template_parameter_detected", "title": "Template parameter detected"}
+    ],
+    "injection_surface_candidates": [
+      {"rule_id": "reflected_input_candidate", "title": "Reflected input candidate"},
+      {"rule_id": "stored_input_candidate_manual_review", "title": "Stored input candidate manual review"},
+      {"rule_id": "api_input_candidate", "title": "API input candidate"},
+      {"rule_id": "form_text_input_candidate", "title": "Form text input candidate"},
+      {"rule_id": "upload_metadata_candidate", "title": "Upload metadata candidate"},
+      {"rule_id": "header_influenced_input_candidate_manual_review", "title": "Header influenced input candidate manual review"}
+    ],
+    "reflection_observation": [
+      {"rule_id": "safe_marker_reflected", "title": "Safe marker reflected"},
+      {"rule_id": "marker_reflected_in_html_text", "title": "Marker reflected in HTML text"},
+      {"rule_id": "marker_reflected_in_attribute_like_context", "title": "Marker reflected in attribute-like context"},
+      {"rule_id": "marker_reflected_in_script_like_context", "title": "Marker reflected in script-like context"},
+      {"rule_id": "marker_reflected_in_json_like_context", "title": "Marker reflected in JSON-like context"},
+      {"rule_id": "marker_reflected_in_url_context", "title": "Marker reflected in URL context"}
+    ],
+    "form_input_indicators": [
+      {"rule_id": "text_input_detected", "title": "Text input detected"},
+      {"rule_id": "textarea_detected", "title": "Textarea detected"},
+      {"rule_id": "search_input_detected", "title": "Search input detected"},
+      {"rule_id": "email_input_detected", "title": "Email input detected"},
+      {"rule_id": "hidden_input_names_only", "title": "Hidden input names only"},
+      {"rule_id": "comment_form_detected", "title": "Comment form detected"},
+      {"rule_id": "feedback_form_detected", "title": "Feedback form detected"}
+    ],
+    "api_input_indicators": [
+      {"rule_id": "api_endpoint_with_query_params", "title": "API endpoint with query parameters"},
+      {"rule_id": "json_content_type_endpoint", "title": "JSON content-type endpoint"},
+      {"rule_id": "graphql_endpoint_detected", "title": "GraphQL endpoint detected"},
+      {"rule_id": "rest_endpoint_with_object_id", "title": "REST endpoint with object ID"},
+      {"rule_id": "filter_sort_query_pattern", "title": "Filter/sort query pattern"}
+    ],
+    "manual_validation_required": [
+      {"rule_id": "sql_injection_manual_review", "title": "SQL injection manual review"},
+      {"rule_id": "xss_manual_review", "title": "XSS manual review"},
+      {"rule_id": "command_injection_manual_review", "title": "Command injection manual review"},
+      {"rule_id": "template_injection_manual_review", "title": "Template injection manual review"},
+      {"rule_id": "nosql_injection_manual_review", "title": "NoSQL injection manual review"},
+      {"rule_id": "ldap_injection_manual_review", "title": "LDAP injection manual review"}
+    ]
+  },
+  "limitations": [
+    "A05 Injection checks identify candidates and indicators only.",
+    "Safe reflection uses harmless alphanumeric markers for selected GET parameters only.",
+    "No exploit payloads, form submission, schema probing, or exploitability confirmation is performed."
+  ]
+}

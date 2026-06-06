@@ -964,6 +964,77 @@ export interface A07AssessmentResponse {
   a07_authentication_evidence?: A07AuthenticationEvidenceItem[]
 }
 
+export interface A05InjectionSummary {
+  enabled?: boolean
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  strong_indicators_count?: number
+  weak_indicators_count?: number
+  informational_count?: number
+  manual_validation_required_count?: number
+  parameter_candidate_count?: number
+  form_input_candidate_count?: number
+  api_input_candidate_count?: number
+  reflection_observed_count?: number
+  script_like_reflection_count?: number
+  attribute_like_reflection_count?: number
+  json_like_reflection_count?: number
+  rule_group_counts?: ApiRecord
+  highest_confidence?: string
+  top_risks?: string[]
+  recommendations?: string[]
+  limitations?: string[]
+}
+
+export interface A05InjectionEvidenceItem {
+  evidence_id?: string
+  rule_id?: string
+  rule_group?: string
+  title?: string
+  affected_url?: string
+  affected_host?: string
+  affected_parameter?: string
+  input_type?: string
+  evidence_strength?: string
+  confidence?: string
+  observed_value?: string
+  safe_evidence_summary?: string
+  reflection_context?: string
+  recommendation?: string
+  manual_validation_required?: boolean
+  source?: string
+  created_at?: string
+  candidate_type?: string
+  potential_issue?: string
+  marker_reflected?: boolean
+  redacted_snippet?: string
+  form_action?: string
+  input_names?: string[]
+  input_types?: string[]
+  hidden_field_names?: string[]
+  candidate_reason?: string
+  api_pattern?: string
+  parameter_names?: string[]
+  candidate_score?: number
+  [key: string]: unknown
+}
+
+export interface A05AssessmentRequest {
+  target?: string
+  endpoint_results?: ApiRecord[]
+  parameter_results?: ApiRecord[]
+  forms?: ApiRecord[]
+  safe_reflection?: boolean
+  max_reflection_checks?: number
+  request_delay?: number
+}
+
+export interface A05AssessmentResponse {
+  a05_injection_summary?: A05InjectionSummary
+  a05_injection_evidence?: A05InjectionEvidenceItem[]
+}
+
 export interface A10ErrorHandlingSummary {
   enabled?: boolean
   target?: string

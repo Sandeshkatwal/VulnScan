@@ -41,13 +41,14 @@ from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
+from scanner.owasp_a05_injection import A05RulesError, assess_a05_injection, load_a05_rules
 from scanner.owasp_a04_crypto import A04RulesError, assess_a04_crypto, load_a04_rules
 from scanner.owasp_a07_authentication import A07RulesError, assess_a07_authentication, load_a07_rules
 from scanner.owasp_a10_error_handling import A10RulesError, assess_a10_error_handling, load_a10_rules
 from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment_rules
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A04AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
+from scanner.api_models import A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -1004,6 +1005,46 @@ def create_app(
                 "a07_authentication_evidence": payload["a07_authentication_evidence"],
             }
         except A07RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get(
+        "/owasp/a05/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List A05 Injection candidate rules",
+        description="Returns local A05 Injection candidate and reflection indicator rules. Does not perform testing or accept file paths.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_a05_rules() -> dict[str, Any]:
+        try:
+            return load_a05_rules()
+        except A05RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a05/assess",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build A05 Injection candidate evidence",
+        description="Classifies A05 Injection candidates from supplied safe metadata. Optional safe reflection uses harmless GET markers only and never returns full response bodies.",
+        responses=ERROR_RESPONSES,
+    )
+    def assess_a05_endpoint(request: A05AssessmentRequest) -> dict[str, Any]:
+        try:
+            payload = assess_a05_injection(
+                target=request.target,
+                endpoint_results=request.endpoint_results,
+                parameter_results=request.parameter_results,
+                forms=request.forms,
+                safe_reflection=request.safe_reflection,
+                max_reflection_checks=request.max_reflection_checks,
+                request_delay=request.request_delay,
+            )
+            return {
+                "a05_injection_summary": payload["a05_injection_summary"],
+                "a05_injection_evidence": payload["a05_injection_evidence"],
+            }
+        except A05RulesError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.get(

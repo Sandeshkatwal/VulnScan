@@ -626,6 +626,81 @@
     </section>
     {% endif %}
 
+    {% set a05 = report.get("a05_injection_summary", {}) %}
+    {% if a05.get("enabled") %}
+    <section>
+      <h2>A05 Injection Candidate and Reflection Analysis</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">A05 Evidence</div><div class="value">{{ a05.get("total_evidence_items", 0) }}</div></div>
+        <div class="metric"><div class="label">Strong Indicators</div><div class="value">{{ a05.get("strong_indicators_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Parameter Candidates</div><div class="value">{{ a05.get("parameter_candidate_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Manual Validation</div><div class="value">{{ a05.get("manual_validation_required_count", 0) }}</div></div>
+      </div>
+      <p><strong>Weak indicators:</strong> {{ a05.get("weak_indicators_count", 0) }} | <strong>Informational:</strong> {{ a05.get("informational_count", 0) }} | <strong>Highest confidence:</strong> {{ a05.get("highest_confidence", "Low") }}</p>
+      <p><strong>Form input candidates:</strong> {{ a05.get("form_input_candidate_count", 0) }} | <strong>API input candidates:</strong> {{ a05.get("api_input_candidate_count", 0) }} | <strong>Reflections observed:</strong> {{ a05.get("reflection_observed_count", 0) }}</p>
+      <p><strong>Context hints:</strong> script-like {{ a05.get("script_like_reflection_count", 0) }}, attribute-like {{ a05.get("attribute_like_reflection_count", 0) }}, JSON-like {{ a05.get("json_like_reflection_count", 0) }}.</p>
+
+      <h3>Parameter Candidates</h3>
+      {% set a05_parameter_items = report.get("a05_injection_evidence", []) | selectattr("rule_group", "equalto", "parameter_candidates") | list %}
+      {% if a05_parameter_items %}
+      <table>
+        <thead><tr><th>URL/path</th><th>Parameter</th><th>Candidate Type</th><th>Potential Issue</th><th>Strength</th><th>Confidence</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          {% for item in a05_parameter_items[:60] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("affected_parameter") }}</td><td>{{ item.get("candidate_type") or item.get("input_type") }}</td><td>{{ item.get("potential_issue") or item.get("title") }}</td><td>{{ item.get("evidence_strength") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("recommendation") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No A05 parameter candidates were generated.</p>
+      {% endif %}
+
+      <h3>Reflection Observations</h3>
+      {% set a05_reflection_items = report.get("a05_injection_evidence", []) | selectattr("rule_group", "equalto", "reflection_observation") | list %}
+      {% if a05_reflection_items %}
+      <table>
+        <thead><tr><th>URL</th><th>Parameter</th><th>Context Hint</th><th>Strength</th><th>Confidence</th><th>Redacted Snippet</th></tr></thead>
+        <tbody>
+          {% for item in a05_reflection_items[:40] %}
+          <tr><td>{{ item.get("affected_url") }}</td><td>{{ item.get("affected_parameter") }}</td><td>{{ item.get("reflection_context") }}</td><td>{{ item.get("evidence_strength") }}</td><td>{{ item.get("confidence") }}</td><td>{{ item.get("redacted_snippet") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No harmless marker reflection observations were generated.</p>
+      {% endif %}
+
+      <h3>Form and API Input Candidates</h3>
+      {% set a05_surface_items = report.get("a05_injection_evidence", []) | selectattr("rule_group", "in", ["form_input_indicators", "api_input_indicators"]) | list %}
+      {% if a05_surface_items %}
+      <table>
+        <thead><tr><th>Source</th><th>URL/action</th><th>Input/Parameters</th><th>Candidate Reason</th><th>Strength</th><th>Confidence</th></tr></thead>
+        <tbody>
+          {% for item in a05_surface_items[:60] %}
+          <tr><td>{{ item.get("rule_group") }}</td><td>{{ item.get("form_action") or item.get("affected_url") }}</td><td>{{ (item.get("input_names") or item.get("parameter_names") or [item.get("affected_parameter")]) | join(", ") }}</td><td>{{ item.get("candidate_reason") or item.get("api_pattern") or item.get("safe_evidence_summary") }}</td><td>{{ item.get("evidence_strength") }}</td><td>{{ item.get("confidence") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No A05 form or API input candidates were generated.</p>
+      {% endif %}
+
+      <h3>Manual Validation Checklist</h3>
+      <ul>
+        <li>Review output encoding.</li>
+        <li>Review server-side input validation.</li>
+        <li>Review parameterised queries.</li>
+        <li>Review template rendering context.</li>
+        <li>Review API filter/sort handling.</li>
+        <li>Review command/path/template-like parameters.</li>
+        <li>Confirm impact manually before reporting.</li>
+      </ul>
+      <p><strong>Safety:</strong> harmless marker only; no payloads were used; no exploitability confirmed.</p>
+      <p><strong>Recommendations:</strong> {{ a05.get("recommendations", []) | join("; ") }}</p>
+      <p><strong>Limitations:</strong> {{ a05.get("limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
     {% set a07 = report.get("a07_authentication_summary", {}) %}
     {% if a07.get("enabled") %}
     <section>

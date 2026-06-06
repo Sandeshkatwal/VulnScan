@@ -217,3 +217,11 @@ Legacy `/bug-bounty/...` routes and `data/bug_bounty` files remain supported as 
 - JSON and HTML reports include A10 summary, verbose error evidence, framework debug indicators, database error indicators, status code pattern analysis, fail-safe review guidance, redaction notes, recommendations, and limitations.
 - FastAPI exposes `GET /owasp/a10/rules` and `POST /owasp/a10/assess`.
 - The module does not force application errors, send payloads, submit forms, perform crash testing, or perform DoS testing.
+### OWASP A05 Injection Candidate Analysis
+
+- `scanner.owasp_a05_injection` loads `data/owasp/a05/a05_rules.json` and builds `a05_injection_summary`, `a05_injection_evidence`, and grouped findings.
+- `scanner.reflection_analysis` performs optional harmless marker reflection observation for selected GET parameters only.
+- `--a05-checks` classifies injection candidates from available endpoint, parameter, API, and form evidence. `--safe-reflection` enables limited marker reflection observation.
+- A05 evidence feeds `scanner.owasp_evidence` as `A05:2025` OWASP evidence when `--owasp-assess` is used.
+- FastAPI exposes `GET /owasp/a05/rules` and `POST /owasp/a05/assess`.
+- The module does not submit forms, send exploit payloads, modify state, probe SSRF, perform schema fuzzing, or confirm exploitability.

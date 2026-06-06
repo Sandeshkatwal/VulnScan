@@ -1701,6 +1701,68 @@ dd {
   font-weight: 700;
 }
 
+.a05-panel h3 {
+  margin: 20px 0 12px;
+  font-size: 16px;
+}
+
+.a05-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.a05-context {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.a05-context--script_like,
+.a05-context--attribute_like {
+  border-color: rgba(190, 76, 67, 0.45);
+  color: #7f1d1d;
+  background: rgba(254, 226, 226, 0.72);
+}
+
+.a05-context--json_like,
+.a05-context--url_like {
+  border-color: rgba(180, 83, 9, 0.38);
+  color: #7c2d12;
+  background: rgba(255, 247, 237, 0.78);
+}
+
+.a05-list,
+.a05-recommendations,
+.a05-checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.a05-list-item,
+.a05-recommendations span,
+.a05-checklist span {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-muted);
+}
+
+.a05-list-item {
+  display: grid;
+  gap: 5px;
+}
+
+.a05-list-item small,
+.a05-checklist small {
+  color: var(--muted);
+}
+
 .snippet-cell {
   max-width: 360px;
   word-break: break-word;
