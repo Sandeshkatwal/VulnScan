@@ -43,6 +43,7 @@ from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, b
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_a01_access_control import A01RulesError, assess_a01_access_control, build_a01_manual_plan_response, load_a01_rules
 from scanner.owasp_a03_supply_chain import A03RulesError, assess_a03_supply_chain, load_a03_rules
+from scanner.owasp_a08_integrity import A08RulesError, assess_a08_integrity, build_a08_manual_plan_response, load_a08_rules
 from scanner.owasp_a05_injection import A05RulesError, assess_a05_injection, load_a05_rules
 from scanner.owasp_a04_crypto import A04RulesError, assess_a04_crypto, load_a04_rules
 from scanner.owasp_a07_authentication import A07RulesError, assess_a07_authentication, load_a07_rules
@@ -51,7 +52,7 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -94,7 +95,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "20.7"
+API_VERSION = "20.8"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -164,6 +165,9 @@ PROTECTED_PATHS = {
     "/owasp/a01/manual-plan",
     "/owasp/a03/rules",
     "/owasp/a03/assess",
+    "/owasp/a08/rules",
+    "/owasp/a08/assess",
+    "/owasp/a08/manual-plan",
     "/sbom/analyse",
     "/remediation",
     "/remediation/summary",
@@ -1047,6 +1051,57 @@ def create_app(
             }
         except (A03RulesError, SBOMImportError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/owasp/a08/rules",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="List A08 Software or Data Integrity Failures rules",
+        description="Returns local A08 Software or Data Integrity Failures indicator rules. Candidate-only; does not accept files, upload data, trigger webhooks, or call update endpoints.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_a08_rules() -> dict[str, Any]:
+        try:
+            return load_a08_rules()
+        except A08RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a08/assess",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build A08 Software/Data Integrity indicator evidence",
+        description="Classifies upload, import/export, webhook/callback, update workflow, Subresource Integrity, trusted-data boundary, and data-handling indicators from supplied metadata only. No uploads, form submissions, webhook triggering, update calls, or bypass testing are performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def assess_a08_endpoint(request: A08AssessmentRequest) -> dict[str, Any]:
+        try:
+            payload = assess_a08_integrity(
+                target=request.target,
+                endpoint_results=request.endpoint_results,
+                parameter_results=request.parameter_results,
+                forms=request.forms,
+                scripts=request.scripts,
+                stylesheets=request.stylesheets,
+                html_snippet=request.html_snippet,
+            )
+            return {
+                "a08_integrity_summary": payload["a08_integrity_summary"],
+                "a08_integrity_evidence": payload["a08_integrity_evidence"],
+            }
+        except A08RulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post(
+        "/owasp/a08/manual-plan",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Generate an A08 manual validation plan",
+        description="Generates safe manual validation guidance and a report-ready evidence template for an A08 integrity indicator. No upload, webhook, update, or bypass testing is performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def a08_manual_plan_endpoint(request: A08ManualPlanRequest) -> dict[str, Any]:
+        return build_a08_manual_plan_response(request.evidence_item)
 
     @app.get(
         "/owasp/a04/rules",

@@ -40,6 +40,10 @@ import type {
   A01ManualPlanResponse,
   A03AssessmentRequest,
   A03AssessmentResponse,
+  A08AssessmentRequest,
+  A08AssessmentResponse,
+  A08ManualPlanRequest,
+  A08ManualPlanResponse,
   A04AssessmentRequest,
   A04AssessmentResponse,
   A07AssessmentRequest,
@@ -339,6 +343,22 @@ export function buildA01ManualPlan(payload: A01ManualPlanRequest): Promise<A01Ma
 
 export function assessA03SupplyChain(payload: A03AssessmentRequest): Promise<A03AssessmentResponse> {
   return request<A03AssessmentResponse>('/owasp/a03/assess', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function assessA08Integrity(payload: A08AssessmentRequest): Promise<A08AssessmentResponse> {
+  return request<A08AssessmentResponse>('/owasp/a08/assess', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function buildA08ManualPlan(payload: A08ManualPlanRequest): Promise<A08ManualPlanResponse> {
+  return request<A08ManualPlanResponse>('/owasp/a08/manual-plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

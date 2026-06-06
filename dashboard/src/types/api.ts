@@ -974,6 +974,97 @@ export interface A03AssessmentResponse {
   a03_supply_chain_evidence?: A03SupplyChainEvidenceItem[]
 }
 
+export interface A08IntegritySummary {
+  enabled?: boolean
+  target?: string
+  generated_at?: string
+  total_evidence_items?: number
+  high_interest_count?: number
+  medium_interest_count?: number
+  low_interest_count?: number
+  informational_count?: number
+  manual_validation_required_count?: number
+  upload_candidate_count?: number
+  import_export_candidate_count?: number
+  webhook_callback_candidate_count?: number
+  update_workflow_candidate_count?: number
+  sri_indicator_count?: number
+  trusted_data_boundary_candidate_count?: number
+  deserialisation_candidate_count?: number
+  rule_group_counts?: Record<string, number>
+  highest_confidence?: string
+  top_candidates?: A08IntegrityEvidenceItem[]
+  recommendations?: string[]
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface A08IntegrityEvidenceTemplate {
+  candidate_title?: string
+  affected_endpoint?: string
+  workflow_type?: string
+  integrity_boundary?: string
+  why_it_may_matter?: string
+  safe_manual_validation_steps?: string[]
+  expected_secure_behaviour?: string
+  evidence_needed_for_confirmation?: string
+  risk_if_confirmed?: string
+  recommendation?: string
+}
+
+export interface A08IntegrityEvidenceItem {
+  evidence_id?: string
+  rule_id?: string
+  rule_group?: string
+  title?: string
+  affected_url?: string
+  affected_host?: string
+  affected_parameter?: string
+  workflow_type?: string
+  integrity_candidate_type?: string
+  evidence_strength?: string
+  candidate_score?: number
+  interest_label?: string
+  confidence?: string
+  safe_evidence_summary?: string
+  manual_validation_required?: boolean
+  manual_test_plan_id?: string
+  recommended_manual_steps?: string[]
+  recommendation?: string
+  limitation?: string
+  resource_type?: string
+  integrity_present?: boolean
+  third_party_domain?: string
+  evidence_template?: A08IntegrityEvidenceTemplate
+  source?: string
+  created_at?: string
+  [key: string]: unknown
+}
+
+export interface A08AssessmentRequest {
+  target?: string
+  endpoint_results?: ApiRecord[]
+  parameter_results?: ApiRecord[]
+  forms?: ApiRecord[]
+  scripts?: unknown[]
+  stylesheets?: unknown[]
+  html_snippet?: string
+}
+
+export interface A08AssessmentResponse {
+  a08_integrity_summary?: A08IntegritySummary
+  a08_integrity_evidence?: A08IntegrityEvidenceItem[]
+}
+
+export interface A08ManualPlanRequest {
+  evidence_item?: ApiRecord
+}
+
+export interface A08ManualPlanResponse {
+  manual_validation_plan?: ApiRecord
+  evidence_template?: A08IntegrityEvidenceTemplate
+}
+
 export interface SBOMAnalyseRequest {
   sbom?: ApiRecord
   use_vuln_intel?: boolean

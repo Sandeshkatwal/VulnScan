@@ -59,6 +59,8 @@ def build_owasp_evidence_items(
         items.extend(_items_from_a10_evidence(record, index, categories))
     for index, record in enumerate(scan_result.get("a01_access_control_evidence", []) or []):
         items.extend(_items_from_a01_evidence(record, index, categories))
+    for index, record in enumerate(scan_result.get("a08_integrity_evidence", []) or []):
+        items.extend(_items_from_a08_evidence(record, index, categories))
     return _dedupe(items)
 
 
@@ -366,6 +368,32 @@ def _items_from_a03_evidence(record: dict[str, Any], index: int, categories: dic
             evidence_summary=str(record.get("safe_evidence_summary") or ""),
             recommendation_theme=str(record.get("recommendation") or "Review A03 software supply chain evidence and validate component patch status."),
             limitation=str(record.get("limitation") or "A03 evidence is metadata-based and does not perform package registry analysis or exploit validation."),
+        )
+    ]
+
+
+def _items_from_a08_evidence(record: dict[str, Any], index: int, categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    if "A08:2025" not in categories:
+        return []
+    strength = str(record.get("evidence_strength") or "weak_indicator")
+    confidence = str(record.get("confidence") or "Medium")
+    return [
+        make_evidence_item(
+            source="owasp_a08",
+            source_id=str(record.get("evidence_id") or f"a08-{index}"),
+            title=str(record.get("title") or "A08 Software or Data Integrity Failures indicator"),
+            owasp_id="A08:2025",
+            categories=categories,
+            confidence=confidence,
+            evidence_strength=strength,
+            observed_signal=str(record.get("safe_evidence_summary") or record.get("title") or ""),
+            affected_url=str(record.get("affected_url") or ""),
+            affected_parameter=str(record.get("affected_parameter") or ""),
+            endpoint_category=str(record.get("workflow_type") or ""),
+            manual_validation_required=bool(record.get("manual_validation_required", True)),
+            evidence_summary=str(record.get("safe_evidence_summary") or ""),
+            recommendation_theme=str(record.get("recommendation") or "Review integrity candidates manually and validate trust-boundary protections."),
+            limitation=str(record.get("limitation") or "A08 evidence is candidate-based and does not prove a confirmed finding without manual validation."),
         )
     ]
 

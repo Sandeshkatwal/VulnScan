@@ -421,6 +421,58 @@ class A03AssessmentRequest(StrictApiModel):
     )
 
 
+class A08AssessmentRequest(StrictApiModel):
+    """Build A08 Software or Data Integrity Failures indicator evidence from supplied safe metadata."""
+
+    target: str = Field("", max_length=2048, description="Authorised target URL.", examples=["http://127.0.0.1:8000"])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates. Endpoints are not called.", examples=[[]])
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter intelligence candidates. Values are not required.", examples=[[]])
+    forms: list[dict[str, Any]] = Field(default_factory=list, description="Form metadata from safe discovery. Forms are not submitted.", examples=[[]])
+    scripts: list[Any] = Field(default_factory=list, description="Observed script URLs or metadata. External scripts are not fetched.", examples=[[]])
+    stylesheets: list[Any] = Field(default_factory=list, description="Observed stylesheet URLs or metadata. External stylesheets are not fetched.", examples=[[]])
+    html_snippet: str = Field("", max_length=20000, description="Limited HTML snippet for SRI analysis. Full response bodies should not be supplied.", examples=[""])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "target": "http://127.0.0.1:8000",
+                    "endpoint_results": [{"url": "http://127.0.0.1:8000/api/import"}],
+                    "parameter_results": [{"url": "http://127.0.0.1:8000/webhook?signature", "parameter_name": "signature"}],
+                    "forms": [{"action": "/upload", "enctype": "multipart/form-data", "fields": [{"name": "file", "type": "file"}]}],
+                    "scripts": [{"src": "https://cdn.example.test/app.js"}],
+                    "stylesheets": [],
+                    "html_snippet": "",
+                }
+            ]
+        },
+    )
+
+
+class A08ManualPlanRequest(StrictApiModel):
+    """Generate an A08 manual validation plan and evidence template for an integrity indicator."""
+
+    evidence_item: dict[str, Any] = Field(default_factory=dict, description="A08 candidate evidence item. Do not include secrets or sensitive response bodies.", examples=[{}])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "evidence_item": {
+                        "title": "Webhook/callback integrity indicator",
+                        "affected_url": "http://127.0.0.1:8000/webhook?signature",
+                        "affected_parameter": "signature",
+                        "workflow_type": "webhook_callback",
+                        "manual_test_plan_id": "webhook_signature_review",
+                    }
+                }
+            ]
+        },
+    )
+
+
 class SBOMAnalyseRequest(StrictApiModel):
     """Analyse a supplied SBOM document body without accepting server-side paths."""
 

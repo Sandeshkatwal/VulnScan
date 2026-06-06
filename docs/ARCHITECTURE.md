@@ -239,3 +239,8 @@ The A03 Software Supply Chain module has three layers:
 - `scanner/owasp_a03_supply_chain.py` orchestrates evidence, summary, grouped findings, local CVE/CPE enrichment, OWASP Assessment integration, and report payloads.
 
 The module is deliberately offline for package intelligence in Version 20.7. It accepts observed metadata and local files only.
+## Version 20.8 A08 Integrity Indicator Engine
+
+The A08 Software or Data Integrity Failures engine is a passive OWASP assessment module. `scanner/integrity_indicators.py` classifies workflow and trusted-data boundary indicators, `scanner/sri_analysis.py` analyses supplied script/stylesheet metadata for Subresource Integrity evidence, and `scanner/owasp_a08_integrity.py` orchestrates summaries, grouped findings, manual validation plans, report templates, and OWASP assessment integration.
+
+The engine does not submit forms, upload files, trigger callbacks/webhooks, call update endpoints, fetch external resources, or execute payloads.

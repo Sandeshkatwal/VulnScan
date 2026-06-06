@@ -57,6 +57,16 @@ Legacy `--bug-bounty-scope` remains supported.
 .\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --scope-file data\programs\sample_program_scope.json --enforce-scope
 ```
 
+## A08 Software/Data Integrity
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a08-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a08-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a08-checks --owasp-assess --json --html
+```
+
+A08 checks are passive integrity indicators only. No uploads, form submissions, webhook triggers, update calls, or bypass tests are performed.
+
 ## Evidence Capture
 
 ```powershell

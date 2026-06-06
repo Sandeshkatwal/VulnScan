@@ -60,6 +60,7 @@ from scanner.owasp_mapping import (
 from scanner.owasp_assessment import attach_owasp_assessment
 from scanner.owasp_a01_access_control import A01RulesError, attach_a01_access_control
 from scanner.owasp_a03_supply_chain import A03RulesError, analyse_sbom_file, attach_a03_supply_chain
+from scanner.owasp_a08_integrity import A08RulesError, attach_a08_integrity
 from scanner.owasp_a05_injection import A05RulesError, attach_a05_injection
 from scanner.owasp_a04_crypto import A04RulesError, attach_a04_crypto
 from scanner.owasp_a07_authentication import A07RulesError, attach_a07_authentication
@@ -2055,6 +2056,13 @@ def web_scan(
             help="Run safe A03 Software Supply Chain and component exposure checks from observed web metadata.",
         ),
     ] = False,
+    a08_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a08-checks",
+            help="Run safe A08 Software/Data Integrity indicator checks from observed endpoints, forms, scripts, and metadata.",
+        ),
+    ] = False,
     a04_checks: Annotated[
         bool,
         typer.Option(
@@ -2410,6 +2418,13 @@ def web_scan(
             console.print(f"[red]A03 Software Supply Chain error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a03_supply_chain_summary(scan_result.get("a03_supply_chain_summary", {}))
+    if a08_checks:
+        try:
+            attach_a08_integrity(scan_result)
+        except A08RulesError as exc:
+            console.print(f"[red]A08 Software/Data Integrity error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a08_integrity_summary(scan_result.get("a08_integrity_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result)
@@ -2712,6 +2727,13 @@ def endpoints(
             help="Run safe A03 Software Supply Chain and component exposure checks from supplied/discovered URLs.",
         ),
     ] = False,
+    a08_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a08-checks",
+            help="Run safe A08 Software/Data Integrity indicator checks from supplied endpoint and parameter metadata.",
+        ),
+    ] = False,
     a05_checks: Annotated[
         bool,
         typer.Option(
@@ -2820,6 +2842,13 @@ def endpoints(
             console.print(f"[red]A03 Software Supply Chain error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a03_supply_chain_summary(scan_result.get("a03_supply_chain_summary", {}))
+    if a08_checks:
+        try:
+            attach_a08_integrity(scan_result)
+        except A08RulesError as exc:
+            console.print(f"[red]A08 Software/Data Integrity error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a08_integrity_summary(scan_result.get("a08_integrity_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result, collect_tls=False)
@@ -2963,6 +2992,13 @@ def validate(
             help="Run safe A01 Broken Access Control candidate discovery and manual validation planning.",
         ),
     ] = False,
+    a08_checks: Annotated[
+        bool,
+        typer.Option(
+            "--a08-checks",
+            help="Run safe A08 Software/Data Integrity indicator checks from validation target metadata.",
+        ),
+    ] = False,
     a05_checks: Annotated[
         bool,
         typer.Option(
@@ -3062,6 +3098,13 @@ def validate(
             console.print(f"[red]A01 Broken Access Control error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_a01_access_control_summary(scan_result.get("a01_access_control_summary", {}))
+    if a08_checks:
+        try:
+            attach_a08_integrity(scan_result)
+        except A08RulesError as exc:
+            console.print(f"[red]A08 Software/Data Integrity error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        _print_a08_integrity_summary(scan_result.get("a08_integrity_summary", {}))
     if a04_checks:
         try:
             attach_a04_crypto(scan_result, collect_tls=False)
@@ -4236,6 +4279,32 @@ def _print_a03_supply_chain_summary(summary: dict[str, Any]) -> None:
         table.add_row(label, "" if value is None else str(value))
     console.print(table)
     console.print("[yellow]A03 safety:[/yellow] evidence-based component review only; no dependency confusion testing, external registry fetching, or exploit code used.")
+
+
+def _print_a08_integrity_summary(summary: dict[str, Any]) -> None:
+    if not summary or not summary.get("enabled"):
+        return
+    table = Table(title="A08 Software/Data Integrity Candidate Summary")
+    table.add_column("Metric")
+    table.add_column("Value")
+    rows = [
+        ("Total candidates", summary.get("total_evidence_items", 0)),
+        ("High interest", summary.get("high_interest_count", 0)),
+        ("Medium interest", summary.get("medium_interest_count", 0)),
+        ("Upload workflow candidates", summary.get("upload_candidate_count", 0)),
+        ("Import/export candidates", summary.get("import_export_candidate_count", 0)),
+        ("Webhook/callback candidates", summary.get("webhook_callback_candidate_count", 0)),
+        ("Update workflow candidates", summary.get("update_workflow_candidate_count", 0)),
+        ("Subresource Integrity evidence", summary.get("sri_indicator_count", 0)),
+        ("Trusted-data boundary indicators", summary.get("trusted_data_boundary_candidate_count", 0)),
+        ("Deserialisation/data handling candidates", summary.get("deserialisation_candidate_count", 0)),
+        ("Manual validation required", summary.get("manual_validation_required_count", 0)),
+        ("Highest indicator confidence", summary.get("highest_confidence", "Low")),
+    ]
+    for label, value in rows:
+        table.add_row(label, "" if value is None else str(value))
+    console.print(table)
+    console.print("[yellow]A08 safety:[/yellow] integrity indicators only; no uploads, form submissions, webhooks, update calls, or bypass testing performed.")
 
 
 def _build_a03_vuln_intel(use_cve_feed: bool, cve_feed: Path | None) -> dict[str, Any]:

@@ -900,3 +900,14 @@ Run local SBOM analysis:
 ```
 
 A03 checks are passive and local-data based. They do not fetch external package registries, perform dependency confusion testing, or download exploit code.
+## A08 Software/Data Integrity Indicator Checks
+
+Version 20.8 adds `--a08-checks` for safe A08 Software or Data Integrity Failures candidate discovery.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a08-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a08-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --a08-checks --owasp-assess --json --html
+```
+
+A08 checks classify integrity indicators from available endpoint, parameter, form, script, stylesheet, and limited HTML metadata. VulScan does not upload files, submit forms, trigger webhooks, call update endpoints, import data, or perform bypass testing.

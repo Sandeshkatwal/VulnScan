@@ -15,6 +15,8 @@ import type {
   A01AccessControlSummary,
   A03SupplyChainEvidenceItem,
   A03SupplyChainSummary,
+  A08IntegrityEvidenceItem,
+  A08IntegritySummary,
   A04CryptoEvidenceItem,
   A04CryptoSummary,
   A04TlsMetadata,
@@ -27,6 +29,7 @@ import type {
 } from '../types/api'
 import { A01AccessControlView } from './A01AccessControlView'
 import { A03SupplyChainView } from './A03SupplyChainView'
+import { A08IntegrityView } from './A08IntegrityView'
 import { A04CryptoView } from './A04CryptoView'
 import { A05InjectionView } from './A05InjectionView'
 import { A07AuthenticationView } from './A07AuthenticationView'
@@ -148,6 +151,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
   const a01Evidence = (resultPayload?.a01_access_control_evidence as A01AccessControlEvidenceItem[] | undefined) || []
   const a03Summary = resultPayload?.a03_supply_chain_summary as A03SupplyChainSummary | undefined
   const a03Evidence = (resultPayload?.a03_supply_chain_evidence as A03SupplyChainEvidenceItem[] | undefined) || []
+  const a08Summary = resultPayload?.a08_integrity_summary as A08IntegritySummary | undefined
+  const a08Evidence = (resultPayload?.a08_integrity_evidence as A08IntegrityEvidenceItem[] | undefined) || []
   const a04Summary = resultPayload?.a04_crypto_summary as A04CryptoSummary | undefined
   const a04Evidence = (resultPayload?.a04_crypto_evidence as A04CryptoEvidenceItem[] | undefined) || []
   const a04TlsMetadata = (resultPayload?.a04_tls_metadata as A04TlsMetadata[] | undefined) || []
@@ -235,6 +240,8 @@ export function OWASPMappingView({ apiOnline, demoMode = false, jobResult }: OWA
       <A01AccessControlView summary={a01Summary} evidence={a01Evidence} />
 
       <A03SupplyChainView summary={a03Summary} evidence={a03Evidence} />
+
+      <A08IntegrityView summary={a08Summary} evidence={a08Evidence} />
 
       <A04CryptoView summary={a04Summary} evidence={a04Evidence} tlsMetadata={a04TlsMetadata} />
 

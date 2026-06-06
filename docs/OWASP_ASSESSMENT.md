@@ -111,3 +111,8 @@ See [OWASP_A01_BROKEN_ACCESS_CONTROL.md](OWASP_A01_BROKEN_ACCESS_CONTROL.md) for
 The OWASP Assessment Engine now consumes A03 Software Supply Chain evidence from `a03_supply_chain_evidence`. A03 category results become stronger when dependency metadata is exposed, SBOM components match local CVE/CPE intelligence, component version exposure has local vulnerability-intelligence evidence, source maps are observed, or vulnerable component evidence includes CVSS/EPSS metadata.
 
 A03 checks are evidence-based and manual-validation oriented. They do not perform dependency confusion testing, package registry fetching, malicious package testing, package takeover simulation, CI/CD attack simulation, or exploit validation.
+## Version 20.8 A08 Software or Data Integrity Failures
+
+A08 evidence feeds the OWASP Assessment Engine when `--a08-checks` is enabled. The module classifies integrity indicators from endpoint, parameter, form, script, stylesheet, and limited HTML metadata. It covers file upload workflow indicators, import/export workflow indicators, webhook/callback integrity indicators, update workflow indicators, Subresource Integrity evidence, trusted-data boundary indicators, and deserialisation/data handling candidates.
+
+The checks are safe and candidate-based. VulScan does not upload files, submit forms, trigger webhooks, call update endpoints, import data, generate deserialisation payloads, or perform bypass testing. Manual validation is required before treating A08 evidence as a confirmed finding.

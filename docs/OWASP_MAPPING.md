@@ -155,3 +155,8 @@ The A01 engine is candidate-only and does not perform auth bypass automation, cr
 A03:2025 maps to software supply chain evidence including component exposure indicators, dependency metadata indicators, SBOM analysis, local CVE/CPE enrichment, source map indicators, and third-party script manual review indicators.
 
 Use the wording `A03 Software Supply Chain Failures`, `component exposure indicator`, `dependency metadata indicator`, `vulnerable component evidence`, `SBOM analysis`, `manual validation required`, and `indicator confidence`. Do not describe A03 output as exploit validation or package attack simulation.
+## Version 20.8 A08 Integrity Indicators
+
+`--a08-checks` maps safe A08 Software or Data Integrity Failures evidence into `A08:2025`. The mapper treats upload/import workflows, webhook/callback indicators, update workflow indicators, Subresource Integrity evidence, trusted-data boundary indicators, and deserialisation/data handling candidates as manual validation required unless manually confirmed evidence is supplied.
+
+No uploads, form submissions, webhook triggers, update calls, or bypass tests are performed.

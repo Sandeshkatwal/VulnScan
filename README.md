@@ -44,6 +44,7 @@ VulScan is intended for security learners, junior security engineers, portfolio 
 | OWASP Mapping | Indicator-only OWASP Top 10 mapping | Working |
 | OWASP Assessment Engine | OWASP Top 10:2025 evidence, category results, confidence, coverage gaps, and manual validation workflow | Foundation |
 | A03 Software Supply Chain | Component exposure indicators, dependency metadata indicators, SBOM analysis, and local CVE/CPE enrichment | Working |
+| A08 Software/Data Integrity | Upload/import, webhook/callback, update workflow, SRI, and trusted-data boundary indicators | Working |
 | Safe Validation | Limited non-destructive validation checks | Working |
 | Evidence Capture | Redacted, report-safe evidence summaries | Working |
 | Security Finding Reports | Local report listing and evidence/report workflow | Working |
@@ -106,6 +107,16 @@ Open:
 ```text
 http://localhost:5173
 ```
+
+## A08 Software/Data Integrity Checks
+
+Version 20.8 adds safe A08 Software or Data Integrity Failures indicator checks:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a08-checks --owasp-assess --json --html
+```
+
+The A08 engine reports integrity indicators and manual validation plans only. It does not upload files, submit forms, trigger webhooks, call update endpoints, import data, or perform bypass testing.
 
 ## Demo Mode
 

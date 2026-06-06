@@ -3207,3 +3207,62 @@ a {
     grid-template-columns: minmax(82px, 1fr) minmax(90px, 1.6fr) 30px;
   }
 }
+
+/* A08 Software/Data Integrity */
+.a08-panel h3 {
+  margin-top: 22px;
+}
+
+.a08-summary-grid {
+  margin-top: 14px;
+}
+
+.a08-list {
+  display: grid;
+  gap: 10px;
+}
+
+.a08-list-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.a08-list-item span,
+.a08-list-item small,
+.a08-panel-grid p {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.a08-panel-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.a08-panel-grid > div {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.checklist-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 14px 14px 32px;
+}
+
+@media (max-width: 860px) {
+  .a08-panel-grid {
+    grid-template-columns: 1fr;
+  }
+}

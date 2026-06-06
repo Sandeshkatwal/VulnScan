@@ -1,0 +1,85 @@
+{
+  "owasp_id": "A08:2025",
+  "name": "A08 Software or Data Integrity Failures",
+  "ruleset_version": "20.8",
+  "safety": {
+    "candidate_only": true,
+    "no_uploads": true,
+    "no_form_submission": true,
+    "no_webhook_triggering": true,
+    "no_update_calls": true,
+    "no_deserialisation_payloads": true,
+    "no_integrity_bypass_testing": true
+  },
+  "rule_groups": {
+    "upload_workflow_indicators": [
+      "file_upload_endpoint_detected",
+      "avatar_upload_endpoint_detected",
+      "document_upload_endpoint_detected",
+      "media_upload_endpoint_detected",
+      "import_upload_form_detected",
+      "multipart_form_detected",
+      "upload_parameter_detected"
+    ],
+    "import_export_integrity_indicators": [
+      "import_endpoint_detected",
+      "export_endpoint_detected",
+      "bulk_import_endpoint_detected",
+      "csv_import_indicator",
+      "json_import_indicator",
+      "xml_import_indicator",
+      "backup_restore_endpoint_detected",
+      "data_sync_endpoint_detected"
+    ],
+    "webhook_callback_indicators": [
+      "webhook_endpoint_detected",
+      "callback_endpoint_detected",
+      "notification_endpoint_detected",
+      "event_endpoint_detected",
+      "integration_endpoint_detected",
+      "third_party_callback_url_parameter_detected"
+    ],
+    "update_workflow_indicators": [
+      "update_endpoint_detected",
+      "upgrade_endpoint_detected",
+      "plugin_endpoint_detected",
+      "extension_endpoint_detected",
+      "theme_endpoint_detected",
+      "module_endpoint_detected",
+      "package_endpoint_detected"
+    ],
+    "subresource_integrity_indicators": [
+      "external_script_without_sri",
+      "external_stylesheet_without_sri",
+      "third_party_script_without_sri",
+      "sri_attribute_present",
+      "sri_missing_crossorigin_context",
+      "inline_script_integrity_review"
+    ],
+    "trusted_data_boundary_indicators": [
+      "signed_parameter_name_detected",
+      "signature_parameter_name_detected",
+      "checksum_parameter_name_detected",
+      "hash_parameter_name_detected",
+      "token_parameter_integrity_review",
+      "state_parameter_detected",
+      "callback_url_parameter_detected"
+    ],
+    "deserialisation_data_handling_candidates": [
+      "serialized_parameter_name_detected",
+      "object_parameter_name_detected",
+      "payload_parameter_name_detected",
+      "data_parameter_name_detected",
+      "json_blob_parameter_detected",
+      "xml_data_parameter_detected"
+    ],
+    "manual_validation_plans": [
+      "upload_integrity_review",
+      "import_data_validation_review",
+      "webhook_signature_review",
+      "update_integrity_review",
+      "third_party_script_integrity_review",
+      "deserialisation_safety_review"
+    ]
+  }
+}

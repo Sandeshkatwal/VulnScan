@@ -6,6 +6,8 @@ It presents API health, scan jobs, findings, risk overview, trends, Evidence & R
 
 Version 20.7 adds an A03 Software Supply Chain view under OWASP Assessment. It displays component exposure indicators, dependency metadata indicators, SBOM analysis, CVE/CPE enrichment, source map/build artifact indicators, third-party script review, and recommendations. The dashboard uses wording such as indicator, evidence, confidence, and manual validation required; it does not expose exploit actions or external registry fetching.
 
+Version 20.8 adds an A08 Software/Data Integrity view under OWASP Assessment. It shows upload/import workflow candidates, webhook/callback integrity indicators, update workflow indicators, Subresource Integrity evidence, trusted-data boundary indicators, a manual validation checklist, and recommendations. It clearly states that no uploads were performed, no webhooks were triggered, and no update endpoints were called.
+
 ## Safety Note
 
 The dashboard is local development tooling. It does not collect credentials, does not expose exploit buttons, does not request external platform API tokens, and does not submit reports to external platforms.

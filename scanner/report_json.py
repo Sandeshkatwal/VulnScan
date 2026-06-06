@@ -170,6 +170,11 @@ def save_json_report(
             {"enabled": False, "limitations": ["A03 Software Supply Chain checks were not enabled."]},
         ),
         "a03_supply_chain_evidence": scan_result.get("a03_supply_chain_evidence", []),
+        "a08_integrity_summary": scan_result.get(
+            "a08_integrity_summary",
+            {"enabled": False, "limitations": ["A08 Software or Data Integrity Failures indicator checks were not enabled."]},
+        ),
+        "a08_integrity_evidence": scan_result.get("a08_integrity_evidence", []),
         "a04_crypto_summary": scan_result.get(
             "a04_crypto_summary",
             {"enabled": False, "limitations": ["A04 Cryptographic Failures checks were not enabled."]},
