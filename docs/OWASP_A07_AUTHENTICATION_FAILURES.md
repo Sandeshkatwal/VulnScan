@@ -70,3 +70,4 @@ The OWASP Assessment screen includes an A07 Authentication Failures section when
 ## Limitations
 
 A07 evidence is based on available metadata and may require manual validation. Missing evidence does not mean authentication is secure; it may mean the workflow was not assessed, was not reachable, or requires authenticated/manual review.
+Version 20.9 reporting note: A07 evidence is consolidated into the unified OWASP Assessment report with manual validation checklist items for login, session, password reset, MFA/2FA where applicable, lockout, and rate limiting.

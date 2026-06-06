@@ -58,6 +58,7 @@ from scanner.owasp_mapping import (
     load_owasp_mapping,
 )
 from scanner.owasp_assessment import attach_owasp_assessment
+from scanner.owasp_report_builder import save_markdown_report
 from scanner.owasp_a01_access_control import A01RulesError, attach_a01_access_control
 from scanner.owasp_a03_supply_chain import A03RulesError, analyse_sbom_file, attach_a03_supply_chain
 from scanner.owasp_a08_integrity import A08RulesError, attach_a08_integrity
@@ -1109,6 +1110,13 @@ def scan(
             help="Build OWASP Assessment Engine category results from existing evidence.",
         ),
     ] = False,
+    owasp_report: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-report",
+            help="Generate a unified Markdown-ready OWASP Assessment report from existing assessment evidence.",
+        ),
+    ] = False,
     a03_checks: Annotated[
         bool,
         typer.Option(
@@ -1753,6 +1761,16 @@ def scan(
             console.print(f"[red]OWASP assessment error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
+    if owasp_report:
+        try:
+            if not scan_result.get("owasp_assessment_summary", {}).get("enabled"):
+                attach_owasp_metadata(scan_result)
+                attach_owasp_assessment(scan_result)
+            report_path = _generate_owasp_markdown_report(scan_result)
+        except (OWASPMappingError, OWASPAssessmentRulesError) as exc:
+            console.print(f"[red]OWASP report error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        console.print(f"[bold]OWASP Markdown report saved:[/bold] {report_path}")
 
     _print_findings(scan_result["findings"])
 
@@ -2033,6 +2051,13 @@ def web_scan(
         typer.Option(
             "--owasp-assess",
             help="Build OWASP Assessment Engine category results from existing web evidence.",
+        ),
+    ] = False,
+    owasp_report: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-report",
+            help="Generate a unified Markdown-ready OWASP Assessment report from existing web evidence.",
         ),
     ] = False,
     a02_checks: Annotated[
@@ -2467,6 +2492,16 @@ def web_scan(
             console.print(f"[red]OWASP assessment error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
+    if owasp_report:
+        try:
+            if not scan_result.get("owasp_assessment_summary", {}).get("enabled"):
+                attach_owasp_metadata(scan_result)
+                attach_owasp_assessment(scan_result)
+            report_path = _generate_owasp_markdown_report(scan_result)
+        except (OWASPMappingError, OWASPAssessmentRulesError) as exc:
+            console.print(f"[red]OWASP report error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        console.print(f"[bold]OWASP Markdown report saved:[/bold] {report_path}")
     _print_findings(scan_result["findings"])
 
     if json_report or html_report:
@@ -2706,6 +2741,13 @@ def endpoints(
             help="Build OWASP Assessment Engine category results from endpoint candidates.",
         ),
     ] = False,
+    owasp_report: Annotated[
+        bool,
+        typer.Option(
+            "--owasp-report",
+            help="Generate a unified Markdown-ready OWASP Assessment report from endpoint candidates.",
+        ),
+    ] = False,
     a04_checks: Annotated[
         bool,
         typer.Option(
@@ -2891,6 +2933,16 @@ def endpoints(
             console.print(f"[red]OWASP assessment error:[/red] {exc}")
             raise typer.Exit(code=1) from exc
         _print_owasp_assessment_summary(scan_result.get("owasp_assessment_summary", {}), scan_result.get("owasp_category_results", []))
+    if owasp_report:
+        try:
+            if not scan_result.get("owasp_assessment_summary", {}).get("enabled"):
+                attach_owasp_metadata(scan_result)
+                attach_owasp_assessment(scan_result)
+            report_path = _generate_owasp_markdown_report(scan_result)
+        except (OWASPMappingError, OWASPAssessmentRulesError) as exc:
+            console.print(f"[red]OWASP report error:[/red] {exc}")
+            raise typer.Exit(code=1) from exc
+        console.print(f"[bold]OWASP Markdown report saved:[/bold] {report_path}")
     if json_report:
         report_path = save_json_report(
             scan_result=scan_result,
@@ -4159,6 +4211,18 @@ def _print_owasp_assessment_summary(summary: dict[str, Any], category_results: l
                 str(result.get("highest_confidence") or "Low"),
             )
         console.print(category_table)
+
+
+def _generate_owasp_markdown_report(scan_result: dict[str, Any]) -> Path:
+    report = scan_result.get("owasp_assessment_report")
+    if not isinstance(report, dict) or not report:
+        attach_owasp_assessment(scan_result)
+        report = scan_result.get("owasp_assessment_report", {})
+    report_path = save_markdown_report(report)
+    scan_result["owasp_markdown_report_path"] = str(report_path)
+    scan_result.setdefault("owasp_assessment_report", report)
+    scan_result["owasp_assessment_report"]["markdown_report_path"] = str(report_path)
+    return report_path
 
 
 def _print_a04_crypto_summary(summary: dict[str, Any]) -> None:

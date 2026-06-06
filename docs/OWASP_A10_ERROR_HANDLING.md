@@ -75,3 +75,4 @@ The OWASP Assessment screen includes an A10 Error Handling section when the sele
 ## Limitations
 
 A10 checks are observation-based. VulScan does not confirm fail-open behaviour automatically and does not force application errors. Manual validation is required to determine business impact and whether sensitive workflows fail closed.
+Version 20.9 reporting note: A10 evidence is consolidated into the unified OWASP Assessment report with manual validation checklist items for fail-safe review, generic error handling, and debug mode disabled validation.

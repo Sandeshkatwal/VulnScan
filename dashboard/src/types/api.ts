@@ -725,8 +725,8 @@ export interface OWASPMapResponse {
 }
 
 export type OWASPEvidenceStrength = 'weak_indicator' | 'strong_indicator' | 'confirmed_finding' | 'informational' | 'not_assessed'
-export type OWASPAssessmentStatus = 'detected_indicator' | 'needs_manual_validation' | 'confirmed' | 'not_detected' | 'not_assessed' | 'coverage_gap'
-export type OWASPCoverageStatus = 'assessed' | 'partially_assessed' | 'not_assessed' | 'manual_only' | 'coverage_gap'
+export type OWASPAssessmentStatus = 'detected_indicator' | 'needs_manual_validation' | 'confirmed' | 'confirmed_findings' | 'strong_indicators' | 'weak_indicators' | 'informational_only' | 'no_indicators_observed' | 'not_detected' | 'not_assessed' | 'coverage_gap'
+export type OWASPCoverageStatus = 'assessed' | 'partially_assessed' | 'manual_review_required' | 'not_assessed' | 'manual_only' | 'coverage_gap'
 
 export interface OWASPEvidenceItem {
   evidence_id?: string
@@ -753,15 +753,19 @@ export interface OWASPEvidenceItem {
 
 export interface OWASPCategoryResult {
   owasp_id?: string
+  category?: string
   name?: string
   assessment_status?: OWASPAssessmentStatus | string
   highest_confidence?: 'Low' | 'Medium' | 'High' | string
   evidence_count?: number
+  strongest_evidence?: string
   confirmed_count?: number
   strong_indicator_count?: number
   weak_indicator_count?: number
   manual_validation_required_count?: number
+  manual_validation_required?: boolean
   coverage_status?: OWASPCoverageStatus | string
+  recommendation_summary?: string
   top_evidence?: OWASPEvidenceItem[]
   recommendation_themes?: string[]
   limitations?: string
@@ -769,8 +773,13 @@ export interface OWASPCategoryResult {
 }
 
 export interface OWASPCoverageGap {
+  category?: string
   owasp_id?: string
   owasp_name?: string
+  gap_title?: string
+  why_it_matters?: string
+  recommended_next_step?: string
+  severity_context?: string
   coverage_status?: OWASPCoverageStatus | string
   explanation?: string
   manual_validation_required?: boolean
@@ -798,6 +807,10 @@ export interface OWASPAssessmentSummary {
 }
 
 export interface OWASPAssessmentBuildRequest {
+  target?: string
+  owasp_assessment_summary?: OWASPAssessmentSummary
+  owasp_category_results?: OWASPCategoryResult[]
+  owasp_evidence_items?: OWASPEvidenceItem[]
   findings?: Finding[]
   endpoint_results?: EndpointResult[]
   parameter_results?: ParameterResult[]
@@ -807,9 +820,61 @@ export interface OWASPAssessmentBuildRequest {
 
 export interface OWASPAssessmentResponse {
   owasp_assessment_summary?: OWASPAssessmentSummary
+  owasp_assessment_report?: OWASPAssessmentReport
   owasp_category_results?: OWASPCategoryResult[]
   owasp_evidence_items?: OWASPEvidenceItem[]
+  owasp_coverage_matrix?: OWASPCategoryResult[]
+  owasp_manual_validation_checklist?: OWASPManualValidationItem[]
+  owasp_developer_recommendations?: OWASPDeveloperRecommendation[]
   owasp_coverage_gaps?: OWASPCoverageGap[]
+  [key: string]: unknown
+}
+
+export interface OWASPManualValidationItem {
+  category?: string
+  item?: string
+  priority?: string
+  reason?: string
+  suggested_evidence?: string
+  status?: 'pending' | 'done' | 'not_applicable' | string
+  [key: string]: unknown
+}
+
+export interface OWASPDeveloperRecommendation {
+  category?: string
+  issue_theme?: string
+  recommendation?: string
+  implementation_hint?: string
+  validation_hint?: string
+  references_label?: string
+  [key: string]: unknown
+}
+
+export interface OWASPAssessmentReport {
+  report_id?: string
+  target?: string
+  generated_at?: string
+  owasp_version?: string
+  assessment_scope?: ApiRecord
+  executive_summary?: ApiRecord
+  assessment_quality_score?: { score?: number; label?: string; limitation?: string; [key: string]: unknown }
+  overall_coverage_status?: string
+  category_results?: OWASPCategoryResult[]
+  evidence_strength_summary?: ApiRecord
+  manual_validation_summary?: { manual_validation_required_count?: number; checklist?: OWASPManualValidationItem[]; [key: string]: unknown }
+  coverage_gaps?: OWASPCoverageGap[]
+  top_risks?: ApiRecord[]
+  developer_recommendations?: OWASPDeveloperRecommendation[]
+  report_limitations?: string[]
+  safe_testing_statement?: string
+  markdown_report_path?: string
+  [key: string]: unknown
+}
+
+export interface OWASPReportBuildResponse {
+  owasp_assessment_report?: OWASPAssessmentReport
+  markdown_report_path?: string
+  download_url?: string
   [key: string]: unknown
 }
 

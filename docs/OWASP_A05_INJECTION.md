@@ -71,3 +71,4 @@ Dashboard wording uses candidate, indicator, evidence, confidence, manual valida
 ## Remediation Guidance
 
 Review output encoding, server-side input validation, parameterised queries, template rendering context, API filter/sort handling, and command/path/template-like parameters. Confirm impact manually before reporting.
+Version 20.9 reporting note: A05 evidence remains indicator-based unless manual confirmation exists. The unified OWASP Assessment report includes manual validation checklist items for output encoding, server-side validation, query parameterisation, and reflection context review.

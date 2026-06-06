@@ -54,3 +54,4 @@ The OWASP Assessment page includes an A03 Software Supply Chain section with sum
 ## Remediation Guidance
 
 Maintain an SBOM, update vulnerable components after verifying component identity and version, avoid unintentionally exposing dependency metadata, review source map exposure in production, and use SRI/CSP where appropriate for third-party scripts.
+Version 20.9 reporting note: A03 evidence is consolidated into the unified OWASP Assessment report with coverage matrix status, evidence strength, confidence, SBOM coverage gaps, and developer remediation guidance for component governance.

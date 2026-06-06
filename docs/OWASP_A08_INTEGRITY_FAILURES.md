@@ -81,3 +81,4 @@ The OWASP Assessment page includes an A08 Software/Data Integrity panel with sum
 - Use CSP and SRI where appropriate for third-party resources.
 - Avoid unsafe deserialisation of untrusted data.
 - Keep audit logs for upload, import, webhook, and update workflows.
+Version 20.9 reporting note: A08 evidence is consolidated into the unified OWASP Assessment report with manual validation checklist items for upload/import/webhook integrity and third-party script review.

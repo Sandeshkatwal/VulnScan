@@ -9,6 +9,7 @@ from typing import Any
 
 from scanner.finding import create_finding, finding_to_dict
 from scanner.owasp_evidence import CONFIDENCE_ORDER, STRENGTH_ORDER, build_owasp_evidence_items, strongest_item
+from scanner.owasp_report_builder import build_unified_owasp_report
 from scanner.owasp_rules import OWASPAssessmentRulesError, categories_by_id, load_owasp_assessment_rules
 
 
@@ -66,11 +67,23 @@ def build_owasp_assessment(scan_result: dict[str, Any] | None = None, **kwargs: 
     category_results = [assess_owasp_category(category, evidence_items) for category in categories]
     coverage_gaps = _coverage_gaps(category_results)
     summary = _build_summary(scan_result, evidence_items, category_results, coverage_gaps)
+    unified_report = build_unified_owasp_report(
+        target=str(scan_result.get("target") or scan_result.get("host") or ""),
+        owasp_assessment_summary=summary,
+        owasp_category_results=category_results,
+        owasp_evidence_items=evidence_items,
+        owasp_coverage_gaps=coverage_gaps,
+        scan_result=scan_result,
+    )
     return {
         "owasp_assessment_summary": summary,
         "owasp_category_results": category_results,
         "owasp_evidence_items": evidence_items,
         "owasp_coverage_gaps": coverage_gaps,
+        "owasp_assessment_report": unified_report,
+        "owasp_coverage_matrix": unified_report["category_results"],
+        "owasp_manual_validation_checklist": unified_report["manual_validation_summary"]["checklist"],
+        "owasp_developer_recommendations": unified_report["developer_recommendations"],
     }
 
 

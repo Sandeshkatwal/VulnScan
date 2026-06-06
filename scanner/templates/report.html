@@ -450,8 +450,16 @@
 
     {% set assessment = report.get("owasp_assessment_summary", {}) %}
     {% if assessment.get("enabled") %}
+    {% set owasp_report = report.get("owasp_assessment_report", {}) %}
     <section>
       <h2>OWASP Assessment Engine</h2>
+      {% if owasp_report %}
+      {% set owasp_exec = owasp_report.get("executive_summary", {}) %}
+      <h3>OWASP Executive Summary</h3>
+      <p>{{ owasp_exec.get("summary_text") }}</p>
+      <p><strong>Overall coverage status:</strong> {{ owasp_report.get("overall_coverage_status") }} | <strong>Quality:</strong> {{ owasp_report.get("assessment_quality_score", {}).get("score", 0) }} - {{ owasp_report.get("assessment_quality_score", {}).get("label", "Limited Assessment") }}</p>
+      <p><strong>Assessment limitation:</strong> {{ owasp_report.get("assessment_quality_score", {}).get("limitation") }}</p>
+      {% endif %}
       <div class="grid">
         <div class="metric"><div class="label">OWASP Version</div><div class="value">{{ assessment.get("owasp_version", "2025") }}</div></div>
         <div class="metric"><div class="label">Evidence Items</div><div class="value">{{ assessment.get("total_evidence_items", 0) }}</div></div>
@@ -469,15 +477,15 @@
       <table>
         <thead><tr><th>Category</th><th>Assessment Status</th><th>Coverage Status</th><th>Evidence</th><th>Confidence</th><th>Manual Validation</th><th>Top Recommendation</th></tr></thead>
         <tbody>
-          {% for result in report.get("owasp_category_results", []) %}
+          {% for result in report.get("owasp_coverage_matrix", report.get("owasp_category_results", [])) %}
           <tr>
             <td>{{ result.get("owasp_id") }} {{ result.get("name") }}</td>
             <td>{{ result.get("assessment_status") }}</td>
             <td>{{ result.get("coverage_status") }}</td>
             <td>{{ result.get("evidence_count", 0) }}</td>
             <td>{{ result.get("highest_confidence") }}</td>
-            <td>{{ result.get("manual_validation_required_count", 0) }}</td>
-            <td>{{ result.get("recommendation_themes", []) | first }}</td>
+            <td>{{ "Required" if result.get("manual_validation_required") else result.get("manual_validation_required_count", 0) }}</td>
+            <td>{{ result.get("recommendation_summary") or (result.get("recommendation_themes", []) | first) }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -517,6 +525,16 @@
       {% endif %}
 
       <h3>Manual Validation Required</h3>
+      {% if report.get("owasp_manual_validation_checklist") %}
+      <table>
+        <thead><tr><th>Category</th><th>Checklist Item</th><th>Priority</th><th>Reason</th><th>Suggested Evidence</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for item in report.get("owasp_manual_validation_checklist", []) %}
+          <tr><td>{{ item.get("category") }}</td><td>{{ item.get("item") }}</td><td>{{ item.get("priority") }}</td><td>{{ item.get("reason") }}</td><td>{{ item.get("suggested_evidence") }}</td><td>{{ item.get("status") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
       {% set manual_items = report.get("owasp_evidence_items", []) | selectattr("manual_validation_required") | list %}
       {% if manual_items %}
       <table>
@@ -534,15 +552,33 @@
       <h3>Coverage Gaps</h3>
       {% if report.get("owasp_coverage_gaps") %}
       <table>
-        <thead><tr><th>Category</th><th>Coverage</th><th>Explanation</th></tr></thead>
+        <thead><tr><th>Category</th><th>Coverage</th><th>Explanation</th><th>Next Step</th></tr></thead>
         <tbody>
           {% for gap in report.get("owasp_coverage_gaps", []) %}
-          <tr><td>{{ gap.get("owasp_id") }} {{ gap.get("owasp_name") }}</td><td>{{ gap.get("coverage_status") }}</td><td>{{ gap.get("explanation") }}</td></tr>
+          <tr><td>{{ gap.get("category") or gap.get("owasp_id") }} {{ gap.get("owasp_name", "") }}</td><td>{{ gap.get("coverage_status", "coverage_gap") }}</td><td>{{ gap.get("why_it_matters") or gap.get("explanation") }}</td><td>{{ gap.get("recommended_next_step", "") }}</td></tr>
           {% endfor %}
         </tbody>
       </table>
       {% else %}
       <p class="empty">No OWASP coverage gaps were generated.</p>
+      {% endif %}
+
+      <h3>Developer Remediation Guidance</h3>
+      {% if report.get("owasp_developer_recommendations") %}
+      <table>
+        <thead><tr><th>Category</th><th>Theme</th><th>Recommendation</th><th>Implementation Hint</th><th>Validation Hint</th></tr></thead>
+        <tbody>
+          {% for item in report.get("owasp_developer_recommendations", []) %}
+          <tr><td>{{ item.get("category") }}</td><td>{{ item.get("issue_theme") }}</td><td>{{ item.get("recommendation") }}</td><td>{{ item.get("implementation_hint") }}</td><td>{{ item.get("validation_hint") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="empty">No OWASP developer remediation guidance was generated.</p>
+      {% endif %}
+
+      {% if report.get("owasp_markdown_report_path") %}
+      <p><strong>Markdown-ready OWASP report:</strong> {{ report.get("owasp_markdown_report_path") }}</p>
       {% endif %}
     </section>
     {% endif %}

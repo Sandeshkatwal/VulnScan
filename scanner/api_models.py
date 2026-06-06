@@ -241,6 +241,10 @@ class OWASPMapRequest(StrictApiModel):
 class OWASPAssessmentBuildRequest(StrictApiModel):
     """Build OWASP Assessment Engine results from supplied local evidence."""
 
+    target: str | None = Field(None, max_length=2048, description="Optional assessment target label.", examples=["https://demo-web.local/"])
+    owasp_assessment_summary: dict[str, Any] = Field(default_factory=dict, description="Existing OWASP Assessment summary to consolidate.", examples=[{}])
+    owasp_category_results: list[dict[str, Any]] = Field(default_factory=list, description="Existing OWASP category results to consolidate.", examples=[[]])
+    owasp_evidence_items: list[dict[str, Any]] = Field(default_factory=list, description="Existing OWASP evidence items to consolidate.", examples=[[]])
     findings: list[dict[str, Any]] = Field(default_factory=list, description="Existing VulScan finding dictionaries.", examples=[[]])
     endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint discovery candidates.", examples=[[]])
     parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter intelligence candidates.", examples=[[]])

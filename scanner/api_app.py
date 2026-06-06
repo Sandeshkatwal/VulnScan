@@ -41,6 +41,13 @@ from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
+from scanner.owasp_report_builder import (
+    OWASP_REPORTS_DIR,
+    build_unified_owasp_report,
+    list_owasp_markdown_reports,
+    resolve_owasp_markdown_report,
+    save_markdown_report,
+)
 from scanner.owasp_a01_access_control import A01RulesError, assess_a01_access_control, build_a01_manual_plan_response, load_a01_rules
 from scanner.owasp_a03_supply_chain import A03RulesError, assess_a03_supply_chain, load_a03_rules
 from scanner.owasp_a08_integrity import A08RulesError, assess_a08_integrity, build_a08_manual_plan_response, load_a08_rules
@@ -95,7 +102,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "20.8"
+API_VERSION = "20.9"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -160,6 +167,10 @@ PROTECTED_PATHS = {
     "/owasp/map",
     "/owasp/assessment/rules",
     "/owasp/assessment/build",
+    "/owasp/report/latest",
+    "/owasp/report/build",
+    "/owasp/report/{report_id}",
+    "/owasp/report/{report_id}/download",
     "/owasp/a01/rules",
     "/owasp/a01/assess",
     "/owasp/a01/manual-plan",
@@ -927,9 +938,10 @@ def create_app(
     )
     def build_owasp_assessment_endpoint(request: OWASPAssessmentBuildRequest) -> dict[str, Any]:
         try:
-            return build_owasp_assessment(
+            result = build_owasp_assessment(
                 {
-                    "host": "api-supplied-evidence",
+                    "host": request.target or "api-supplied-evidence",
+                    "target": request.target or "api-supplied-evidence",
                     "findings": request.findings,
                     "endpoint_results": request.endpoint_results,
                     "parameter_results": request.parameter_results,
@@ -937,8 +949,104 @@ def create_app(
                     "evidence_records": request.evidence_records,
                 }
             )
+            if request.owasp_evidence_items or request.owasp_category_results or request.owasp_assessment_summary:
+                report = build_unified_owasp_report(
+                    target=request.target or "api-supplied-evidence",
+                    owasp_assessment_summary=request.owasp_assessment_summary or result.get("owasp_assessment_summary", {}),
+                    owasp_category_results=request.owasp_category_results or result.get("owasp_category_results", []),
+                    owasp_evidence_items=request.owasp_evidence_items or result.get("owasp_evidence_items", []),
+                    scan_result={"target": request.target or "api-supplied-evidence"},
+                )
+                result["owasp_assessment_report"] = report
+                result["owasp_coverage_matrix"] = report["category_results"]
+                result["owasp_manual_validation_checklist"] = report["manual_validation_summary"]["checklist"]
+                result["owasp_developer_recommendations"] = report["developer_recommendations"]
+            return result
         except OWASPAssessmentRulesError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get(
+        "/owasp/report/latest",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Get latest OWASP Assessment report metadata",
+        description="Returns metadata for the latest Markdown OWASP Assessment report under reports/owasp.",
+        responses=ERROR_RESPONSES,
+    )
+    def latest_owasp_report() -> dict[str, Any]:
+        reports = list_owasp_markdown_reports(OWASP_REPORTS_DIR)
+        if not reports:
+            raise HTTPException(status_code=404, detail="No OWASP Assessment report was found.")
+        return {"report": reports[0]}
+
+    @app.post(
+        "/owasp/report/build",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Build a unified OWASP Assessment report",
+        description="Builds and saves a Markdown OWASP Assessment report from supplied existing assessment data. Does not run additional tests.",
+        responses=ERROR_RESPONSES,
+    )
+    def build_owasp_report_endpoint(request: OWASPAssessmentBuildRequest) -> dict[str, Any]:
+        try:
+            if request.owasp_evidence_items or request.owasp_category_results or request.owasp_assessment_summary:
+                report = build_unified_owasp_report(
+                    target=request.target or "api-supplied-evidence",
+                    owasp_assessment_summary=request.owasp_assessment_summary,
+                    owasp_category_results=request.owasp_category_results,
+                    owasp_evidence_items=request.owasp_evidence_items,
+                    scan_result={"target": request.target or "api-supplied-evidence"},
+                )
+            else:
+                result = build_owasp_assessment(
+                    {
+                        "host": request.target or "api-supplied-evidence",
+                        "target": request.target or "api-supplied-evidence",
+                        "findings": request.findings,
+                        "endpoint_results": request.endpoint_results,
+                        "parameter_results": request.parameter_results,
+                        "safe_active_validation_results": request.safe_validation_results,
+                        "evidence_records": request.evidence_records,
+                    }
+                )
+                report = result["owasp_assessment_report"]
+            markdown_path = save_markdown_report(report, OWASP_REPORTS_DIR)
+        except OWASPAssessmentRulesError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        return {
+            "owasp_assessment_report": report,
+            "markdown_report_path": str(markdown_path),
+            "download_url": f"/owasp/report/{markdown_path.stem}/download",
+        }
+
+    @app.get(
+        "/owasp/report/{report_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Get OWASP Assessment report metadata",
+        description="Returns safe metadata for one Markdown OWASP Assessment report under reports/owasp.",
+        responses=ERROR_RESPONSES,
+    )
+    def get_owasp_report(report_id: str) -> dict[str, Any]:
+        path = resolve_owasp_markdown_report(report_id, OWASP_REPORTS_DIR)
+        if path is None:
+            raise HTTPException(status_code=404, detail="OWASP Assessment report was not found.")
+        matches = [item for item in list_owasp_markdown_reports(OWASP_REPORTS_DIR) if item.get("report_id") == report_id]
+        return {"report": matches[0] if matches else {"report_id": report_id, "filename": path.name, "download_url": f"/owasp/report/{report_id}/download"}}
+
+    @app.get(
+        "/owasp/report/{report_id}/download",
+        dependencies=[Depends(require_api_key)],
+        tags=["OWASP"],
+        summary="Download OWASP Assessment Markdown report",
+        description="Downloads a Markdown OWASP Assessment report only from reports/owasp. Path traversal is blocked.",
+        responses=ERROR_RESPONSES,
+    )
+    def download_owasp_report(report_id: str) -> FileResponse:
+        path = resolve_owasp_markdown_report(report_id, OWASP_REPORTS_DIR)
+        if path is None:
+            raise HTTPException(status_code=404, detail="OWASP Assessment report was not found.")
+        return FileResponse(path, media_type="text/markdown", filename=path.name)
 
     @app.get(
         "/owasp/a01/rules",

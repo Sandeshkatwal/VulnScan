@@ -183,3 +183,10 @@ The option does not perform auth bypass automation, cross-account testing, crede
 ```
 
 `--a03-checks` classifies available component/header/endpoint/SBOM/vulnerability-intelligence evidence. It does not perform dependency confusion testing, external registry fetching, malicious package testing, package takeover simulation, or exploit validation.
+# Version 20.9 OWASP Assessment Report
+
+Generate the unified OWASP Assessment Markdown report with `--owasp-report` after `--owasp-assess`:
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a01-checks --a02-checks --a03-checks --a04-checks --a05-checks --a07-checks --a08-checks --a10-checks --owasp-assess --owasp-report --json --html
+```

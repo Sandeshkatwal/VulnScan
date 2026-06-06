@@ -69,3 +69,4 @@ The OWASP Assessment screen includes an A04 Cryptographic Failures section when 
 ## Limitations
 
 A04 evidence is based on available metadata and may require manual validation. Missing evidence does not mean a workflow is secure; it may mean the workflow was not assessed, was not reachable, or requires authenticated/manual review.
+Version 20.9 reporting note: A04 evidence is consolidated into the unified OWASP Assessment report with coverage matrix status, evidence strength, confidence, TLS metadata coverage gaps, and developer remediation guidance for HTTPS, HSTS, and cookie attributes.

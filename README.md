@@ -218,9 +218,11 @@ License not selected yet. Add a `LICENSE` file before public release.
 ## OWASP Assessment Engine
 
 Version 20.0 adds an OWASP Top 10:2025 assessment foundation for category-level evidence, confidence, coverage gaps, and manual validation workflow.
+Version 20.9 adds a unified OWASP Assessment report with executive summary, A01-A10 coverage matrix, evidence strength summary, manual validation checklist, developer remediation guidance, coverage gaps, limitations, and Markdown export. See `docs/OWASP_ASSESSMENT_REPORTING.md`.
 
 ```powershell
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a01-checks --a02-checks --a03-checks --a04-checks --a05-checks --a07-checks --a08-checks --a10-checks --owasp-assess --owasp-report --json --html
 ```
 
 The OWASP assessment score measures coverage and evidence quality. It is not a security rating, and no indicator found does not mean the category is secure.

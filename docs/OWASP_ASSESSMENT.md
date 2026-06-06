@@ -2,6 +2,8 @@
 
 VulScan Version 20.0 adds the OWASP Assessment Engine foundation for authorised web application assessment workflows. It builds OWASP Top 10:2025 category-level results from existing VulScan evidence, endpoint intelligence, parameter intelligence, passive web findings, safe validation results, vulnerability intelligence, and manual notes.
 
+Version 20.9 adds a unified OWASP Assessment report model and Markdown export. The report includes executive summary, A01-A10 coverage matrix, evidence strength summary, manual validation checklist, developer remediation guidance, coverage gaps, limitations, and safe testing statement. See `docs/OWASP_ASSESSMENT_REPORTING.md`.
+
 The engine does not exploit, brute force, bypass authentication, submit destructive payloads, or scan out-of-scope assets. Results are evidence and coverage oriented.
 
 ## OWASP Top 10:2025 Categories

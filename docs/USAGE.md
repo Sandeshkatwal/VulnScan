@@ -911,3 +911,10 @@ Version 20.8 adds `--a08-checks` for safe A08 Software or Data Integrity Failure
 ```
 
 A08 checks classify integrity indicators from available endpoint, parameter, form, script, stylesheet, and limited HTML metadata. VulScan does not upload files, submit forms, trigger webhooks, call update endpoints, import data, or perform bypass testing.
+# OWASP Assessment Report
+
+Use `--owasp-report` with `--owasp-assess` to write a Markdown-ready OWASP Assessment report under `reports/owasp`.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a01-checks --a03-checks --a05-checks --a08-checks --owasp-assess --owasp-report --json --html
+```

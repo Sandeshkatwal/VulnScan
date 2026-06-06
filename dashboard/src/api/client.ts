@@ -34,6 +34,7 @@ import type {
   OWASPAssessmentBuildRequest,
   OWASPAssessmentResponse,
   OWASPAssessmentRulesResponse,
+  OWASPReportBuildResponse,
   A01AssessmentRequest,
   A01AssessmentResponse,
   A01ManualPlanRequest,
@@ -323,6 +324,18 @@ export function buildOWASPAssessment(payload: OWASPAssessmentBuildRequest): Prom
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+}
+
+export function buildOWASPReport(payload: OWASPAssessmentBuildRequest): Promise<OWASPReportBuildResponse> {
+  return request<OWASPReportBuildResponse>('/owasp/report/build', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function downloadOWASPReport(reportId: string, filename?: string): Promise<void> {
+  return authenticatedDownload(`/owasp/report/${encodeURIComponent(reportId)}/download`, filename || `${reportId}.md`)
 }
 
 export function assessA01AccessControl(payload: A01AssessmentRequest): Promise<A01AssessmentResponse> {

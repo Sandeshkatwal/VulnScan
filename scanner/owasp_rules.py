@@ -17,6 +17,10 @@ class OWASPAssessmentRulesError(ValueError):
 
 def load_owasp_assessment_rules(path: str | Path = OWASP_RULES_PATH) -> dict[str, Any]:
     rules_path = Path(path)
+    if not rules_path.exists() and not rules_path.is_absolute():
+        package_root_path = Path(__file__).resolve().parent.parent / rules_path
+        if package_root_path.exists():
+            rules_path = package_root_path
     try:
         payload = json.loads(rules_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
