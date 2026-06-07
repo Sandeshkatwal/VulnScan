@@ -247,3 +247,5 @@ The engine does not submit forms, upload files, trigger callbacks/webhooks, call
 ## Version 21.0 Authenticated Web Assessment Foundation
 
 VulScan 21.0 adds redacted Session Profiles, Authentication Context summaries, Authenticated Scope boundary checks, Auth-Required Endpoint classification, and Role/Permission Notes. The foundation is local-only and report-safe: raw auth material is not included in JSON, HTML, dashboard, API, or terminal output.
+
+VulScan 21.1 adds `scanner.authenticated_crawler`, `scanner.session_boundary`, and `scanner.authenticated_evidence` for GET-only Authenticated Crawl, Auth Boundary Enforcement, Session Expiry Indicator classification, and Redacted Authenticated Evidence.

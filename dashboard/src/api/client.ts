@@ -20,6 +20,7 @@ import type {
   BugBountyReconResponse,
   AuthBoundaryResult,
   AuthEndpointClassificationResponse,
+  AuthenticatedCrawlResponse,
   AuthProfilesResponse,
   BugIntelligenceMetricsResponse,
   DateRangeOption,
@@ -322,6 +323,23 @@ export function classifyAuthEndpoints(profile: Record<string, unknown>, endpoint
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ profile, endpoint_results: endpointResults }),
+  })
+}
+
+export function runAuthenticatedCrawl(payload: {
+  url: string
+  profile: Record<string, unknown>
+  max_pages: number
+  max_depth: number
+  request_delay: number
+  timeout: number
+  same_origin_only: boolean
+  dry_run: boolean
+}): Promise<AuthenticatedCrawlResponse> {
+  return request<AuthenticatedCrawlResponse>('/authenticated/crawl', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   })
 }
 

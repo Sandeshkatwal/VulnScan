@@ -3460,6 +3460,65 @@ td select {
   padding: 8px 10px;
 }
 
+.auth-crawl-config {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) repeat(3, minmax(120px, 0.5fr));
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+}
+
+.auth-crawl-config label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.auth-crawl-config input {
+  min-height: 40px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(8, 13, 16, 0.78);
+  padding: 8px 10px;
+}
+
+.auth-crawl-config .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  min-height: 40px;
+}
+
+.auth-crawl-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.auth-crawl-summary div {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.auth-crawl-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.auth-crawl-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--heading);
+  font-size: 1.15rem;
+}
+
 .auth-boundary-result {
   display: grid;
   gap: 4px;
@@ -3491,6 +3550,10 @@ td select {
 
 @media (max-width: 780px) {
   .auth-boundary-form {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-crawl-config {
     grid-template-columns: 1fr;
   }
 }

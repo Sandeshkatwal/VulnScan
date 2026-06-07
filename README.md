@@ -25,6 +25,8 @@ VulScan is intended for security learners, junior security engineers, portfolio 
 
 Version 21.0 adds Authenticated Web Assessment foundation: redacted Session Profiles, Authentication Context, Authenticated Scope boundaries, Auth-Required Endpoint classification, and Role/Permission Notes. It does not perform login automation, unauthorised authentication testing, or state-changing authenticated requests. See `docs/AUTHENTICATED_ASSESSMENT.md`.
 
+Version 21.1 adds Authenticated Crawl and Session Boundary Controls. The crawl is GET-only, enforces Authenticated Scope before requests, blocks logout/delete/payment/destructive paths, detects Session Expiry Indicators, and stores Redacted Authenticated Evidence only. See `docs/AUTHENTICATED_CRAWL.md`.
+
 ## Key Features
 
 | Area | Capability | Status |

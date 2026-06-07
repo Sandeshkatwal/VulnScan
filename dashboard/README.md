@@ -14,6 +14,8 @@ The dashboard is local development tooling. It does not collect credentials, doe
 
 Version 21.0 adds an Authenticated Assessment dashboard section for redacted Session Profile summaries, Authenticated Scope boundary checks, Auth-Required Endpoint classification, and Role/Permission Notes. It does not display raw cookies, bearer tokens, auth headers, passwords, or login automation controls.
 
+Version 21.1 extends the Authenticated Assessment section with Authenticated Crawl configuration, crawl summary, boundary events, Session Expiry Indicators, and Redacted Authenticated Evidence.
+
 ## Pages And Sections
 
 - Overview

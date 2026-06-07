@@ -926,5 +926,9 @@ Use `--owasp-report` with `--owasp-assess` to write a Markdown-ready OWASP Asses
 .\.venv311\Scripts\python.exe -m scanner.main auth show --profile-file data\auth_profiles\sample_session_profile.redacted.json
 .\.venv311\Scripts\python.exe -m scanner.main auth validate --profile-file data\auth_profiles\sample_session_profile.redacted.json
 .\.venv311\Scripts\python.exe -m scanner.main auth check-url --profile-file data\auth_profiles\sample_session_profile.redacted.json --url http://127.0.0.1:8000/dashboard
+
+.\.venv311\Scripts\python.exe -m scanner.main authenticated-crawl --url http://127.0.0.1:8000/dashboard --auth-profile data\auth_profiles\sample_session_profile.redacted.json --max-pages 30 --max-depth 2 --request-delay 1.0 --json --html
+
+.\.venv311\Scripts\python.exe -m scanner.main authenticated-crawl --url http://127.0.0.1:8000/dashboard --auth-profile data\auth_profiles\sample_session_profile.redacted.json --dry-run --json --html
 .\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --auth-profile data\auth_profiles\sample_session_profile.redacted.json --classify-auth --json --html
 ```

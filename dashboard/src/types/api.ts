@@ -709,6 +709,16 @@ export interface AuthEndpointClassificationResponse {
   [key: string]: unknown
 }
 
+export interface AuthenticatedCrawlResponse {
+  auth_context_summary?: ApiRecord
+  authenticated_crawl_summary?: ApiRecord
+  authenticated_crawl_results?: ApiRecord[]
+  authenticated_crawl_skipped?: ApiRecord[]
+  authenticated_boundary_events?: ApiRecord[]
+  auth_required_endpoint_classification?: ApiRecord
+  [key: string]: unknown
+}
+
 export interface OWASPCategory {
   owasp_id?: string
   name?: string

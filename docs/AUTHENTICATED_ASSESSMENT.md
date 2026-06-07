@@ -106,3 +106,5 @@ Authenticated Web Assessment in 21.0 is classification and context only. It does
 ## Future Work
 
 Future versions can add encrypted local storage, authenticated crawl boundaries, explicit user-approved authenticated requests, and manual role comparison workflows.
+
+Version 21.1 adds GET-only Authenticated Crawl with Session Boundary Controls. See `docs/AUTHENTICATED_CRAWL.md`.

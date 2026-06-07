@@ -19,6 +19,7 @@ from scanner.audit_profiles import (
 from scanner.api_runner import run_api_server
 from scanner.api_security import API_KEY_ENV_VAR, LOCAL_DEVELOPMENT_WARNING, get_configured_api_key
 from scanner.auth_context import build_auth_context
+from scanner.authenticated_crawler import AUTHENTICATED_CRAWL_REPORTS_DIR, authenticated_crawl
 from scanner.authenticated_scope import classify_auth_boundary, classify_auth_required_endpoints
 from scanner.session_profiles import SessionProfileError, ensure_auth_profile_dirs, list_session_profiles, load_session_profile, validate_session_profile
 from scanner.api_bug_bounty import check_scope as api_check_scope, list_scope_files as api_list_scope_files
@@ -402,6 +403,78 @@ def auth_check_url(
     for key in ("url", "allowed_by_profile", "blocked_by_profile", "reason", "matched_rule", "auth_profile_id", "role_label"):
         table.add_row(key.replace("_", " ").title(), str(result.get(key, "")))
     console.print(table)
+
+
+@app.command("authenticated-crawl")
+def authenticated_crawl_command(
+    url: Annotated[str, typer.Option("--url", help="Authenticated Crawl start URL.")],
+    auth_profile: Annotated[Path, typer.Option("--auth-profile", help="Session Profile JSON under data/auth_profiles.")],
+    scope_file: Annotated[Path | None, typer.Option("--scope-file", help="Optional Program Scope file. Reserved for future Authenticated Crawl scope integration.")] = None,
+    enforce_scope: Annotated[bool, typer.Option("--enforce-scope/--no-enforce-scope", help="Keep Program Scope enforcement enabled when a scope file is supplied.")] = True,
+    max_pages: Annotated[int, typer.Option("--max-pages", min=1, max=200, help="Maximum pages to crawl.")] = 30,
+    max_depth: Annotated[int, typer.Option("--max-depth", min=0, max=10, help="Maximum crawl depth.")] = 2,
+    request_delay: Annotated[float, typer.Option("--request-delay", min=0, max=30, help="Seconds between GET requests.")] = 1.0,
+    timeout: Annotated[float, typer.Option("--timeout", min=1, max=30, help="Per-request timeout.")] = 5.0,
+    max_redirects: Annotated[int, typer.Option("--max-redirects", min=0, max=10, help="Maximum redirect entries retained in results.")] = 5,
+    same_origin_only: Annotated[bool, typer.Option("--same-origin-only/--allow-cross-origin", help="Keep Authenticated Crawl to the start URL origin.")] = True,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Validate boundary and reporting without sending HTTP requests.")] = False,
+    json_report: Annotated[bool, typer.Option("--json", help="Write a redacted JSON Authenticated Crawl report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write a redacted HTML Authenticated Crawl report.")] = False,
+) -> None:
+    """Run a safe GET-only Authenticated Crawl with Session Boundary Controls."""
+    console.print(Panel(f"VulScan version {__version__}"))
+    console.print("[yellow]Authenticated Crawl safety:[/yellow] authorised testing only; GET-only; no form submission; logout/delete/payment/destructive paths are blocked.")
+    scan_start_time = datetime.now()
+    try:
+        profile = load_session_profile(auth_profile)
+        validation = validate_session_profile(profile)
+        if not validation.get("valid"):
+            for error in validation.get("errors") or []:
+                console.print(f"[red]Session Profile error:[/red] {error}")
+            raise typer.Exit(code=1)
+        for warning in validation.get("warnings") or []:
+            console.print(f"[yellow]Warning:[/yellow] {warning}")
+        _print_auth_profile_summary(validation.get("session_profile") or {})
+        if scope_file and enforce_scope:
+            console.print("[yellow]Scope note:[/yellow] Program Scope file accepted; Authenticated Crawl 21.1 still enforces Session Boundary Controls before requests.")
+        result = authenticated_crawl(
+            url,
+            profile,
+            {
+                "max_pages": max_pages,
+                "max_depth": max_depth,
+                "request_delay": request_delay,
+                "timeout": timeout,
+                "max_redirects": max_redirects,
+                "same_origin_only": same_origin_only,
+                "dry_run": dry_run,
+            },
+        )
+    except SessionProfileError as exc:
+        console.print(f"[red]Session Profile error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    except ValueError as exc:
+        console.print(f"[red]Authenticated Crawl error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+
+    _print_authenticated_crawl_summary(result.get("authenticated_crawl_summary") or {})
+    _print_authenticated_crawl_rows(result.get("authenticated_crawl_results") or [], result.get("authenticated_crawl_skipped") or [], result.get("authenticated_boundary_events") or [])
+    scan_end_time = datetime.now()
+    scan_result = {
+        "host": url,
+        "resolved_ip": "",
+        "scan_mode": "authenticated_crawl",
+        "duration_seconds": round((scan_end_time - scan_start_time).total_seconds(), 3),
+        "open_ports": [],
+        "findings": [],
+        **result,
+    }
+    if json_report:
+        report_path = save_json_report(scan_result=scan_result, scanner_name="VulScan", scanner_version=__version__, scan_start_time=scan_start_time, scan_end_time=scan_end_time, reports_dir=AUTHENTICATED_CRAWL_REPORTS_DIR)
+        console.print(f"[green]JSON authenticated crawl report saved:[/green] {report_path}")
+    if html_report:
+        report_path = save_html_report(scan_result=scan_result, scanner_name="VulScan", scanner_version=__version__, scan_start_time=scan_start_time, scan_end_time=scan_end_time, reports_dir=AUTHENTICATED_CRAWL_REPORTS_DIR)
+        console.print(f"[green]HTML authenticated crawl report saved:[/green] {report_path}")
 
 
 @sbom_app.command("analyse")
@@ -4351,6 +4424,61 @@ def _print_auth_endpoint_classification(summary: dict[str, Any]) -> None:
     for key in ("total_endpoints", "auth_required_likely_count", "public_likely_count", "unknown_count", "role_label"):
         table.add_row(key.replace("_", " ").title(), str(summary.get(key, "")))
     console.print(table)
+
+
+def _print_authenticated_crawl_summary(summary: dict[str, Any]) -> None:
+    if not summary:
+        return
+    table = Table(title="Authenticated Crawl Summary")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in (
+        "crawl_id",
+        "target_base_url",
+        "profile_name",
+        "role_label",
+        "pages_crawled",
+        "endpoints_discovered",
+        "auth_required_endpoints_count",
+        "blocked_by_boundary_count",
+        "skipped_destructive_count",
+        "skipped_out_of_scope_count",
+        "session_expiry_indicators_count",
+        "redaction_applied",
+    ):
+        table.add_row(key.replace("_", " ").title(), str(summary.get(key, "")))
+    console.print(table)
+
+
+def _print_authenticated_crawl_rows(results: list[dict[str, Any]], skipped: list[dict[str, Any]], events: list[dict[str, Any]]) -> None:
+    if results:
+        table = Table(title="Authenticated Crawl Results")
+        for column in ("URL", "Status", "Title", "Auth Required", "Session Expiry", "Category"):
+            table.add_column(column)
+        for row in results[:20]:
+            table.add_row(
+                str(row.get("url") or ""),
+                str(row.get("status_code") or ""),
+                str(row.get("page_title") or row.get("title") or "")[:80],
+                str(row.get("auth_required_likely") or False),
+                str(row.get("session_expiry_indicator") or False),
+                str(row.get("endpoint_category") or ""),
+            )
+        console.print(table)
+    if skipped:
+        table = Table(title="Authenticated Crawl Skipped")
+        for column in ("URL", "Reason", "Rule"):
+            table.add_column(column)
+        for row in skipped[:20]:
+            table.add_row(str(row.get("url") or ""), str(row.get("reason") or ""), str(row.get("matched_rule") or ""))
+        console.print(table)
+    if events:
+        table = Table(title="Session Boundary Events")
+        for column in ("URL", "Event", "Reason", "Action"):
+            table.add_column(column)
+        for row in events[:20]:
+            table.add_row(str(row.get("url") or ""), str(row.get("event_type") or ""), str(row.get("reason") or ""), str(row.get("action_taken") or ""))
+        console.print(table)
 
 
 def _generate_owasp_markdown_report(scan_result: dict[str, Any]) -> Path:

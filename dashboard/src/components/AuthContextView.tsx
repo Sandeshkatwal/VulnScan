@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { checkAuthBoundary, classifyAuthEndpoints, getAuthProfiles } from '../api/client'
-import type { AuthBoundaryResult, SessionProfileSummary, JobResultResponse } from '../types/api'
+import { checkAuthBoundary, classifyAuthEndpoints, getAuthProfiles, runAuthenticatedCrawl } from '../api/client'
+import type { AuthBoundaryResult, AuthenticatedCrawlResponse, SessionProfileSummary, JobResultResponse } from '../types/api'
 import { ErrorAlert } from './ErrorAlert'
 
 interface AuthContextViewProps {
@@ -31,6 +31,13 @@ export function AuthContextView({ apiOnline, demoMode = false, jobResult }: Auth
   const [url, setUrl] = useState('http://127.0.0.1:8000/dashboard')
   const [boundary, setBoundary] = useState<AuthBoundaryResult | null>(demoMode ? { url: 'http://127.0.0.1:8000/dashboard', allowed_by_profile: true, blocked_by_profile: false, reason: 'URL is inside the Authenticated Scope.', role_label: 'standard_user' } : null)
   const [classified, setClassified] = useState<Array<Record<string, unknown>>>([])
+  const [crawlUrl, setCrawlUrl] = useState('http://127.0.0.1:8000/dashboard')
+  const [maxPages, setMaxPages] = useState(30)
+  const [maxDepth, setMaxDepth] = useState(2)
+  const [requestDelay, setRequestDelay] = useState(1)
+  const [sameOriginOnly, setSameOriginOnly] = useState(true)
+  const [dryRun, setDryRun] = useState(true)
+  const [crawlResult, setCrawlResult] = useState<AuthenticatedCrawlResponse | null>(demoMode ? demoCrawlResult() : null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -39,6 +46,7 @@ export function AuthContextView({ apiOnline, demoMode = false, jobResult }: Auth
       setProfiles(demoProfiles)
       setSelectedId(demoProfiles[0].profile_id || '')
       setClassified(demoClassifiedEndpoints())
+      setCrawlResult(demoCrawlResult())
       return
     }
     if (!apiOnline) return
@@ -75,6 +83,32 @@ export function AuthContextView({ apiOnline, demoMode = false, jobResult }: Auth
       } else {
         const response = await classifyAuthEndpoints(selected as Record<string, unknown>, endpointResults)
         setClassified(response.classified_endpoints || [])
+      }
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function startAuthenticatedCrawl() {
+    if (!selected) return
+    setLoading(true)
+    setError(null)
+    try {
+      if (demoMode) {
+        setCrawlResult(demoCrawlResult())
+      } else {
+        setCrawlResult(await runAuthenticatedCrawl({
+          url: crawlUrl,
+          profile: selected as Record<string, unknown>,
+          max_pages: maxPages,
+          max_depth: maxDepth,
+          request_delay: requestDelay,
+          timeout: 5,
+          same_origin_only: sameOriginOnly,
+          dry_run: dryRun,
+        }))
       }
     } catch (caught) {
       setError(errorMessage(caught))
@@ -131,6 +165,25 @@ export function AuthContextView({ apiOnline, demoMode = false, jobResult }: Auth
 
       <article className="panel panel--wide">
         <div className="panel-heading">
+          <div><h2>Authenticated Crawl</h2><p>GET-only crawl with Session Boundary Controls and Redacted Authenticated Evidence.</p></div>
+          <button className="primary-button" type="button" disabled={!selected || loading} onClick={() => void startAuthenticatedCrawl()}>Start Authenticated Crawl</button>
+        </div>
+        <div className="auth-safety-notice">
+          Authenticated crawl uses provided session context only for authorised testing. It uses GET-only requests, does not submit forms, and blocks logout/delete/payment/destructive paths.
+        </div>
+        <div className="auth-crawl-config">
+          <label><span>Start URL</span><input value={crawlUrl} onChange={(event) => setCrawlUrl(event.target.value)} /></label>
+          <label><span>Max pages</span><input type="number" min={1} max={200} value={maxPages} onChange={(event) => setMaxPages(Number(event.target.value))} /></label>
+          <label><span>Max depth</span><input type="number" min={0} max={10} value={maxDepth} onChange={(event) => setMaxDepth(Number(event.target.value))} /></label>
+          <label><span>Request delay</span><input type="number" min={0} max={30} step={0.5} value={requestDelay} onChange={(event) => setRequestDelay(Number(event.target.value))} /></label>
+          <label className="checkbox-row"><input type="checkbox" checked={sameOriginOnly} onChange={(event) => setSameOriginOnly(event.target.checked)} /> Same origin only</label>
+          <label className="checkbox-row"><input type="checkbox" checked={dryRun} onChange={(event) => setDryRun(event.target.checked)} /> Dry run</label>
+        </div>
+        {crawlResult && <AuthenticatedCrawlResultView result={crawlResult} />}
+      </article>
+
+      <article className="panel panel--wide">
+        <div className="panel-heading">
           <div><h2>Auth-Required Endpoints</h2><p>Classification only. No bypass or live auth testing is performed.</p></div>
           <button className="secondary-button" type="button" disabled={!selected || loading} onClick={() => void runEndpointClassification()}>Classify Endpoints</button>
         </div>
@@ -157,6 +210,41 @@ export function AuthContextView({ apiOnline, demoMode = false, jobResult }: Auth
   )
 }
 
+function AuthenticatedCrawlResultView({ result }: { result: AuthenticatedCrawlResponse }) {
+  const summary = result.authenticated_crawl_summary || {}
+  const rows = result.authenticated_crawl_results || []
+  const events = result.authenticated_boundary_events || []
+  return (
+    <div className="auth-crawl-results">
+      <div className="auth-crawl-summary">
+        <div><span>Pages crawled</span><strong>{String(summary.pages_crawled ?? 0)}</strong></div>
+        <div><span>Endpoints</span><strong>{String(summary.endpoints_discovered ?? 0)}</strong></div>
+        <div><span>Blocked paths</span><strong>{String(summary.blocked_by_boundary_count ?? 0)}</strong></div>
+        <div><span>Skipped destructive</span><strong>{String(summary.skipped_destructive_count ?? 0)}</strong></div>
+        <div><span>Session Expiry Indicator</span><strong>{String(summary.session_expiry_indicators_count ?? 0)}</strong></div>
+        <div><span>Auth-required endpoints</span><strong>{String(summary.auth_required_endpoints_count ?? 0)}</strong></div>
+      </div>
+      <div className="table-shell">
+        <table>
+          <thead><tr><th>URL</th><th>Status</th><th>Title</th><th>Auth Required</th><th>Session Expiry</th><th>Category</th></tr></thead>
+          <tbody>{rows.map((row, index) => (
+            <tr key={`${row.url}-${index}`}><td>{String(row.url || '')}</td><td>{String(row.status_code ?? '')}</td><td>{String(row.page_title || row.title || '')}</td><td>{String(row.auth_required_likely || false)}</td><td>{String(row.session_expiry_indicator || false)}</td><td>{String(row.endpoint_category || '')}</td></tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <div className="table-shell">
+        <table>
+          <thead><tr><th>URL</th><th>Event</th><th>Reason</th><th>Action</th></tr></thead>
+          <tbody>{events.map((event, index) => (
+            <tr key={`${event.url}-${index}`}><td>{String(event.url || '')}</td><td>{String(event.event_type || '')}</td><td>{String(event.reason || '')}</td><td>{String(event.action_taken || '')}</td></tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <div className="panel-message">Redacted Authenticated Evidence only. Raw cookies, bearer tokens, passwords, and Authorization headers are not displayed.</div>
+    </div>
+  )
+}
+
 function ProfileDetail({ profile }: { profile: SessionProfileSummary }) {
   return (
     <div className="auth-profile-detail">
@@ -179,6 +267,28 @@ function demoClassifiedEndpoints(): Array<Record<string, unknown>> {
     { url: 'http://127.0.0.1:8000/dashboard', auth_required_classification: 'auth_required_likely', auth_classification_reason: 'Path suggests an Auth-Required Endpoint.', role_label: 'standard_user', source: 'demo' },
     { url: 'http://127.0.0.1:8000/login', auth_required_classification: 'public_likely', auth_classification_reason: 'Endpoint appears reachable from available metadata.', role_label: 'standard_user', source: 'demo' },
   ]
+}
+
+function demoCrawlResult(): AuthenticatedCrawlResponse {
+  return {
+    authenticated_crawl_summary: {
+      enabled: true,
+      pages_crawled: 2,
+      endpoints_discovered: 2,
+      blocked_by_boundary_count: 1,
+      skipped_destructive_count: 1,
+      session_expiry_indicators_count: 1,
+      auth_required_endpoints_count: 1,
+      redaction_applied: true,
+    },
+    authenticated_crawl_results: [
+      { url: 'http://127.0.0.1:8000/dashboard', status_code: 200, page_title: 'Dashboard', auth_required_likely: true, session_expiry_indicator: false, endpoint_category: 'authenticated_likely' },
+      { url: 'http://127.0.0.1:8000/account', status_code: 401, page_title: 'Login', auth_required_likely: true, session_expiry_indicator: true, endpoint_category: 'auth_required_likely' },
+    ],
+    authenticated_boundary_events: [
+      { url: 'http://127.0.0.1:8000/logout', event_type: 'logout_path_skipped', reason: 'Path matches the default destructive path blocklist.', action_taken: 'skipped' },
+    ],
+  }
 }
 
 function errorMessage(error: unknown): string {

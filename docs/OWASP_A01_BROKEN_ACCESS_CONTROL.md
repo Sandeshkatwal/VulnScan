@@ -68,3 +68,4 @@ A01 Broken Access Control frequently requires authenticated, role-aware, and ten
 Version 20.9 reporting note: A01 evidence is consolidated into the unified OWASP Assessment report with coverage status, evidence strength, confidence, developer remediation guidance, and manual validation checklist items for object ownership, tenant boundaries, and admin/function authorization.
 
 Version 21.0 note: A01 can include redacted role labels and Auth-Required Endpoint classification from a Session Profile. VulScan does not compare profiles or automate cross-account testing in this version.
+Version 21.1 Authenticated Crawl note: endpoints observed through Authenticated Crawl can strengthen access-control candidate context, but object ownership, tenant boundary, and role/permission impact still require manual validation.

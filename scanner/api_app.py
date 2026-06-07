@@ -40,6 +40,7 @@ from scanner.bug_intelligence_metrics import MetricsDateRangeError
 from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.api_auth_context import api_check_auth_boundary, api_classify_auth_endpoints, api_list_auth_profiles, api_validate_auth_profile
+from scanner.api_authenticated_crawl import api_list_authenticated_crawls, api_run_authenticated_crawl
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_report_builder import (
@@ -60,7 +61,7 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -103,7 +104,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "21.0"
+API_VERSION = "21.1"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -168,6 +169,9 @@ PROTECTED_PATHS = {
     "/auth/profile/validate",
     "/auth/boundary/check",
     "/auth/endpoints/classify",
+    "/authenticated/crawl",
+    "/authenticated/boundary/check-url",
+    "/authenticated/crawls",
     "/owasp/categories",
     "/owasp/map",
     "/owasp/assessment/rules",
@@ -198,7 +202,7 @@ TAGS_METADATA = [
     {"name": "Exports", "description": "Local export metadata for saved findings."},
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
     {"name": "Bug Intelligence", "description": "Local program scope, recon intelligence, endpoint discovery, and safe validation workflows."},
-    {"name": "Authenticated Assessment", "description": "Redacted local Session Profile, Authentication Context, and Authenticated Scope helpers."},
+    {"name": "Authenticated Assessment", "description": "Redacted local Session Profile, Authentication Context, Authenticated Scope helpers, and GET-only Authenticated Crawl."},
     {"name": "OWASP", "description": "OWASP Top 10:2025 indicator mapping and assessment results for existing evidence and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
     {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
@@ -490,6 +494,39 @@ def create_app(
     )
     def classify_auth_endpoints(request: AuthEndpointClassifyRequest) -> dict[str, Any]:
         return api_classify_auth_endpoints(request.profile, request.endpoint_results)
+
+    @app.post(
+        "/authenticated/crawl",
+        dependencies=[Depends(require_api_key)],
+        tags=["Authenticated Assessment"],
+        summary="Run GET-only Authenticated Crawl",
+        description="Runs a bounded Authenticated Crawl with Session Boundary Controls. Responses are redacted and forms are not submitted.",
+        responses=ERROR_RESPONSES,
+    )
+    def run_authenticated_crawl(request: AuthenticatedCrawlRequest) -> dict[str, Any]:
+        return api_run_authenticated_crawl(request)
+
+    @app.post(
+        "/authenticated/boundary/check-url",
+        dependencies=[Depends(require_api_key)],
+        tags=["Authenticated Assessment"],
+        summary="Check an Authenticated Crawl boundary",
+        description="Alias for Auth Boundary Enforcement checks used by the Authenticated Crawl dashboard.",
+        responses=ERROR_RESPONSES,
+    )
+    def check_authenticated_boundary(request: AuthBoundaryCheckRequest) -> dict[str, Any]:
+        return api_check_auth_boundary(request.profile, request.url)
+
+    @app.get(
+        "/authenticated/crawls",
+        dependencies=[Depends(require_api_key)],
+        tags=["Authenticated Assessment"],
+        summary="List local Authenticated Crawl reports",
+        description="Lists local Authenticated Crawl report metadata under reports/authenticated/crawls.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_authenticated_crawls() -> dict[str, Any]:
+        return api_list_authenticated_crawls()
 
     @app.post(
         "/endpoints/analyse",

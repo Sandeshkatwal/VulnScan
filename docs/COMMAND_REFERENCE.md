@@ -198,4 +198,14 @@ Generate the unified OWASP Assessment Markdown report with `--owasp-report` afte
 .\.venv311\Scripts\python.exe -m scanner.main auth show --profile-file data\auth_profiles\sample_session_profile.redacted.json
 .\.venv311\Scripts\python.exe -m scanner.main auth validate --profile-file data\auth_profiles\sample_session_profile.redacted.json
 .\.venv311\Scripts\python.exe -m scanner.main auth check-url --profile-file data\auth_profiles\sample_session_profile.redacted.json --url http://127.0.0.1:8000/dashboard
+
+## Authenticated Crawl
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main authenticated-crawl --url http://127.0.0.1:8000/dashboard --auth-profile data\auth_profiles\sample_session_profile.redacted.json --max-pages 30 --max-depth 2 --request-delay 1.0 --json --html
+
+.\.venv311\Scripts\python.exe -m scanner.main authenticated-crawl --url http://127.0.0.1:8000/dashboard --auth-profile data\auth_profiles\sample_session_profile.redacted.json --dry-run --json --html
+```
+
+Authenticated Crawl is GET-only, enforces Session Boundary Controls, blocks destructive-looking paths, records Session Expiry Indicators, and stores Redacted Authenticated Evidence only.
 ```

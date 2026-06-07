@@ -85,7 +85,8 @@ def attach_a01_access_control(scan_result: dict[str, Any]) -> dict[str, Any]:
     )
     auth_summary = scan_result.get("auth_context_summary") or {}
     role_label = str(auth_summary.get("role_label") or (auth_summary.get("session_profile") or {}).get("role_label") or "")
-    auth_classified = {str(item.get("normalised_url") or item.get("url") or ""): item for item in scan_result.get("endpoint_results", []) or [] if item.get("auth_required_likely")}
+    auth_endpoint_sources = list(scan_result.get("endpoint_results", []) or []) + list(scan_result.get("authenticated_crawl_results", []) or [])
+    auth_classified = {str(item.get("normalised_url") or item.get("url") or ""): item for item in auth_endpoint_sources if item.get("auth_required_likely") or item.get("source") == "authenticated_crawl"}
     if role_label or auth_classified:
         for item in payload.get("a01_access_control_evidence", []) or []:
             url = str(item.get("affected_url") or item.get("url") or "")
@@ -94,7 +95,9 @@ def attach_a01_access_control(scan_result: dict[str, Any]) -> dict[str, Any]:
                 item["role_permission_notes"] = "Manual validation should consider this Session Profile role label."
             if url in auth_classified:
                 item["auth_required_likely"] = True
-                item["auth_context_note"] = "Endpoint was classified as Auth-Required likely from existing metadata."
+                item["auth_context_note"] = "Endpoint was classified as Auth-Required likely from existing metadata. Manual Validation Required."
+                if auth_classified[url].get("source") == "authenticated_crawl":
+                    item["authenticated_crawl_context"] = "Endpoint was observed through Authenticated Crawl. Manual role and object-ownership validation is required."
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)

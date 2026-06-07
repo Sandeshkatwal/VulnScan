@@ -314,6 +314,50 @@
     </section>
     {% endif %}
 
+    {% set auth_crawl = report.get("authenticated_crawl_summary", {}) %}
+    {% if auth_crawl.get("enabled") %}
+    <section>
+      <h2>Authenticated Crawl</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">Pages Crawled</div><div class="value">{{ auth_crawl.get("pages_crawled", 0) }}</div></div>
+        <div class="metric"><div class="label">Endpoints</div><div class="value">{{ auth_crawl.get("endpoints_discovered", 0) }}</div></div>
+        <div class="metric"><div class="label">Auth-Required</div><div class="value">{{ auth_crawl.get("auth_required_endpoints_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Session Expiry</div><div class="value">{{ auth_crawl.get("session_expiry_indicators_count", 0) }}</div></div>
+      </div>
+      <p><strong>Safety:</strong> Authenticated Crawl uses GET-only requests, does not submit forms, blocks logout/delete/payment/destructive paths, and stores Redacted Authenticated Evidence only.</p>
+      <p><strong>Blocked by boundary:</strong> {{ auth_crawl.get("blocked_by_boundary_count", 0) }} | <strong>Skipped destructive:</strong> {{ auth_crawl.get("skipped_destructive_count", 0) }} | <strong>Skipped out of scope:</strong> {{ auth_crawl.get("skipped_out_of_scope_count", 0) }}</p>
+      {% if report.get("authenticated_crawl_results") %}
+      <h3>Crawled Pages</h3>
+      <table>
+        <thead><tr><th>URL</th><th>Status</th><th>Title</th><th>Auth Required</th><th>Session Expiry</th><th>Category</th></tr></thead>
+        <tbody>
+          {% for row in report.get("authenticated_crawl_results", [])[:20] %}
+          <tr>
+            <td>{{ row.get("url") }}</td>
+            <td>{{ row.get("status_code") }}</td>
+            <td>{{ row.get("page_title") or row.get("title") }}</td>
+            <td>{{ row.get("auth_required_likely") }}</td>
+            <td>{{ row.get("session_expiry_indicator") }}</td>
+            <td>{{ row.get("endpoint_category") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("authenticated_boundary_events") %}
+      <h3>Boundary Events</h3>
+      <table>
+        <thead><tr><th>URL</th><th>Event</th><th>Reason</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for event in report.get("authenticated_boundary_events", [])[:20] %}
+          <tr><td>{{ event.get("url") }}</td><td>{{ event.get("event_type") }}</td><td>{{ event.get("reason") }}</td><td>{{ event.get("action_taken") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>

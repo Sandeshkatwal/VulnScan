@@ -237,6 +237,22 @@ class AuthEndpointClassifyRequest(StrictApiModel):
     endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Existing endpoint result dictionaries.", examples=[[]])
 
 
+class AuthenticatedCrawlRequest(StrictApiModel):
+    """Run a GET-only Authenticated Crawl with Session Boundary Controls."""
+
+    url: str = Field(..., min_length=1, max_length=2048, description="Authenticated Crawl start URL.", examples=["http://127.0.0.1:8000/dashboard"])
+    profile: dict[str, Any] = Field(default_factory=dict, description="Session Profile content. Auth material is redacted from the response.", examples=[{}])
+    scope_file: str | None = Field(None, max_length=512, description="Optional local Program Scope file for future scope enforcement.", examples=["data/programs/sample_program_scope.json"])
+    enforce_scope: bool = Field(True, description="Keep Program Scope enforcement enabled when a scope file is provided.", examples=[True])
+    max_pages: int = Field(30, ge=1, le=200, description="Maximum pages to crawl.", examples=[30])
+    max_depth: int = Field(2, ge=0, le=10, description="Maximum link depth.", examples=[2])
+    request_delay: float = Field(1.0, ge=0, le=30, description="Seconds between requests.", examples=[1.0])
+    timeout: float = Field(5.0, gt=0, le=30, description="Per-request timeout.", examples=[5])
+    max_redirects: int = Field(5, ge=0, le=10, description="Maximum redirect entries retained.", examples=[5])
+    same_origin_only: bool = Field(True, description="Keep the crawl to the start URL origin.", examples=[True])
+    dry_run: bool = Field(False, description="Classify the start URL without sending HTTP requests.", examples=[False])
+
+
 class OWASPMapRequest(StrictApiModel):
     """Indicator-only OWASP Top 10 mapping request."""
 

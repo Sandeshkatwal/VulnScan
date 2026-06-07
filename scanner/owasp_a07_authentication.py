@@ -117,8 +117,9 @@ def attach_a07_authentication(scan_result: dict[str, Any]) -> dict[str, Any]:
     auth_summary = scan_result.get("auth_context_summary") or {}
     profile = auth_summary.get("session_profile") or {}
     cookie_names = list(profile.get("cookie_names") or auth_summary.get("cookie_names") or [])
+    extra_evidence = []
     if cookie_names:
-        extra_evidence = [
+        extra_evidence.extend([
             _evidence(
                 rule_id="session_profile_cookie_name_observed",
                 rule_group="session_cookie_indicators",
@@ -133,7 +134,25 @@ def attach_a07_authentication(scan_result: dict[str, Any]) -> dict[str, Any]:
                 extra={"cookie_name": name, "role_label": profile.get("role_label") or ""},
             )
             for name in cookie_names
-        ]
+        ])
+    for row in scan_result.get("authenticated_crawl_results") or []:
+        if row.get("session_expiry_indicator"):
+            extra_evidence.append(
+                _evidence(
+                    rule_id="authenticated_crawl_session_expiry_indicator",
+                    rule_group="session_expiry_indicators",
+                    title="Session Expiry Indicator observed during Authenticated Crawl",
+                    affected_url=str(row.get("url") or target),
+                    confidence=str(row.get("session_expiry_confidence") or "Medium"),
+                    evidence_strength="weak_indicator",
+                    observed_value=str(row.get("session_expiry_reason") or "Session Expiry Indicator observed."),
+                    safe_evidence_summary="Authenticated Crawl observed a login-required or session-expiry indicator. Raw auth material was not stored.",
+                    recommendation="Manually validate expected session expiry, login redirect, and user experience for the documented Authentication Context.",
+                    manual_validation_required=True,
+                    extra={"role_label": profile.get("role_label") or row.get("role_label") or "", "source": "authenticated_crawl"},
+                )
+            )
+    if extra_evidence:
         payload["a07_authentication_evidence"] = list(payload.get("a07_authentication_evidence", [])) + extra_evidence
         payload["a07_authentication_summary"] = build_a07_summary(target=target, evidence=payload["a07_authentication_evidence"])
     findings = list(payload.get("findings", []))
