@@ -31,6 +31,8 @@ def api_run_authenticated_crawl(request: Any) -> dict[str, Any]:
             "max_redirects": request.max_redirects,
             "same_origin_only": request.same_origin_only,
             "dry_run": request.dry_run,
+            "scope_file": request.scope_file,
+            "enforce_scope": request.enforce_scope,
         },
     )
     result["profile"] = safe_profile_summary(profile)

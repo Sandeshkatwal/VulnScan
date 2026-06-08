@@ -84,6 +84,46 @@ def test_authenticated_crawl_respects_same_origin_only() -> None:
     assert any(event["event_type"] == "cross_host_skipped" for event in result["authenticated_boundary_events"])
 
 
+def test_authenticated_crawl_enforces_program_scope_before_request() -> None:
+    session = FakeSession(
+        {
+            "http://outside.example/dashboard": FakeResponse("http://outside.example/dashboard", 200, "<title>Other</title>"),
+        }
+    )
+    profile = _profile()
+    profile["allowed_hosts"] = ["outside.example"]
+
+    result = authenticated_crawl(
+        "http://outside.example/dashboard",
+        profile,
+        {"request_delay": 0, "scope_file": "data/programs/sample_program_scope.json", "enforce_scope": True, "same_origin_only": False},
+        session=session,
+    )
+
+    assert session.requests == []
+    assert result["authenticated_crawl_summary"]["pages_crawled"] == 0
+    assert any(event["event_type"] == "out_of_scope_skipped" for event in result["authenticated_boundary_events"])
+
+
+def test_authenticated_crawl_detects_login_location_redirect_without_following() -> None:
+    session = FakeSession(
+        {
+            "http://127.0.0.1:8000/dashboard": FakeResponse(
+                "http://127.0.0.1:8000/dashboard",
+                302,
+                "",
+                {"Content-Type": "text/html", "Location": "/login"},
+            ),
+        }
+    )
+
+    result = authenticated_crawl("http://127.0.0.1:8000/dashboard", _profile(), {"request_delay": 0}, session=session)
+
+    assert result["authenticated_crawl_results"][0]["session_expiry_indicator"] is True
+    assert result["authenticated_crawl_results"][0]["final_url"] == "http://127.0.0.1:8000/login"
+    assert any(event["event_type"] == "auth_redirect_detected" for event in result["authenticated_boundary_events"])
+
+
 def test_session_expiry_detection_signals() -> None:
     assert detect_session_expiry(FakeResponse("http://127.0.0.1:8000/account", 401), "http://127.0.0.1:8000/account", "", "")["session_expiry_indicator"]
     assert detect_session_expiry(FakeResponse("http://127.0.0.1:8000/login", 302), "http://127.0.0.1:8000/login", "", "")["session_expiry_indicator"]

@@ -57,6 +57,7 @@ def classify_auth_required_endpoint(endpoint: dict[str, Any], profile: dict[str,
     path = _path(url).lower()
     classification = "unknown"
     reason = "No authentication requirement signal was observed."
+    source = str(item.get("source") or "")
     if status in {401, 403}:
         classification = "auth_required_likely"
         reason = f"Observed HTTP {status} response."
@@ -66,6 +67,9 @@ def classify_auth_required_endpoint(endpoint: dict[str, Any], profile: dict[str,
     elif any(token in path for token in ("account", "profile", "settings", "dashboard", "orders", "billing")):
         classification = "auth_required_likely"
         reason = "Path suggests an Auth-Required Endpoint."
+    elif source == "authenticated_crawl":
+        classification = "authenticated_likely"
+        reason = "Endpoint was discovered during Authenticated Crawl."
     elif status and status < 400:
         classification = "public_likely"
         reason = "Endpoint appears reachable from available metadata."
@@ -90,6 +94,7 @@ def classify_auth_required_endpoints(endpoint_results: list[dict[str, Any]], pro
         "auth_required_endpoint_classification": {
             "enabled": True,
             "total_endpoints": len(rows),
+            "authenticated_likely_count": sum(1 for item in rows if item.get("auth_required_classification") == "authenticated_likely"),
             "auth_required_likely_count": sum(1 for item in rows if item.get("auth_required_classification") == "auth_required_likely"),
             "public_likely_count": sum(1 for item in rows if item.get("auth_required_classification") == "public_likely"),
             "unknown_count": sum(1 for item in rows if item.get("auth_required_classification") == "unknown"),

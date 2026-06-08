@@ -17,6 +17,7 @@ from scanner.auth_context import build_auth_context
 from scanner.auth_redaction import redact_secret_text, safe_profile_summary
 from scanner.authenticated_evidence import build_redacted_evidence_summary, redact_request_for_logs, redact_response_for_storage
 from scanner.authenticated_scope import classify_auth_required_endpoints
+from scanner.bug_bounty_scope import build_bug_bounty_scope_summary, disabled_bug_bounty_scope, get_scope_decision, load_bug_bounty_scope
 from scanner.session_boundary import boundary_event_from_decision, classify_session_boundary
 from scanner.session_profiles import ensure_auth_profile_dirs, validate_session_profile
 from scanner.web_crawler import normalize_url, should_skip_url
@@ -74,13 +75,16 @@ def authenticated_crawl(
     request_delay = max(0.0, float(options.get("request_delay_seconds", options.get("request_delay", 1.0))))
     timeout = max(1.0, float(options.get("timeout", 5)))
     max_redirects = max(0, int(options.get("max_redirects", 5)))
+    max_requests = max(1, int(options.get("max_requests", max_pages)))
     same_origin_only = bool(options.get("same_origin_only", True))
     dry_run = bool(options.get("dry_run", False))
+    enforce_scope = bool(options.get("enforce_scope", True))
+    scope = load_bug_bounty_scope(options["scope_file"]) if options.get("scope_file") else None
     profile_summary = safe_profile_summary(session_profile)
     auth_context = build_auth_context(session_profile)
     request_context = build_authenticated_request_context(session_profile)
     normalized_start = normalize_url(start_url)
-    start_decision = classify_session_boundary(normalized_start, session_profile, start_url=normalized_start, same_origin_only=same_origin_only)
+    start_decision = _boundary_decision(normalized_start, session_profile, normalized_start, same_origin_only, scope, enforce_scope)
 
     results: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
@@ -89,18 +93,29 @@ def authenticated_crawl(
     requests_attempted = 0
     requests_completed = 0
     links_discovered = 0
+    if request_context.get("header_names") or request_context.get("cookie_names"):
+        boundary_events.append(
+            {
+                "url": normalized_start,
+                "event_type": "auth_material_redacted",
+                "reason": "Auth material is used in memory only; request evidence stores header and cookie names with redacted values.",
+                "matched_rule": "auth_redaction",
+                "severity": "info",
+                "action_taken": "redacted",
+            }
+        )
 
     if not start_decision.get("allowed"):
         skipped.append(_skipped(normalized_start, start_decision, "start_url"))
         boundary_events.append(boundary_event_from_decision(start_decision))
-        return _result(crawl_id, normalized_start, profile_summary, auth_context, started_at, results, skipped, boundary_events, endpoint_rows, options, requests_attempted, requests_completed, links_discovered)
+        return _result(crawl_id, normalized_start, profile_summary, auth_context, started_at, results, skipped, boundary_events, endpoint_rows, options, requests_attempted, requests_completed, links_discovered, scope)
 
     client = session or requests.Session()
     queue: deque[tuple[str, int, str]] = deque([(normalized_start, 0, "start_url")])
     queued = {normalized_start}
     visited: set[str] = set()
 
-    while queue and len(results) < max_pages:
+    while queue and len(results) < max_pages and requests_attempted < max_requests:
         current_url, depth, source = queue.popleft()
         if current_url in visited:
             continue
@@ -109,7 +124,7 @@ def authenticated_crawl(
             skipped.append(_skipped(current_url, decision, source))
             boundary_events.append(boundary_event_from_decision(decision))
             continue
-        decision = classify_session_boundary(current_url, session_profile, start_url=normalized_start, same_origin_only=same_origin_only)
+        decision = _boundary_decision(current_url, session_profile, normalized_start, same_origin_only, scope, enforce_scope)
         if not decision.get("allowed"):
             skipped.append(_skipped(current_url, decision, source))
             boundary_events.append(boundary_event_from_decision(decision))
@@ -136,11 +151,12 @@ def authenticated_crawl(
         text = _limited_text(response)
         soup = BeautifulSoup(text, "html.parser") if _is_html(response) else BeautifulSoup("", "html.parser")
         title = _title(soup)
-        final_url = normalize_url(str(getattr(response, "url", current_url) or current_url), current_url)
+        final_url = _final_url(response, current_url)
         redirect_chain = _redirect_chain(response)
         expiry = detect_session_expiry(response, final_url, title, text[:2000])
         if expiry.get("session_expiry_indicator"):
-            boundary_events.append({"url": current_url, "event_type": "session_expiry_detected", "reason": expiry.get("reason"), "matched_rule": "session_expiry_indicator", "severity": "medium", "action_taken": "recorded"})
+            event_type = "auth_redirect_detected" if str(expiry.get("reason") or "").lower().startswith("redirect") else "session_expiry_detected"
+            boundary_events.append({"url": current_url, "event_type": event_type, "reason": expiry.get("reason"), "matched_rule": "session_expiry_indicator", "severity": "medium", "action_taken": "recorded"})
         links = _safe_links(soup, current_url)
         links_discovered += len(links)
         forms = _form_metadata(soup, current_url)
@@ -148,7 +164,7 @@ def authenticated_crawl(
             normalized_link = normalize_url(link, current_url)
             if should_skip_url(normalized_link):
                 continue
-            link_decision = classify_session_boundary(normalized_link, session_profile, start_url=normalized_start, same_origin_only=same_origin_only)
+            link_decision = _boundary_decision(normalized_link, session_profile, normalized_start, same_origin_only, scope, enforce_scope)
             if not link_decision.get("allowed"):
                 skipped.append(_skipped(normalized_link, link_decision, current_url))
                 boundary_events.append(boundary_event_from_decision(link_decision))
@@ -191,7 +207,7 @@ def authenticated_crawl(
         if request_delay > 0 and queue:
             time.sleep(request_delay)
 
-    return _result(crawl_id, normalized_start, profile_summary, auth_context, started_at, results, skipped, boundary_events, endpoint_rows, options, requests_attempted, requests_completed, links_discovered)
+    return _result(crawl_id, normalized_start, profile_summary, auth_context, started_at, results, skipped, boundary_events, endpoint_rows, options, requests_attempted, requests_completed, links_discovered, scope)
 
 
 def detect_session_expiry(response: Any, final_url: str, title: str, snippet: str) -> dict[str, Any]:
@@ -204,6 +220,9 @@ def detect_session_expiry(response: Any, final_url: str, title: str, snippet: st
         return {"session_expiry_indicator": True, "reason": f"HTTP {status_code} indicates authentication is required.", "confidence": "High"}
     if any(token in final for token in ("/login", "/signin", "/auth")):
         return {"session_expiry_indicator": True, "reason": "Redirect or final URL indicates login is required.", "confidence": "High"}
+    location = str(dict(headers).get("Location") or dict(headers).get("location") or "").lower()
+    if any(token in location for token in ("/login", "/signin", "/auth")):
+        return {"session_expiry_indicator": True, "reason": "Redirect Location indicates login is required.", "confidence": "High"}
     if any(token in title_text for token in ("login", "sign in", "signin")):
         return {"session_expiry_indicator": True, "reason": "Page title indicates login is required.", "confidence": "Medium"}
     for token in ("session expired", "please log in", "sign in to continue", "authentication required", "unauthorized", "forbidden"):
@@ -215,7 +234,7 @@ def detect_session_expiry(response: Any, final_url: str, title: str, snippet: st
     return {"session_expiry_indicator": False, "reason": "", "confidence": "Low"}
 
 
-def _result(crawl_id: str, target_base_url: str, profile_summary: dict[str, Any], auth_context: dict[str, Any], started_at: datetime, results: list[dict[str, Any]], skipped: list[dict[str, Any]], events: list[dict[str, Any]], endpoint_rows: list[dict[str, Any]], options: dict[str, Any], requests_attempted: int, requests_completed: int, links_discovered: int) -> dict[str, Any]:
+def _result(crawl_id: str, target_base_url: str, profile_summary: dict[str, Any], auth_context: dict[str, Any], started_at: datetime, results: list[dict[str, Any]], skipped: list[dict[str, Any]], events: list[dict[str, Any]], endpoint_rows: list[dict[str, Any]], options: dict[str, Any], requests_attempted: int, requests_completed: int, links_discovered: int, scope: dict[str, Any] | None = None) -> dict[str, Any]:
     completed_at = datetime.now(timezone.utc)
     classification = classify_auth_required_endpoints(endpoint_rows, profile_summary)
     classified = classification["classified_endpoints"]
@@ -230,6 +249,7 @@ def _result(crawl_id: str, target_base_url: str, profile_summary: dict[str, Any]
         "completed_at": completed_at.isoformat(timespec="seconds"),
         "max_pages": int(options.get("max_pages", 30)),
         "max_depth": int(options.get("max_depth", 2)),
+        "max_requests": int(options.get("max_requests", options.get("max_pages", 30))),
         "request_delay_seconds": float(options.get("request_delay_seconds", options.get("request_delay", 1.0))),
         "requests_attempted": requests_attempted,
         "requests_completed": requests_completed,
@@ -250,6 +270,7 @@ def _result(crawl_id: str, target_base_url: str, profile_summary: dict[str, Any]
     }
     return {
         "auth_context_summary": auth_context,
+        "bug_bounty_scope": _scope_summary(scope, target_base_url),
         "authenticated_crawl_summary": summary,
         "authenticated_crawl_results": classified,
         "authenticated_crawl_skipped": skipped,
@@ -263,6 +284,40 @@ def _placeholder_only(values: dict[str, Any]) -> bool:
     if not values:
         return True
     return all("[REDACTED" in str(value) for value in values.values())
+
+
+def _boundary_decision(
+    url: str,
+    session_profile: dict[str, Any],
+    start_url: str,
+    same_origin_only: bool,
+    scope: dict[str, Any] | None,
+    enforce_scope: bool,
+) -> dict[str, Any]:
+    if scope and enforce_scope:
+        scope_decision = get_scope_decision(url, scope)
+        if not scope_decision.get("in_scope"):
+            return {
+                "url": url,
+                "allowed_by_profile": False,
+                "blocked_by_profile": False,
+                "allowed": False,
+                "reason": f"Program Scope blocked URL: {scope_decision.get('reason') or 'out of scope'}",
+                "matched_rule": scope_decision.get("matched_rule") or "program_scope",
+                "event_type": "out_of_scope_skipped",
+                "severity": "medium",
+                "action_taken": "skipped",
+                "boundary_status": "blocked",
+                "auth_profile_id": safe_profile_summary(session_profile).get("profile_id") or "",
+                "role_label": safe_profile_summary(session_profile).get("role_label") or "",
+            }
+    return classify_session_boundary(url, session_profile, start_url=start_url, same_origin_only=same_origin_only)
+
+
+def _scope_summary(scope: dict[str, Any] | None, target_url: str) -> dict[str, Any]:
+    if not scope:
+        return disabled_bug_bounty_scope(target_url)
+    return build_bug_bounty_scope_summary(scope, get_scope_decision(target_url, scope))
 
 
 def _skipped(url: str, decision: dict[str, Any], source: str) -> dict[str, Any]:
@@ -309,6 +364,14 @@ def _is_html(response: Any) -> bool:
 def _content_type(response: Any) -> str:
     headers = getattr(response, "headers", {}) or {}
     return str(headers.get("Content-Type") or headers.get("content-type") or "")
+
+
+def _final_url(response: Any, current_url: str) -> str:
+    headers = getattr(response, "headers", {}) or {}
+    location = str(dict(headers).get("Location") or dict(headers).get("location") or "").strip()
+    if location and int(getattr(response, "status_code", 0) or 0) in {301, 302, 303, 307, 308}:
+        return normalize_url(urljoin(current_url, location), current_url)
+    return normalize_url(str(getattr(response, "url", current_url) or current_url), current_url)
 
 
 def _title(soup: BeautifulSoup) -> str:

@@ -448,6 +448,8 @@ def authenticated_crawl_command(
                 "max_redirects": max_redirects,
                 "same_origin_only": same_origin_only,
                 "dry_run": dry_run,
+                "scope_file": str(scope_file) if scope_file else None,
+                "enforce_scope": enforce_scope,
             },
         )
     except SessionProfileError as exc:
