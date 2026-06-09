@@ -98,6 +98,23 @@ def attach_a01_access_control(scan_result: dict[str, Any]) -> dict[str, Any]:
                 item["auth_context_note"] = "Endpoint was classified as Auth-Required likely from existing metadata. Manual Validation Required."
                 if auth_classified[url].get("source") == "authenticated_crawl":
                     item["authenticated_crawl_context"] = "Endpoint was observed through Authenticated Crawl. Manual role and object-ownership validation is required."
+    role_rows = scan_result.get("role_endpoint_matrix") or []
+    if role_rows:
+        by_endpoint = {str(row.get("endpoint") or ""): row for row in role_rows}
+        for item in payload.get("a01_access_control_evidence", []) or []:
+            url = str(item.get("affected_url") or item.get("url") or "")
+            row = by_endpoint.get(url)
+            if not row:
+                continue
+            item["role_label"] = row.get("role_label") or item.get("role_label") or ""
+            item["expected_permission"] = row.get("expected_permission") or "unknown"
+            item["inferred_action"] = row.get("inferred_action") or ""
+            item["validation_status"] = row.get("validation_status") or "not_tested"
+            item["manual_plan_id"] = row.get("manual_plan_id") or item.get("manual_test_plan_id") or ""
+            item["manual_validation_required"] = True
+            if row.get("expected_permission") == "denied":
+                item["interest_label"] = "High Interest"
+                item["role_permission_notes"] = "Expected denied action in Access-Control Matrix. Manual Validation Required."
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)

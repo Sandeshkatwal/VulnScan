@@ -181,3 +181,6 @@ Version 20.5 adds an OWASP A05 Injection view under OWASP Assessment. It shows A
 ## Version 20.6 A01 Broken Access Control
 
 Version 20.6 adds an A01 Broken Access Control view under OWASP Assessment. Reports that include `a01_access_control_summary` and `a01_access_control_evidence` show A01 summary cards, object ID candidates, admin/function surfaces, tenant boundary candidates, sensitive resource/API/role indicators, a manual test planner, evidence template, recommendations, and limitations.
+## Version 21.2 Role and Permission Mapping
+
+The dashboard includes Role & Permission Mapping under Authenticated Assessment. It shows Role Profiles, Permission Matrix, Endpoint Action Mapping, Role Endpoint Matrix, Manual Validation Plan, and Role Comparison Notes. No credential fields, automatic role comparison, or state-changing access checks are exposed.

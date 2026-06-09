@@ -217,6 +217,67 @@ class EndpointDiscoveryRequest(StrictApiModel):
     )
 
 
+class RoleMappingValidateRequest(StrictApiModel):
+    """Validate Role Profiles and Access-Control Matrix data without live requests."""
+
+    roles: list[dict[str, Any]] = Field(default_factory=list, description="Safe Role Profiles. Do not include credentials.")
+    permission_matrix: dict[str, Any] = Field(default_factory=dict, description="Access-Control Matrix planning data.")
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "roles": [{"role_id": "standard_user", "role_name": "standard_user", "role_label": "Standard User", "user_type": "standard_user"}],
+                    "permission_matrix": {"matrix_id": "sample", "matrix_name": "Sample Access-Control Matrix", "target": "local-demo", "actions": [], "role_action_rules": []},
+                }
+            ]
+        },
+    )
+
+
+class RoleEndpointMapRequest(StrictApiModel):
+    """Build Role Endpoint Matrix and Manual Validation Plans without live requests."""
+
+    roles: list[dict[str, Any]] = Field(default_factory=list, description="Safe Role Profiles.")
+    permission_matrix: dict[str, Any] = Field(default_factory=dict, description="Access-Control Matrix planning data.")
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Existing endpoint metadata. No requests are made.")
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "roles": [{"role_id": "standard_user", "role_name": "standard_user", "role_label": "Standard User", "user_type": "standard_user"}],
+                    "permission_matrix": {"matrix_id": "sample", "matrix_name": "Sample Access-Control Matrix", "target": "local-demo"},
+                    "endpoint_results": [{"url": "http://127.0.0.1:8000/admin/users", "method": "GET"}],
+                }
+            ]
+        },
+    )
+
+
+class RoleManualPlanRequest(StrictApiModel):
+    """Generate one Role and Permission Mapping manual validation plan."""
+
+    role: dict[str, Any] = Field(default_factory=dict, description="Safe Role Profile. Do not include credentials.")
+    endpoint: dict[str, Any] | str = Field(..., description="Endpoint metadata or URL string. No request is made.")
+    expected_permission: str = Field("unknown", description="Expected permission: allowed, denied, conditional, or unknown.", examples=["denied"])
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "role": {"role_id": "standard_user", "role_name": "standard_user", "role_label": "Standard User", "user_type": "standard_user"},
+                    "endpoint": {"url": "http://127.0.0.1:8000/admin/users", "method": "GET"},
+                    "expected_permission": "denied",
+                }
+            ]
+        },
+    )
+
+
 class AuthProfileValidateRequest(StrictApiModel):
     """Validate a redacted Session Profile object."""
 

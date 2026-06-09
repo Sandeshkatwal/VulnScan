@@ -276,4 +276,7 @@ The module reports A05 Injection candidates, input handling indicators, paramete
 
 Version 20.6 adds an A01 Broken Access Control Candidate Engine for safe, authorised OWASP-focused assessment. It identifies access-control candidates from endpoints, parameters, URL structures, object identifiers, admin/function surfaces, tenant indicators, export/download workflows, APIs, and evidence records, then generates candidate evidence, confidence scoring, manual validation plans, and report-ready templates.
 
-The A01 engine is candidate-only: no auth bypass automation, no cross-account testing, no credential attacks, no privilege escalation attempts, and no state-changing requests. See `docs/OWASP_A01_BROKEN_ACCESS_CONTROL.md`.
+The A01 engine is candidate-only: no automatic role comparison, account-to-account requests, credential attack workflow, elevated-access action workflow, or state-changing requests. See `docs/OWASP_A01_BROKEN_ACCESS_CONTROL.md`.
+## Version 21.2 Role and Permission Mapping
+
+VulScan includes a Role and Permission Mapping assistant for A01 Access-Control Planning. It lets authorised assessors define Role Profiles, maintain an Access-Control Matrix, infer endpoint actions from existing endpoint metadata, and generate Manual Validation Required plans. It is a planning and documentation workflow only and does not perform automatic role comparison, account-to-account requests, or state-changing access checks. See `docs/ROLE_PERMISSION_MAPPING.md`.

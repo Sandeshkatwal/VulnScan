@@ -172,7 +172,7 @@ The API binds to localhost by default. Do not expose it remotely unless you expl
 
 `--a01-checks` enables safe candidate discovery and manual validation planning for A01 Broken Access Control. It is available for `endpoints`, `web-scan`, and `validate`.
 
-The option does not perform auth bypass automation, cross-account testing, credential attacks, privilege escalation attempts, or state-changing requests.
+The option does not perform automatic role comparison, account-to-account requests, credential attack workflows, elevated-access action workflows, or state-changing requests.
 ## Version 20.7 A03 Commands
 
 ```powershell
@@ -209,3 +209,14 @@ Generate the unified OWASP Assessment Markdown report with `--owasp-report` afte
 
 Authenticated Crawl is GET-only, enforces Session Boundary Controls, blocks destructive-looking paths, records Session Expiry Indicators, and stores Redacted Authenticated Evidence only.
 ```
+## Version 21.2 Role Commands
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main roles list --roles-file data\roles\sample_roles.json
+.\.venv311\Scripts\python.exe -m scanner.main roles show --roles-file data\roles\sample_roles.json --role standard_user
+.\.venv311\Scripts\python.exe -m scanner.main roles matrix --matrix-file data\roles\sample_permission_matrix.json
+.\.venv311\Scripts\python.exe -m scanner.main roles map-endpoints --roles-file data\roles\sample_roles.json --matrix-file data\roles\sample_permission_matrix.json --endpoints-file data\endpoints\sample_urls.txt --json --html
+.\.venv311\Scripts\python.exe -m scanner.main roles plan --role standard_user --endpoint "http://127.0.0.1:8000/admin/users" --expected denied
+```
+
+Role commands perform Role and Permission Mapping, Access-Control Matrix summaries, endpoint action inference, and Manual Validation Required planning only. They do not perform live requests or automatic permission testing.

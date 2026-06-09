@@ -121,3 +121,6 @@ A08 evidence feeds the OWASP Assessment Engine when `--a08-checks` is enabled. T
 
 The checks are safe and candidate-based. VulScan does not upload files, submit forms, trigger webhooks, call update endpoints, import data, generate deserialisation payloads, or perform bypass testing. Manual validation is required before treating A08 evidence as a confirmed finding.
 Version 21.1 Authenticated Crawl note: OWASP evidence may include GET-only Authenticated Crawl metadata, Session Boundary Controls, Session Expiry Indicators, and Redacted Authenticated Evidence. These are indicators, not confirmation of application security posture.
+## Version 21.2 Role and Permission Mapping
+
+The OWASP Assessment workflow can include Role and Permission Mapping outputs for A01 Access-Control Planning: Role Profiles, Access-Control Matrix summaries, Role Endpoint Matrix rows, and Manual Validation Required plans. These records support documentation and evidence preparation only. See `docs/ROLE_PERMISSION_MAPPING.md`.

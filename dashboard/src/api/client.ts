@@ -61,6 +61,9 @@ import type {
   OWASPMapResponse,
   RetestRecord,
   RetestsResponse,
+  RoleEndpointMapRequest,
+  RoleManualPlanRequest,
+  RoleMappingResponse,
   SafeValidationRequest,
   SafeValidationResponse,
   ScanRequest,
@@ -337,6 +340,26 @@ export function runAuthenticatedCrawl(payload: {
   dry_run: boolean
 }): Promise<AuthenticatedCrawlResponse> {
   return request<AuthenticatedCrawlResponse>('/authenticated/crawl', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getRoles(): Promise<RoleMappingResponse> {
+  return request<RoleMappingResponse>('/roles')
+}
+
+export function mapRoleEndpoints(payload: RoleEndpointMapRequest): Promise<RoleMappingResponse> {
+  return request<RoleMappingResponse>('/roles/map-endpoints', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function buildRoleManualPlan(payload: RoleManualPlanRequest): Promise<RoleMappingResponse> {
+  return request<RoleMappingResponse>('/roles/manual-plan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

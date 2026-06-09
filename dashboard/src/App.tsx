@@ -35,6 +35,7 @@ import { ProductHero } from './components/ProductHero'
 import { OWASPMappingView } from './components/OWASPMappingView'
 import { ReportsView } from './components/ReportsView'
 import { RemediationView } from './components/RemediationView'
+import { RolePermissionMappingView } from './components/RolePermissionMappingView'
 import { RiskOverview } from './components/RiskOverview'
 import { SafeValidationView } from './components/SafeValidationView'
 import { ScansTable } from './components/ScansTable'
@@ -85,7 +86,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '20.0-demo', api_version: '20.0' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.2-demo', api_version: '21.2' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -786,7 +787,12 @@ function App() {
   }
 
   function renderAuthenticatedAssessment() {
-    return <AuthContextView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+    return (
+      <>
+        <AuthContextView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+        <RolePermissionMappingView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+      </>
+    )
   }
 
   function renderSubmissionTracker() {

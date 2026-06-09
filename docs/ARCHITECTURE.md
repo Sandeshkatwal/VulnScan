@@ -249,3 +249,6 @@ The engine does not submit forms, upload files, trigger callbacks/webhooks, call
 VulScan 21.0 adds redacted Session Profiles, Authentication Context summaries, Authenticated Scope boundary checks, Auth-Required Endpoint classification, and Role/Permission Notes. The foundation is local-only and report-safe: raw auth material is not included in JSON, HTML, dashboard, API, or terminal output.
 
 VulScan 21.1 adds `scanner.authenticated_crawler`, `scanner.session_boundary`, and `scanner.authenticated_evidence` for GET-only Authenticated Crawl, Auth Boundary Enforcement, Session Expiry Indicator classification, and Redacted Authenticated Evidence.
+## Version 21.2 Role and Permission Mapping Components
+
+Role and Permission Mapping is implemented as pure local planning modules: `scanner/role_profiles.py`, `scanner/permission_matrix.py`, `scanner/access_control_matrix.py`, and `scanner/role_mapping_assistant.py`. API wrappers live in `scanner/api_role_mapping.py`. The modules consume existing endpoint/session metadata and generate Access-Control Matrix rows and Manual Validation Required plans without making network requests.

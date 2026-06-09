@@ -39,3 +39,6 @@ Do not expose the dashboard or API publicly without a separate security review, 
 Authenticated Web Assessment requires explicit authorisation. Do not store real credentials, raw session cookies, bearer tokens, API keys, HAR files, Burp exports, or cookie jars in the repository. VulScan 21.0 redacts auth material from UI, reports, API responses, and terminal output, and does not perform login automation, unauthorised authentication testing, or state-changing authenticated requests.
 
 Authenticated Crawl in 21.1 is GET-only, does not submit forms, does not call logout endpoints, blocks destructive-looking links, and stores Redacted Authenticated Evidence only.
+## Version 21.2 Role and Permission Mapping Safety
+
+Role and Permission Mapping is for authorised access-control planning and documentation only. VulScan does not perform automatic role comparison, account-to-account requests, form submission, or state-changing access checks. Role Profiles use safe labels only and must not contain usernames, passwords, session cookies, bearer tokens, Authorization headers, or secret authentication material.

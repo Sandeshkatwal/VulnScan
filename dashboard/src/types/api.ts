@@ -719,6 +719,113 @@ export interface AuthenticatedCrawlResponse {
   [key: string]: unknown
 }
 
+export interface RoleProfile {
+  role_id?: string
+  role_name?: string
+  role_label?: string
+  description?: string
+  linked_session_profile_id?: string | null
+  linked_session_profile_name?: string | null
+  test_account_label?: string | null
+  tenant_label?: string | null
+  user_type?: string
+  expected_access_level?: string
+  allowed_actions?: string[]
+  disallowed_actions?: string[]
+  sensitive_actions?: string[]
+  notes?: string
+  created_at?: string
+  updated_at?: string
+  [key: string]: unknown
+}
+
+export interface PermissionAction {
+  action_id?: string
+  action_name?: string
+  action_type?: string
+  description?: string
+  endpoint_pattern?: string
+  http_method?: string
+  sensitivity?: string
+  state_changing?: boolean
+  destructive?: boolean
+  requires_manual_validation?: boolean
+  notes?: string
+  [key: string]: unknown
+}
+
+export interface PermissionMatrix {
+  matrix_id?: string
+  matrix_name?: string
+  target?: string
+  roles?: unknown[]
+  actions?: PermissionAction[]
+  role_action_rules?: Array<Record<string, unknown>>
+  endpoint_mappings?: Array<Record<string, unknown>>
+  [key: string]: unknown
+}
+
+export interface RoleEndpointMatrixRow {
+  role_id?: string
+  role_label?: string
+  tenant_label?: string
+  endpoint?: string
+  method?: string
+  action_id?: string
+  inferred_action?: string
+  sensitivity?: string
+  state_changing?: boolean
+  destructive?: boolean
+  expected_permission?: string
+  validation_status?: string
+  manual_plan_id?: string
+  manual_validation_required?: boolean
+  [key: string]: unknown
+}
+
+export interface ManualValidationPlan {
+  plan_id?: string
+  role_label?: string
+  tenant_label?: string
+  endpoint?: string
+  inferred_action?: string
+  expected_permission?: string
+  safe_manual_steps?: string[]
+  expected_secure_result?: string
+  evidence_to_collect?: string[]
+  risk_if_failed?: string
+  safety_notes?: string[]
+  status?: string
+  [key: string]: unknown
+}
+
+export interface RoleMappingResponse {
+  role_mapping_summary?: ApiRecord
+  roles?: RoleProfile[]
+  role_profiles?: RoleProfile[]
+  permission_matrix?: PermissionMatrix
+  permission_matrix_summary?: ApiRecord
+  inferred_actions?: Array<Record<string, unknown>>
+  endpoint_action_mappings?: Array<Record<string, unknown>>
+  role_endpoint_matrix?: RoleEndpointMatrixRow[]
+  manual_validation_plans?: ManualValidationPlan[]
+  role_comparison_notes?: Array<Record<string, unknown>>
+  safety_notes?: string[]
+  [key: string]: unknown
+}
+
+export interface RoleEndpointMapRequest {
+  roles: RoleProfile[]
+  permission_matrix: PermissionMatrix
+  endpoint_results: Array<Record<string, unknown>>
+}
+
+export interface RoleManualPlanRequest {
+  role: RoleProfile
+  endpoint: Record<string, unknown> | string
+  expected_permission: string
+}
+
 export interface OWASPCategory {
   owasp_id?: string
   name?: string

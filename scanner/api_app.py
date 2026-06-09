@@ -41,6 +41,9 @@ from scanner.bug_bounty_scope import BugBountyScopeError
 from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_discovery, save_endpoint_report
 from scanner.api_auth_context import api_check_auth_boundary, api_classify_auth_endpoints, api_list_auth_profiles, api_validate_auth_profile
 from scanner.api_authenticated_crawl import api_list_authenticated_crawls, api_run_authenticated_crawl
+from scanner.api_role_mapping import api_list_roles, api_manual_plan, api_map_role_endpoints, api_validate_role_mapping
+from scanner.permission_matrix import PermissionMatrixError
+from scanner.role_profiles import RoleProfileError
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_report_builder import (
@@ -61,7 +64,7 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -104,7 +107,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "21.1"
+API_VERSION = "21.2"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -172,6 +175,10 @@ PROTECTED_PATHS = {
     "/authenticated/crawl",
     "/authenticated/boundary/check-url",
     "/authenticated/crawls",
+    "/roles",
+    "/roles/validate",
+    "/roles/map-endpoints",
+    "/roles/manual-plan",
     "/owasp/categories",
     "/owasp/map",
     "/owasp/assessment/rules",
@@ -203,6 +210,7 @@ TAGS_METADATA = [
     {"name": "Reports", "description": "Safe local report listing, metadata, viewing, and download for reports under the reports directory."},
     {"name": "Bug Intelligence", "description": "Local program scope, recon intelligence, endpoint discovery, and safe validation workflows."},
     {"name": "Authenticated Assessment", "description": "Redacted local Session Profile, Authentication Context, Authenticated Scope helpers, and GET-only Authenticated Crawl."},
+    {"name": "Role and Permission Mapping", "description": "A01 Access-Control Planning, Access-Control Matrix, Role Profiles, and Manual Validation Required plans. No live permission testing is performed."},
     {"name": "OWASP", "description": "OWASP Top 10:2025 indicator mapping and assessment results for existing evidence and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
     {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
@@ -527,6 +535,62 @@ def create_app(
     )
     def list_authenticated_crawls() -> dict[str, Any]:
         return api_list_authenticated_crawls()
+
+    @app.get(
+        "/roles",
+        dependencies=[Depends(require_api_key)],
+        tags=["Role and Permission Mapping"],
+        summary="List Role Profiles",
+        description="Lists safe local Role Profiles from data/roles. No credentials or raw session data are returned.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_roles() -> dict[str, Any]:
+        try:
+            return api_list_roles()
+        except RoleProfileError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/roles/validate",
+        dependencies=[Depends(require_api_key)],
+        tags=["Role and Permission Mapping"],
+        summary="Validate Role and Permission Mapping inputs",
+        description="Validates Role Profiles and Access-Control Matrix data. This is planning only and performs no live requests.",
+        responses=ERROR_RESPONSES,
+    )
+    def validate_roles(request: RoleMappingValidateRequest) -> dict[str, Any]:
+        try:
+            return api_validate_role_mapping(request.roles, request.permission_matrix)
+        except (RoleProfileError, PermissionMatrixError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/roles/map-endpoints",
+        dependencies=[Depends(require_api_key)],
+        tags=["Role and Permission Mapping"],
+        summary="Build Role Endpoint Matrix",
+        description="Maps existing endpoint metadata to inferred actions and Manual Validation Required plans. VulScan does not make requests.",
+        responses=ERROR_RESPONSES,
+    )
+    def map_role_endpoints(request: RoleEndpointMapRequest) -> dict[str, Any]:
+        try:
+            return api_map_role_endpoints(request.roles, request.permission_matrix, request.endpoint_results)
+        except (RoleProfileError, PermissionMatrixError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/roles/manual-plan",
+        dependencies=[Depends(require_api_key)],
+        tags=["Role and Permission Mapping"],
+        summary="Build Role Manual Validation Plan",
+        description="Generates a safe manual validation plan for a Role Profile and endpoint. No live request is performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def role_manual_plan(request: RoleManualPlanRequest) -> dict[str, Any]:
+        try:
+            return api_manual_plan(request.role, request.endpoint, request.expected_permission)
+        except RoleProfileError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post(
         "/endpoints/analyse",

@@ -48,3 +48,6 @@ The Authenticated Assessment dashboard includes Authenticated Crawl configuratio
 ## Limitations
 
 Version 21.1 does not perform role comparison, session expiry duration testing, form submission, authenticated state-changing workflows, JavaScript-driven crawling, or automated business-logic validation. Future work can add explicit user-approved authenticated request workflows and richer Authenticated Scope reporting.
+## Version 21.2 Role Endpoint Map
+
+Authenticated Crawl now includes a role endpoint map using the Session Profile role label, discovered endpoints, inferred actions, and Manual Validation Required needs. VulScan does not compare different roles automatically. See `docs/ROLE_PERMISSION_MAPPING.md`.

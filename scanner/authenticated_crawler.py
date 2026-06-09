@@ -17,6 +17,7 @@ from scanner.auth_context import build_auth_context
 from scanner.auth_redaction import redact_secret_text, safe_profile_summary
 from scanner.authenticated_evidence import build_redacted_evidence_summary, redact_request_for_logs, redact_response_for_storage
 from scanner.authenticated_scope import classify_auth_required_endpoints
+from scanner.access_control_matrix import role_endpoint_map_from_authenticated_crawl
 from scanner.bug_bounty_scope import build_bug_bounty_scope_summary, disabled_bug_bounty_scope, get_scope_decision, load_bug_bounty_scope
 from scanner.session_boundary import boundary_event_from_decision, classify_session_boundary
 from scanner.session_profiles import ensure_auth_profile_dirs, validate_session_profile
@@ -24,7 +25,7 @@ from scanner.web_crawler import normalize_url, should_skip_url
 
 
 AUTHENTICATED_CRAWL_REPORTS_DIR = Path("reports") / "authenticated" / "crawls"
-DEFAULT_USER_AGENT = "VulScan-AuthenticatedCrawl/21.1"
+DEFAULT_USER_AGENT = "VulScan-AuthenticatedCrawl/21.2"
 
 
 def build_authenticated_request_context(session_profile: dict[str, Any]) -> dict[str, Any]:
@@ -276,6 +277,7 @@ def _result(crawl_id: str, target_base_url: str, profile_summary: dict[str, Any]
         "authenticated_crawl_skipped": skipped,
         "authenticated_boundary_events": events,
         "auth_required_endpoint_classification": classification["auth_required_endpoint_classification"],
+        "role_endpoint_map": role_endpoint_map_from_authenticated_crawl({"authenticated_crawl_summary": summary, "authenticated_crawl_results": classified}),
         "redaction_status": "redacted",
     }
 

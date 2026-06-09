@@ -4,7 +4,7 @@ Version 20.6 adds a dedicated A01 Broken Access Control candidate engine for aut
 
 The A01 engine is candidate and planning only. It produces candidate evidence, indicator confidence, candidate scores, manual validation checklists, and report-ready templates.
 
-It does not perform auth bypass automation, cross-account testing, credential attacks, privilege escalation attempts, destructive actions, or state-changing requests. It does not request or compare two accounts automatically and does not access unauthorised data.
+It does not perform automatic role comparison, account-to-account requests, credential attack workflows, elevated-access action workflows, destructive actions, or state-changing requests. It does not request or compare two accounts automatically and does not access data outside the authorised assessment scope.
 
 ## Checks Implemented
 
@@ -67,5 +67,8 @@ If manual validation confirms an issue, enforce server-side authorization checks
 A01 Broken Access Control frequently requires authenticated, role-aware, and tenant-aware manual validation. VulScan identifies candidates and helps plan validation; it does not confirm broken access control without manually supplied evidence.
 Version 20.9 reporting note: A01 evidence is consolidated into the unified OWASP Assessment report with coverage status, evidence strength, confidence, developer remediation guidance, and manual validation checklist items for object ownership, tenant boundaries, and admin/function authorization.
 
-Version 21.0 note: A01 can include redacted role labels and Auth-Required Endpoint classification from a Session Profile. VulScan does not compare profiles or automate cross-account testing in this version.
+Version 21.0 note: A01 can include redacted role labels and Auth-Required Endpoint classification from a Session Profile. VulScan does not compare profiles or automate account-to-account checks in this version.
 Version 21.1 Authenticated Crawl note: endpoints observed through Authenticated Crawl can strengthen access-control candidate context, but object ownership, tenant boundary, and role/permission impact still require manual validation.
+## Version 21.2 A01 Access-Control Planning
+
+A01 evidence can now be enriched with Role and Permission Mapping context: role label, expected permission, inferred action, validation status, and manual plan ID. This enrichment is planning only and does not perform automatic role comparison, account-to-account requests, or state-changing access checks. See `docs/ROLE_PERMISSION_MAPPING.md`.

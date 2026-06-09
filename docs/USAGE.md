@@ -932,3 +932,6 @@ Use `--owasp-report` with `--owasp-assess` to write a Markdown-ready OWASP Asses
 .\.venv311\Scripts\python.exe -m scanner.main authenticated-crawl --url http://127.0.0.1:8000/dashboard --auth-profile data\auth_profiles\sample_session_profile.redacted.json --dry-run --json --html
 .\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --auth-profile data\auth_profiles\sample_session_profile.redacted.json --classify-auth --json --html
 ```
+## Version 21.2 Role and Permission Mapping
+
+Use `python -m scanner.main roles ...` to list Role Profiles, inspect the Access-Control Matrix, map existing endpoints to inferred actions, and generate Manual Validation Required plans. This workflow is documentation/planning only and performs no live permission testing. See `docs/ROLE_PERMISSION_MAPPING.md`.

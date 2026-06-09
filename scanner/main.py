@@ -22,6 +22,10 @@ from scanner.auth_context import build_auth_context
 from scanner.authenticated_crawler import AUTHENTICATED_CRAWL_REPORTS_DIR, authenticated_crawl
 from scanner.authenticated_scope import classify_auth_boundary, classify_auth_required_endpoints
 from scanner.session_profiles import SessionProfileError, ensure_auth_profile_dirs, list_session_profiles, load_session_profile, validate_session_profile
+from scanner.access_control_matrix import infer_action_from_endpoint, save_role_mapping_reports
+from scanner.permission_matrix import PermissionMatrixError, load_permission_matrix, permission_matrix_summary
+from scanner.role_mapping_assistant import build_manual_plan, build_role_mapping_from_files
+from scanner.role_profiles import RoleProfileError, find_role, load_role_profiles, role_profiles_summary
 from scanner.api_bug_bounty import check_scope as api_check_scope, list_scope_files as api_list_scope_files
 from scanner.assets import get_asset_services, get_assets
 from scanner.asset_criticality import (
@@ -213,6 +217,7 @@ metrics_app = typer.Typer(help="Local Bug Intelligence metrics and personal perf
 scope_app = typer.Typer(help="Manage local Program Scope files.")
 sbom_app = typer.Typer(help="Analyse local SBOM files and build A03 software supply chain evidence.")
 auth_app = typer.Typer(help="Manage redacted Authenticated Web Assessment Session Profiles.")
+roles_app = typer.Typer(help="Role and Permission Mapping planning commands.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -222,6 +227,7 @@ app.add_typer(metrics_app, name="metrics")
 app.add_typer(scope_app, name="scope")
 app.add_typer(sbom_app, name="sbom")
 app.add_typer(auth_app, name="auth")
+app.add_typer(roles_app, name="roles")
 console = Console()
 
 
@@ -403,6 +409,149 @@ def auth_check_url(
     for key in ("url", "allowed_by_profile", "blocked_by_profile", "reason", "matched_rule", "auth_profile_id", "role_label"):
         table.add_row(key.replace("_", " ").title(), str(result.get(key, "")))
     console.print(table)
+
+
+@roles_app.command("list")
+def roles_list_command(
+    roles_file: Annotated[Path, typer.Option("--roles-file", help="Role Profile JSON file under data/roles.")] = Path("data") / "roles" / "sample_roles.json",
+) -> None:
+    """List safe Role Profiles."""
+    try:
+        roles = load_role_profiles(roles_file)
+    except RoleProfileError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    summary = role_profiles_summary(roles)
+    table = Table(title="Role Profiles")
+    table.add_column("Role ID")
+    table.add_column("Role Label")
+    table.add_column("User Type")
+    table.add_column("Tenant")
+    table.add_column("Access Level")
+    for item in roles:
+        table.add_row(str(item.get("role_id") or ""), str(item.get("role_label") or ""), str(item.get("user_type") or ""), str(item.get("tenant_label") or ""), str(item.get("expected_access_level") or ""))
+    console.print(table)
+    console.print(f"[bold]Role count:[/bold] {summary['role_count']}")
+    console.print("[yellow]Authorised Test Accounts Only. No credentials are stored or displayed.[/yellow]")
+
+
+@roles_app.command("show")
+def roles_show_command(
+    roles_file: Annotated[Path, typer.Option("--roles-file", help="Role Profile JSON file under data/roles.")] = Path("data") / "roles" / "sample_roles.json",
+    role: Annotated[str, typer.Option("--role", help="Role ID, name, or label to show.")] = "",
+) -> None:
+    """Show a safe Role Profile summary."""
+    try:
+        selected = find_role(load_role_profiles(roles_file), role)
+    except RoleProfileError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    table = Table(title=f"Role Profile: {selected.get('role_label')}")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("role_id", "role_name", "role_label", "user_type", "tenant_label", "linked_session_profile_name", "test_account_label", "expected_access_level", "notes"):
+        table.add_row(key, _format_summary_list(selected.get(key)))
+    table.add_row("allowed_actions", _format_summary_list(selected.get("allowed_actions")))
+    table.add_row("disallowed_actions", _format_summary_list(selected.get("disallowed_actions")))
+    table.add_row("sensitive_actions", _format_summary_list(selected.get("sensitive_actions")))
+    console.print(table)
+
+
+@roles_app.command("matrix")
+def roles_matrix_command(
+    matrix_file: Annotated[Path, typer.Option("--matrix-file", help="Permission Matrix JSON file under data/roles.")] = Path("data") / "roles" / "sample_permission_matrix.json",
+) -> None:
+    """Print Access-Control Matrix summary."""
+    try:
+        matrix = load_permission_matrix(matrix_file)
+    except PermissionMatrixError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    summary = permission_matrix_summary(matrix)
+    table = Table(title="Access-Control Matrix Summary")
+    table.add_column("Metric")
+    table.add_column("Value")
+    for key in ("matrix_name", "target", "role_count", "action_count", "rule_count", "manual_validation_required_count", "destructive_action_count", "state_changing_action_count"):
+        table.add_row(key, str(summary.get(key) or matrix.get(key) or 0))
+    console.print(table)
+    rules_table = Table(title="Role Action Rules")
+    rules_table.add_column("Role")
+    rules_table.add_column("Action")
+    rules_table.add_column("Expected Permission")
+    rules_table.add_column("Validation Status")
+    for rule in matrix.get("role_action_rules") or []:
+        rules_table.add_row(str(rule.get("role_id") or ""), str(rule.get("action_id") or ""), str(rule.get("expected_permission") or ""), str(rule.get("validation_status") or ""))
+    console.print(rules_table)
+    console.print("[yellow]Planning only. VulScan does not automatically test permissions.[/yellow]")
+
+
+@roles_app.command("map-endpoints")
+def roles_map_endpoints_command(
+    roles_file: Annotated[Path, typer.Option("--roles-file", help="Role Profile JSON file under data/roles.")] = Path("data") / "roles" / "sample_roles.json",
+    matrix_file: Annotated[Path, typer.Option("--matrix-file", help="Permission Matrix JSON file under data/roles.")] = Path("data") / "roles" / "sample_permission_matrix.json",
+    endpoints_file: Annotated[Path, typer.Option("--endpoints-file", help="Local endpoints file to map.")] = Path("data") / "endpoints" / "sample_urls.txt",
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON role mapping report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML role mapping report.")] = False,
+) -> None:
+    """Infer endpoint actions and build a Role Endpoint Matrix."""
+    try:
+        urls = load_url_list(endpoints_file)
+        endpoints = [{"url": url, "normalised_url": url, "method": "GET"} for url in urls]
+        package = build_role_mapping_from_files(str(roles_file), str(matrix_file), endpoints)
+        json_path, html_path = save_role_mapping_reports(package, json_report=json_report, html_report=html_report)
+    except (EndpointDiscoveryError, PermissionMatrixError, RoleProfileError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    summary = package.get("role_mapping_summary") or {}
+    table = Table(title="Role Endpoint Matrix")
+    table.add_column("Role")
+    table.add_column("Endpoint")
+    table.add_column("Action")
+    table.add_column("Expected")
+    table.add_column("Plan")
+    for row in (package.get("role_endpoint_matrix") or [])[:25]:
+        table.add_row(str(row.get("role_label") or ""), str(row.get("endpoint") or ""), str(row.get("inferred_action") or ""), str(row.get("expected_permission") or ""), str(row.get("manual_plan_id") or ""))
+    console.print(table)
+    console.print(f"[bold]Manual validation plans:[/bold] {summary.get('manual_validation_plan_count', 0)}")
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+    console.print("[yellow]No requests were made. Endpoint-to-action mapping is inference only.[/yellow]")
+
+
+@roles_app.command("plan")
+def roles_plan_command(
+    role: Annotated[str, typer.Option("--role", help="Role ID, name, or label.")] = "standard_user",
+    endpoint: Annotated[str, typer.Option("--endpoint", help="Endpoint to plan manual validation for.")] = "",
+    expected: Annotated[str, typer.Option("--expected", help="Expected permission: allowed, denied, conditional, or unknown.")] = "unknown",
+    roles_file: Annotated[Path, typer.Option("--roles-file", help="Role Profile JSON file under data/roles.")] = Path("data") / "roles" / "sample_roles.json",
+) -> None:
+    """Build a safe manual validation plan for one role and endpoint."""
+    try:
+        selected = find_role(load_role_profiles(roles_file), role)
+        result = build_manual_plan(selected, endpoint, expected)
+    except RoleProfileError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    inferred = result["inferred_action"]
+    plan = result["manual_validation_plan"]
+    console.print(Panel(f"{plan['role_label']} -> {plan['endpoint']}", title="Manual Validation Required"))
+    table = Table(title="Endpoint Action Inference")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("inferred_action", "sensitivity", "state_changing", "destructive", "inference_reason"):
+        table.add_row(key, str(inferred.get(key) or ""))
+    console.print(table)
+    plan_table = Table(title="Manual Validation Plan")
+    plan_table.add_column("Field")
+    plan_table.add_column("Value")
+    for key in ("plan_id", "expected_permission", "expected_secure_result", "risk_if_failed", "status"):
+        plan_table.add_row(key, str(plan.get(key) or ""))
+    plan_table.add_row("safe_manual_steps", "\n".join(plan.get("safe_manual_steps") or []))
+    plan_table.add_row("evidence_to_collect", "\n".join(plan.get("evidence_to_collect") or []))
+    plan_table.add_row("safety_notes", "\n".join(plan.get("safety_notes") or []))
+    console.print(plan_table)
 
 
 @app.command("authenticated-crawl")

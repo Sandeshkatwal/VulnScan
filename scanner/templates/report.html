@@ -358,6 +358,54 @@
     </section>
     {% endif %}
 
+    {% set role_mapping = report.get("role_mapping_summary", {}) %}
+    {% if role_mapping.get("enabled") %}
+    <section>
+      <h2>Role and Permission Mapping</h2>
+      <p><strong>Safety:</strong> Role mapping is a planning and documentation assistant. VulScan does not perform automatic role comparison, account-to-account requests, or state-changing access checks.</p>
+      <div class="grid">
+        <div class="metric"><div class="label">Roles</div><div class="value">{{ role_mapping.get("role_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Endpoints</div><div class="value">{{ role_mapping.get("endpoint_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Matrix Rows</div><div class="value">{{ role_mapping.get("role_endpoint_rows", 0) }}</div></div>
+        <div class="metric"><div class="label">Manual Plans</div><div class="value">{{ role_mapping.get("manual_validation_plan_count", 0) }}</div></div>
+      </div>
+      {% if report.get("role_profiles") %}
+      <h3>Role Profiles</h3>
+      <table>
+        <thead><tr><th>Role</th><th>User Type</th><th>Tenant</th><th>Linked Session Profile</th><th>Expected Access Level</th><th>Notes</th></tr></thead>
+        <tbody>
+          {% for role in report.get("role_profiles", []) %}
+          <tr><td>{{ role.get("role_label") }}</td><td>{{ role.get("user_type") }}</td><td>{{ role.get("tenant_label") }}</td><td>{{ role.get("linked_session_profile_name") }}</td><td>{{ role.get("expected_access_level") }}</td><td>{{ role.get("notes") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("role_endpoint_matrix") %}
+      <h3>Role Endpoint Matrix</h3>
+      <table>
+        <thead><tr><th>Role</th><th>Endpoint</th><th>Inferred Action</th><th>Sensitivity</th><th>Expected Permission</th><th>Validation Status</th><th>Manual Plan</th></tr></thead>
+        <tbody>
+          {% for row in report.get("role_endpoint_matrix", [])[:30] %}
+          <tr><td>{{ row.get("role_label") }}</td><td>{{ row.get("endpoint") }}</td><td>{{ row.get("inferred_action") }}</td><td>{{ row.get("sensitivity") }}</td><td>{{ row.get("expected_permission") }}</td><td>{{ row.get("validation_status") }}</td><td>{{ row.get("manual_plan_id") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("manual_validation_plans") %}
+      <h3>Manual Validation Plans</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Role</th><th>Endpoint</th><th>Action</th><th>Expected Secure Result</th></tr></thead>
+        <tbody>
+          {% for plan in report.get("manual_validation_plans", [])[:20] %}
+          <tr><td>{{ plan.get("plan_id") }}</td><td>{{ plan.get("role_label") }}</td><td>{{ plan.get("endpoint") }}</td><td>{{ plan.get("inferred_action") }}</td><td>{{ plan.get("expected_secure_result") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      <p><strong>Limitations:</strong> {{ role_mapping.get("limitations", []) | join("; ") }}</p>
+    </section>
+    {% endif %}
+
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>
@@ -916,7 +964,7 @@
         <div class="metric"><div class="label">Manual Validation</div><div class="value">{{ a01.get("manual_validation_required_count", 0) }}</div></div>
       </div>
       <p><strong>Tenant boundary candidates:</strong> {{ a01.get("tenant_boundary_candidate_count", 0) }} | <strong>Function-level candidates:</strong> {{ a01.get("function_level_candidate_count", 0) }} | <strong>Sensitive resources:</strong> {{ a01.get("sensitive_resource_candidate_count", 0) }} | <strong>Role/permission indicators:</strong> {{ a01.get("role_permission_indicator_count", 0) }}</p>
-      <p><strong>Highest indicator confidence:</strong> {{ a01.get("highest_confidence", "Low") }}. Candidate requiring manual validation; no auth bypass automation or cross-account testing was performed.</p>
+      <p><strong>Highest indicator confidence:</strong> {{ a01.get("highest_confidence", "Low") }}. Candidate requiring manual validation; no automatic role comparison or account-to-account requests were performed.</p>
 
       <h3>Object ID Candidates</h3>
       {% set a01_object_items = report.get("a01_access_control_evidence", []) | selectattr("rule_group", "equalto", "object_level_authorization_candidates") | list %}

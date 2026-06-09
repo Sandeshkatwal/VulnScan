@@ -108,3 +108,6 @@ Authenticated Web Assessment in 21.0 is classification and context only. It does
 Future versions can add encrypted local storage, authenticated crawl boundaries, explicit user-approved authenticated requests, and manual role comparison workflows.
 
 Version 21.1 adds GET-only Authenticated Crawl with Session Boundary Controls. See `docs/AUTHENTICATED_CRAWL.md`.
+## Version 21.2 Role and Permission Mapping
+
+Authenticated assessment results can now be linked to safe Role Profiles for Role and Permission Mapping. Linked Session Profiles are redacted summaries only, and the assistant generates Access-Control Matrix context and Manual Validation Required plans without automatic role comparison or state-changing requests. See `docs/ROLE_PERMISSION_MAPPING.md`.
