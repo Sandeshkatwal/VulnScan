@@ -50,3 +50,7 @@ The Access Control Manual Test Planner creates local workflow and documentation 
 Replay Plans are manual templates only. VulScan does not replay requests, mutate parameters, submit forms, send payloads, perform automatic authorization testing, perform automatic privilege changes, or compare live accounts automatically.
 
 Redacted Request Templates store names and schemas only: header names, cookie names, parameter names, path placeholders, form field names, and JSON body schema. Raw credentials, raw cookies, bearer tokens, passwords, CSRF values, nonce values, and session tokens must not be stored.
+
+## Business Logic Review
+
+Business Logic Review plans are manual workflows only. VulScan does not execute checkout, payment, approval, coupon, rate-limit, or state-changing workflows automatically. Do not trigger payments, refunds, transfers, subscriptions, purchases, real approvals, or real rejections. Use Authorised Test Data Only.

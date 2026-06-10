@@ -18,6 +18,7 @@ import { ArchitectureSummary } from './components/ArchitectureSummary'
 import { AuthContextView } from './components/AuthContextView'
 import { A01ManualTestPlannerView } from './components/A01ManualTestPlannerView'
 import { BugIntelligenceMetricsView } from './components/BugIntelligenceMetricsView'
+import { BusinessLogicReviewView } from './components/BusinessLogicReviewView'
 import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
 import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
@@ -64,7 +65,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -114,6 +115,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'safe-validation', label: 'Safe Validation' },
   { id: 'authenticated-assessment', label: 'Authenticated Assessment' },
   { id: 'parameter-replay-planner', label: 'Parameter Replay Planner' },
+  { id: 'business-logic-review', label: 'Business Logic Review' },
   { id: 'a01-manual-planner', label: 'A01 Manual Test Planner' },
   { id: 'submission-tracker', label: 'Submission Tracker' },
   { id: 'duplicates', label: 'Duplicate Detection' },
@@ -181,6 +183,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'parameter-replay-planner': {
     title: 'Parameter Replay Planner',
     description: 'Safe Authenticated Parameter Replay Planner for Replay Plans, Redacted Request Templates, Expected Behaviour, Observed Behaviour, and Retest Workflow.',
+  },
+  'business-logic-review': {
+    title: 'Business Logic Review',
+    description: 'Business Logic Review Workflow Assistant for Workflow Review Plans, State Transition Review, Abuse Case Checklist, Expected Behaviour, Observed Behaviour, and Retest Workflow.',
   },
   'a01-manual-planner': {
     title: 'A01 Manual Test Planner',
@@ -815,6 +821,10 @@ function App() {
     return <ParameterReplayPlannerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
   }
 
+  function renderBusinessLogicReview() {
+    return <BusinessLogicReviewView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+  }
+
   function renderSubmissionTracker() {
     return <SubmissionTrackerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -872,6 +882,7 @@ function App() {
     if (currentSection === 'safe-validation') return renderSafeValidation()
     if (currentSection === 'authenticated-assessment') return renderAuthenticatedAssessment()
     if (currentSection === 'parameter-replay-planner') return renderParameterReplayPlanner()
+    if (currentSection === 'business-logic-review') return renderBusinessLogicReview()
     if (currentSection === 'a01-manual-planner') return renderA01ManualPlanner()
     if (currentSection === 'submission-tracker') return renderSubmissionTracker()
     if (currentSection === 'duplicates') return renderDuplicates()

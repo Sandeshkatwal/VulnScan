@@ -742,6 +742,70 @@ class ReplayPlanReportTemplateRequest(StrictApiModel):
     retest: dict[str, Any] | None = Field(None)
 
 
+class BusinessLogicDetectRequest(StrictApiModel):
+    """Detect Business Logic Review workflow candidates from supplied metadata only."""
+
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Discovered endpoints. No endpoints are called.", examples=[[]])
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter names and metadata only.", examples=[[]])
+    role_matrix: list[dict[str, Any]] | dict[str, Any] | None = Field(None, description="Optional Role Endpoint Matrix metadata without credentials.")
+    replay_plans: list[dict[str, Any]] = Field(default_factory=list, description="Optional Replay Plans to link.", examples=[[]])
+
+
+class BusinessLogicCreateRequest(StrictApiModel):
+    """Create one Business Logic Review plan. No workflow is executed."""
+
+    workflow: str = Field(..., min_length=1, max_length=128, examples=["checkout_payment"])
+    endpoint: dict[str, Any] | str = Field(..., description="Endpoint metadata or URL.", examples=["http://127.0.0.1:8000/checkout"])
+    role: dict[str, Any] | str | None = Field(None, description="Safe role label or role metadata without credentials.", examples=["standard_user"])
+
+
+class BusinessLogicGenerateRequest(StrictApiModel):
+    """Generate Business Logic Review plans from workflow candidates."""
+
+    candidates: list[dict[str, Any]] = Field(default_factory=list)
+    roles: list[dict[str, Any]] = Field(default_factory=list)
+    replay_plans: list[dict[str, Any]] = Field(default_factory=list)
+    access_test_plans: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class BusinessLogicStateMapRequest(StrictApiModel):
+    workflow: str = Field(..., min_length=1, max_length=128)
+    endpoints: list[Any] = Field(default_factory=list)
+    roles: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class BusinessLogicChecklistRequest(StrictApiModel):
+    workflow: str = Field(..., min_length=1, max_length=128)
+    review_plan_id: str = Field("", max_length=255)
+
+
+class BusinessLogicObserveRequest(StrictApiModel):
+    review_plan_id: str = Field(..., min_length=1, max_length=255)
+    observed_result: str = Field(..., max_length=128)
+    observed_status_code: int | None = Field(None, ge=100, le=599)
+    observed_message_summary: str = Field("", max_length=2000)
+    observed_workflow_effect: str = Field("", max_length=2000)
+    evidence_summary: str = Field("", max_length=2000)
+    evidence_file_path: str = Field("", max_length=1024)
+    tester_notes: str = Field("", max_length=2000)
+
+
+class BusinessLogicRetestRequest(StrictApiModel):
+    review_plan_id: str = Field(..., min_length=1, max_length=255)
+    retest_status: str = Field(..., max_length=64)
+    original_observed_result: str = Field("", max_length=128)
+    remediation_summary: str = Field("", max_length=2000)
+    retest_steps: list[str] = Field(default_factory=list)
+    retest_observed_result: str = Field("", max_length=128)
+    retest_notes: str = Field("", max_length=2000)
+
+
+class BusinessLogicReportTemplateRequest(StrictApiModel):
+    plan: dict[str, Any] = Field(default_factory=dict)
+    observation: dict[str, Any] | None = Field(None)
+    retest: dict[str, Any] | None = Field(None)
+
+
 class SubmissionCreateRequest(StrictApiModel):
     """Create a local submission tracking record. Does not submit externally."""
 

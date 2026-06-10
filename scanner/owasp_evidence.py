@@ -61,6 +61,8 @@ def build_owasp_evidence_items(
         items.extend(_items_from_a01_evidence(record, index, categories))
     for index, record in enumerate(scan_result.get("a08_integrity_evidence", []) or []):
         items.extend(_items_from_a08_evidence(record, index, categories))
+    for index, record in enumerate(scan_result.get("business_logic_review_plans", []) or []):
+        items.extend(_items_from_business_logic_plan(record, index, categories))
     return _dedupe(items)
 
 
@@ -318,6 +320,39 @@ def _items_from_a07_evidence(record: dict[str, Any], index: int, categories: dic
             limitation="A07 evidence is indicator-based and does not perform login attempts or brute force.",
         )
     ]
+
+
+def _items_from_business_logic_plan(record: dict[str, Any], index: int, categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    ids = []
+    for category in record.get("related_owasp_categories") or ["A06"]:
+        value = str(category)
+        if value.startswith("A") and not value.endswith(":2025"):
+            value = f"{value}:2025"
+        if value in categories:
+            ids.append(value)
+    if "A06:2025" in categories and "A06:2025" not in ids:
+        ids.append("A06:2025")
+    results = []
+    for owasp_id in ids[:4]:
+        results.append(
+            make_evidence_item(
+                source="business_logic_review",
+                source_id=str(record.get("review_plan_id") or f"business-logic-{index}"),
+                title=str(record.get("title") or "Business Logic Review plan"),
+                owasp_id=owasp_id,
+                categories=categories,
+                confidence="Medium",
+                evidence_strength="informational",
+                observed_signal=str(record.get("expected_secure_behaviour") or "Business Logic Review plan created."),
+                affected_url=", ".join(str(item) for item in record.get("affected_urls") or []),
+                endpoint_category=str(record.get("workflow_type") or ""),
+                manual_validation_required=True,
+                evidence_summary="Business Logic Review Workflow Assistant plan exists. Manual Validation Required. No Automatic Workflow Execution.",
+                recommendation_theme=str(record.get("recommendation") or "Complete Business Rule Review and State Transition Review with Authorised Test Data Only."),
+                limitation="Business Logic Review plans are manual planning records and do not confirm issues.",
+            )
+        )
+    return results
 
 
 def _items_from_a05_evidence(record: dict[str, Any], index: int, categories: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:

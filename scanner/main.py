@@ -56,6 +56,22 @@ from scanner.parameter_review_workflow import (
     build_parameter_replay_retest,
     save_replay_report_markdown,
 )
+from scanner.business_logic_checklists import build_abuse_case_checklist
+from scanner.business_logic_retest import BusinessLogicRetestError, build_business_logic_observation, build_business_logic_retest
+from scanner.business_logic_review import (
+    BusinessLogicReviewError,
+    build_business_logic_review_plan,
+    build_report_ready_business_logic_template,
+    build_review_plans_from_candidates,
+    find_business_logic_plan,
+    load_business_logic_plans,
+    package_business_logic,
+    render_report_template_markdown as render_business_logic_report_template_markdown,
+    save_business_logic_markdown,
+    save_business_logic_package,
+)
+from scanner.workflow_candidates import assess_business_logic_workflow_candidates
+from scanner.workflow_state_map import build_state_transition_map
 from scanner.permission_matrix import PermissionMatrixError, load_permission_matrix, permission_matrix_summary
 from scanner.role_mapping_assistant import build_manual_plan, build_role_mapping_from_files
 from scanner.role_profiles import RoleProfileError, find_role, load_role_profiles, role_profiles_summary
@@ -253,6 +269,7 @@ auth_app = typer.Typer(help="Manage redacted Authenticated Web Assessment Sessio
 roles_app = typer.Typer(help="Role and Permission Mapping planning commands.")
 access_tests_app = typer.Typer(help="Access Control Manual Test Planner commands.")
 replay_plans_app = typer.Typer(help="Safe Authenticated Parameter Replay Planner commands.")
+business_logic_app = typer.Typer(help="Business Logic Review Workflow Assistant commands.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -265,6 +282,7 @@ app.add_typer(auth_app, name="auth")
 app.add_typer(roles_app, name="roles")
 app.add_typer(access_tests_app, name="access-tests")
 app.add_typer(replay_plans_app, name="replay-plans")
+app.add_typer(business_logic_app, name="business-logic")
 console = Console()
 
 
@@ -902,6 +920,195 @@ def replay_plans_retest_command(
         for key in ("retest_id", "replay_plan_id", "retest_status", "retest_notes", "retested_at"):
             table.add_row(key, str(retest.get(key) or ""))
         console.print(table)
+
+
+@business_logic_app.command("list")
+def business_logic_list_command(
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="Business Logic Review plan file under data/business_logic.")] = Path("data") / "business_logic" / "sample_workflow_plan.json",
+) -> None:
+    """List Business Logic Review workflow plans."""
+    try:
+        package = load_business_logic_plans(plans_file)
+    except BusinessLogicReviewError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_business_logic_plans(package.get("business_logic_review_plans") or [])
+    console.print(f"[bold]Workflow Review Plans:[/bold] {package.get('business_logic_summary', {}).get('business_logic_review_plans_count', 0)}")
+    console.print("[yellow]No Automatic Workflow Execution. Local planning records only.[/yellow]")
+
+
+@business_logic_app.command("detect")
+def business_logic_detect_command(
+    endpoints_file: Annotated[Path, typer.Option("--endpoints-file", help="Local endpoints file.")],
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON business logic report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML business logic report.")] = False,
+) -> None:
+    """Detect Business Logic Review workflow candidates from local endpoint metadata."""
+    try:
+        endpoints = _load_replay_endpoint_file(endpoints_file)
+        candidates = assess_business_logic_workflow_candidates(endpoints, [])
+        package = package_business_logic(candidates, [], [], [])
+        json_path, html_path = save_business_logic_package(package, json_report=json_report, html_report=html_report)
+    except (EndpointDiscoveryError, BusinessLogicReviewError, OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_business_logic_candidates(candidates)
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+    console.print("[yellow]Candidates only. No workflows were executed.[/yellow]")
+
+
+@business_logic_app.command("create")
+def business_logic_create_command(
+    workflow: Annotated[str, typer.Option("--workflow", help="Workflow type.")],
+    endpoint: Annotated[str, typer.Option("--endpoint", help="Endpoint URL for manual Business Logic Review.")],
+    role: Annotated[str, typer.Option("--role", help="Safe role label.")] = "",
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON business logic report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML business logic report.")] = False,
+) -> None:
+    """Create one Workflow Review Plan."""
+    candidate = {"workflow_candidate_id": "cli-created", "workflow_type": workflow, "affected_url": endpoint, "target": endpoint, "related_roles": [role] if role else [], "related_owasp_categories": ["A06"]}
+    try:
+        plan = build_business_logic_review_plan(candidate, [{"role_label": role}] if role else [])
+        package = package_business_logic([candidate], [plan], [], [])
+        json_path, html_path = save_business_logic_package(package, json_report=json_report, html_report=html_report)
+    except BusinessLogicReviewError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_business_logic_plans([plan])
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+    console.print("[yellow]Manual Validation Required. No workflow request was made.[/yellow]")
+
+
+@business_logic_app.command("generate")
+def business_logic_generate_command(
+    endpoints_file: Annotated[Path, typer.Option("--endpoints-file", help="Local endpoints file.")],
+    roles_file: Annotated[Path, typer.Option("--roles-file", help="Role Profile JSON file under data/roles.")] = Path("data") / "roles" / "sample_roles.json",
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON business logic report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML business logic report.")] = False,
+) -> None:
+    """Generate Workflow Review Plans from detected candidates."""
+    try:
+        endpoints = _load_replay_endpoint_file(endpoints_file)
+        roles = load_role_profiles(roles_file)
+        candidates = assess_business_logic_workflow_candidates(endpoints, [], None, None)
+        plans = build_review_plans_from_candidates(candidates, roles=roles)
+        package = package_business_logic(candidates, plans, [], [])
+        json_path, html_path = save_business_logic_package(package, json_report=json_report, html_report=html_report)
+    except (EndpointDiscoveryError, RoleProfileError, BusinessLogicReviewError, OSError, json.JSONDecodeError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_business_logic_plans(plans)
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+    console.print("[yellow]No Automatic Workflow Execution.[/yellow]")
+
+
+@business_logic_app.command("state-map")
+def business_logic_state_map_command(
+    workflow: Annotated[str, typer.Option("--workflow", help="Workflow type.")],
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate a State Transition Review map."""
+    state_map = build_state_transition_map(workflow, [])
+    if json_report:
+        console.print_json(data={"business_logic_state_transition_map": state_map})
+        return
+    _print_state_map(state_map)
+
+
+@business_logic_app.command("checklist")
+def business_logic_checklist_command(
+    workflow: Annotated[str, typer.Option("--workflow", help="Workflow type.")],
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Generate an Abuse Case Checklist."""
+    checklist = build_abuse_case_checklist(workflow)
+    if json_report:
+        console.print_json(data={"business_logic_abuse_case_checklist": checklist})
+        return
+    table = Table(title="Abuse Case Checklist")
+    table.add_column("Item")
+    table.add_column("Status")
+    for item in checklist.get("items") or []:
+        table.add_row(str(item.get("item") or ""), str(item.get("status") or ""))
+    console.print(table)
+
+
+@business_logic_app.command("observe")
+def business_logic_observe_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Workflow Review Plan ID.")],
+    observed_result: Annotated[str, typer.Option("--observed-result", help="Observed result.")],
+    summary: Annotated[str, typer.Option("--summary", help="Redacted Observed Behaviour summary.")] = "",
+    status_code: Annotated[int | None, typer.Option("--status-code", help="Observed status code, if safe to record.")] = None,
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Record manual Observed Behaviour for a Workflow Review Plan."""
+    try:
+        observation = build_business_logic_observation(review_plan_id=plan_id, observed_result=observed_result, observed_status_code=status_code, observed_message_summary=summary, evidence_summary=summary)
+    except (BusinessLogicRetestError, RoleProfileError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if json_report:
+        console.print_json(data={"business_logic_observation": observation})
+        return
+    table = Table(title="Business Logic Observed Behaviour")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("observation_id", "review_plan_id", "observed_result", "observed_status_code", "observed_message_summary", "redaction_status"):
+        table.add_row(key, str(observation.get(key) or ""))
+    console.print(table)
+
+
+@business_logic_app.command("report")
+def business_logic_report_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Workflow Review Plan ID.")],
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="Business Logic Review plan file under data/business_logic.")] = Path("data") / "business_logic" / "sample_workflow_plan.json",
+    markdown: Annotated[bool, typer.Option("--markdown", help="Write Markdown report template.")] = False,
+) -> None:
+    """Generate a report-ready Business Logic Review template."""
+    try:
+        plan = find_business_logic_plan(load_business_logic_plans(plans_file).get("business_logic_review_plans") or [], plan_id)
+        template = build_report_ready_business_logic_template(plan)
+        markdown_text = render_business_logic_report_template_markdown(template)
+        path = save_business_logic_markdown(template, plan_id) if markdown else None
+    except BusinessLogicReviewError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(markdown_text)
+    if path:
+        console.print(f"[bold]Markdown report:[/bold] {path}")
+
+
+@business_logic_app.command("retest")
+def business_logic_retest_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Workflow Review Plan ID.")],
+    status: Annotated[str, typer.Option("--status", help="Retest Workflow status.")],
+    notes: Annotated[str, typer.Option("--notes", help="Retest notes.")] = "",
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Record Retest Workflow status for a Workflow Review Plan."""
+    try:
+        retest = build_business_logic_retest(review_plan_id=plan_id, retest_status=status, retest_notes=notes)
+    except (BusinessLogicRetestError, RoleProfileError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if json_report:
+        console.print_json(data={"business_logic_retest": retest})
+        return
+    table = Table(title="Business Logic Retest Workflow")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in ("retest_id", "review_plan_id", "retest_status", "retest_notes", "retested_at"):
+        table.add_row(key, str(retest.get(key) or ""))
+    console.print(table)
 
 
 @app.command("authenticated-crawl")
@@ -6722,6 +6929,64 @@ def _load_replay_endpoint_file(path: Path) -> list[dict[str, Any]]:
         endpoints = payload.get("endpoint_results") if isinstance(payload, dict) else payload
         return list(endpoints or [])
     return [{"url": url, "normalised_url": url, "method": "GET"} for url in load_url_list(path)]
+
+
+def _print_business_logic_candidates(candidates: list[dict[str, Any]]) -> None:
+    table = Table(title="Business Logic Review Candidates")
+    table.add_column("Candidate ID")
+    table.add_column("Workflow")
+    table.add_column("Endpoint")
+    table.add_column("Sensitivity")
+    table.add_column("Score")
+    table.add_column("OWASP")
+    for candidate in candidates:
+        table.add_row(
+            str(candidate.get("workflow_candidate_id") or ""),
+            str(candidate.get("workflow_type") or ""),
+            str(candidate.get("affected_url") or ""),
+            str(candidate.get("workflow_sensitivity") or ""),
+            str(candidate.get("candidate_score") or 0),
+            ", ".join(str(item) for item in candidate.get("related_owasp_categories") or []),
+        )
+    console.print(table)
+
+
+def _print_business_logic_plans(plans: list[dict[str, Any]]) -> None:
+    table = Table(title="Business Logic Review Workflow Assistant")
+    table.add_column("Plan ID")
+    table.add_column("Workflow")
+    table.add_column("Endpoint")
+    table.add_column("Roles")
+    table.add_column("Status")
+    table.add_column("Retest")
+    for plan in plans:
+        table.add_row(
+            str(plan.get("review_plan_id") or ""),
+            str(plan.get("workflow_type") or ""),
+            ", ".join(str(item) for item in plan.get("affected_urls") or []),
+            ", ".join(str(item) for item in plan.get("related_roles") or []),
+            str(plan.get("validation_status") or ""),
+            str(plan.get("retest_status") or ""),
+        )
+    console.print(table)
+
+
+def _print_state_map(state_map: dict[str, Any]) -> None:
+    table = Table(title="State Transition Review")
+    table.add_column("From")
+    table.add_column("To")
+    table.add_column("Action")
+    table.add_column("Allowed Roles")
+    table.add_column("Expected Control")
+    for transition in state_map.get("transitions") or []:
+        table.add_row(
+            str(transition.get("from_state") or ""),
+            str(transition.get("to_state") or ""),
+            str(transition.get("action") or ""),
+            ", ".join(str(item) for item in transition.get("allowed_roles") or []),
+            str(transition.get("expected_control") or ""),
+        )
+    console.print(table)
 
 
 if __name__ == "__main__":

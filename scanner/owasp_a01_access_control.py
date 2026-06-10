@@ -152,6 +152,16 @@ def attach_a01_access_control(scan_result: dict[str, Any]) -> dict[str, Any]:
                 "replay_verified_secure_count": replay_summary.get("manually_verified_secure_count", 0),
             }
         )
+    business_logic_plans = [plan for plan in scan_result.get("business_logic_review_plans") or [] if "A01" in (plan.get("related_owasp_categories") or [])]
+    if business_logic_plans:
+        observations = scan_result.get("business_logic_observations") or []
+        payload["a01_access_control_summary"].update(
+            {
+                "business_logic_review_plans_count": len(business_logic_plans),
+                "business_logic_manual_observations_count": len(observations),
+                "business_logic_verified_issue_count": sum(1 for item in observations if item.get("observed_result") in {"unexpected_success", "control_missing"}),
+            }
+        )
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)

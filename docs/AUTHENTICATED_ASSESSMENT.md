@@ -117,3 +117,6 @@ Authenticated assessment metadata can feed A01 Manual Validation Plan records fo
 ## Safe Authenticated Parameter Replay Planner
 
 Version 21.4 adds Replay Plans and Redacted Request Templates for authenticated manual validation planning. The planner uses Redacted Auth Context only and does not replay requests, mutate parameters, submit forms, or perform automatic authorization testing. See `docs/SAFE_PARAMETER_REPLAY_PLANNER.md`.
+## Business Logic Review Workflow Assistant
+
+Version 21.5 adds Business Logic Review planning for authenticated workflow candidates such as checkout, approval, account lifecycle, import/export, and webhook paths. It uses redacted context and discovered metadata only. VulScan does not execute workflows, submit state-changing requests, trigger payments, or approve/reject real requests automatically. See `docs/BUSINESS_LOGIC_REVIEW.md`.

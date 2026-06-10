@@ -511,6 +511,66 @@
     </section>
     {% endif %}
 
+    {% set business_logic = report.get("business_logic_summary", {}) %}
+    {% if business_logic.get("enabled") %}
+    <section>
+      <h2>Business Logic Review Workflow Assistant</h2>
+      <p><strong>Safety:</strong> Business logic review plans are manual workflows only. VulScan does not execute checkout, payment, approval, coupon, rate-limit, or state-changing workflows automatically.</p>
+      <div class="grid">
+        <div class="metric"><div class="label">Candidates</div><div class="value">{{ business_logic.get("workflow_candidates_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Review Plans</div><div class="value">{{ business_logic.get("business_logic_review_plans_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Verified Issues</div><div class="value">{{ business_logic.get("business_logic_verified_issue_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Retest Passed/Failed</div><div class="value">{{ business_logic.get("retest_passed_count", 0) }}/{{ business_logic.get("retest_failed_count", 0) }}</div></div>
+      </div>
+      {% if report.get("business_logic_workflow_candidates") %}
+      <h3>Workflow Candidates</h3>
+      <table>
+        <thead><tr><th>Candidate</th><th>Workflow Type</th><th>Endpoint</th><th>Sensitivity</th><th>Score</th><th>OWASP</th></tr></thead>
+        <tbody>
+          {% for candidate in report.get("business_logic_workflow_candidates", [])[:30] %}
+          <tr><td>{{ candidate.get("workflow_candidate_id") }}</td><td>{{ candidate.get("workflow_type") }}</td><td>{{ candidate.get("affected_url") }}</td><td>{{ candidate.get("workflow_sensitivity") }}</td><td>{{ candidate.get("candidate_score") }}</td><td>{{ candidate.get("related_owasp_categories", []) | join(", ") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("business_logic_review_plans") %}
+      <h3>Workflow Review Plans</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Workflow Type</th><th>Endpoint</th><th>Roles</th><th>Status</th><th>Retest</th></tr></thead>
+        <tbody>
+          {% for plan in report.get("business_logic_review_plans", [])[:30] %}
+          <tr><td>{{ plan.get("review_plan_id") }}</td><td>{{ plan.get("workflow_type") }}</td><td>{{ plan.get("affected_urls", []) | join(", ") }}</td><td>{{ plan.get("related_roles", []) | join(", ") }}</td><td>{{ plan.get("validation_status") }}</td><td>{{ plan.get("retest_status") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("business_logic_state_transition_maps") %}
+      <h3>State Transition Maps</h3>
+      {% for state_map in report.get("business_logic_state_transition_maps", [])[:5] %}
+      <table>
+        <thead><tr><th>From</th><th>To</th><th>Action</th><th>Allowed Roles</th><th>Expected Control</th></tr></thead>
+        <tbody>
+          {% for transition in state_map.get("transitions", []) %}
+          <tr><td>{{ transition.get("from_state") }}</td><td>{{ transition.get("to_state") }}</td><td>{{ transition.get("action") }}</td><td>{{ transition.get("allowed_roles", []) | join(", ") }}</td><td>{{ transition.get("expected_control") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endfor %}
+      {% endif %}
+      {% if report.get("business_logic_observations") %}
+      <h3>Expected vs Observed Behaviour</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Observed Result</th><th>Status Code</th><th>Summary</th><th>Redaction</th></tr></thead>
+        <tbody>
+          {% for observation in report.get("business_logic_observations", [])[:30] %}
+          <tr><td>{{ observation.get("review_plan_id") }}</td><td>{{ observation.get("observed_result") }}</td><td>{{ observation.get("observed_status_code") }}</td><td>{{ observation.get("observed_message_summary") }}</td><td>{{ observation.get("redaction_status") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>

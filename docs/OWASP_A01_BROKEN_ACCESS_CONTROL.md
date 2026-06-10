@@ -78,3 +78,6 @@ A01 candidates can now be converted into A01 Manual Validation Plan records with
 ## Replay Plan Integration
 
 A01 summaries include Safe Authenticated Parameter Replay Planner counts when Replay Plans and manual observations are present: replay plan count, observation count, manually verified issue count, and manually verified secure count.
+## Business Logic Review Integration
+
+A01 summaries can include Business Logic Review plans for role approval chains, tenant boundary workflows, admin approval workflows, and object ownership workflows. Observed Behaviour must be manually recorded before any issue wording is used.

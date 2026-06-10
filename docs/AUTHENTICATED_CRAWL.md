@@ -57,3 +57,6 @@ Authenticated Crawl endpoint metadata can be used as input for A01 Manual Valida
 ## Replay Planning Integration
 
 Authenticated Crawl results can provide endpoint and auth-required context for Version 21.4 Replay Plans. The Safe Authenticated Parameter Replay Planner still creates local manual records only and performs No Automatic Replay.
+## Business Logic Review Integration
+
+Authenticated Crawl results can provide discovered workflow endpoints for Version 21.5 Business Logic Review. The assistant creates Workflow Review Plans and State Transition Review documentation only. It does not execute checkout, payment, approval, coupon, rate-limit, or other state-changing workflows automatically.

@@ -190,3 +190,7 @@ The dashboard includes an A01 Manual Test Planner section with Test Plan Summary
 ## Parameter Replay Planner
 
 The dashboard includes a Parameter Replay Planner section under authenticated assessment workflows. It displays Replay Plans, Redacted Request Templates, Expected Behaviour, Observed Behaviour, Evidence Checklist, Retest Workflow, and report template text. It has no send request or replay controls and no credential, payload, raw token, or raw cookie fields.
+
+## Business Logic Review
+
+The dashboard includes a Business Logic Review section for Workflow Review Plans, State Transition Review, Abuse Case Checklist, Expected Behaviour, Observed Behaviour, Retest Workflow, and report template text. It has no run workflow, test payment, approve now, credential, token, or cookie display controls.

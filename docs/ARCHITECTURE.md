@@ -98,6 +98,7 @@ VulScan
 - `scanner.api_app`, `scanner.api_runner`, `scanner.api_jobs`, `scanner.api_job_store`, `scanner.api_filters`, `scanner.api_reports`, `scanner.api_remediation`, `scanner.api_security`: local FastAPI API, persistent jobs, safe report access, filtering, and optional API key protection.
 - `scanner.report_json` and `scanner.report_html`: JSON and HTML report generation.
 - `scanner.parameter_replay_planner`, `scanner.request_template_builder`, `scanner.redacted_request_templates`, and `scanner.parameter_review_workflow`: Safe Authenticated Parameter Replay Planner, Redacted Request Templates, Expected Behaviour/Observed Behaviour records, evidence checklist, report-ready templates, and Retest Workflow records. This layer is local planning only and performs No Automatic Replay.
+- `scanner.business_logic_review`, `scanner.workflow_candidates`, `scanner.workflow_state_map`, `scanner.business_logic_checklists`, and `scanner.business_logic_retest`: Business Logic Review Workflow Assistant, workflow candidates, State Transition Review maps, Abuse Case Checklists, Expected Behaviour/Observed Behaviour records, and Retest Workflow records. This layer is local planning only and performs No Automatic Workflow Execution.
 
 ## Dashboard Modules
 

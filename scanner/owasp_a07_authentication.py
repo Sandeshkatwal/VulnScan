@@ -165,6 +165,14 @@ def attach_a07_authentication(scan_result: dict[str, Any]) -> dict[str, Any]:
                 "session_replay_review_count": sum(1 for plan in replay_plans if plan.get("replay_intent") == "auth_session_review"),
             }
         )
+    business_logic_plans = [plan for plan in scan_result.get("business_logic_review_plans") or [] if "A07" in (plan.get("related_owasp_categories") or [])]
+    if business_logic_plans:
+        payload["a07_authentication_summary"].update(
+            {
+                "business_logic_review_plans_count": len(business_logic_plans),
+                "business_logic_manual_observations_count": len(scan_result.get("business_logic_observations") or []),
+            }
+        )
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)

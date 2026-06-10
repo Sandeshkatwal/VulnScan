@@ -82,3 +82,6 @@ The OWASP Assessment page includes an A08 Software/Data Integrity panel with sum
 - Avoid unsafe deserialisation of untrusted data.
 - Keep audit logs for upload, import, webhook, and update workflows.
 Version 20.9 reporting note: A08 evidence is consolidated into the unified OWASP Assessment report with manual validation checklist items for upload/import/webhook integrity and third-party script review.
+## Business Logic Review Integration
+
+A08 summaries can include Business Logic Review plans for import/export, webhook/callback, update, and integrity-sensitive workflows. State Transition Review and Abuse Case Checklist records are manual documentation only and do not trigger uploads, callbacks, imports, exports, or update workflows.

@@ -120,3 +120,7 @@ Role and Permission Mapping outputs can now feed A01 Manual Validation Plan reco
 ## Replay Plan Integration
 
 Role labels and expected permissions can be used by Version 21.4 Replay Plans for role permission review. VulScan stores labels and planning metadata only. It does not perform automatic cross-account testing or automatic privilege changes.
+
+## Business Logic Review Integration
+
+Version 21.5 Business Logic Review uses role labels and expected permissions to document Workflow Review Plans, State Transition Review controls, and Abuse Case Checklists for approval, role, invitation, and account lifecycle workflows. It does not execute workflows or compare live accounts automatically.

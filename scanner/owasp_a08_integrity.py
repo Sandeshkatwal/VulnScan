@@ -98,6 +98,14 @@ def attach_a08_integrity(scan_result: dict[str, Any]) -> dict[str, Any]:
         evidence_records=scan_result.get("evidence_records") or [],
     )
     findings = list(payload.get("findings", []))
+    business_logic_plans = [plan for plan in scan_result.get("business_logic_review_plans") or [] if "A08" in (plan.get("related_owasp_categories") or [])]
+    if business_logic_plans:
+        payload["a08_integrity_summary"].update(
+            {
+                "business_logic_review_plans_count": len(business_logic_plans),
+                "business_logic_manual_observations_count": len(scan_result.get("business_logic_observations") or []),
+            }
+        )
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)
     scan_result.update(payload_without_findings)

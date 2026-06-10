@@ -198,6 +198,7 @@ Generate the unified OWASP Assessment Markdown report with `--owasp-report` afte
 .\.venv311\Scripts\python.exe -m scanner.main auth show --profile-file data\auth_profiles\sample_session_profile.redacted.json
 .\.venv311\Scripts\python.exe -m scanner.main auth validate --profile-file data\auth_profiles\sample_session_profile.redacted.json
 .\.venv311\Scripts\python.exe -m scanner.main auth check-url --profile-file data\auth_profiles\sample_session_profile.redacted.json --url http://127.0.0.1:8000/dashboard
+```
 
 ## Authenticated Crawl
 
@@ -208,7 +209,7 @@ Generate the unified OWASP Assessment Markdown report with `--owasp-report` afte
 ```
 
 Authenticated Crawl is GET-only, enforces Session Boundary Controls, blocks destructive-looking paths, records Session Expiry Indicators, and stores Redacted Authenticated Evidence only.
-```
+
 ## Version 21.2 Role Commands
 
 ```powershell
@@ -229,6 +230,7 @@ Role commands perform Role and Permission Mapping, Access-Control Matrix summari
 .\.venv311\Scripts\python.exe -m scanner.main access-tests observe --plan-id demo-plan-001 --observed-result denied_as_expected --status-code 403 --summary "Access denied for standard_user as expected" --json
 .\.venv311\Scripts\python.exe -m scanner.main access-tests report --plan-id demo-plan-001 --plans-file data\access_control_tests\sample_a01_test_plan.json --markdown
 .\.venv311\Scripts\python.exe -m scanner.main access-tests retest --plan-id demo-plan-001 --status passed --notes "Access remains denied after remediation" --json
+```
 
 ## Safe Authenticated Parameter Replay Planner
 
@@ -241,6 +243,19 @@ Role commands perform Role and Permission Mapping, Access-Control Matrix summari
 .\.venv311\Scripts\python.exe -m scanner.main replay-plans report --plan-id demo-replay-001 --plans-file data\parameter_replay\sample_replay_plan.json --markdown
 .\.venv311\Scripts\python.exe -m scanner.main replay-plans retest --plan-id demo-replay-001 --status passed --notes "Parameter access remains denied after remediation" --json
 ```
+
+## Business Logic Review
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main business-logic list --plans-file data\business_logic\sample_workflow_plan.json
+.\.venv311\Scripts\python.exe -m scanner.main business-logic detect --endpoints-file data\endpoints\sample_urls.txt --json --html
+.\.venv311\Scripts\python.exe -m scanner.main business-logic create --workflow checkout_payment --endpoint "http://127.0.0.1:8000/checkout" --role standard_user --json --html
+.\.venv311\Scripts\python.exe -m scanner.main business-logic generate --endpoints-file data\endpoints\sample_urls.txt --roles-file data\roles\sample_roles.json --json --html
+.\.venv311\Scripts\python.exe -m scanner.main business-logic state-map --workflow approval_rejection --json
+.\.venv311\Scripts\python.exe -m scanner.main business-logic checklist --workflow checkout_payment --json
+.\.venv311\Scripts\python.exe -m scanner.main business-logic observe --plan-id demo-workflow-001 --observed-result behaved_as_expected --summary "Workflow behaved as expected using approved test data" --json
+.\.venv311\Scripts\python.exe -m scanner.main business-logic report --plan-id demo-workflow-001 --plans-file data\business_logic\sample_workflow_plan.json --markdown
+.\.venv311\Scripts\python.exe -m scanner.main business-logic retest --plan-id demo-workflow-001 --status passed --notes "Workflow control still enforced after remediation" --json
 ```
 
 Access test commands create, update, and read local Access Control Manual Test Planner records only.

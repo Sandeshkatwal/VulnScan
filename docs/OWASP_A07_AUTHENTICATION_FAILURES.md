@@ -77,3 +77,6 @@ Version 21.1 Authenticated Crawl note: A07 evidence can include Session Expiry I
 ## Replay Plan Integration
 
 A07 summaries include auth/session parameter review plan counts when Replay Plans cover CSRF, state, nonce, token, or session parameter names. Values are never stored.
+## Business Logic Review Integration
+
+A07 summaries can include Business Logic Review plans for password reset, account lifecycle, invitation, and session-sensitive workflows. These plans document Expected Behaviour, Observed Behaviour, and Manual Validation Required steps without attempting login, password reset, or session workflow execution automatically.

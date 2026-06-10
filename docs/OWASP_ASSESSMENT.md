@@ -128,3 +128,6 @@ The OWASP Assessment workflow can include Role and Permission Mapping outputs fo
 
 OWASP Assessment outputs can include Access Control Manual Test Planner records for A01 Manual Validation Plan workflow, evidence documentation, and Retest Workflow tracking. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
 Version 21.4 adds Safe Authenticated Parameter Replay Planner support for manual validation planning across A01, A05, A07, and A08-related parameter contexts. Replay Plans are local records only and perform No Automatic Replay.
+## Version 21.5 Business Logic Review
+
+Version 21.5 adds Business Logic Review support for manual workflow review across A01, A05, A06, A07, A08, and A09-related contexts. Workflow Review Plans, State Transition Review maps, Abuse Case Checklists, observations, and retest records are local planning artifacts only. VulScan does not execute workflows, submit state-changing requests, trigger payments, or approve/reject real requests automatically.

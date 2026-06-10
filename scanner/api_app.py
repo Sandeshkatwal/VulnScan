@@ -48,6 +48,8 @@ from scanner.role_profiles import RoleProfileError
 from scanner.access_control_test_planner import AccessControlTestPlannerError
 from scanner.parameter_replay_planner import ParameterReplayPlannerError
 from scanner.parameter_review_workflow import ParameterReviewWorkflowError
+from scanner.business_logic_review import BusinessLogicReviewError
+from scanner.business_logic_retest import BusinessLogicRetestError
 from scanner.a01_manual_tests import A01ManualTestError
 from scanner.access_control_retest import AccessControlRetestError
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
@@ -70,8 +72,9 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, BusinessLogicChecklistRequest, BusinessLogicCreateRequest, BusinessLogicDetectRequest, BusinessLogicGenerateRequest, BusinessLogicObserveRequest, BusinessLogicReportTemplateRequest, BusinessLogicRetestRequest, BusinessLogicStateMapRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_parameter_replay_planner import api_create_replay_plan, api_generate_replay_plans, api_get_replay_plan, api_record_replay_observation, api_record_replay_retest, api_replay_report_template
+from scanner.api_business_logic_review import api_business_logic_report_template, api_checklist, api_create_business_logic_plan, api_detect_business_logic, api_generate_business_logic_plans, api_observe_business_logic, api_retest_business_logic, api_state_map
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -802,6 +805,127 @@ def create_app(
     )
     def replay_plan_report_template(request: ReplayPlanReportTemplateRequest) -> dict[str, Any]:
         return api_replay_report_template(request.plan, request.observation, request.retest)
+
+    @app.post(
+        "/business-logic/detect",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Detect Business Logic Review workflow candidates",
+        description="Detects workflow candidates from supplied endpoint and parameter metadata only. No workflows are executed.",
+        responses=ERROR_RESPONSES,
+    )
+    def detect_business_logic(request: BusinessLogicDetectRequest) -> dict[str, Any]:
+        try:
+            return api_detect_business_logic(request.endpoint_results, request.parameter_results, request.role_matrix, request.replay_plans)
+        except RoleProfileError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/business-logic/create",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Create Business Logic Review plan",
+        description="Creates a local Workflow Review Plan. No checkout, payment, approval, or state-changing workflow is executed.",
+        responses=ERROR_RESPONSES,
+    )
+    def create_business_logic(request: BusinessLogicCreateRequest) -> dict[str, Any]:
+        try:
+            return api_create_business_logic_plan(request.workflow, request.endpoint, request.role)
+        except (RoleProfileError, BusinessLogicReviewError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/business-logic/generate",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Generate Business Logic Review plans",
+        description="Generates local Workflow Review Plans from supplied candidates. No live requests are made.",
+        responses=ERROR_RESPONSES,
+    )
+    def generate_business_logic(request: BusinessLogicGenerateRequest) -> dict[str, Any]:
+        try:
+            return api_generate_business_logic_plans(request.candidates, request.roles, request.replay_plans, request.access_test_plans)
+        except (RoleProfileError, BusinessLogicReviewError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/business-logic/state-map",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Generate State Transition Review map",
+        responses=ERROR_RESPONSES,
+    )
+    def business_logic_state_map(request: BusinessLogicStateMapRequest) -> dict[str, Any]:
+        try:
+            return api_state_map(request.workflow, request.endpoints, request.roles)
+        except RoleProfileError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/business-logic/checklist",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Generate Abuse Case Checklist",
+        responses=ERROR_RESPONSES,
+    )
+    def business_logic_checklist(request: BusinessLogicChecklistRequest) -> dict[str, Any]:
+        return api_checklist(request.workflow, request.review_plan_id)
+
+    @app.post(
+        "/business-logic/observe",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Record Business Logic Review observation",
+        description="Records redacted manual Observed Behaviour. Raw responses, credentials, tokens, and cookies are not accepted.",
+        responses=ERROR_RESPONSES,
+    )
+    def observe_business_logic(request: BusinessLogicObserveRequest) -> dict[str, Any]:
+        try:
+            return api_observe_business_logic(
+                review_plan_id=request.review_plan_id,
+                observed_result=request.observed_result,
+                observed_status_code=request.observed_status_code,
+                observed_message_summary=request.observed_message_summary,
+                observed_workflow_effect=request.observed_workflow_effect,
+                evidence_summary=request.evidence_summary,
+                evidence_file_path=request.evidence_file_path,
+                tester_notes=request.tester_notes,
+            )
+        except (RoleProfileError, BusinessLogicRetestError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/business-logic/retest",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Record Business Logic Review retest",
+        description="Records Retest Workflow metadata only. No live workflow is executed.",
+        responses=ERROR_RESPONSES,
+    )
+    def retest_business_logic(request: BusinessLogicRetestRequest) -> dict[str, Any]:
+        try:
+            return api_retest_business_logic(
+                review_plan_id=request.review_plan_id,
+                retest_status=request.retest_status,
+                original_observed_result=request.original_observed_result,
+                remediation_summary=request.remediation_summary,
+                retest_steps=request.retest_steps,
+                retest_observed_result=request.retest_observed_result,
+                retest_notes=request.retest_notes,
+            )
+        except (RoleProfileError, BusinessLogicRetestError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/business-logic/report-template",
+        dependencies=[Depends(require_api_key)],
+        tags=["Business Logic Review"],
+        summary="Build report-ready Business Logic Review template",
+        description="Returns candidate wording unless manual Observed Behaviour confirms unexpected_success or control_missing.",
+        responses=ERROR_RESPONSES,
+    )
+    def business_logic_report_template(request: BusinessLogicReportTemplateRequest) -> dict[str, Any]:
+        return api_business_logic_report_template(request.plan, request.observation, request.retest)
 
     @app.post(
         "/endpoints/analyse",

@@ -72,3 +72,7 @@ There is no send request, replay now, payload input, credential field, raw token
 ## Limitations And Future Work
 
 Replay Plans are planning records and do not prove impact. Manual validation must stay within assessment scope and programme rules. Future work can add richer importers for authenticated crawl and role mapping exports while preserving the No Automatic Replay safety model.
+
+## Business Logic Review Integration
+
+Version 21.5 Business Logic Review can link Replay Plans to Workflow Review Plans when parameter context supports a manual Business Rule Review. These links are documentation only and preserve the No Automatic Workflow Execution and No Automatic Replay safety boundaries.

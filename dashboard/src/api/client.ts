@@ -63,6 +63,8 @@ import type {
   ParameterReplayPlannerResponse,
   ReplayPlanCreateRequest,
   ReplayPlanObserveRequest,
+  BusinessLogicCreateRequest,
+  BusinessLogicReviewResponse,
   OWASPMapRequest,
   OWASPMapResponse,
   RetestRecord,
@@ -450,6 +452,68 @@ export function buildReplayPlanReportTemplate(payload: {
   retest?: Record<string, unknown> | null
 }): Promise<ParameterReplayPlannerResponse> {
   return request<ParameterReplayPlannerResponse>('/replay-plans/report-template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function detectBusinessLogic(payload: {
+  endpoint_results: Array<Record<string, unknown>>
+  parameter_results?: Array<Record<string, unknown>>
+  role_matrix?: Array<Record<string, unknown>> | Record<string, unknown> | null
+  replay_plans?: Array<Record<string, unknown>>
+}): Promise<BusinessLogicReviewResponse> {
+  return request<BusinessLogicReviewResponse>('/business-logic/detect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createBusinessLogicPlan(payload: BusinessLogicCreateRequest): Promise<BusinessLogicReviewResponse> {
+  return request<BusinessLogicReviewResponse>('/business-logic/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function observeBusinessLogic(payload: {
+  review_plan_id: string
+  observed_result: string
+  observed_status_code?: number | null
+  observed_message_summary?: string
+  evidence_summary?: string
+  tester_notes?: string
+}): Promise<BusinessLogicReviewResponse> {
+  return request<BusinessLogicReviewResponse>('/business-logic/observe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function retestBusinessLogic(payload: {
+  review_plan_id: string
+  retest_status: string
+  remediation_summary?: string
+  retest_observed_result?: string
+  retest_notes?: string
+}): Promise<BusinessLogicReviewResponse> {
+  return request<BusinessLogicReviewResponse>('/business-logic/retest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function buildBusinessLogicReportTemplate(payload: {
+  plan: Record<string, unknown>
+  observation?: Record<string, unknown> | null
+  retest?: Record<string, unknown> | null
+}): Promise<BusinessLogicReviewResponse> {
+  return request<BusinessLogicReviewResponse>('/business-logic/report-template', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

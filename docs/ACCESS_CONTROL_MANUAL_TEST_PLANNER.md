@@ -103,3 +103,7 @@ Future versions can add richer local evidence attachment management and submissi
 ## Replay Plan Integration
 
 Version 21.4 adds the Safe Authenticated Parameter Replay Planner. Object identifier, tenant boundary, and role/permission Replay Plans can enrich A01 manual validation records with Redacted Request Templates and Expected Behaviour/Observed Behaviour workflow data. Replay Plans do not make live requests.
+
+## Business Logic Review Integration
+
+Version 21.5 Business Logic Review can link access-control plans to workflow approvals, tenant boundary workflows, role-sensitive actions, and object ownership workflows. Workflow Review Plans remain Manual Validation Required records and do not perform live workflow requests.

@@ -1021,6 +1021,95 @@ export interface ReplayPlanObserveRequest {
   tester_notes?: string
 }
 
+export interface BusinessLogicWorkflowCandidate {
+  workflow_candidate_id?: string
+  title?: string
+  workflow_type?: string
+  target?: string
+  affected_url?: string
+  normalised_url?: string
+  endpoint_category?: string
+  related_parameters?: string[]
+  related_roles?: string[]
+  related_owasp_categories?: string[]
+  workflow_sensitivity?: string
+  state_changing?: boolean
+  destructive_or_financial?: boolean
+  candidate_score?: number
+  confidence?: string
+  [key: string]: unknown
+}
+
+export interface BusinessLogicReviewPlan {
+  review_plan_id?: string
+  title?: string
+  workflow_type?: string
+  target?: string
+  affected_urls?: string[]
+  related_parameters?: string[]
+  related_roles?: string[]
+  related_owasp_categories?: string[]
+  expected_business_rule?: string
+  expected_secure_behaviour?: string
+  abuse_cases?: ApiRecord
+  state_transition_map?: ApiRecord
+  manual_steps?: string[]
+  evidence_checklist?: ApiRecord
+  observed_behaviour?: ApiRecord
+  validation_status?: string
+  risk_if_failed?: string
+  recommendation?: string
+  retest_status?: string
+  safety_notes?: string[]
+  linked_candidates?: string[]
+  linked_replay_plans?: string[]
+  linked_access_test_plans?: string[]
+  [key: string]: unknown
+}
+
+export interface BusinessLogicObservation {
+  observation_id?: string
+  review_plan_id?: string
+  observed_result?: string
+  observed_status_code?: number | null
+  observed_message_summary?: string
+  observed_workflow_effect?: string
+  evidence_summary?: string
+  redaction_status?: string
+  tester_notes?: string
+  [key: string]: unknown
+}
+
+export interface BusinessLogicRetest {
+  retest_id?: string
+  review_plan_id?: string
+  retest_status?: string
+  retest_observed_result?: string
+  retest_notes?: string
+  [key: string]: unknown
+}
+
+export interface BusinessLogicReviewResponse {
+  business_logic_workflow_candidates?: BusinessLogicWorkflowCandidate[]
+  business_logic_review_plans?: BusinessLogicReviewPlan[]
+  business_logic_review_plan?: BusinessLogicReviewPlan
+  business_logic_state_transition_map?: ApiRecord
+  business_logic_abuse_case_checklist?: ApiRecord
+  business_logic_observation?: BusinessLogicObservation
+  business_logic_observations?: BusinessLogicObservation[]
+  business_logic_retest?: BusinessLogicRetest
+  business_logic_retests?: BusinessLogicRetest[]
+  business_logic_report_template?: ApiRecord
+  business_logic_summary?: ApiRecord
+  [key: string]: unknown
+}
+
+export interface BusinessLogicCreateRequest {
+  workflow: string
+  endpoint: Record<string, unknown> | string
+  role?: Record<string, unknown> | string | null
+}
+
 export interface OWASPCategory {
   owasp_id?: string
   name?: string
