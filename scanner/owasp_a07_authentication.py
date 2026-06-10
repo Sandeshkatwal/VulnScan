@@ -17,6 +17,7 @@ from urllib.parse import parse_qsl, urlsplit
 
 from scanner.evidence import redact_nested
 from scanner.finding import create_finding, finding_to_dict
+from scanner.parameter_replay_planner import build_parameter_replay_summary
 from scanner.web_cookie_audit import parse_set_cookie_headers
 
 
@@ -155,6 +156,15 @@ def attach_a07_authentication(scan_result: dict[str, Any]) -> dict[str, Any]:
     if extra_evidence:
         payload["a07_authentication_evidence"] = list(payload.get("a07_authentication_evidence", [])) + extra_evidence
         payload["a07_authentication_summary"] = build_a07_summary(target=target, evidence=payload["a07_authentication_evidence"])
+    replay_plans = [plan for plan in scan_result.get("parameter_replay_plans") or [] if "A07" in (plan.get("related_owasp_categories") or [])]
+    if replay_plans:
+        replay_summary = build_parameter_replay_summary(replay_plans, scan_result.get("parameter_replay_observations") or [], scan_result.get("parameter_replay_retests") or [])
+        payload["a07_authentication_summary"].update(
+            {
+                "auth_parameter_review_plans_count": replay_summary.get("replay_plans_count", 0),
+                "session_replay_review_count": sum(1 for plan in replay_plans if plan.get("replay_intent") == "auth_session_review"),
+            }
+        )
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)

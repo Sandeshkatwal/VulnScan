@@ -16,6 +16,7 @@ from urllib.parse import parse_qsl, urlsplit
 
 from scanner.evidence import redact_nested
 from scanner.finding import create_finding, finding_to_dict
+from scanner.parameter_replay_planner import build_parameter_replay_summary
 from scanner.reflection_analysis import observe_safe_reflection
 
 
@@ -231,6 +232,17 @@ def attach_a05_injection(scan_result: dict[str, Any], *, safe_reflection: bool =
         request_delay=request_delay,
     )
     findings = list(payload.get("findings", []))
+    replay_plans = [plan for plan in scan_result.get("parameter_replay_plans") or [] if "A05" in (plan.get("related_owasp_categories") or [])]
+    replay_observations = scan_result.get("parameter_replay_observations") or []
+    if replay_plans or replay_observations:
+        replay_summary = build_parameter_replay_summary(replay_plans, replay_observations, scan_result.get("parameter_replay_retests") or [])
+        payload["a05_injection_summary"].update(
+            {
+                "replay_plans_count": replay_summary.get("replay_plans_count", 0),
+                "reflection_review_plans_count": sum(1 for plan in replay_plans if plan.get("replay_intent") in {"reflection_context_review", "input_validation_review"}),
+                "manually_verified_reflection_issue_count": sum(1 for item in replay_observations if item.get("observed_access_result") == "reflected_with_context_risk"),
+            }
+        )
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)
     scan_result.update(payload_without_findings)

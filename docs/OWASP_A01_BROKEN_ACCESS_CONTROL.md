@@ -75,3 +75,6 @@ A01 evidence can now be enriched with Role and Permission Mapping context: role 
 ## Version 21.3 Access Control Manual Test Planner
 
 A01 candidates can now be converted into A01 Manual Validation Plan records with Expected Behaviour, Observed Behaviour, Evidence Checklist, Retest Workflow, and report-ready A01 templates. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
+## Replay Plan Integration
+
+A01 summaries include Safe Authenticated Parameter Replay Planner counts when Replay Plans and manual observations are present: replay plan count, observation count, manually verified issue count, and manually verified secure count.

@@ -38,6 +38,24 @@ from scanner.access_control_test_planner import (
     save_access_test_package,
     save_report_template_markdown,
 )
+from scanner.parameter_replay_planner import (
+    ParameterReplayPlannerError,
+    build_parameter_replay_summary,
+    build_report_ready_replay_template,
+    build_replay_plan_from_parameter,
+    build_replay_plans_from_candidates,
+    find_replay_plan,
+    load_replay_plans,
+    package_from_plans,
+    render_report_template_markdown as render_replay_report_template_markdown,
+    save_replay_plan_package,
+)
+from scanner.parameter_review_workflow import (
+    ParameterReviewWorkflowError,
+    build_parameter_replay_observation,
+    build_parameter_replay_retest,
+    save_replay_report_markdown,
+)
 from scanner.permission_matrix import PermissionMatrixError, load_permission_matrix, permission_matrix_summary
 from scanner.role_mapping_assistant import build_manual_plan, build_role_mapping_from_files
 from scanner.role_profiles import RoleProfileError, find_role, load_role_profiles, role_profiles_summary
@@ -234,6 +252,7 @@ sbom_app = typer.Typer(help="Analyse local SBOM files and build A03 software sup
 auth_app = typer.Typer(help="Manage redacted Authenticated Web Assessment Session Profiles.")
 roles_app = typer.Typer(help="Role and Permission Mapping planning commands.")
 access_tests_app = typer.Typer(help="Access Control Manual Test Planner commands.")
+replay_plans_app = typer.Typer(help="Safe Authenticated Parameter Replay Planner commands.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -245,6 +264,7 @@ app.add_typer(sbom_app, name="sbom")
 app.add_typer(auth_app, name="auth")
 app.add_typer(roles_app, name="roles")
 app.add_typer(access_tests_app, name="access-tests")
+app.add_typer(replay_plans_app, name="replay-plans")
 console = Console()
 
 
@@ -728,6 +748,158 @@ def access_tests_retest_command(
         table.add_column("Field")
         table.add_column("Value")
         for key in ("retest_id", "test_plan_id", "retest_status", "retest_notes", "retested_at"):
+            table.add_row(key, str(retest.get(key) or ""))
+        console.print(table)
+
+
+@replay_plans_app.command("list")
+def replay_plans_list_command(
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="Replay Plan file under data/parameter_replay.")] = Path("data") / "parameter_replay" / "sample_replay_plan.json",
+) -> None:
+    """List Safe Authenticated Parameter Replay Planner records."""
+    try:
+        package = load_replay_plans(plans_file)
+    except ParameterReplayPlannerError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_replay_plans(package.get("parameter_replay_plans") or [])
+    console.print(f"[bold]Replay Plans:[/bold] {package.get('parameter_replay_summary', {}).get('replay_plans_count', 0)}")
+    console.print("[yellow]No Automatic Replay. Local planning records only.[/yellow]")
+
+
+@replay_plans_app.command("create")
+def replay_plans_create_command(
+    endpoint: Annotated[str, typer.Option("--endpoint", help="Endpoint URL to create a Replay Plan for.")],
+    parameter: Annotated[str, typer.Option("--parameter", help="Parameter name only.")],
+    intent: Annotated[str, typer.Option("--intent", help="Replay intent.")] = "manual_review",
+    role: Annotated[str, typer.Option("--role", help="Safe role label.")] = "",
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON planner report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML planner report.")] = False,
+) -> None:
+    """Create one Replay Plan and Redacted Request Template."""
+    try:
+        plan = build_replay_plan_from_parameter({"parameter_name": parameter, "replay_intent": intent}, {"url": endpoint, "method": "GET"}, {"role_label": role})
+        package = package_from_plans([plan])
+        json_path, html_path = save_replay_plan_package(package, json_report=json_report, html_report=html_report)
+    except ParameterReplayPlannerError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_replay_plans(package.get("parameter_replay_plans") or [])
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+    console.print("[yellow]Manual Validation Required. No replay request was made.[/yellow]")
+
+
+@replay_plans_app.command("generate")
+def replay_plans_generate_command(
+    parameters_file: Annotated[Path, typer.Option("--parameters-file", help="Local parameter results JSON file.")],
+    endpoints_file: Annotated[Path, typer.Option("--endpoints-file", help="Local endpoints file or endpoint JSON file.")] = Path("data") / "endpoints" / "sample_urls.txt",
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON planner report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML planner report.")] = False,
+) -> None:
+    """Generate Replay Plans from local parameter and endpoint metadata."""
+    try:
+        parameter_payload = json.loads(Path(parameters_file).read_text(encoding="utf-8"))
+        parameters = parameter_payload.get("parameter_results") if isinstance(parameter_payload, dict) else parameter_payload
+        endpoints = _load_replay_endpoint_file(endpoints_file)
+        plans = build_replay_plans_from_candidates(parameters or [], endpoints)
+        package = package_from_plans(plans)
+        json_path, html_path = save_replay_plan_package(package, json_report=json_report, html_report=html_report)
+    except (OSError, json.JSONDecodeError, EndpointDiscoveryError, ParameterReplayPlannerError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_replay_plans(package.get("parameter_replay_plans") or [])
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+    console.print("[yellow]No live requests were made.[/yellow]")
+
+
+@replay_plans_app.command("template")
+def replay_plans_template_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Replay Plan ID.")],
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="Replay Plan file under data/parameter_replay.")] = Path("data") / "parameter_replay" / "sample_replay_plan.json",
+) -> None:
+    """Show the Redacted Request Template for a Replay Plan."""
+    try:
+        package = load_replay_plans(plans_file)
+        plan = find_replay_plan(package.get("parameter_replay_plans") or [], plan_id)
+        template_id = str(plan.get("safe_request_template_id") or "")
+        template = next((item for item in package.get("redacted_request_templates") or [] if str(item.get("template_id") or "") == template_id), {})
+    except ParameterReplayPlannerError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data={"redacted_request_template": template})
+
+
+@replay_plans_app.command("observe")
+def replay_plans_observe_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Replay Plan ID.")],
+    observed_result: Annotated[str, typer.Option("--observed-result", help="Observed access result.")],
+    status_code: Annotated[int | None, typer.Option("--status-code", help="Observed status code, if safe to record.")] = None,
+    summary: Annotated[str, typer.Option("--summary", help="Redacted Observed Behaviour summary.")] = "",
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Record manual Observed Behaviour for a Replay Plan."""
+    try:
+        observation = build_parameter_replay_observation(replay_plan_id=plan_id, observed_access_result=observed_result, observed_status_code=status_code, observed_message_summary=summary, evidence_summary=summary)
+    except (ParameterReviewWorkflowError, RoleProfileError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if json_report:
+        console.print_json(data={"parameter_replay_observation": observation})
+    else:
+        table = Table(title="Observed Behaviour")
+        table.add_column("Field")
+        table.add_column("Value")
+        for key in ("observation_id", "replay_plan_id", "observed_access_result", "observed_status_code", "observed_message_summary", "redaction_status"):
+            table.add_row(key, str(observation.get(key) or ""))
+        console.print(table)
+
+
+@replay_plans_app.command("report")
+def replay_plans_report_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Replay Plan ID.")],
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="Replay Plan file under data/parameter_replay.")] = Path("data") / "parameter_replay" / "sample_replay_plan.json",
+    markdown: Annotated[bool, typer.Option("--markdown", help="Write Markdown report template.")] = False,
+) -> None:
+    """Generate report-ready Replay Plan text."""
+    try:
+        plan = find_replay_plan(load_replay_plans(plans_file).get("parameter_replay_plans") or [], plan_id)
+        template = build_report_ready_replay_template(plan)
+        markdown_text = render_replay_report_template_markdown(template)
+        path = save_replay_report_markdown(template, plan_id) if markdown else None
+    except ParameterReplayPlannerError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(markdown_text)
+    if path:
+        console.print(f"[bold]Markdown report:[/bold] {path}")
+
+
+@replay_plans_app.command("retest")
+def replay_plans_retest_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="Replay Plan ID.")],
+    status: Annotated[str, typer.Option("--status", help="Retest Workflow status.")],
+    notes: Annotated[str, typer.Option("--notes", help="Retest notes.")] = "",
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Record Retest Workflow status for a Replay Plan."""
+    try:
+        retest = build_parameter_replay_retest(replay_plan_id=plan_id, retest_status=status, retest_notes=notes)
+    except (ParameterReviewWorkflowError, RoleProfileError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if json_report:
+        console.print_json(data={"parameter_replay_retest": retest})
+    else:
+        table = Table(title="Retest Workflow")
+        table.add_column("Field")
+        table.add_column("Value")
+        for key in ("retest_id", "replay_plan_id", "retest_status", "retest_notes", "retested_at"):
             table.add_row(key, str(retest.get(key) or ""))
         console.print(table)
 
@@ -6520,6 +6692,36 @@ def _print_access_test_detail(plan: dict[str, Any]) -> None:
     table.add_row("manual_steps", "\n".join(str(step) for step in plan.get("manual_steps") or []))
     table.add_row("safety_notes", "\n".join(str(note) for note in plan.get("safety_notes") or []))
     console.print(table)
+
+
+def _print_replay_plans(plans: list[dict[str, Any]]) -> None:
+    table = Table(title="Safe Authenticated Parameter Replay Planner")
+    table.add_column("Plan ID")
+    table.add_column("Endpoint")
+    table.add_column("Parameter")
+    table.add_column("Intent")
+    table.add_column("Role")
+    table.add_column("OWASP")
+    table.add_column("Status")
+    for plan in plans:
+        table.add_row(
+            str(plan.get("replay_plan_id") or ""),
+            str(plan.get("affected_url") or ""),
+            str(plan.get("parameter_name") or ""),
+            str(plan.get("replay_intent") or ""),
+            str(plan.get("role_label") or ""),
+            ", ".join(str(item) for item in plan.get("related_owasp_categories") or []),
+            str(plan.get("validation_status") or ""),
+        )
+    console.print(table)
+
+
+def _load_replay_endpoint_file(path: Path) -> list[dict[str, Any]]:
+    if path.suffix.lower() == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        endpoints = payload.get("endpoint_results") if isinstance(payload, dict) else payload
+        return list(endpoints or [])
+    return [{"url": url, "normalised_url": url, "method": "GET"} for url in load_url_list(path)]
 
 
 if __name__ == "__main__":

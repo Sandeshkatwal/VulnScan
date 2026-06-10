@@ -34,6 +34,7 @@ import { PortfolioFooter } from './components/PortfolioFooter'
 import { PortfolioModeBanner } from './components/PortfolioModeBanner'
 import { ProductHero } from './components/ProductHero'
 import { OWASPMappingView } from './components/OWASPMappingView'
+import { ParameterReplayPlannerView } from './components/ParameterReplayPlannerView'
 import { ReportsView } from './components/ReportsView'
 import { RemediationView } from './components/RemediationView'
 import { RolePermissionMappingView } from './components/RolePermissionMappingView'
@@ -63,7 +64,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -112,6 +113,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'endpoint-discovery', label: 'Endpoint Intelligence' },
   { id: 'safe-validation', label: 'Safe Validation' },
   { id: 'authenticated-assessment', label: 'Authenticated Assessment' },
+  { id: 'parameter-replay-planner', label: 'Parameter Replay Planner' },
   { id: 'a01-manual-planner', label: 'A01 Manual Test Planner' },
   { id: 'submission-tracker', label: 'Submission Tracker' },
   { id: 'duplicates', label: 'Duplicate Detection' },
@@ -175,6 +177,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'authenticated-assessment': {
     title: 'Authenticated Assessment',
     description: 'Redacted Session Profile, Authentication Context, Authenticated Scope, and Auth-Required Endpoint classification.',
+  },
+  'parameter-replay-planner': {
+    title: 'Parameter Replay Planner',
+    description: 'Safe Authenticated Parameter Replay Planner for Replay Plans, Redacted Request Templates, Expected Behaviour, Observed Behaviour, and Retest Workflow.',
   },
   'a01-manual-planner': {
     title: 'A01 Manual Test Planner',
@@ -805,6 +811,10 @@ function App() {
     return <A01ManualTestPlannerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
   }
 
+  function renderParameterReplayPlanner() {
+    return <ParameterReplayPlannerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+  }
+
   function renderSubmissionTracker() {
     return <SubmissionTrackerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -861,6 +871,7 @@ function App() {
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
     if (currentSection === 'safe-validation') return renderSafeValidation()
     if (currentSection === 'authenticated-assessment') return renderAuthenticatedAssessment()
+    if (currentSection === 'parameter-replay-planner') return renderParameterReplayPlanner()
     if (currentSection === 'a01-manual-planner') return renderA01ManualPlanner()
     if (currentSection === 'submission-tracker') return renderSubmissionTracker()
     if (currentSection === 'duplicates') return renderDuplicates()

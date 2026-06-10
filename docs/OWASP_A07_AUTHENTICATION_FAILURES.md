@@ -74,3 +74,6 @@ Version 20.9 reporting note: A07 evidence is consolidated into the unified OWASP
 
 Version 21.0 note: A07 can use redacted Session Profile cookie names and expiry hints to support manual session management review. VulScan does not test session fixation, expiry, MFA, or login workflows automatically.
 Version 21.1 Authenticated Crawl note: A07 evidence can include Session Expiry Indicators, login redirect detection, Auth-Required Endpoint Discovery, and redacted session cookie-name context. Session duration and fixation testing remain manual.
+## Replay Plan Integration
+
+A07 summaries include auth/session parameter review plan counts when Replay Plans cover CSRF, state, nonce, token, or session parameter names. Values are never stored.

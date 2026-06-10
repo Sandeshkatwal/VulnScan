@@ -187,3 +187,6 @@ The dashboard includes Role & Permission Mapping under Authenticated Assessment.
 ## Version 21.3 A01 Manual Test Planner
 
 The dashboard includes an A01 Manual Test Planner section with Test Plan Summary, Test Plan Table, Plan Detail, Evidence Checklist, Expected vs Observed, Retest Workflow, and Report Template panels. It does not expose credential fields or live testing buttons.
+## Parameter Replay Planner
+
+The dashboard includes a Parameter Replay Planner section under authenticated assessment workflows. It displays Replay Plans, Redacted Request Templates, Expected Behaviour, Observed Behaviour, Evidence Checklist, Retest Workflow, and report template text. It has no send request or replay controls and no credential, payload, raw token, or raw cookie fields.

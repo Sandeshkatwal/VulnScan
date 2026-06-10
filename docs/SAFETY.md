@@ -45,3 +45,8 @@ Role and Permission Mapping is for authorised access-control planning and docume
 ## Version 21.3 Access Control Manual Test Planner Safety
 
 The Access Control Manual Test Planner creates local workflow and documentation records only. Use Authorised Test Accounts Only. Planner commands and API endpoints do not perform live access-control requests, form submission, state-changing actions, or account-to-account requests.
+## Safe Authenticated Parameter Replay Planner
+
+Replay Plans are manual templates only. VulScan does not replay requests, mutate parameters, submit forms, send payloads, perform automatic authorization testing, perform automatic privilege changes, or compare live accounts automatically.
+
+Redacted Request Templates store names and schemas only: header names, cookie names, parameter names, path placeholders, form field names, and JSON body schema. Raw credentials, raw cookies, bearer tokens, passwords, CSRF values, nonce values, and session tokens must not be stored.

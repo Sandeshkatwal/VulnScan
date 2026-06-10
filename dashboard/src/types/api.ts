@@ -912,6 +912,115 @@ export interface AccessTestObserveRequest {
   tester_notes?: string
 }
 
+export interface ParameterReplayPlan {
+  replay_plan_id?: string
+  title?: string
+  target?: string
+  affected_url?: string
+  normalised_url?: string
+  method?: string
+  endpoint_category?: string
+  parameter_name?: string
+  parameter_location?: string
+  parameter_type?: string
+  related_owasp_categories?: string[]
+  role_label?: string
+  expected_permission?: string
+  replay_intent?: string
+  manual_steps?: string[]
+  safe_request_template_id?: string
+  expected_secure_behaviour?: string
+  observed_behaviour?: ApiRecord
+  validation_status?: string
+  evidence_checklist?: ApiRecord
+  retest_status?: string
+  safety_notes?: string[]
+  [key: string]: unknown
+}
+
+export interface RedactedRequestTemplate {
+  template_id?: string
+  title?: string
+  method?: string
+  url_template?: string
+  normalised_url?: string
+  headers_redacted?: Record<string, string>
+  cookies_redacted?: string[]
+  query_parameters?: Record<string, string[]>
+  path_parameters?: Record<string, string>
+  form_fields?: Record<string, string>
+  json_body_schema?: ApiRecord
+  sensitive_fields_redacted?: string[]
+  auth_context_summary?: ApiRecord
+  boundary_status?: string
+  blocked_by_default?: boolean
+  state_changing?: boolean
+  destructive?: boolean
+  safe_to_review_manually?: boolean
+  warnings?: string[]
+  [key: string]: unknown
+}
+
+export interface ParameterReplayObservation {
+  observation_id?: string
+  replay_plan_id?: string
+  observed_access_result?: string
+  observed_status_code?: number | null
+  observed_message_summary?: string
+  observed_parameter_effect?: string
+  evidence_summary?: string
+  evidence_file_path?: string
+  redaction_status?: string
+  tester_notes?: string
+  observed_at?: string
+  [key: string]: unknown
+}
+
+export interface ParameterReplayRetest {
+  retest_id?: string
+  replay_plan_id?: string
+  original_observed_result?: string
+  remediation_summary?: string
+  retest_steps?: string[]
+  retest_observed_result?: string
+  retest_status?: string
+  retest_notes?: string
+  retested_at?: string
+  [key: string]: unknown
+}
+
+export interface ParameterReplayPlannerResponse {
+  parameter_replay_plans?: ParameterReplayPlan[]
+  parameter_replay_plan?: ParameterReplayPlan
+  redacted_request_templates?: RedactedRequestTemplate[]
+  redacted_request_template?: RedactedRequestTemplate
+  parameter_replay_observations?: ParameterReplayObservation[]
+  parameter_replay_observation?: ParameterReplayObservation
+  parameter_replay_retests?: ParameterReplayRetest[]
+  parameter_replay_retest?: ParameterReplayRetest
+  parameter_replay_summary?: ApiRecord
+  parameter_replay_report_template?: ApiRecord
+  [key: string]: unknown
+}
+
+export interface ReplayPlanCreateRequest {
+  endpoint: Record<string, unknown> | string
+  parameter: Record<string, unknown> | string
+  intent?: string
+  role?: Record<string, unknown> | string | null
+}
+
+export interface ReplayPlanObserveRequest {
+  replay_plan_id: string
+  observed_access_result: string
+  observed_status_code?: number | null
+  observed_message_summary?: string
+  observed_parameter_effect?: string
+  evidence_summary?: string
+  evidence_file_path?: string
+  tester_notes?: string
+}
+
 export interface OWASPCategory {
   owasp_id?: string
   name?: string

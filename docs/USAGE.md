@@ -938,3 +938,5 @@ Use `python -m scanner.main roles ...` to list Role Profiles, inspect the Access
 ## Version 21.3 Access Control Manual Test Planner
 
 Use `python -m scanner.main access-tests ...` to list A01 Manual Validation Plans, create endpoint-based plans, record Observed Behaviour, generate report-ready templates, and track Retest Workflow status. These commands operate on local planning records only. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
+
+Version 21.4 adds the Safe Authenticated Parameter Replay Planner. Use `python -m scanner.main replay-plans ...` to create Replay Plans, Redacted Request Templates, Parameter Review Plans, Expected Behaviour and Observed Behaviour records, report-ready templates, and Retest Workflow records. These commands never make live replay requests. See `docs/SAFE_PARAMETER_REPLAY_PLANNER.md`.

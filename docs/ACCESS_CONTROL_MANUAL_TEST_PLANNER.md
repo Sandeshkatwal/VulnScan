@@ -100,3 +100,6 @@ The planner records workflow and evidence documentation only. Manual validation 
 ## Future Work
 
 Future versions can add richer local evidence attachment management and submission workflow links while preserving the manual-only safety model.
+## Replay Plan Integration
+
+Version 21.4 adds the Safe Authenticated Parameter Replay Planner. Object identifier, tenant boundary, and role/permission Replay Plans can enrich A01 manual validation records with Redacted Request Templates and Expected Behaviour/Observed Behaviour workflow data. Replay Plans do not make live requests.

@@ -54,3 +54,6 @@ Authenticated Crawl now includes a role endpoint map using the Session Profile r
 ## Version 21.3 Access Control Manual Test Planner
 
 Authenticated Crawl endpoint metadata can be used as input for A01 Manual Validation Plan records. The planner creates documentation only and does not perform live access-control requests. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
+## Replay Planning Integration
+
+Authenticated Crawl results can provide endpoint and auth-required context for Version 21.4 Replay Plans. The Safe Authenticated Parameter Replay Planner still creates local manual records only and performs No Automatic Replay.

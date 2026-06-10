@@ -72,3 +72,6 @@ Dashboard wording uses candidate, indicator, evidence, confidence, manual valida
 
 Review output encoding, server-side input validation, parameterised queries, template rendering context, API filter/sort handling, and command/path/template-like parameters. Confirm impact manually before reporting.
 Version 20.9 reporting note: A05 evidence remains indicator-based unless manual confirmation exists. The unified OWASP Assessment report includes manual validation checklist items for output encoding, server-side validation, query parameterisation, and reflection context review.
+## Replay Plan Integration
+
+A05 summaries include Replay Plan counts for reflection and input validation review when present. `reflected_with_context_risk` is treated as manually recorded issue evidence; candidate Replay Plans remain Manual Validation Required.

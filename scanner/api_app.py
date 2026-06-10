@@ -46,6 +46,8 @@ from scanner.api_access_control_planner import api_create_access_test, api_gener
 from scanner.permission_matrix import PermissionMatrixError
 from scanner.role_profiles import RoleProfileError
 from scanner.access_control_test_planner import AccessControlTestPlannerError
+from scanner.parameter_replay_planner import ParameterReplayPlannerError
+from scanner.parameter_review_workflow import ParameterReviewWorkflowError
 from scanner.a01_manual_tests import A01ManualTestError
 from scanner.access_control_retest import AccessControlRetestError
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
@@ -68,7 +70,8 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_parameter_replay_planner import api_create_replay_plan, api_generate_replay_plans, api_get_replay_plan, api_record_replay_observation, api_record_replay_retest, api_replay_report_template
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -702,6 +705,103 @@ def create_app(
             return api_report_template(request.plan, request.observation, request.retest)
         except AccessControlTestPlannerError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/replay-plans/create",
+        dependencies=[Depends(require_api_key)],
+        tags=["Safe Authenticated Parameter Replay Planner"],
+        summary="Create one Replay Plan",
+        description="Creates a local Replay Plan and Redacted Request Template. No live request is made and no credential fields are accepted.",
+        responses=ERROR_RESPONSES,
+    )
+    def create_replay_plan(request: ReplayPlanCreateRequest) -> dict[str, Any]:
+        try:
+            return api_create_replay_plan(request.endpoint, request.parameter, request.intent, request.role)
+        except (RoleProfileError, ParameterReplayPlannerError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/replay-plans/generate",
+        dependencies=[Depends(require_api_key)],
+        tags=["Safe Authenticated Parameter Replay Planner"],
+        summary="Generate Replay Plans",
+        description="Generates local Replay Plans from supplied parameter, endpoint, OWASP, and role metadata. No endpoints are called.",
+        responses=ERROR_RESPONSES,
+    )
+    def generate_replay_plans(request: ReplayPlanGenerateRequest) -> dict[str, Any]:
+        try:
+            return api_generate_replay_plans(request.parameter_results, request.endpoint_results, request.a01_evidence, request.a05_evidence, request.a07_evidence, request.roles)
+        except (RoleProfileError, ParameterReplayPlannerError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/replay-plans/{plan_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Safe Authenticated Parameter Replay Planner"],
+        summary="Get Replay Plan",
+        responses=ERROR_RESPONSES,
+    )
+    def get_replay_plan(plan_id: str) -> dict[str, Any]:
+        try:
+            return api_get_replay_plan(plan_id)
+        except ParameterReplayPlannerError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post(
+        "/replay-plans/observe",
+        dependencies=[Depends(require_api_key)],
+        tags=["Safe Authenticated Parameter Replay Planner"],
+        summary="Record manual replay observation",
+        description="Records redacted manual Observed Behaviour. Raw responses, cookies, tokens, and credentials are not accepted.",
+        responses=ERROR_RESPONSES,
+    )
+    def observe_replay_plan(request: ReplayPlanObserveRequest) -> dict[str, Any]:
+        try:
+            return api_record_replay_observation(
+                request.replay_plan_id,
+                request.observed_access_result,
+                request.observed_status_code,
+                request.observed_message_summary,
+                request.observed_parameter_effect,
+                request.evidence_summary,
+                request.evidence_file_path,
+                request.tester_notes,
+            )
+        except (RoleProfileError, ParameterReviewWorkflowError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/replay-plans/retest",
+        dependencies=[Depends(require_api_key)],
+        tags=["Safe Authenticated Parameter Replay Planner"],
+        summary="Record Replay Plan retest",
+        description="Records local Retest Workflow metadata only. No live request is made.",
+        responses=ERROR_RESPONSES,
+    )
+    def retest_replay_plan(request: ReplayPlanRetestRequest) -> dict[str, Any]:
+        try:
+            return api_record_replay_retest(
+                request.replay_plan_id,
+                request.retest_status,
+                request.original_observed_result,
+                request.remediation_summary,
+                request.retest_steps,
+                request.retest_observed_result,
+                request.retest_notes,
+            )
+        except (RoleProfileError, ParameterReviewWorkflowError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/replay-plans/report-template",
+        dependencies=[Depends(require_api_key)],
+        tags=["Safe Authenticated Parameter Replay Planner"],
+        summary="Build report-ready Replay Plan template",
+        description="Returns candidate wording unless manual Observed Behaviour confirms unexpectedly_allowed or reflected_with_context_risk.",
+        responses=ERROR_RESPONSES,
+    )
+    def replay_plan_report_template(request: ReplayPlanReportTemplateRequest) -> dict[str, Any]:
+        return api_replay_report_template(request.plan, request.observation, request.retest)
 
     @app.post(
         "/endpoints/analyse",

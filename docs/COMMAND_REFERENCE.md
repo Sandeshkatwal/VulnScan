@@ -229,6 +229,18 @@ Role commands perform Role and Permission Mapping, Access-Control Matrix summari
 .\.venv311\Scripts\python.exe -m scanner.main access-tests observe --plan-id demo-plan-001 --observed-result denied_as_expected --status-code 403 --summary "Access denied for standard_user as expected" --json
 .\.venv311\Scripts\python.exe -m scanner.main access-tests report --plan-id demo-plan-001 --plans-file data\access_control_tests\sample_a01_test_plan.json --markdown
 .\.venv311\Scripts\python.exe -m scanner.main access-tests retest --plan-id demo-plan-001 --status passed --notes "Access remains denied after remediation" --json
+
+## Safe Authenticated Parameter Replay Planner
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans list --plans-file data\parameter_replay\sample_replay_plan.json
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans create --endpoint "http://127.0.0.1:8000/users/123?user_id=123" --parameter user_id --intent object_ownership_review --role standard_user --json --html
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans generate --parameters-file reports\latest_parameter_results.json --endpoints-file data\endpoints\sample_urls.txt --json --html
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans template --plan-id demo-replay-001 --plans-file data\parameter_replay\sample_replay_plan.json
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans observe --plan-id demo-replay-001 --observed-result denied_as_expected --status-code 403 --summary "Access denied for standard_user as expected" --json
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans report --plan-id demo-replay-001 --plans-file data\parameter_replay\sample_replay_plan.json --markdown
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans retest --plan-id demo-replay-001 --status passed --notes "Parameter access remains denied after remediation" --json
+```
 ```
 
 Access test commands create, update, and read local Access Control Manual Test Planner records only.

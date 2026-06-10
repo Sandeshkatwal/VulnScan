@@ -21,6 +21,8 @@ VulScan is a local platform for authorised security assessment and vulnerability
 
 The project exists to show how scanner output can become a practical security workflow instead of a raw list of findings. It stores results locally, enriches findings with risk and prioritisation context, produces JSON/HTML reports, exposes a local FastAPI API, and presents the workflow in a React dashboard.
 
+Version 21.4 adds a Safe Authenticated Parameter Replay Planner for manual validation planning only. It creates Replay Plans, Redacted Request Templates, Parameter Review Plans, Expected Behaviour/Observed Behaviour records, evidence checklists, and Retest Workflow records. It performs No Automatic Replay and stores no raw credentials, cookies, bearer tokens, CSRF values, or session tokens.
+
 VulScan is intended for security learners, junior security engineers, portfolio reviewers, and authorised internal testing labs. The Bug Intelligence Engine supports responsible disclosure, bug bounty workflow compatibility, and internal security testing through Program Scope, Recon Intelligence, Endpoint Intelligence, OWASP Indicator Mapping, Safe Validation, Evidence Capture, Security Finding Reports, Submission and Retest Tracker, Duplicate Detection, and Performance Metrics.
 
 Version 21.0 adds Authenticated Web Assessment foundation: redacted Session Profiles, Authentication Context, Authenticated Scope boundaries, Auth-Required Endpoint classification, and Role/Permission Notes. It does not perform login automation, unauthorised authentication testing, or state-changing authenticated requests. See `docs/AUTHENTICATED_ASSESSMENT.md`.

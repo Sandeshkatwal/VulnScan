@@ -114,3 +114,6 @@ Authenticated assessment results can now be linked to safe Role Profiles for Rol
 ## Version 21.3 Access Control Manual Test Planner
 
 Authenticated assessment metadata can feed A01 Manual Validation Plan records for manual Expected Behaviour, Observed Behaviour, Evidence Checklist, and Retest Workflow documentation. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
+## Safe Authenticated Parameter Replay Planner
+
+Version 21.4 adds Replay Plans and Redacted Request Templates for authenticated manual validation planning. The planner uses Redacted Auth Context only and does not replay requests, mutate parameters, submit forms, or perform automatic authorization testing. See `docs/SAFE_PARAMETER_REPLAY_PLANNER.md`.

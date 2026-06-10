@@ -127,3 +127,4 @@ The OWASP Assessment workflow can include Role and Permission Mapping outputs fo
 ## Version 21.3 Access Control Manual Test Planner
 
 OWASP Assessment outputs can include Access Control Manual Test Planner records for A01 Manual Validation Plan workflow, evidence documentation, and Retest Workflow tracking. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
+Version 21.4 adds Safe Authenticated Parameter Replay Planner support for manual validation planning across A01, A05, A07, and A08-related parameter contexts. Replay Plans are local records only and perform No Automatic Replay.

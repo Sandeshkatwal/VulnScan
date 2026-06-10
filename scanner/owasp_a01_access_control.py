@@ -26,6 +26,7 @@ from scanner.access_control_candidates import (
 from scanner.evidence import redact_nested
 from scanner.finding import create_finding, finding_to_dict
 from scanner.access_control_test_planner import build_a01_manual_validation_summary
+from scanner.parameter_replay_planner import build_parameter_replay_summary
 
 
 A01_RULES_PATH = Path("data") / "owasp" / "a01" / "a01_rules.json"
@@ -138,6 +139,19 @@ def attach_a01_access_control(scan_result: dict[str, Any]) -> dict[str, Any]:
             if plan:
                 item["manual_test_plan_id"] = plan.get("test_plan_id")
                 item["validation_status"] = plan.get("validation_status") or item.get("validation_status") or "planned"
+    replay_plans = [plan for plan in scan_result.get("parameter_replay_plans") or [] if "A01" in (plan.get("related_owasp_categories") or [])]
+    replay_observations = scan_result.get("parameter_replay_observations") or []
+    replay_retests = scan_result.get("parameter_replay_retests") or []
+    if replay_plans or replay_observations or replay_retests:
+        replay_summary = build_parameter_replay_summary(replay_plans, replay_observations, replay_retests)
+        payload["a01_access_control_summary"].update(
+            {
+                "replay_plans_count": replay_summary.get("replay_plans_count", 0),
+                "replay_observations_count": len(replay_observations),
+                "replay_verified_issue_count": replay_summary.get("manually_verified_issue_count", 0),
+                "replay_verified_secure_count": replay_summary.get("manually_verified_secure_count", 0),
+            }
+        )
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)

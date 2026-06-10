@@ -689,6 +689,59 @@ class SafeValidationRequest(StrictApiModel):
     safe_active_confirm: bool = Field(True, description="Required explicit acknowledgement that checks are safe and authorised.", examples=[True])
 
 
+class ReplayPlanCreateRequest(StrictApiModel):
+    """Create one Safe Authenticated Parameter Replay Planner record. No live request is made."""
+
+    endpoint: dict[str, Any] | str = Field(..., description="Endpoint metadata or URL. Values are used for redacted planning only.", examples=["http://127.0.0.1:8000/users/123?user_id=123"])
+    parameter: dict[str, Any] | str = Field(..., description="Parameter metadata or parameter name. Parameter values are not required.", examples=["user_id"])
+    intent: str = Field("", max_length=128, description="Optional replay_intent override.", examples=["object_ownership_review"])
+    role: dict[str, Any] | str | None = Field(None, description="Safe role label or Role Profile metadata without credentials.", examples=["standard_user"])
+
+
+class ReplayPlanGenerateRequest(StrictApiModel):
+    """Generate Replay Plans from local/supplied parameter and endpoint metadata only."""
+
+    parameter_results: list[dict[str, Any]] = Field(default_factory=list, description="Parameter Intelligence candidates. Values are redacted or omitted.", examples=[[]])
+    endpoint_results: list[dict[str, Any]] = Field(default_factory=list, description="Endpoint/crawl candidates. Endpoints are not called.", examples=[[]])
+    a01_evidence: list[dict[str, Any]] = Field(default_factory=list, description="Optional A01 candidate evidence.", examples=[[]])
+    a05_evidence: list[dict[str, Any]] = Field(default_factory=list, description="Optional A05 candidate evidence.", examples=[[]])
+    a07_evidence: list[dict[str, Any]] = Field(default_factory=list, description="Optional A07 candidate evidence.", examples=[[]])
+    roles: list[dict[str, Any]] = Field(default_factory=list, description="Safe Role Profiles without credentials.", examples=[[]])
+
+
+class ReplayPlanObserveRequest(StrictApiModel):
+    """Record manual Observed Behaviour for a Replay Plan."""
+
+    replay_plan_id: str = Field(..., min_length=1, max_length=255)
+    observed_access_result: str = Field(..., max_length=128)
+    observed_status_code: int | None = Field(None, ge=100, le=599)
+    observed_message_summary: str = Field("", max_length=2000)
+    observed_parameter_effect: str = Field("", max_length=2000)
+    evidence_summary: str = Field("", max_length=2000)
+    evidence_file_path: str = Field("", max_length=1024)
+    tester_notes: str = Field("", max_length=2000)
+
+
+class ReplayPlanRetestRequest(StrictApiModel):
+    """Record Retest Workflow status for a Replay Plan."""
+
+    replay_plan_id: str = Field(..., min_length=1, max_length=255)
+    retest_status: str = Field(..., max_length=64)
+    original_observed_result: str = Field("", max_length=128)
+    remediation_summary: str = Field("", max_length=2000)
+    retest_steps: list[str] = Field(default_factory=list)
+    retest_observed_result: str = Field("", max_length=128)
+    retest_notes: str = Field("", max_length=2000)
+
+
+class ReplayPlanReportTemplateRequest(StrictApiModel):
+    """Generate report-ready text for a Replay Plan without confirming an issue automatically."""
+
+    plan: dict[str, Any] = Field(default_factory=dict)
+    observation: dict[str, Any] | None = Field(None)
+    retest: dict[str, Any] | None = Field(None)
+
+
 class SubmissionCreateRequest(StrictApiModel):
     """Create a local submission tracking record. Does not submit externally."""
 

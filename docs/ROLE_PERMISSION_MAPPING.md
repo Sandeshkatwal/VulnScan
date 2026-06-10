@@ -117,3 +117,6 @@ Future versions may add richer local import/export and evidence management workf
 ## Version 21.3 Access Control Manual Test Planner
 
 Role and Permission Mapping outputs can now feed A01 Manual Validation Plan records for Expected Behaviour, Observed Behaviour, Evidence Checklist, and Retest Workflow documentation. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
+## Replay Plan Integration
+
+Role labels and expected permissions can be used by Version 21.4 Replay Plans for role permission review. VulScan stores labels and planning metadata only. It does not perform automatic cross-account testing or automatic privilege changes.

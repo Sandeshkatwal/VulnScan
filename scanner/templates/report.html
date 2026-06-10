@@ -453,6 +453,64 @@
     </section>
     {% endif %}
 
+    {% set replay = report.get("parameter_replay_summary", {}) %}
+    {% if replay.get("enabled") %}
+    <section>
+      <h2>Safe Authenticated Parameter Replay Planner</h2>
+      <p><strong>Safety:</strong> Replay plans are manual templates only. VulScan does not replay requests, mutate parameters, send payloads, or perform auth bypass automatically.</p>
+      <div class="grid">
+        <div class="metric"><div class="label">Replay Plans</div><div class="value">{{ replay.get("replay_plans_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Verified Secure</div><div class="value">{{ replay.get("manually_verified_secure_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Verified Issue</div><div class="value">{{ replay.get("manually_verified_issue_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Retest Passed/Failed</div><div class="value">{{ replay.get("retest_passed_count", 0) }}/{{ replay.get("retest_failed_count", 0) }}</div></div>
+      </div>
+      {% if report.get("parameter_replay_plans") %}
+      <h3>Replay Plans</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Endpoint</th><th>Parameter</th><th>Intent</th><th>Role</th><th>OWASP</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for plan in report.get("parameter_replay_plans", [])[:30] %}
+          <tr><td>{{ plan.get("replay_plan_id") }}</td><td>{{ plan.get("affected_url") }}</td><td>{{ plan.get("parameter_name") }}</td><td>{{ plan.get("replay_intent") }}</td><td>{{ plan.get("role_label") }}</td><td>{{ plan.get("related_owasp_categories", []) | join(", ") }}</td><td>{{ plan.get("validation_status") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("redacted_request_templates") %}
+      <h3>Redacted Request Templates</h3>
+      <table>
+        <thead><tr><th>Template</th><th>Method</th><th>URL Template</th><th>Headers</th><th>Cookies</th><th>Flags</th></tr></thead>
+        <tbody>
+          {% for template in report.get("redacted_request_templates", [])[:20] %}
+          <tr><td>{{ template.get("template_id") }}</td><td>{{ template.get("method") }}</td><td>{{ template.get("url_template") }}</td><td>{{ template.get("headers_redacted", {}).keys() | list | join(", ") }}</td><td>{{ template.get("cookies_redacted", []) | join(", ") }}</td><td>state-changing={{ template.get("state_changing") }}, destructive={{ template.get("destructive") }}, blocked={{ template.get("blocked_by_default") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("parameter_replay_observations") %}
+      <h3>Expected vs Observed Behaviour</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Observed Result</th><th>Status Code</th><th>Summary</th><th>Redaction</th></tr></thead>
+        <tbody>
+          {% for observation in report.get("parameter_replay_observations", [])[:30] %}
+          <tr><td>{{ observation.get("replay_plan_id") }}</td><td>{{ observation.get("observed_access_result") }}</td><td>{{ observation.get("observed_status_code") }}</td><td>{{ observation.get("observed_message_summary") }}</td><td>{{ observation.get("redaction_status") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("parameter_replay_retests") %}
+      <h3>Retest Status</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Status</th><th>Observed Result</th><th>Notes</th></tr></thead>
+        <tbody>
+          {% for retest in report.get("parameter_replay_retests", [])[:30] %}
+          <tr><td>{{ retest.get("replay_plan_id") }}</td><td>{{ retest.get("retest_status") }}</td><td>{{ retest.get("retest_observed_result") }}</td><td>{{ retest.get("retest_notes") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>

@@ -60,6 +60,9 @@ import type {
   AccessTestCreateRequest,
   AccessTestObserveRequest,
   AccessTestPlannerResponse,
+  ParameterReplayPlannerResponse,
+  ReplayPlanCreateRequest,
+  ReplayPlanObserveRequest,
   OWASPMapRequest,
   OWASPMapResponse,
   RetestRecord,
@@ -405,6 +408,48 @@ export function buildAccessTestReportTemplate(payload: {
   retest?: Record<string, unknown> | null
 }): Promise<AccessTestPlannerResponse> {
   return request<AccessTestPlannerResponse>('/access-tests/report-template', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createReplayPlan(payload: ReplayPlanCreateRequest): Promise<ParameterReplayPlannerResponse> {
+  return request<ParameterReplayPlannerResponse>('/replay-plans/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function observeReplayPlan(payload: ReplayPlanObserveRequest): Promise<ParameterReplayPlannerResponse> {
+  return request<ParameterReplayPlannerResponse>('/replay-plans/observe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function retestReplayPlan(payload: {
+  replay_plan_id: string
+  retest_status: string
+  remediation_summary?: string
+  retest_observed_result?: string
+  retest_notes?: string
+}): Promise<ParameterReplayPlannerResponse> {
+  return request<ParameterReplayPlannerResponse>('/replay-plans/retest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function buildReplayPlanReportTemplate(payload: {
+  plan: Record<string, unknown>
+  observation?: Record<string, unknown> | null
+  retest?: Record<string, unknown> | null
+}): Promise<ParameterReplayPlannerResponse> {
+  return request<ParameterReplayPlannerResponse>('/replay-plans/report-template', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

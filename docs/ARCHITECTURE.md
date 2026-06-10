@@ -97,6 +97,7 @@ VulScan
 - `scanner.database`, `scanner.history`, `scanner.remediation`, `scanner.assets`, `scanner.exporter`: local SQLite storage, remediation records, asset inventory, and exports.
 - `scanner.api_app`, `scanner.api_runner`, `scanner.api_jobs`, `scanner.api_job_store`, `scanner.api_filters`, `scanner.api_reports`, `scanner.api_remediation`, `scanner.api_security`: local FastAPI API, persistent jobs, safe report access, filtering, and optional API key protection.
 - `scanner.report_json` and `scanner.report_html`: JSON and HTML report generation.
+- `scanner.parameter_replay_planner`, `scanner.request_template_builder`, `scanner.redacted_request_templates`, and `scanner.parameter_review_workflow`: Safe Authenticated Parameter Replay Planner, Redacted Request Templates, Expected Behaviour/Observed Behaviour records, evidence checklist, report-ready templates, and Retest Workflow records. This layer is local planning only and performs No Automatic Replay.
 
 ## Dashboard Modules
 
