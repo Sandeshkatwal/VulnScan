@@ -806,6 +806,46 @@ class BusinessLogicReportTemplateRequest(StrictApiModel):
     retest: dict[str, Any] | None = Field(None)
 
 
+class EvidenceCreateRequest(StrictApiModel):
+    """Create one Evidence Vault item. Raw secrets are redacted before save."""
+
+    title: str = Field(..., min_length=1, max_length=500)
+    evidence_type: str = Field("manual_observation", max_length=128)
+    source_module: str = Field("manual", max_length=128)
+    safe_summary: str = Field(..., min_length=1, max_length=4000)
+    related_target: str = Field("", max_length=512)
+    related_url: str = Field("", max_length=2048)
+    related_host: str = Field("", max_length=255)
+    related_owasp_categories: list[str] = Field(default_factory=list)
+    linked_finding_ids: list[str] = Field(default_factory=list)
+    linked_test_plan_ids: list[str] = Field(default_factory=list)
+    linked_replay_plan_ids: list[str] = Field(default_factory=list)
+    linked_business_logic_plan_ids: list[str] = Field(default_factory=list)
+    linked_submission_ids: list[str] = Field(default_factory=list)
+    severity_context: str = Field("", max_length=128)
+    confidence: str = Field("medium", max_length=64)
+    evidence_strength: str = Field("informational", max_length=128)
+    redacted_request_summary: str = Field("", max_length=4000)
+    redacted_response_summary: str = Field("", max_length=4000)
+    safe_observed_value: str = Field("", max_length=1000)
+    notes: str = Field("", max_length=2000)
+
+
+class EvidenceRedactCheckRequest(StrictApiModel):
+    text: str = Field(..., min_length=1, max_length=8000)
+
+
+class EvidenceLinkRequest(StrictApiModel):
+    link_type: str = Field(..., min_length=1, max_length=64)
+    linked_id: str = Field(..., min_length=1, max_length=255)
+
+
+class EvidenceExportRequest(StrictApiModel):
+    evidence_ids: list[str] = Field(default_factory=list)
+    markdown: bool = Field(False)
+    json_export: bool = Field(True, alias="json")
+
+
 class SubmissionCreateRequest(StrictApiModel):
     """Create a local submission tracking record. Does not submit externally."""
 

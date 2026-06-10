@@ -60,3 +60,6 @@ Authenticated Crawl results can provide endpoint and auth-required context for V
 ## Business Logic Review Integration
 
 Authenticated Crawl results can provide discovered workflow endpoints for Version 21.5 Business Logic Review. The assistant creates Workflow Review Plans and State Transition Review documentation only. It does not execute checkout, payment, approval, coupon, rate-limit, or other state-changing workflows automatically.
+## Evidence Vault Integration
+
+Authenticated Crawl results can be converted into Evidence Vault items using safe fields only. Raw auth headers, cookies, tokens, and full sensitive response bodies are not stored.

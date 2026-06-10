@@ -571,6 +571,32 @@
     </section>
     {% endif %}
 
+    {% set evidence_quality = report.get("evidence_quality_summary", {}) %}
+    {% if evidence_quality.get("enabled") %}
+    <section>
+      <h2>Evidence Vault Summary</h2>
+      <p><strong>Safety:</strong> Evidence Vault stores Redacted Evidence summaries only and blocks export if Secret Detection or Redaction Quality Controls fail.</p>
+      {% set evidence_redaction = report.get("evidence_redaction_summary", {}) %}
+      <div class="grid">
+        <div class="metric"><div class="label">Evidence Items</div><div class="value">{{ evidence_quality.get("total_evidence", 0) }}</div></div>
+        <div class="metric"><div class="label">Average Quality</div><div class="value">{{ evidence_quality.get("average_evidence_quality_score", 0) }}</div></div>
+        <div class="metric"><div class="label">Passed Redaction</div><div class="value">{{ evidence_redaction.get("passed_redaction", 0) }}</div></div>
+        <div class="metric"><div class="label">Blocked Exports</div><div class="value">{{ report.get("blocked_evidence_export_count", 0) }}</div></div>
+      </div>
+      {% if report.get("evidence_vault_items") %}
+      <h3>Report Evidence Linking</h3>
+      <table>
+        <thead><tr><th>Evidence ID</th><th>Title</th><th>Type</th><th>OWASP</th><th>Strength</th><th>Redaction</th><th>Quality</th><th>Safe Summary</th></tr></thead>
+        <tbody>
+          {% for item in report.get("evidence_vault_items", [])[:30] %}
+          <tr><td>{{ item.get("evidence_id") }}</td><td>{{ item.get("title") }}</td><td>{{ item.get("evidence_type") }}</td><td>{{ item.get("related_owasp_categories", []) | join(", ") }}</td><td>{{ item.get("evidence_strength") }}</td><td>{{ item.get("redaction_status") }}</td><td>{{ item.get("evidence_quality_score") }}</td><td>{{ item.get("safe_summary") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>

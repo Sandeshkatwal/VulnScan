@@ -26,6 +26,7 @@ import { DemoModeToggle } from './components/DemoModeToggle'
 import { DuplicateDetectionView } from './components/DuplicateDetectionView'
 import { EndpointDiscoveryView } from './components/EndpointDiscoveryView'
 import { ErrorAlert } from './components/ErrorAlert'
+import { EvidenceVaultView } from './components/EvidenceVaultView'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
 import { FindingDetailDrawer } from './components/FindingDetailDrawer'
 import { JobDetails } from './components/JobDetails'
@@ -65,7 +66,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'evidence-vault' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -107,6 +108,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'trends', label: 'Trends' },
   { id: 'reports', label: 'Evidence & Reports' },
   { id: 'remediation', label: 'Remediation' },
+  { id: 'evidence-vault', label: 'Evidence Vault' },
   { id: 'bug-intelligence', label: 'Bug Intelligence' },
   { id: 'bug-intelligence-metrics', label: 'Performance Metrics' },
   { id: 'bug-bounty', label: 'Program Scope' },
@@ -151,6 +153,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   remediation: {
     title: 'Remediation',
     description: 'Tracking-only remediation status, owners, due dates, and notes.',
+  },
+  'evidence-vault': {
+    title: 'Evidence Vault',
+    description: 'Redacted Evidence, Redaction Quality Controls, Secret Detection, Evidence Quality Score, Evidence Timeline, and Export Safety Check.',
   },
   'bug-intelligence': {
     title: 'Bug Intelligence',
@@ -825,6 +831,10 @@ function App() {
     return <BusinessLogicReviewView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
   }
 
+  function renderEvidenceVault() {
+    return <EvidenceVaultView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+  }
+
   function renderSubmissionTracker() {
     return <SubmissionTrackerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -874,6 +884,7 @@ function App() {
     if (currentSection === 'trends') return renderTrends()
     if (currentSection === 'reports') return renderReports()
     if (currentSection === 'remediation') return renderRemediation()
+    if (currentSection === 'evidence-vault') return renderEvidenceVault()
     if (currentSection === 'bug-intelligence') return renderBugIntelligence()
     if (currentSection === 'bug-intelligence-metrics') return renderBugIntelligenceMetrics()
     if (currentSection === 'bug-bounty') return renderBugBounty()

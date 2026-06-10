@@ -107,3 +107,7 @@ Version 21.4 adds the Safe Authenticated Parameter Replay Planner. Object identi
 ## Business Logic Review Integration
 
 Version 21.5 Business Logic Review can link access-control plans to workflow approvals, tenant boundary workflows, role-sensitive actions, and object ownership workflows. Workflow Review Plans remain Manual Validation Required records and do not perform live workflow requests.
+
+## Evidence Vault Integration
+
+Version 21.6 Evidence Vault can link A01 Manual Validation Plan observations to Evidence Items with Redaction Quality Controls, Evidence Quality Score, and Chain-of-Custody Style Timeline events.

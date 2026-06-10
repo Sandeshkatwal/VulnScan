@@ -942,3 +942,5 @@ Use `python -m scanner.main access-tests ...` to list A01 Manual Validation Plan
 Version 21.4 adds the Safe Authenticated Parameter Replay Planner. Use `python -m scanner.main replay-plans ...` to create Replay Plans, Redacted Request Templates, Parameter Review Plans, Expected Behaviour and Observed Behaviour records, report-ready templates, and Retest Workflow records. These commands never make live replay requests. See `docs/SAFE_PARAMETER_REPLAY_PLANNER.md`.
 
 Version 21.5 adds the Business Logic Review Workflow Assistant. Use `python -m scanner.main business-logic ...` to detect workflow candidates from local endpoint metadata, create Workflow Review Plans, generate State Transition Review maps, build Abuse Case Checklists, record Observed Behaviour, generate report-ready templates, and track Retest Workflow status. These commands perform No Automatic Workflow Execution. See `docs/BUSINESS_LOGIC_REVIEW.md`.
+
+Version 21.6 adds the Evidence Vault. Use `python -m scanner.main evidence ...` to list, add, redact-check, score, timeline, link, and export Redacted Evidence. Export Safety Check blocks unsafe Evidence Items. See `docs/EVIDENCE_VAULT.md`.

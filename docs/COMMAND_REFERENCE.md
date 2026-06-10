@@ -259,3 +259,16 @@ Role commands perform Role and Permission Mapping, Access-Control Matrix summari
 ```
 
 Access test commands create, update, and read local Access Control Manual Test Planner records only.
+
+## Evidence Vault
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main evidence list
+.\.venv311\Scripts\python.exe -m scanner.main evidence show --evidence-id demo-evidence-001
+.\.venv311\Scripts\python.exe -m scanner.main evidence add --title "Manual A01 observation" --type manual_observation --summary "Access denied for standard_user as expected" --owasp A01:2025 --json
+.\.venv311\Scripts\python.exe -m scanner.main evidence redact-check --text "Authorization: Bearer secret-demo-token"
+.\.venv311\Scripts\python.exe -m scanner.main evidence quality --evidence-id demo-evidence-001
+.\.venv311\Scripts\python.exe -m scanner.main evidence timeline --evidence-id demo-evidence-001
+.\.venv311\Scripts\python.exe -m scanner.main evidence link --evidence-id demo-evidence-001 --finding-id finding-001
+.\.venv311\Scripts\python.exe -m scanner.main evidence export --evidence-id demo-evidence-001 --markdown --json
+```

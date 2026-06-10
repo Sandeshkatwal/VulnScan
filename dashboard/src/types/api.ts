@@ -2294,3 +2294,59 @@ export interface DuplicateGroupsResponse {
   groups: DuplicateGroup[]
   [key: string]: unknown
 }
+
+export interface EvidenceVaultItem {
+  evidence_id?: string
+  title?: string
+  evidence_type?: string
+  source_module?: string
+  related_target?: string
+  related_url?: string
+  related_host?: string
+  related_owasp_categories?: string[]
+  linked_finding_ids?: string[]
+  linked_test_plan_ids?: string[]
+  linked_replay_plan_ids?: string[]
+  linked_business_logic_plan_ids?: string[]
+  linked_submission_ids?: string[]
+  severity_context?: string
+  confidence?: string
+  evidence_strength?: string
+  redaction_status?: string
+  secret_detection_status?: string
+  evidence_quality_score?: number
+  evidence_quality_label?: string
+  safe_summary?: string
+  redacted_request_summary?: string
+  redacted_response_summary?: string
+  safe_observed_value?: string
+  timeline_events?: ApiRecord[]
+  limitations?: string[]
+  [key: string]: unknown
+}
+
+export interface EvidenceVaultResponse {
+  evidence_items?: EvidenceVaultItem[]
+  evidence_vault_item?: EvidenceVaultItem
+  count?: number
+  redacted_text?: string
+  redaction_check?: ApiRecord
+  evidence_quality?: ApiRecord
+  timeline_events?: ApiRecord[]
+  export_allowed?: boolean
+  export_paths?: Record<string, string>
+  blocked_evidence?: ApiRecord[]
+  [key: string]: unknown
+}
+
+export interface EvidenceCreateRequest {
+  title: string
+  evidence_type?: string
+  source_module?: string
+  safe_summary: string
+  related_owasp_categories?: string[]
+  related_url?: string
+  related_target?: string
+  confidence?: string
+  evidence_strength?: string
+}

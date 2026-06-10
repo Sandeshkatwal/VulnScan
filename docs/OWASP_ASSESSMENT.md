@@ -131,3 +131,6 @@ Version 21.4 adds Safe Authenticated Parameter Replay Planner support for manual
 ## Version 21.5 Business Logic Review
 
 Version 21.5 adds Business Logic Review support for manual workflow review across A01, A05, A06, A07, A08, and A09-related contexts. Workflow Review Plans, State Transition Review maps, Abuse Case Checklists, observations, and retest records are local planning artifacts only. VulScan does not execute workflows, submit state-changing requests, trigger payments, or approve/reject real requests automatically.
+## Version 21.6 Evidence Vault
+
+Version 21.6 adds Evidence Vault support for OWASP evidence coverage counts, categories with linked vault evidence, Evidence Quality Score averages, Export Safety Check status, and Redaction Quality Controls summaries. OWASP reports include Redacted Evidence IDs and safe summaries only.

@@ -54,3 +54,7 @@ Redacted Request Templates store names and schemas only: header names, cookie na
 ## Business Logic Review
 
 Business Logic Review plans are manual workflows only. VulScan does not execute checkout, payment, approval, coupon, rate-limit, or state-changing workflows automatically. Do not trigger payments, refunds, transfers, subscriptions, purchases, real approvals, or real rejections. Use Authorised Test Data Only.
+
+## Evidence Vault
+
+Evidence Vault stores Redacted Evidence summaries only. Redaction Quality Controls and Secret Detection run before save/export. Do not store raw passwords, session cookies, bearer tokens, API keys, private keys, full sensitive response bodies, or other authentication material. Export Safety Check blocks unsafe Evidence Items.

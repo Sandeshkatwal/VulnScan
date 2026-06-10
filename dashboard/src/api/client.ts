@@ -30,6 +30,8 @@ import type {
   DuplicateCheckResponse,
   DuplicateGroupsResponse,
   DuplicateSummary,
+  EvidenceCreateRequest,
+  EvidenceVaultResponse,
   FindingFingerprint,
   EndpointDiscoveryRequest,
   EndpointDiscoveryResponse,
@@ -749,6 +751,50 @@ export function createRetest(payload: Partial<RetestRecord>): Promise<RetestReco
 export function updateRetest(retestId: string, payload: Partial<RetestRecord>): Promise<RetestRecord> {
   return request<RetestRecord>(`/retests/${encodeURIComponent(retestId)}`, {
     method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getEvidenceVault(): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>('/evidence')
+}
+
+export function createEvidenceItem(payload: EvidenceCreateRequest): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>('/evidence', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function redactEvidenceText(text: string): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>('/evidence/redact-check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+}
+
+export function getEvidenceQuality(evidenceId: string): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>(`/evidence/${encodeURIComponent(evidenceId)}/quality`, { method: 'POST' })
+}
+
+export function getEvidenceTimeline(evidenceId: string): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>(`/evidence/${encodeURIComponent(evidenceId)}/timeline`)
+}
+
+export function linkEvidence(evidenceId: string, payload: { link_type: string; linked_id: string }): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>(`/evidence/${encodeURIComponent(evidenceId)}/link`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function exportEvidence(payload: { evidence_ids: string[]; markdown?: boolean; json?: boolean }): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>('/evidence/export', {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })

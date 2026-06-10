@@ -72,9 +72,11 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, BusinessLogicChecklistRequest, BusinessLogicCreateRequest, BusinessLogicDetectRequest, BusinessLogicGenerateRequest, BusinessLogicObserveRequest, BusinessLogicReportTemplateRequest, BusinessLogicRetestRequest, BusinessLogicStateMapRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, BusinessLogicChecklistRequest, BusinessLogicCreateRequest, BusinessLogicDetectRequest, BusinessLogicGenerateRequest, BusinessLogicObserveRequest, BusinessLogicReportTemplateRequest, BusinessLogicRetestRequest, BusinessLogicStateMapRequest, EndpointDiscoveryRequest, EvidenceCreateRequest, EvidenceExportRequest, EvidenceLinkRequest, EvidenceRedactCheckRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_parameter_replay_planner import api_create_replay_plan, api_generate_replay_plans, api_get_replay_plan, api_record_replay_observation, api_record_replay_retest, api_replay_report_template
 from scanner.api_business_logic_review import api_business_logic_report_template, api_checklist, api_create_business_logic_plan, api_detect_business_logic, api_generate_business_logic_plans, api_observe_business_logic, api_retest_business_logic, api_state_map
+from scanner.api_evidence_vault import api_create_evidence, api_export, api_get_evidence, api_link, api_list_evidence, api_quality, api_redact_check, api_timeline
+from scanner.evidence_vault import EvidenceVaultError
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -215,6 +217,13 @@ PROTECTED_PATHS = {
     "/remediation",
     "/remediation/summary",
     "/remediation/{finding_key}",
+    "/evidence",
+    "/evidence/{evidence_id}",
+    "/evidence/redact-check",
+    "/evidence/{evidence_id}/quality",
+    "/evidence/{evidence_id}/timeline",
+    "/evidence/{evidence_id}/link",
+    "/evidence/export",
 }
 TAGS_METADATA = [
     {"name": "Health", "description": "Public local API health checks."},
@@ -228,6 +237,7 @@ TAGS_METADATA = [
     {"name": "Authenticated Assessment", "description": "Redacted local Session Profile, Authentication Context, Authenticated Scope helpers, and GET-only Authenticated Crawl."},
     {"name": "Role and Permission Mapping", "description": "A01 Access-Control Planning, Access-Control Matrix, Role Profiles, and Manual Validation Required plans. No live permission testing is performed."},
     {"name": "Access Control Manual Test Planner", "description": "A01 Manual Validation Plan, Evidence Checklist, Expected Behaviour, Observed Behaviour, and Retest Workflow records. No live access-control requests are performed."},
+    {"name": "Evidence Vault", "description": "Redacted Evidence storage, Redaction Quality Controls, Secret Detection, Evidence Quality Score, and Export Safety Check."},
     {"name": "OWASP", "description": "OWASP Top 10:2025 indicator mapping and assessment results for existing evidence and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
     {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
@@ -926,6 +936,103 @@ def create_app(
     )
     def business_logic_report_template(request: BusinessLogicReportTemplateRequest) -> dict[str, Any]:
         return api_business_logic_report_template(request.plan, request.observation, request.retest)
+
+    @app.get(
+        "/evidence",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="List Evidence Vault items",
+        description="Returns Redacted Evidence summaries only.",
+        responses=ERROR_RESPONSES,
+    )
+    def list_evidence_vault() -> dict[str, Any]:
+        return api_list_evidence()
+
+    @app.get(
+        "/evidence/{evidence_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="Get one Evidence Vault item",
+        responses=ERROR_RESPONSES,
+    )
+    def get_evidence_vault_item(evidence_id: str) -> dict[str, Any]:
+        try:
+            return api_get_evidence(evidence_id)
+        except EvidenceVaultError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post(
+        "/evidence",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="Create Evidence Vault item",
+        description="Creates a local Redacted Evidence item. Secret Detection and Redaction Quality Controls are applied before save.",
+        responses=ERROR_RESPONSES,
+    )
+    def create_evidence_vault_item(request: EvidenceCreateRequest) -> dict[str, Any]:
+        return api_create_evidence(request.model_dump(exclude_none=True))
+
+    @app.post(
+        "/evidence/redact-check",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="Run Redaction Quality Controls on text",
+        description="Returns redacted output only and does not store the supplied text.",
+        responses=ERROR_RESPONSES,
+    )
+    def evidence_redact_check(request: EvidenceRedactCheckRequest) -> dict[str, Any]:
+        return api_redact_check(request.text)
+
+    @app.post(
+        "/evidence/{evidence_id}/quality",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="Calculate Evidence Quality Score",
+        responses=ERROR_RESPONSES,
+    )
+    def evidence_quality(evidence_id: str) -> dict[str, Any]:
+        try:
+            return api_quality(evidence_id)
+        except EvidenceVaultError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get(
+        "/evidence/{evidence_id}/timeline",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="Return Evidence Timeline",
+        description="Returns the Chain-of-Custody Style Timeline for the Evidence Item.",
+        responses=ERROR_RESPONSES,
+    )
+    def evidence_timeline(evidence_id: str) -> dict[str, Any]:
+        return api_timeline(evidence_id)
+
+    @app.post(
+        "/evidence/{evidence_id}/link",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="Link Evidence Item",
+        responses=ERROR_RESPONSES,
+    )
+    def evidence_link(evidence_id: str, request: EvidenceLinkRequest) -> dict[str, Any]:
+        try:
+            return api_link(evidence_id, request.link_type, request.linked_id)
+        except EvidenceVaultError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/evidence/export",
+        dependencies=[Depends(require_api_key)],
+        tags=["Evidence Vault"],
+        summary="Export Redacted Evidence bundle",
+        description="Runs Export Safety Check and blocks unsafe Evidence Items.",
+        responses=ERROR_RESPONSES,
+    )
+    def evidence_export(request: EvidenceExportRequest) -> dict[str, Any]:
+        try:
+            return api_export(request.evidence_ids, markdown=request.markdown, json_export=request.json_export)
+        except EvidenceVaultError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post(
         "/endpoints/analyse",

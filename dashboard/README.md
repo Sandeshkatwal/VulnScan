@@ -194,3 +194,7 @@ The dashboard includes a Parameter Replay Planner section under authenticated as
 ## Business Logic Review
 
 The dashboard includes a Business Logic Review section for Workflow Review Plans, State Transition Review, Abuse Case Checklist, Expected Behaviour, Observed Behaviour, Retest Workflow, and report template text. It has no run workflow, test payment, approve now, credential, token, or cookie display controls.
+
+## Evidence Vault
+
+The dashboard includes an Evidence Vault section for Redacted Evidence, Redaction Quality Controls, Secret Detection, Evidence Quality Score, Evidence Timeline, Evidence Linking, and Export Safety Check. It does not display raw tokens or cookies and does not include an arbitrary sensitive attachment picker in 21.6.

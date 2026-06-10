@@ -18,7 +18,7 @@ It combines finding severity, risk score, asset context, vulnerability intellige
 
 ## 5. What safety controls did you implement?
 
-Local-first API binding, optional API key protection, scope enforcement, request rate limits, redaction, path traversal protections for reports, no exploit execution, no brute force, no credential attacks, and no platform token storage.
+Local-first API binding, optional API key protection, scope enforcement, request rate limits, redaction, path traversal protections for reports, no exploit execution, no brute force, no credential attacks, and no platform secret retention.
 
 ## 6. How does the Bug Intelligence workflow work?
 

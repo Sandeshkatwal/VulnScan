@@ -257,3 +257,7 @@ Role and Permission Mapping is implemented as pure local planning modules: `scan
 ## Version 21.3 Access Control Manual Test Planner Components
 
 Access Control Manual Test Planner logic lives in `scanner/access_control_test_planner.py`, `scanner/a01_manual_tests.py`, `scanner/access_control_evidence_checklist.py`, and `scanner/access_control_retest.py`. API wrappers live in `scanner/api_access_control_planner.py`. The modules create local workflow records and do not make network requests.
+
+## Version 21.6 Evidence Vault Components
+
+Evidence Vault logic lives in `scanner/evidence_vault.py`, `scanner/evidence_models.py`, `scanner/evidence_redaction.py`, `scanner/evidence_quality.py`, `scanner/evidence_timeline.py`, and `scanner/evidence_export_safety.py`. API wrappers live in `scanner/api_evidence_vault.py`. The layer stores Redacted Evidence summaries, applies Redaction Quality Controls and Secret Detection, calculates Evidence Quality Score, records a Chain-of-Custody Style Timeline, links evidence to reports and plans, and blocks unsafe exports.

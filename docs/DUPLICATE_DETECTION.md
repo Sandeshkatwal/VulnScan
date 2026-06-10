@@ -59,4 +59,4 @@ The Duplicate Detection view under Bug Intelligence provides summary cards, a fi
 
 ## Safety Notes
 
-VulScan does not perform exploitation, payload generation, external platform submission, or credential storage for duplicate detection. This workflow supports authorised security testing, responsible disclosure, internal testing, and bug bounty workflows.
+VulScan does not perform exploitation, payload generation, external platform submission, or secret retention for duplicate detection. This workflow supports authorised security testing, responsible disclosure, internal testing, and bug bounty workflows.

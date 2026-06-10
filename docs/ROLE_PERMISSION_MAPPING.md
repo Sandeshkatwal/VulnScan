@@ -124,3 +124,7 @@ Role labels and expected permissions can be used by Version 21.4 Replay Plans fo
 ## Business Logic Review Integration
 
 Version 21.5 Business Logic Review uses role labels and expected permissions to document Workflow Review Plans, State Transition Review controls, and Abuse Case Checklists for approval, role, invitation, and account lifecycle workflows. It does not execute workflows or compare live accounts automatically.
+
+## Evidence Vault Integration
+
+Version 21.6 Evidence Vault can link role mapping notes and manual validation plans to Redacted Evidence records without storing raw credentials, cookies, tokens, or account secrets.

@@ -76,3 +76,7 @@ Replay Plans are planning records and do not prove impact. Manual validation mus
 ## Business Logic Review Integration
 
 Version 21.5 Business Logic Review can link Replay Plans to Workflow Review Plans when parameter context supports a manual Business Rule Review. These links are documentation only and preserve the No Automatic Workflow Execution and No Automatic Replay safety boundaries.
+
+## Evidence Vault Integration
+
+Version 21.6 Evidence Vault can link Replay Plans and Parameter Replay observations to Redacted Evidence records. Secret Detection and Export Safety Check run before evidence export.

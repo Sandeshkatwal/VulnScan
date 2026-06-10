@@ -159,6 +159,18 @@ from scanner.duplicate_detection import (
     rebuild_from_submissions,
 )
 from scanner.evidence import redact_nested
+from scanner.evidence_export_safety import can_export_evidence, export_evidence_summary_json, export_evidence_summary_markdown
+from scanner.evidence_quality import calculate_evidence_quality_score
+from scanner.evidence_redaction import redact_secrets, validate_redaction
+from scanner.evidence_timeline import build_evidence_timeline
+from scanner.evidence_vault import (
+    EvidenceVaultError,
+    create_evidence_item,
+    link_evidence_to_finding,
+    list_evidence_items,
+    load_evidence_item,
+    save_evidence_item,
+)
 from scanner.exporter import (
     export_assets,
     export_findings,
@@ -270,6 +282,7 @@ roles_app = typer.Typer(help="Role and Permission Mapping planning commands.")
 access_tests_app = typer.Typer(help="Access Control Manual Test Planner commands.")
 replay_plans_app = typer.Typer(help="Safe Authenticated Parameter Replay Planner commands.")
 business_logic_app = typer.Typer(help="Business Logic Review Workflow Assistant commands.")
+evidence_app = typer.Typer(help="Evidence Vault and Redaction Quality Controls commands.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -283,6 +296,7 @@ app.add_typer(roles_app, name="roles")
 app.add_typer(access_tests_app, name="access-tests")
 app.add_typer(replay_plans_app, name="replay-plans")
 app.add_typer(business_logic_app, name="business-logic")
+app.add_typer(evidence_app, name="evidence")
 console = Console()
 
 
@@ -1369,13 +1383,101 @@ def bug_report_alias(action: Annotated[str | None, typer.Argument(help="Optional
     _security_report_command("Alias retained for compatibility. Prefer security-report list.")
 
 
-@app.command("evidence")
-def evidence_reports(action: Annotated[str | None, typer.Argument(help="Optional action. Use 'list' to list local evidence and reports.")] = None) -> None:
-    """List local evidence and Security Finding Reports."""
-    if action and action != "list":
-        console.print("[red]Unsupported evidence action. Use: evidence list[/red]")
+@evidence_app.command("list")
+def evidence_list() -> None:
+    """List local Evidence Vault items."""
+    _print_evidence_items(list_evidence_items())
+
+
+@evidence_app.command("show")
+def evidence_show(evidence_id: Annotated[str, typer.Option("--evidence-id")]) -> None:
+    """Show one Redacted Evidence item."""
+    item = load_evidence_item(evidence_id)
+    if item is None:
+        console.print("[red]Evidence Item was not found.[/red]")
         raise typer.Exit(code=1)
-    _security_report_command("Evidence & Reports view for local Security Finding Reports.")
+    console.print_json(data={"evidence_vault_item": item})
+
+
+@evidence_app.command("add")
+def evidence_add(
+    title: Annotated[str, typer.Option("--title")],
+    evidence_type: Annotated[str, typer.Option("--type")] = "manual_observation",
+    summary: Annotated[str, typer.Option("--summary")] = "",
+    owasp: Annotated[str | None, typer.Option("--owasp")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Add a manual Evidence Item after Redaction Quality Controls."""
+    item = create_evidence_item(title=title, evidence_type=evidence_type, source_module="manual", safe_summary=summary, related_owasp_categories=[owasp] if owasp else [])
+    save_evidence_item(item)
+    if json_output:
+        console.print_json(data={"evidence_vault_item": item})
+    else:
+        _print_evidence_items([item])
+
+
+@evidence_app.command("redact-check")
+def evidence_redact_check(text: Annotated[str, typer.Option("--text")]) -> None:
+    """Run Secret Detection and print redacted output only."""
+    redacted = redact_secrets(text)
+    console.print_json(data={"redacted_text": redacted, "redaction_check": validate_redaction(redacted)})
+
+
+@evidence_app.command("quality")
+def evidence_quality_command(evidence_id: Annotated[str, typer.Option("--evidence-id")]) -> None:
+    """Calculate Evidence Quality Score."""
+    item = load_evidence_item(evidence_id)
+    if item is None:
+        console.print("[red]Evidence Item was not found.[/red]")
+        raise typer.Exit(code=1)
+    console.print_json(data={"evidence_id": evidence_id, "evidence_quality": calculate_evidence_quality_score(item)})
+
+
+@evidence_app.command("timeline")
+def evidence_timeline_command(evidence_id: Annotated[str, typer.Option("--evidence-id")]) -> None:
+    """Show Chain-of-Custody Style Timeline."""
+    console.print_json(data=build_evidence_timeline(evidence_id, list_evidence_items()))
+
+
+@evidence_app.command("link")
+def evidence_link_command(
+    evidence_id: Annotated[str, typer.Option("--evidence-id")],
+    finding_id: Annotated[str, typer.Option("--finding-id")],
+) -> None:
+    """Link Evidence Item to a finding."""
+    try:
+        item = link_evidence_to_finding(evidence_id, finding_id)
+    except EvidenceVaultError as exc:
+        console.print(f"[red]Evidence Vault error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data={"evidence_vault_item": item})
+
+
+@evidence_app.command("export")
+def evidence_export_command(
+    evidence_id: Annotated[str, typer.Option("--evidence-id")],
+    markdown: Annotated[bool, typer.Option("--markdown")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Export Redacted Evidence after Export Safety Check."""
+    item = load_evidence_item(evidence_id)
+    if item is None:
+        console.print("[red]Evidence Item was not found.[/red]")
+        raise typer.Exit(code=1)
+    check = can_export_evidence(item)
+    if not check["export_allowed"]:
+        console.print_json(data={"export_allowed": False, "reasons": check["reasons"]})
+        raise typer.Exit(code=1)
+    paths: dict[str, str] = {}
+    try:
+        if json_output:
+            paths["json"] = str(export_evidence_summary_json([item]))
+        if markdown:
+            paths["markdown"] = str(export_evidence_summary_markdown([item]))
+    except Exception as exc:
+        console.print(f"[red]Export blocked:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data={"export_allowed": True, "export_paths": paths})
 
 
 @submission_app.callback(invoke_without_command=True)
@@ -6985,6 +7087,30 @@ def _print_state_map(state_map: dict[str, Any]) -> None:
             str(transition.get("action") or ""),
             ", ".join(str(item) for item in transition.get("allowed_roles") or []),
             str(transition.get("expected_control") or ""),
+        )
+    console.print(table)
+
+
+def _print_evidence_items(items: list[dict[str, Any]]) -> None:
+    table = Table(title="Evidence Vault")
+    table.add_column("Evidence ID")
+    table.add_column("Title")
+    table.add_column("Type")
+    table.add_column("Source")
+    table.add_column("OWASP")
+    table.add_column("Strength")
+    table.add_column("Redaction")
+    table.add_column("Quality")
+    for item in items:
+        table.add_row(
+            str(item.get("evidence_id") or ""),
+            str(item.get("title") or ""),
+            str(item.get("evidence_type") or ""),
+            str(item.get("source_module") or ""),
+            ", ".join(str(value) for value in item.get("related_owasp_categories") or []),
+            str(item.get("evidence_strength") or ""),
+            str(item.get("redaction_status") or ""),
+            str(item.get("evidence_quality_score") or 0),
         )
     console.print(table)
 

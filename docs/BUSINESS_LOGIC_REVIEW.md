@@ -52,3 +52,7 @@ Open the dashboard and select Business Logic Review. There is no run workflow, t
 ## Limitations And Future Work
 
 Business Logic Review plans document manual review scope and do not prove impact. Future work can add richer imports from authenticated crawl and role mapping exports while preserving the No Automatic Workflow Execution model.
+
+## Evidence Vault Integration
+
+Version 21.6 Evidence Vault can link Business Logic Review observations and Workflow Review Plans to Redacted Evidence, Evidence Quality Score, Evidence Timeline, and Export Safety Check records.
