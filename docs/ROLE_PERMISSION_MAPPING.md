@@ -113,3 +113,7 @@ Role and Permission Mapping is planning and documentation only. Manual validatio
 ## Future Work
 
 Future versions may add richer local import/export and evidence management workflows while preserving the no-automatic-cross-account-testing safety boundary.
+
+## Version 21.3 Access Control Manual Test Planner
+
+Role and Permission Mapping outputs can now feed A01 Manual Validation Plan records for Expected Behaviour, Observed Behaviour, Evidence Checklist, and Retest Workflow documentation. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.

@@ -22,7 +22,7 @@ Version 19.0 is a Bug Intelligence release hardening pass.
 ## Safety
 
 - Scope-aware workflows continue to support scope enforcement.
-- Safe Validation remains non-destructive and does not add exploitation, payload generation, SSRF testing, auth bypass automation, brute force, credential attacks, or destructive checks.
+- Safe Validation remains non-destructive and does not add exploitation, payload generation, SSRF testing, automated authentication-boundary checks, brute force, credential attack workflows, or destructive checks.
 - Report serving remains restricted to local report files with path traversal blocking.
 - API still binds to localhost by default and protected routes use API key checks when configured.
 

@@ -220,3 +220,15 @@ Authenticated Crawl is GET-only, enforces Session Boundary Controls, blocks dest
 ```
 
 Role commands perform Role and Permission Mapping, Access-Control Matrix summaries, endpoint action inference, and Manual Validation Required planning only. They do not perform live requests or automatic permission testing.
+## Version 21.3 Access Test Commands
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main access-tests list --plans-file data\access_control_tests\sample_a01_test_plan.json
+.\.venv311\Scripts\python.exe -m scanner.main access-tests create --role standard_user --endpoint "http://127.0.0.1:8000/admin/users" --expected denied --test-type vertical_access_control_review --json --html
+.\.venv311\Scripts\python.exe -m scanner.main access-tests show --plan-id demo-plan-001 --plans-file data\access_control_tests\sample_a01_test_plan.json
+.\.venv311\Scripts\python.exe -m scanner.main access-tests observe --plan-id demo-plan-001 --observed-result denied_as_expected --status-code 403 --summary "Access denied for standard_user as expected" --json
+.\.venv311\Scripts\python.exe -m scanner.main access-tests report --plan-id demo-plan-001 --plans-file data\access_control_tests\sample_a01_test_plan.json --markdown
+.\.venv311\Scripts\python.exe -m scanner.main access-tests retest --plan-id demo-plan-001 --status passed --notes "Access remains denied after remediation" --json
+```
+
+Access test commands create, update, and read local Access Control Manual Test Planner records only.

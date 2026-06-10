@@ -57,6 +57,9 @@ import type {
   A05AssessmentResponse,
   A10AssessmentRequest,
   A10AssessmentResponse,
+  AccessTestCreateRequest,
+  AccessTestObserveRequest,
+  AccessTestPlannerResponse,
   OWASPMapRequest,
   OWASPMapResponse,
   RetestRecord,
@@ -360,6 +363,48 @@ export function mapRoleEndpoints(payload: RoleEndpointMapRequest): Promise<RoleM
 
 export function buildRoleManualPlan(payload: RoleManualPlanRequest): Promise<RoleMappingResponse> {
   return request<RoleMappingResponse>('/roles/manual-plan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createAccessTest(payload: AccessTestCreateRequest): Promise<AccessTestPlannerResponse> {
+  return request<AccessTestPlannerResponse>('/access-tests/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function observeAccessTest(payload: AccessTestObserveRequest): Promise<AccessTestPlannerResponse> {
+  return request<AccessTestPlannerResponse>('/access-tests/observe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function retestAccessTest(payload: {
+  test_plan_id: string
+  retest_status: string
+  remediation_summary?: string
+  retest_observed_result?: string
+  retest_notes?: string
+}): Promise<AccessTestPlannerResponse> {
+  return request<AccessTestPlannerResponse>('/access-tests/retest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function buildAccessTestReportTemplate(payload: {
+  plan: Record<string, unknown>
+  observation?: Record<string, unknown> | null
+  retest?: Record<string, unknown> | null
+}): Promise<AccessTestPlannerResponse> {
+  return request<AccessTestPlannerResponse>('/access-tests/report-template', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

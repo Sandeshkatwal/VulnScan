@@ -33,3 +33,10 @@ def build_a01_role_permission_report_template(evidence: dict[str, Any]) -> dict[
             ],
         }
     )
+
+
+def build_a01_manual_test_report_template(plan: dict[str, Any], observation: dict[str, Any] | None = None, retest: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Build report-ready A01 text from an Access Control Manual Test Planner record."""
+    from scanner.access_control_test_planner import build_report_ready_a01_template
+
+    return build_report_ready_a01_template(plan, observation, retest)

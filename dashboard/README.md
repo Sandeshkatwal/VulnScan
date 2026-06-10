@@ -184,3 +184,6 @@ Version 20.6 adds an A01 Broken Access Control view under OWASP Assessment. Repo
 ## Version 21.2 Role and Permission Mapping
 
 The dashboard includes Role & Permission Mapping under Authenticated Assessment. It shows Role Profiles, Permission Matrix, Endpoint Action Mapping, Role Endpoint Matrix, Manual Validation Plan, and Role Comparison Notes. No credential fields, automatic role comparison, or state-changing access checks are exposed.
+## Version 21.3 A01 Manual Test Planner
+
+The dashboard includes an A01 Manual Test Planner section with Test Plan Summary, Test Plan Table, Plan Detail, Evidence Checklist, Expected vs Observed, Retest Workflow, and Report Template panels. It does not expose credential fields or live testing buttons.

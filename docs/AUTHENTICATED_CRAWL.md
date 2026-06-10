@@ -51,3 +51,6 @@ Version 21.1 does not perform role comparison, session expiry duration testing, 
 ## Version 21.2 Role Endpoint Map
 
 Authenticated Crawl now includes a role endpoint map using the Session Profile role label, discovered endpoints, inferred actions, and Manual Validation Required needs. VulScan does not compare different roles automatically. See `docs/ROLE_PERMISSION_MAPPING.md`.
+## Version 21.3 Access Control Manual Test Planner
+
+Authenticated Crawl endpoint metadata can be used as input for A01 Manual Validation Plan records. The planner creates documentation only and does not perform live access-control requests. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.

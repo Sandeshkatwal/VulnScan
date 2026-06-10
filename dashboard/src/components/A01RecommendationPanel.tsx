@@ -2,7 +2,7 @@ import type { A01AccessControlSummary } from '../types/api'
 
 export function A01RecommendationPanel({ summary }: { summary: A01AccessControlSummary }) {
   const recommendations = summary.recommendations || ['Review A01 candidates using authorised test accounts and programme-approved test data.']
-  const limitations = summary.limitations || ['Candidate-only analysis. No auth bypass automation performed.']
+  const limitations = summary.limitations || ['Candidate-only analysis. Manual Validation Required.']
   return (
     <div className="a01-recommendations">
       <div>

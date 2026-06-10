@@ -111,3 +111,6 @@ Version 21.1 adds GET-only Authenticated Crawl with Session Boundary Controls. S
 ## Version 21.2 Role and Permission Mapping
 
 Authenticated assessment results can now be linked to safe Role Profiles for Role and Permission Mapping. Linked Session Profiles are redacted summaries only, and the assistant generates Access-Control Matrix context and Manual Validation Required plans without automatic role comparison or state-changing requests. See `docs/ROLE_PERMISSION_MAPPING.md`.
+## Version 21.3 Access Control Manual Test Planner
+
+Authenticated assessment metadata can feed A01 Manual Validation Plan records for manual Expected Behaviour, Observed Behaviour, Evidence Checklist, and Retest Workflow documentation. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.

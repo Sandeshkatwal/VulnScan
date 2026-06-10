@@ -406,6 +406,53 @@
     </section>
     {% endif %}
 
+    {% set access_tests = report.get("a01_manual_validation_summary", {}) %}
+    {% if access_tests.get("enabled") %}
+    <section>
+      <h2>Access Control Manual Test Planner</h2>
+      <p><strong>Safety:</strong> Manual test plans are for authorised testing only. VulScan creates local planning records and does not perform live access-control requests or state-changing actions.</p>
+      <div class="grid">
+        <div class="metric"><div class="label">Plans</div><div class="value">{{ access_tests.get("manual_test_plans_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Verified Secure</div><div class="value">{{ access_tests.get("manually_verified_secure_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Verified Issue</div><div class="value">{{ access_tests.get("manually_verified_issue_count", 0) }}</div></div>
+        <div class="metric"><div class="label">Retest Passed/Failed</div><div class="value">{{ access_tests.get("retest_passed_count", 0) }}/{{ access_tests.get("retest_failed_count", 0) }}</div></div>
+      </div>
+      {% if report.get("access_control_test_plans") %}
+      <h3>Planned Tests</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Title</th><th>Role</th><th>Endpoint</th><th>Test Type</th><th>Expected Permission</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for plan in report.get("access_control_test_plans", [])[:30] %}
+          <tr><td>{{ plan.get("test_plan_id") }}</td><td>{{ plan.get("title") }}</td><td>{{ plan.get("role_label") }}</td><td>{{ plan.get("affected_url") }}</td><td>{{ plan.get("test_type") }}</td><td>{{ plan.get("expected_permission") }}</td><td>{{ plan.get("validation_status") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("access_control_observations") %}
+      <h3>Expected vs Observed Behaviour</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Observed Result</th><th>Status Code</th><th>Summary</th><th>Redaction</th></tr></thead>
+        <tbody>
+          {% for observation in report.get("access_control_observations", [])[:30] %}
+          <tr><td>{{ observation.get("test_plan_id") }}</td><td>{{ observation.get("observed_access_result") }}</td><td>{{ observation.get("observed_status_code") }}</td><td>{{ observation.get("observed_message_summary") }}</td><td>{{ observation.get("redaction_status") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if report.get("access_control_retests") %}
+      <h3>Retest Workflow</h3>
+      <table>
+        <thead><tr><th>Plan</th><th>Status</th><th>Observed Result</th><th>Notes</th></tr></thead>
+        <tbody>
+          {% for retest in report.get("access_control_retests", [])[:30] %}
+          <tr><td>{{ retest.get("test_plan_id") }}</td><td>{{ retest.get("retest_status") }}</td><td>{{ retest.get("retest_observed_result") }}</td><td>{{ retest.get("retest_notes") }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {% set recon = report.get("bug_bounty_recon", {}) %}
     {% if recon.get("enabled") %}
     <section>

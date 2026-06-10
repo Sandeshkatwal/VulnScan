@@ -278,6 +278,45 @@ class RoleManualPlanRequest(StrictApiModel):
     )
 
 
+class AccessTestGenerateRequest(StrictApiModel):
+    a01_evidence_items: list[dict[str, Any]] = Field(default_factory=list, description="Existing A01 candidate evidence. No live requests are made.")
+    role_profiles: list[dict[str, Any]] = Field(default_factory=list, description="Safe Role Profiles.")
+    permission_matrix: dict[str, Any] = Field(default_factory=dict, description="Access-Control Matrix planning data.")
+
+
+class AccessTestCreateRequest(StrictApiModel):
+    role: dict[str, Any] = Field(default_factory=dict, description="Safe Role Profile.")
+    endpoint: dict[str, Any] | str = Field(..., description="Endpoint metadata or URL string. No request is made.")
+    expected_permission: str = Field("unknown", description="Expected permission.")
+    test_type: str = Field("custom", description="A01 manual test type.")
+
+
+class AccessTestObserveRequest(StrictApiModel):
+    test_plan_id: str = Field(..., min_length=1, max_length=255)
+    observed_access_result: str = Field(..., description="Manual observed access result.")
+    observed_status_code: int | None = Field(None, ge=100, le=599)
+    observed_message_summary: str = Field("", max_length=2000)
+    evidence_summary: str = Field("", max_length=4000)
+    evidence_file_path: str = Field("", max_length=1024)
+    tester_notes: str = Field("", max_length=4000)
+
+
+class AccessTestRetestRequest(StrictApiModel):
+    test_plan_id: str = Field(..., min_length=1, max_length=255)
+    retest_status: str = Field(..., description="Retest Workflow status.")
+    original_observed_result: str = Field("", max_length=1000)
+    remediation_summary: str = Field("", max_length=4000)
+    retest_steps: list[str] = Field(default_factory=list)
+    retest_observed_result: str = Field("", max_length=1000)
+    retest_notes: str = Field("", max_length=4000)
+
+
+class AccessTestReportTemplateRequest(StrictApiModel):
+    plan: dict[str, Any] = Field(default_factory=dict)
+    observation: dict[str, Any] | None = None
+    retest: dict[str, Any] | None = None
+
+
 class AuthProfileValidateRequest(StrictApiModel):
     """Validate a redacted Session Profile object."""
 

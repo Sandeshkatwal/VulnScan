@@ -42,8 +42,12 @@ from scanner.endpoint_discovery import EndpointDiscoveryError, run_endpoint_disc
 from scanner.api_auth_context import api_check_auth_boundary, api_classify_auth_endpoints, api_list_auth_profiles, api_validate_auth_profile
 from scanner.api_authenticated_crawl import api_list_authenticated_crawls, api_run_authenticated_crawl
 from scanner.api_role_mapping import api_list_roles, api_manual_plan, api_map_role_endpoints, api_validate_role_mapping
+from scanner.api_access_control_planner import api_create_access_test, api_generate_access_tests, api_get_access_test, api_record_observation, api_record_retest, api_report_template
 from scanner.permission_matrix import PermissionMatrixError
 from scanner.role_profiles import RoleProfileError
+from scanner.access_control_test_planner import AccessControlTestPlannerError
+from scanner.a01_manual_tests import A01ManualTestError
+from scanner.access_control_retest import AccessControlRetestError
 from scanner.owasp_mapping import OWASPMappingError, build_owasp_mapped_items, build_owasp_summary, load_owasp_mapping
 from scanner.owasp_assessment import build_owasp_assessment
 from scanner.owasp_report_builder import (
@@ -64,7 +68,7 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, EndpointDiscoveryRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -107,7 +111,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "21.2"
+API_VERSION = "21.3"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -179,6 +183,12 @@ PROTECTED_PATHS = {
     "/roles/validate",
     "/roles/map-endpoints",
     "/roles/manual-plan",
+    "/access-tests/generate",
+    "/access-tests/create",
+    "/access-tests/observe",
+    "/access-tests/retest",
+    "/access-tests/{plan_id}",
+    "/access-tests/report-template",
     "/owasp/categories",
     "/owasp/map",
     "/owasp/assessment/rules",
@@ -211,6 +221,7 @@ TAGS_METADATA = [
     {"name": "Bug Intelligence", "description": "Local program scope, recon intelligence, endpoint discovery, and safe validation workflows."},
     {"name": "Authenticated Assessment", "description": "Redacted local Session Profile, Authentication Context, Authenticated Scope helpers, and GET-only Authenticated Crawl."},
     {"name": "Role and Permission Mapping", "description": "A01 Access-Control Planning, Access-Control Matrix, Role Profiles, and Manual Validation Required plans. No live permission testing is performed."},
+    {"name": "Access Control Manual Test Planner", "description": "A01 Manual Validation Plan, Evidence Checklist, Expected Behaviour, Observed Behaviour, and Retest Workflow records. No live access-control requests are performed."},
     {"name": "OWASP", "description": "OWASP Top 10:2025 indicator mapping and assessment results for existing evidence and candidates."},
     {"name": "Remediation", "description": "Tracking-only remediation status and notes. Does not execute remediation actions."},
     {"name": "Submission Tracker", "description": "Local submission and retest workflow tracking. Does not submit reports externally."},
@@ -590,6 +601,106 @@ def create_app(
         try:
             return api_manual_plan(request.role, request.endpoint, request.expected_permission)
         except RoleProfileError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/access-tests/generate",
+        dependencies=[Depends(require_api_key)],
+        tags=["Access Control Manual Test Planner"],
+        summary="Generate A01 Manual Validation Plans",
+        description="Generates local A01 Manual Validation Plans from supplied A01 candidates, Role Profiles, and Permission Matrix data. No live requests are performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def generate_access_tests(request: AccessTestGenerateRequest) -> dict[str, Any]:
+        try:
+            return api_generate_access_tests(request.a01_evidence_items, request.role_profiles, request.permission_matrix)
+        except (RoleProfileError, PermissionMatrixError, AccessControlTestPlannerError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/access-tests/create",
+        dependencies=[Depends(require_api_key)],
+        tags=["Access Control Manual Test Planner"],
+        summary="Create one A01 Manual Validation Plan",
+        description="Creates a local Access Control Manual Test Planner record from a role and endpoint. No live request is made.",
+        responses=ERROR_RESPONSES,
+    )
+    def create_access_test(request: AccessTestCreateRequest) -> dict[str, Any]:
+        try:
+            return api_create_access_test(request.role, request.endpoint, request.expected_permission, request.test_type)
+        except (RoleProfileError, AccessControlTestPlannerError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/access-tests/observe",
+        dependencies=[Depends(require_api_key)],
+        tags=["Access Control Manual Test Planner"],
+        summary="Record Observed Behaviour",
+        description="Records a manual Expected Behaviour vs Observed Behaviour result with redacted evidence metadata.",
+        responses=ERROR_RESPONSES,
+    )
+    def observe_access_test(request: AccessTestObserveRequest) -> dict[str, Any]:
+        try:
+            return api_record_observation(
+                request.test_plan_id,
+                request.observed_access_result,
+                request.observed_status_code,
+                request.observed_message_summary,
+                request.evidence_summary,
+                request.evidence_file_path,
+                request.tester_notes,
+            )
+        except (RoleProfileError, A01ManualTestError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/access-tests/retest",
+        dependencies=[Depends(require_api_key)],
+        tags=["Access Control Manual Test Planner"],
+        summary="Record Retest Workflow result",
+        description="Records a local Retest Workflow result. No live request is made.",
+        responses=ERROR_RESPONSES,
+    )
+    def retest_access_test(request: AccessTestRetestRequest) -> dict[str, Any]:
+        try:
+            return api_record_retest(
+                request.test_plan_id,
+                request.retest_status,
+                request.original_observed_result,
+                request.remediation_summary,
+                request.retest_steps,
+                request.retest_observed_result,
+                request.retest_notes,
+            )
+        except (RoleProfileError, AccessControlRetestError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/access-tests/{plan_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Access Control Manual Test Planner"],
+        summary="Get A01 Manual Validation Plan",
+        description="Returns a local sample/default Access Control Manual Test Planner record by plan ID.",
+        responses=ERROR_RESPONSES,
+    )
+    def get_access_test(plan_id: str) -> dict[str, Any]:
+        try:
+            return api_get_access_test(plan_id)
+        except AccessControlTestPlannerError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post(
+        "/access-tests/report-template",
+        dependencies=[Depends(require_api_key)],
+        tags=["Access Control Manual Test Planner"],
+        summary="Build report-ready A01 template",
+        description="Returns report-ready A01 text using candidate wording unless manual observation confirms an issue.",
+        responses=ERROR_RESPONSES,
+    )
+    def access_test_report_template(request: AccessTestReportTemplateRequest) -> dict[str, Any]:
+        try:
+            return api_report_template(request.plan, request.observation, request.retest)
+        except AccessControlTestPlannerError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post(
@@ -1218,7 +1329,7 @@ def create_app(
         dependencies=[Depends(require_api_key)],
         tags=["OWASP"],
         summary="Build A01 Broken Access Control candidate evidence",
-        description="Classifies access-control candidates from supplied endpoint, parameter, and evidence metadata. No auth bypass automation, cross-account testing, or state-changing requests are performed.",
+        description="Classifies access-control candidates from supplied endpoint, parameter, and evidence metadata. No automatic account-to-account requests or state-changing requests are performed.",
         responses=ERROR_RESPONSES,
     )
     def assess_a01_endpoint(request: A01AssessmentRequest) -> dict[str, Any]:

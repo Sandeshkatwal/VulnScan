@@ -72,3 +72,6 @@ Version 21.1 Authenticated Crawl note: endpoints observed through Authenticated 
 ## Version 21.2 A01 Access-Control Planning
 
 A01 evidence can now be enriched with Role and Permission Mapping context: role label, expected permission, inferred action, validation status, and manual plan ID. This enrichment is planning only and does not perform automatic role comparison, account-to-account requests, or state-changing access checks. See `docs/ROLE_PERMISSION_MAPPING.md`.
+## Version 21.3 Access Control Manual Test Planner
+
+A01 candidates can now be converted into A01 Manual Validation Plan records with Expected Behaviour, Observed Behaviour, Evidence Checklist, Retest Workflow, and report-ready A01 templates. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.

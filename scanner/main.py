@@ -1,5 +1,6 @@
 """Command-line entry point for VulScan."""
 
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +24,20 @@ from scanner.authenticated_crawler import AUTHENTICATED_CRAWL_REPORTS_DIR, authe
 from scanner.authenticated_scope import classify_auth_boundary, classify_auth_required_endpoints
 from scanner.session_profiles import SessionProfileError, ensure_auth_profile_dirs, list_session_profiles, load_session_profile, validate_session_profile
 from scanner.access_control_matrix import infer_action_from_endpoint, save_role_mapping_reports
+from scanner.a01_manual_tests import A01ManualTestError, build_a01_observation
+from scanner.access_control_retest import AccessControlRetestError, build_a01_retest_record
+from scanner.access_control_test_planner import (
+    AccessControlTestPlannerError,
+    build_a01_manual_validation_summary,
+    build_report_ready_a01_template,
+    build_test_plan_from_endpoint,
+    build_test_plans_from_a01_candidates,
+    find_test_plan,
+    load_access_test_plans,
+    render_report_template_markdown,
+    save_access_test_package,
+    save_report_template_markdown,
+)
 from scanner.permission_matrix import PermissionMatrixError, load_permission_matrix, permission_matrix_summary
 from scanner.role_mapping_assistant import build_manual_plan, build_role_mapping_from_files
 from scanner.role_profiles import RoleProfileError, find_role, load_role_profiles, role_profiles_summary
@@ -218,6 +233,7 @@ scope_app = typer.Typer(help="Manage local Program Scope files.")
 sbom_app = typer.Typer(help="Analyse local SBOM files and build A03 software supply chain evidence.")
 auth_app = typer.Typer(help="Manage redacted Authenticated Web Assessment Session Profiles.")
 roles_app = typer.Typer(help="Role and Permission Mapping planning commands.")
+access_tests_app = typer.Typer(help="Access Control Manual Test Planner commands.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -228,6 +244,7 @@ app.add_typer(scope_app, name="scope")
 app.add_typer(sbom_app, name="sbom")
 app.add_typer(auth_app, name="auth")
 app.add_typer(roles_app, name="roles")
+app.add_typer(access_tests_app, name="access-tests")
 console = Console()
 
 
@@ -552,6 +569,167 @@ def roles_plan_command(
     plan_table.add_row("evidence_to_collect", "\n".join(plan.get("evidence_to_collect") or []))
     plan_table.add_row("safety_notes", "\n".join(plan.get("safety_notes") or []))
     console.print(plan_table)
+
+
+@access_tests_app.command("list")
+def access_tests_list_command(
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="A01 Manual Validation Plan file under data/access_control_tests.")] = Path("data") / "access_control_tests" / "sample_a01_test_plan.json",
+) -> None:
+    """List Access Control Manual Test Planner records."""
+    try:
+        package = load_access_test_plans(plans_file)
+    except AccessControlTestPlannerError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_access_test_plans(package.get("access_control_test_plans") or [])
+    console.print(f"[bold]Plans:[/bold] {package.get('a01_manual_validation_summary', {}).get('manual_test_plans_count', 0)}")
+
+
+@access_tests_app.command("generate")
+def access_tests_generate_command(
+    a01_evidence: Annotated[Path, typer.Option("--a01-evidence", help="Local JSON file containing A01 candidate evidence.")],
+    roles_file: Annotated[Path, typer.Option("--roles-file", help="Role Profile JSON file under data/roles.")] = Path("data") / "roles" / "sample_roles.json",
+    matrix_file: Annotated[Path, typer.Option("--matrix-file", help="Permission Matrix JSON file under data/roles.")] = Path("data") / "roles" / "sample_permission_matrix.json",
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON planner report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML planner report.")] = False,
+) -> None:
+    """Generate A01 Manual Validation Plans from local A01 candidates."""
+    try:
+        evidence_payload = json.loads(Path(a01_evidence).read_text(encoding="utf-8"))
+        evidence_items = evidence_payload.get("a01_access_control_evidence") if isinstance(evidence_payload, dict) else evidence_payload
+        roles = load_role_profiles(roles_file)
+        matrix = load_permission_matrix(matrix_file)
+        plans = build_test_plans_from_a01_candidates(evidence_items or [], roles, matrix)
+        package = {
+            "access_control_test_plans": plans,
+            "access_control_observations": [],
+            "access_control_retests": [],
+            "a01_manual_validation_summary": build_a01_manual_validation_summary(plans, [], []),
+        }
+        json_path, html_path = save_access_test_package(package, json_report=json_report, html_report=html_report)
+    except (OSError, json.JSONDecodeError, RoleProfileError, PermissionMatrixError, AccessControlTestPlannerError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_access_test_plans(plans)
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+    console.print("[yellow]Manual Validation Required. No live requests were made.[/yellow]")
+
+
+@access_tests_app.command("create")
+def access_tests_create_command(
+    role: Annotated[str, typer.Option("--role", help="Role ID, name, or label.")] = "standard_user",
+    endpoint: Annotated[str, typer.Option("--endpoint", help="Endpoint to create a manual plan for.")] = "",
+    expected: Annotated[str, typer.Option("--expected", help="Expected permission.")] = "unknown",
+    test_type: Annotated[str, typer.Option("--test-type", help="A01 manual test type.")] = "custom",
+    roles_file: Annotated[Path, typer.Option("--roles-file", help="Role Profile JSON file under data/roles.")] = Path("data") / "roles" / "sample_roles.json",
+    json_report: Annotated[bool, typer.Option("--json", help="Write JSON planner report.")] = False,
+    html_report: Annotated[bool, typer.Option("--html", help="Write HTML planner report.")] = False,
+) -> None:
+    """Create one A01 Manual Validation Plan from a role and endpoint."""
+    try:
+        selected = find_role(load_role_profiles(roles_file), role)
+        plan = build_test_plan_from_endpoint({"url": endpoint, "method": "GET"}, None, expected, selected, test_type)
+        package = {
+            "access_control_test_plans": [plan],
+            "access_control_observations": [],
+            "access_control_retests": [],
+            "a01_manual_validation_summary": build_a01_manual_validation_summary([plan], [], []),
+        }
+        json_path, html_path = save_access_test_package(package, json_report=json_report, html_report=html_report)
+    except (RoleProfileError, AccessControlTestPlannerError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_access_test_plans([plan])
+    if json_path:
+        console.print(f"[bold]JSON report:[/bold] {json_path}")
+    if html_path:
+        console.print(f"[bold]HTML report:[/bold] {html_path}")
+
+
+@access_tests_app.command("show")
+def access_tests_show_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="A01 Manual Validation Plan ID.")],
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="A01 Manual Validation Plan file under data/access_control_tests.")] = Path("data") / "access_control_tests" / "sample_a01_test_plan.json",
+) -> None:
+    """Show a single A01 Manual Validation Plan."""
+    try:
+        plan = find_test_plan(load_access_test_plans(plans_file).get("access_control_test_plans") or [], plan_id)
+    except AccessControlTestPlannerError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    _print_access_test_detail(plan)
+
+
+@access_tests_app.command("observe")
+def access_tests_observe_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="A01 Manual Validation Plan ID.")],
+    observed_result: Annotated[str, typer.Option("--observed-result", help="Observed access result.")],
+    status_code: Annotated[int | None, typer.Option("--status-code", help="Observed status code, if safe to record.")] = None,
+    summary: Annotated[str, typer.Option("--summary", help="Redacted observed message summary.")] = "",
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Record Observed Behaviour for a plan."""
+    try:
+        observation = build_a01_observation(test_plan_id=plan_id, observed_access_result=observed_result, observed_status_code=status_code, observed_message_summary=summary)
+    except (A01ManualTestError, RoleProfileError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if json_report:
+        console.print_json(data={"access_control_observation": observation})
+    else:
+        table = Table(title="Observed Behaviour")
+        table.add_column("Field")
+        table.add_column("Value")
+        for key in ("observation_id", "test_plan_id", "observed_access_result", "observed_status_code", "observed_message_summary", "redaction_status"):
+            table.add_row(key, str(observation.get(key) or ""))
+        console.print(table)
+
+
+@access_tests_app.command("report")
+def access_tests_report_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="A01 Manual Validation Plan ID.")],
+    plans_file: Annotated[Path, typer.Option("--plans-file", help="A01 Manual Validation Plan file under data/access_control_tests.")] = Path("data") / "access_control_tests" / "sample_a01_test_plan.json",
+    markdown: Annotated[bool, typer.Option("--markdown", help="Write Markdown report template.")] = False,
+) -> None:
+    """Generate a report-ready A01 template."""
+    try:
+        plan = find_test_plan(load_access_test_plans(plans_file).get("access_control_test_plans") or [], plan_id)
+        template = build_report_ready_a01_template(plan)
+        markdown_text = render_report_template_markdown(template)
+        path = save_report_template_markdown(template, plan_id) if markdown else None
+    except AccessControlTestPlannerError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(markdown_text)
+    if path:
+        console.print(f"[bold]Markdown report:[/bold] {path}")
+
+
+@access_tests_app.command("retest")
+def access_tests_retest_command(
+    plan_id: Annotated[str, typer.Option("--plan-id", help="A01 Manual Validation Plan ID.")],
+    status: Annotated[str, typer.Option("--status", help="Retest Workflow status.")],
+    notes: Annotated[str, typer.Option("--notes", help="Retest notes.")] = "",
+    json_report: Annotated[bool, typer.Option("--json", help="Print JSON output.")] = False,
+) -> None:
+    """Record a Retest Workflow result."""
+    try:
+        retest = build_a01_retest_record(test_plan_id=plan_id, retest_status=status, retest_notes=notes)
+    except (AccessControlRetestError, RoleProfileError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    if json_report:
+        console.print_json(data={"access_control_retest": retest})
+    else:
+        table = Table(title="Retest Workflow")
+        table.add_column("Field")
+        table.add_column("Value")
+        for key in ("retest_id", "test_plan_id", "retest_status", "retest_notes", "retested_at"):
+            table.add_row(key, str(retest.get(key) or ""))
+        console.print(table)
 
 
 @app.command("authenticated-crawl")
@@ -4735,7 +4913,7 @@ def _print_a01_access_control_summary(summary: dict[str, Any]) -> None:
     table.add_row("Manual validation required", str(summary.get("manual_validation_required_count", 0)))
     table.add_row("Highest indicator confidence", str(summary.get("highest_confidence", "Low")))
     console.print(table)
-    console.print("[yellow]A01 safety:[/yellow] candidate discovery only; manual validation required; no auth bypass automation, cross-account testing, or state-changing requests performed.")
+    console.print("[yellow]A01 safety:[/yellow] candidate discovery only; Manual Validation Required; no automatic account-to-account requests or state-changing requests performed.")
 
 
 def _print_a03_supply_chain_summary(summary: dict[str, Any]) -> None:
@@ -6299,6 +6477,49 @@ def _print_export_result(result: dict[str, Any]) -> None:
         raise typer.Exit(code=1)
 
     console.print(f"[yellow]{result['message']}[/yellow]")
+
+
+def _print_access_test_plans(plans: list[dict[str, Any]]) -> None:
+    table = Table(title="Access Control Manual Test Planner")
+    table.add_column("Plan ID")
+    table.add_column("Title")
+    table.add_column("Role")
+    table.add_column("Endpoint")
+    table.add_column("Test Type")
+    table.add_column("Expected")
+    table.add_column("Status")
+    for plan in plans:
+        table.add_row(
+            str(plan.get("test_plan_id") or ""),
+            str(plan.get("title") or ""),
+            str(plan.get("role_label") or ""),
+            str(plan.get("affected_url") or ""),
+            str(plan.get("test_type") or ""),
+            str(plan.get("expected_permission") or ""),
+            str(plan.get("validation_status") or ""),
+        )
+    console.print(table)
+
+
+def _print_access_test_detail(plan: dict[str, Any]) -> None:
+    table = Table(title=f"A01 Manual Validation Plan: {plan.get('test_plan_id')}")
+    table.add_column("Field")
+    table.add_column("Value")
+    for key in (
+        "title",
+        "test_type",
+        "affected_url",
+        "role_label",
+        "expected_permission",
+        "expected_secure_behaviour",
+        "validation_status",
+        "risk_if_failed",
+        "recommendation",
+    ):
+        table.add_row(key, str(plan.get(key) or ""))
+    table.add_row("manual_steps", "\n".join(str(step) for step in plan.get("manual_steps") or []))
+    table.add_row("safety_notes", "\n".join(str(note) for note in plan.get("safety_notes") or []))
+    console.print(table)
 
 
 if __name__ == "__main__":

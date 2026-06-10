@@ -82,7 +82,7 @@
   },
   "limitations": [
     "Rules identify access-control candidates only.",
-    "No auth bypass automation, cross-account testing, destructive action, or state-changing request is performed.",
+    "No automatic account-to-account request, destructive action, or state-changing request is performed.",
     "Manual validation with authorised test accounts and programme-approved test data is required before confirming impact."
   ]
 }

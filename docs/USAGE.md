@@ -935,3 +935,6 @@ Use `--owasp-report` with `--owasp-assess` to write a Markdown-ready OWASP Asses
 ## Version 21.2 Role and Permission Mapping
 
 Use `python -m scanner.main roles ...` to list Role Profiles, inspect the Access-Control Matrix, map existing endpoints to inferred actions, and generate Manual Validation Required plans. This workflow is documentation/planning only and performs no live permission testing. See `docs/ROLE_PERMISSION_MAPPING.md`.
+## Version 21.3 Access Control Manual Test Planner
+
+Use `python -m scanner.main access-tests ...` to list A01 Manual Validation Plans, create endpoint-based plans, record Observed Behaviour, generate report-ready templates, and track Retest Workflow status. These commands operate on local planning records only. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.

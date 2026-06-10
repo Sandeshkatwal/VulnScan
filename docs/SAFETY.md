@@ -42,3 +42,6 @@ Authenticated Crawl in 21.1 is GET-only, does not submit forms, does not call lo
 ## Version 21.2 Role and Permission Mapping Safety
 
 Role and Permission Mapping is for authorised access-control planning and documentation only. VulScan does not perform automatic role comparison, account-to-account requests, form submission, or state-changing access checks. Role Profiles use safe labels only and must not contain usernames, passwords, session cookies, bearer tokens, Authorization headers, or secret authentication material.
+## Version 21.3 Access Control Manual Test Planner Safety
+
+The Access Control Manual Test Planner creates local workflow and documentation records only. Use Authorised Test Accounts Only. Planner commands and API endpoints do not perform live access-control requests, form submission, state-changing actions, or account-to-account requests.

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from scanner.access_control_matrix import build_access_control_matrix_package, build_role_manual_validation_plan, infer_action_from_endpoint
+from scanner.access_control_test_planner import build_a01_manual_validation_summary, build_test_plans_from_role_mapping
 from scanner.evidence import redact_nested
 from scanner.permission_matrix import load_permission_matrix, validate_permission_matrix
 from scanner.role_profiles import load_role_profiles, validate_no_credential_fields, validate_role_profiles
@@ -48,6 +49,9 @@ def build_role_mapping(
     normalised_roles = validation["role_validation"]["roles"]
     normalised_matrix = validation["permission_matrix_validation"]["permission_matrix"]
     package = build_access_control_matrix_package(normalised_roles, normalised_matrix, endpoint_results)
+    access_test_plans = build_test_plans_from_role_mapping(package)
+    package["access_control_test_plans"] = access_test_plans
+    package["a01_manual_validation_summary"] = build_a01_manual_validation_summary(access_test_plans, [], [])
     package["valid"] = True
     return redact_nested(package)
 

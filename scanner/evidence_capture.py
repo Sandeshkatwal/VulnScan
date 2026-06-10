@@ -35,3 +35,27 @@ def build_role_permission_evidence_template(
             ],
         }
     )
+
+
+def build_a01_manual_test_evidence_template(plan: dict[str, Any], observation: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Build redacted evidence context for an A01 Manual Validation Plan."""
+    observation = observation or plan.get("observed_behaviour") or {}
+    return redact_nested(
+        {
+            "evidence_type": "a01_manual_validation_plan",
+            "test_plan_id": plan.get("test_plan_id") or "",
+            "role_label": plan.get("role_label") or "",
+            "affected_endpoint": plan.get("affected_url") or plan.get("normalised_url") or "",
+            "expected_permission": plan.get("expected_permission") or "unknown",
+            "expected_behaviour": plan.get("expected_secure_behaviour") or "",
+            "observed_behaviour": observation.get("observed_message_summary") or "",
+            "observed_access_result": observation.get("observed_access_result") or "not_tested",
+            "evidence_summary": observation.get("evidence_summary") or "",
+            "redaction_status": observation.get("redaction_status") or "redacted",
+            "safety_notes": [
+                "Authorised Test Accounts Only.",
+                "Do not include secret authentication material or real user data.",
+                "Manual Validation Required.",
+            ],
+        }
+    )

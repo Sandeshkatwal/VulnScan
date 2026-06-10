@@ -16,6 +16,7 @@ import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoReme
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
 import { AuthContextView } from './components/AuthContextView'
+import { A01ManualTestPlannerView } from './components/A01ManualTestPlannerView'
 import { BugIntelligenceMetricsView } from './components/BugIntelligenceMetricsView'
 import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
 import { BugBountyReconView } from './components/BugBountyReconView'
@@ -62,7 +63,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -86,7 +87,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.2-demo', api_version: '21.2' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.3-demo', api_version: '21.3' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -111,6 +112,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'endpoint-discovery', label: 'Endpoint Intelligence' },
   { id: 'safe-validation', label: 'Safe Validation' },
   { id: 'authenticated-assessment', label: 'Authenticated Assessment' },
+  { id: 'a01-manual-planner', label: 'A01 Manual Test Planner' },
   { id: 'submission-tracker', label: 'Submission Tracker' },
   { id: 'duplicates', label: 'Duplicate Detection' },
   { id: 'owasp', label: 'OWASP Top 10' },
@@ -173,6 +175,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   'authenticated-assessment': {
     title: 'Authenticated Assessment',
     description: 'Redacted Session Profile, Authentication Context, Authenticated Scope, and Auth-Required Endpoint classification.',
+  },
+  'a01-manual-planner': {
+    title: 'A01 Manual Test Planner',
+    description: 'Access Control Manual Test Planner for Expected Behaviour, Observed Behaviour, Evidence Checklist, and Retest Workflow records.',
   },
   owasp: {
     title: 'OWASP Top 10',
@@ -795,6 +801,10 @@ function App() {
     )
   }
 
+  function renderA01ManualPlanner() {
+    return <A01ManualTestPlannerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} jobResult={jobResult} />
+  }
+
   function renderSubmissionTracker() {
     return <SubmissionTrackerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -851,6 +861,7 @@ function App() {
     if (currentSection === 'endpoint-discovery') return renderEndpointDiscovery()
     if (currentSection === 'safe-validation') return renderSafeValidation()
     if (currentSection === 'authenticated-assessment') return renderAuthenticatedAssessment()
+    if (currentSection === 'a01-manual-planner') return renderA01ManualPlanner()
     if (currentSection === 'submission-tracker') return renderSubmissionTracker()
     if (currentSection === 'duplicates') return renderDuplicates()
     if (currentSection === 'owasp') return renderOWASP()

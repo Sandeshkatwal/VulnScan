@@ -535,7 +535,7 @@ def make_a01_evidence_item(
         "manual_test_plan_id": manual_test_plan_id,
         "recommended_manual_steps": recommended_manual_steps or plan["safe_manual_steps"],
         "recommendation": recommendation or "Review A01 Broken Access Control candidate using authorised test accounts only.",
-        "limitation": limitation or "Candidate requiring manual validation. No auth bypass automation, cross-account testing, or state-changing request was performed.",
+        "limitation": limitation or "Candidate requiring Manual Validation Required workflow. No automatic account-to-account request or state-changing request was performed.",
         "source": source,
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
@@ -629,7 +629,7 @@ def build_a01_manual_validation_plan(evidence_item: dict[str, Any]) -> dict[str,
     plan = dict(plans.get(plan_id, plans["horizontal_access_control_review"]))
     plan["plan_id"] = plan_id if plan_id in plans else "horizontal_access_control_review"
     plan["manual_validation_required"] = True
-    plan["safety_note"] = "Manual validation required. Use authorised test accounts only; no auth bypass automation is performed by VulScan."
+    plan["safety_note"] = "Manual Validation Required. Use Authorised Test Accounts Only; VulScan does not perform live access-control requests for this plan."
     return plan
 
 

@@ -25,13 +25,14 @@ from scanner.access_control_candidates import (
 )
 from scanner.evidence import redact_nested
 from scanner.finding import create_finding, finding_to_dict
+from scanner.access_control_test_planner import build_a01_manual_validation_summary
 
 
 A01_RULES_PATH = Path("data") / "owasp" / "a01" / "a01_rules.json"
 A01_REPORTS_DIR = Path("reports") / "owasp" / "a01"
 LIMITATIONS = [
     "A01 Broken Access Control checks are candidate-based and require manual validation.",
-    "No auth bypass automation, cross-account testing, credential attack, privilege escalation attempt, or state-changing request is performed.",
+    "No automatic account-to-account requests, credential attack workflow, elevated-access action workflow, or state-changing request is performed.",
     "Object identifiers are normalised where possible and parameter values are not retained unnecessarily.",
     "Use authorised test accounts, approved test tenants, and programme-approved test data only.",
 ]
@@ -115,6 +116,28 @@ def attach_a01_access_control(scan_result: dict[str, Any]) -> dict[str, Any]:
             if row.get("expected_permission") == "denied":
                 item["interest_label"] = "High Interest"
                 item["role_permission_notes"] = "Expected denied action in Access-Control Matrix. Manual Validation Required."
+    access_plans = scan_result.get("access_control_test_plans") or []
+    observations = scan_result.get("access_control_observations") or []
+    retests = scan_result.get("access_control_retests") or []
+    if access_plans or observations or retests:
+        summary = build_a01_manual_validation_summary(access_plans, observations, retests)
+        payload["a01_manual_validation_summary"] = summary
+        payload["a01_access_control_summary"].update(
+            {
+                "manual_test_plans_count": summary.get("manual_test_plans_count", 0),
+                "manually_verified_issue_count": summary.get("manually_verified_issue_count", 0),
+                "manually_verified_secure_count": summary.get("manually_verified_secure_count", 0),
+                "retest_required_count": summary.get("retest_required_count", 0),
+                "retest_passed_count": summary.get("retest_passed_count", 0),
+                "retest_failed_count": summary.get("retest_failed_count", 0),
+            }
+        )
+        plans_by_evidence = {str(plan.get("linked_a01_evidence_id") or ""): plan for plan in access_plans}
+        for item in payload.get("a01_access_control_evidence", []) or []:
+            plan = plans_by_evidence.get(str(item.get("evidence_id") or ""))
+            if plan:
+                item["manual_test_plan_id"] = plan.get("test_plan_id")
+                item["validation_status"] = plan.get("validation_status") or item.get("validation_status") or "planned"
     findings = list(payload.get("findings", []))
     payload_without_findings = dict(payload)
     payload_without_findings.pop("findings", None)
@@ -201,7 +224,7 @@ def build_a01_findings(summary: dict[str, Any], evidence: list[dict[str, Any]]) 
             "Function-Level Authorization Candidate",
             "Admin, management, role, or sensitive function endpoints were observed.",
             "Manually validate authorization using authorised roles.",
-            "Endpoint discovery does not prove unauthorised access.",
+            "Endpoint discovery does not prove access outside the authorised assessment scope.",
         ),
         "tenant_boundary_candidates": (
             "Tenant Boundary Candidate",

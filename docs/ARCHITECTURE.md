@@ -252,3 +252,6 @@ VulScan 21.1 adds `scanner.authenticated_crawler`, `scanner.session_boundary`, a
 ## Version 21.2 Role and Permission Mapping Components
 
 Role and Permission Mapping is implemented as pure local planning modules: `scanner/role_profiles.py`, `scanner/permission_matrix.py`, `scanner/access_control_matrix.py`, and `scanner/role_mapping_assistant.py`. API wrappers live in `scanner/api_role_mapping.py`. The modules consume existing endpoint/session metadata and generate Access-Control Matrix rows and Manual Validation Required plans without making network requests.
+## Version 21.3 Access Control Manual Test Planner Components
+
+Access Control Manual Test Planner logic lives in `scanner/access_control_test_planner.py`, `scanner/a01_manual_tests.py`, `scanner/access_control_evidence_checklist.py`, and `scanner/access_control_retest.py`. API wrappers live in `scanner/api_access_control_planner.py`. The modules create local workflow records and do not make network requests.

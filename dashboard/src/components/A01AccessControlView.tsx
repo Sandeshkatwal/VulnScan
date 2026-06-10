@@ -30,7 +30,7 @@ export function A01AccessControlView({ summary, evidence = [] }: { summary?: A01
         </div>
       </div>
       <A01SummaryCards summary={summary} />
-      <p className="panel-message">Candidate requiring manual validation. Authorised test accounts only; do not access real user data; no auth bypass automation performed.</p>
+      <p className="panel-message">Candidate requiring Manual Validation Required workflow. Authorised test accounts only; do not access real user data.</p>
       <h3>Object ID Candidates</h3>
       <A01ObjectIdCandidateTable items={evidence} />
       <h3>Admin and Function Surfaces</h3>

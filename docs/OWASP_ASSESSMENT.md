@@ -124,3 +124,6 @@ Version 21.1 Authenticated Crawl note: OWASP evidence may include GET-only Authe
 ## Version 21.2 Role and Permission Mapping
 
 The OWASP Assessment workflow can include Role and Permission Mapping outputs for A01 Access-Control Planning: Role Profiles, Access-Control Matrix summaries, Role Endpoint Matrix rows, and Manual Validation Required plans. These records support documentation and evidence preparation only. See `docs/ROLE_PERMISSION_MAPPING.md`.
+## Version 21.3 Access Control Manual Test Planner
+
+OWASP Assessment outputs can include Access Control Manual Test Planner records for A01 Manual Validation Plan workflow, evidence documentation, and Retest Workflow tracking. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.

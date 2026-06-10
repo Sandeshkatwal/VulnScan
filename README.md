@@ -280,3 +280,6 @@ The A01 engine is candidate-only: no automatic role comparison, account-to-accou
 ## Version 21.2 Role and Permission Mapping
 
 VulScan includes a Role and Permission Mapping assistant for A01 Access-Control Planning. It lets authorised assessors define Role Profiles, maintain an Access-Control Matrix, infer endpoint actions from existing endpoint metadata, and generate Manual Validation Required plans. It is a planning and documentation workflow only and does not perform automatic role comparison, account-to-account requests, or state-changing access checks. See `docs/ROLE_PERMISSION_MAPPING.md`.
+## Version 21.3 Access Control Manual Test Planner
+
+VulScan includes an Access Control Manual Test Planner for A01 Manual Validation Plan workflow, Expected Behaviour, Observed Behaviour, Evidence Checklist, Retest Workflow, and report-ready A01 templates. It creates local documentation records only and performs no live access-control requests. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.

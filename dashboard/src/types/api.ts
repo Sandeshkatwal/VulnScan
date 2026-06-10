@@ -826,6 +826,92 @@ export interface RoleManualPlanRequest {
   expected_permission: string
 }
 
+export interface A01ManualTestPlan {
+  test_plan_id?: string
+  title?: string
+  category?: string
+  test_type?: string
+  target?: string
+  affected_url?: string
+  normalised_url?: string
+  endpoint_category?: string
+  role_label?: string
+  role_id?: string
+  tenant_label?: string
+  expected_permission?: string
+  expected_secure_behaviour?: string
+  test_preconditions?: string[]
+  manual_steps?: string[]
+  evidence_checklist?: ApiRecord
+  observed_behaviour?: ApiRecord
+  validation_status?: string
+  risk_if_failed?: string
+  recommendation?: string
+  safety_notes?: string[]
+  linked_a01_evidence_id?: string
+  linked_endpoint_id?: string
+  linked_role_matrix_id?: string
+  linked_session_profile_id?: string
+  [key: string]: unknown
+}
+
+export interface A01AccessObservation {
+  observation_id?: string
+  test_plan_id?: string
+  observed_status?: string
+  observed_status_code?: number | null
+  observed_message_summary?: string
+  observed_access_result?: string
+  evidence_summary?: string
+  evidence_file_path?: string
+  redaction_status?: string
+  tester_notes?: string
+  observed_at?: string
+  [key: string]: unknown
+}
+
+export interface A01AccessRetest {
+  retest_id?: string
+  test_plan_id?: string
+  original_observed_result?: string
+  remediation_summary?: string
+  retest_steps?: string[]
+  retest_observed_result?: string
+  retest_status?: string
+  retest_notes?: string
+  retested_at?: string
+  [key: string]: unknown
+}
+
+export interface AccessTestPlannerResponse {
+  access_control_test_plans?: A01ManualTestPlan[]
+  access_control_test_plan?: A01ManualTestPlan
+  access_control_observations?: A01AccessObservation[]
+  access_control_observation?: A01AccessObservation
+  access_control_retests?: A01AccessRetest[]
+  access_control_retest?: A01AccessRetest
+  a01_manual_validation_summary?: ApiRecord
+  a01_report_template?: ApiRecord
+  [key: string]: unknown
+}
+
+export interface AccessTestCreateRequest {
+  role: RoleProfile
+  endpoint: Record<string, unknown> | string
+  expected_permission: string
+  test_type: string
+}
+
+export interface AccessTestObserveRequest {
+  test_plan_id: string
+  observed_access_result: string
+  observed_status_code?: number | null
+  observed_message_summary?: string
+  evidence_summary?: string
+  evidence_file_path?: string
+  tester_notes?: string
+}
+
 export interface OWASPCategory {
   owasp_id?: string
   name?: string
