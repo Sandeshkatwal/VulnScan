@@ -3680,3 +3680,45 @@ td select {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.panel-wide {
+  grid-column: 1 / -1;
+}
+
+.notice-box {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.panel label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.panel input,
+.panel select,
+.panel textarea {
+  width: 100%;
+}
+
+.panel textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-row input {
+  width: auto;
+}

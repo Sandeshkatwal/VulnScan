@@ -4,6 +4,10 @@ Version 21.5 adds a Business Logic Review Workflow Assistant for manual workflow
 
 Manual Validation Required. Authorised Test Data Only. No Automatic Workflow Execution.
 
+## Report Composer Integration
+
+Version 21.7 can use Business Logic Review plans and observations as sources for Professional Findings with affected workflows, Business Impact, Technical Impact, Developer Remediation, Retest Status, and Risk Acceptance Notes. Manual validation status controls whether confirmed wording is allowed.
+
 The assistant identifies workflow candidates from existing endpoints, parameters, authenticated crawl results, role mapping data, Replay Plans, and OWASP evidence. It creates Workflow Review Plans, State Transition Review maps, Abuse Case Checklists, Expected Behaviour and Observed Behaviour records, Retest Workflow records, and report-ready templates.
 
 VulScan does not execute checkout, payment, approval, coupon, rate-limit, account lifecycle, import/export, webhook, or other state-changing workflows automatically. It does not trigger payments, refunds, transfers, subscriptions, purchases, real approvals, or real rejections.

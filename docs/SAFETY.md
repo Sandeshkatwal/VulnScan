@@ -4,6 +4,10 @@ VulScan is for authorised defensive vulnerability assessment only. Use it only o
 
 For public screenshots and portfolio demos, use demo mode and follow [SCREENSHOT_CHECKLIST.md](SCREENSHOT_CHECKLIST.md).
 
+## Version 21.7 Reporting Safety
+
+Professional Finding Builder and Report Composer are composition-only features. They do not execute scans or active checks. Exports include Redacted Evidence references only and block unsafe evidence, raw passwords, raw cookies, raw bearer tokens, raw private keys, full sensitive response bodies, and exploit payloads. Candidate findings remain candidate or manual-validation-required until manual validation supports stronger wording.
+
 ## Safe Defaults
 
 - The API binds to `127.0.0.1` by default.

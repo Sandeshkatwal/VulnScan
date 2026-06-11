@@ -19,6 +19,8 @@ VulScan is designed for systems you own or have explicit permission to test. It 
 
 VulScan is a local platform for authorised security assessment and vulnerability management. It combines discovery, credentialed audit foundations, passive web assessment, local vulnerability intelligence, prioritisation, reporting, remediation tracking, and dashboard visualisation.
 
+Version 21.7 adds a Professional Finding Builder and Report Composer. It creates Technical Findings and complete Markdown, HTML, and JSON reports from safe local data, Redacted Evidence references, OWASP assessment outputs, manual observations, retest results, and vulnerability intelligence. Candidate findings are not labelled confirmed unless validation status supports that wording. See [docs/PROFESSIONAL_REPORT_COMPOSER.md](docs/PROFESSIONAL_REPORT_COMPOSER.md).
+
 The project exists to show how scanner output can become a practical security workflow instead of a raw list of findings. It stores results locally, enriches findings with risk and prioritisation context, produces JSON/HTML reports, exposes a local FastAPI API, and presents the workflow in a React dashboard.
 
 Version 21.4 adds a Safe Authenticated Parameter Replay Planner for manual validation planning only. It creates Replay Plans, Redacted Request Templates, Parameter Review Plans, Expected Behaviour/Observed Behaviour records, evidence checklists, and Retest Workflow records. It performs No Automatic Replay and stores no raw credentials, cookies, bearer tokens, CSRF values, or session tokens.

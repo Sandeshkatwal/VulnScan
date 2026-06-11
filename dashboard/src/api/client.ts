@@ -41,6 +41,10 @@ import type {
   OWASPAssessmentResponse,
   OWASPAssessmentRulesResponse,
   OWASPReportBuildResponse,
+  ProfessionalFindingRequest,
+  ProfessionalFindingsResponse,
+  ReportComposeRequest,
+  ReportComposerResponse,
   A01AssessmentRequest,
   A01AssessmentResponse,
   A01ManualPlanRequest,
@@ -794,6 +798,46 @@ export function linkEvidence(evidenceId: string, payload: { link_type: string; l
 
 export function exportEvidence(payload: { evidence_ids: string[]; markdown?: boolean; json?: boolean }): Promise<EvidenceVaultResponse> {
   return request<EvidenceVaultResponse>('/evidence/export', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getProfessionalFindings(): Promise<ProfessionalFindingsResponse> {
+  return request<ProfessionalFindingsResponse>('/reports/findings')
+}
+
+export function getProfessionalFinding(findingId: string): Promise<ProfessionalFindingsResponse> {
+  return request<ProfessionalFindingsResponse>(`/reports/findings/${encodeURIComponent(findingId)}`)
+}
+
+export function createProfessionalFinding(payload: ProfessionalFindingRequest): Promise<ProfessionalFindingsResponse> {
+  return request<ProfessionalFindingsResponse>('/reports/finding', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createFindingFromEvidence(evidenceId: string): Promise<ProfessionalFindingsResponse> {
+  return request<ProfessionalFindingsResponse>('/reports/finding/from-evidence', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ evidence_id: evidenceId }),
+  })
+}
+
+export function composeProfessionalReport(payload: ReportComposeRequest): Promise<ReportComposerResponse> {
+  return request<ReportComposerResponse>('/reports/compose', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function checkProfessionalReportSafety(payload: Partial<ReportComposeRequest>): Promise<ReportComposerResponse> {
+  return request<ReportComposerResponse>('/reports/export-safety-check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

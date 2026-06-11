@@ -4,6 +4,10 @@ VulScan Version 20.0 adds the OWASP Assessment Engine foundation for authorised 
 
 Version 20.9 adds a unified OWASP Assessment report model and Markdown export. The report includes executive summary, A01-A10 coverage matrix, evidence strength summary, manual validation checklist, developer remediation guidance, coverage gaps, limitations, and safe testing statement. See `docs/OWASP_ASSESSMENT_REPORTING.md`.
 
+## Professional Report Composition
+
+Version 21.7 can turn OWASP assessment indicators into Professional Finding drafts. Candidate OWASP indicators retain manual-validation-required wording unless validation status supports a manually verified issue. The Report Composer includes an OWASP Mapping section with A01-A10 counts and manual validation status.
+
 Version 21.0 adds Authenticated Web Assessment context support. Redacted Session Profile metadata can improve A01/A07 evidence context and Auth-Required Endpoint classification. Manual validation remains required for access-control and authentication conclusions.
 
 The engine does not exploit, brute force, bypass authentication, submit destructive payloads, or scan out-of-scope assets. Results are evidence and coverage oriented.

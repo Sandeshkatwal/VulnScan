@@ -2,6 +2,16 @@
 
 For a concise professional command list, see [COMMAND_REFERENCE.md](COMMAND_REFERENCE.md). For portfolio demo flow, see [PORTFOLIO_GUIDE.md](PORTFOLIO_GUIDE.md).
 
+## Professional Reporting
+
+Version 21.7 adds Professional Finding Builder and Report Composer workflows for safe report composition from existing local data.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main reports compose --title "VulScan OWASP Assessment Report" --target http://127.0.0.1:8000 --findings-file data\findings\sample_finding.json --markdown --html --json
+```
+
+See [PROFESSIONAL_REPORT_COMPOSER.md](PROFESSIONAL_REPORT_COMPOSER.md) for the finding model, wording policy, export safety checks, CLI examples, API examples, and dashboard workflow.
+
 ## Bug Intelligence Metrics
 
 Version 18.9 adds local Personal Performance Metrics for the Bug Intelligence workflow.

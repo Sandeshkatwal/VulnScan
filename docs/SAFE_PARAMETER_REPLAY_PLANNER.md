@@ -4,6 +4,10 @@ Version 21.4 adds a Safe Authenticated Parameter Replay Planner for authorised m
 
 Replay Plans convert discovered endpoints, parameter names, authenticated crawl metadata, OWASP A01/A05/A07 candidates, and role mapping context into Redacted Request Templates and Parameter Review Plans. They are documentation and workflow records only.
 
+## Finding Builder Integration
+
+Version 21.7 can use Safe Authenticated Parameter Replay Planner records as sources for Professional Finding drafts. Reports should reference redacted request templates and safe observation summaries only; raw tokens, cookies, passwords, and unsafe payloads must not be exported.
+
 ## What Is Not Automated
 
 VulScan does not replay requests, mutate parameters, submit forms, send payloads, perform automatic authorization testing, perform automatic privilege changes, compare live accounts automatically, or access unauthorised data.

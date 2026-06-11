@@ -1,0 +1,23 @@
+{
+  "title": "VulScan OWASP Assessment Report",
+  "target": "http://127.0.0.1:8000",
+  "client_or_project_name": "Local Demo Project",
+  "assessment_type": "owasp_assessment",
+  "report_status": "draft",
+  "scope_summary": "Local demonstration target and sample findings only.",
+  "methodology_summary": "Report Composer uses safe findings and Redacted Evidence references only.",
+  "sections": [
+    "cover_page",
+    "safe_testing_statement",
+    "executive_summary",
+    "scope_methodology",
+    "findings_summary",
+    "technical_findings",
+    "owasp_mapping",
+    "evidence_summary",
+    "retest_summary",
+    "risk_acceptance",
+    "appendices"
+  ]
+}
+

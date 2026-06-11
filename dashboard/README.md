@@ -4,6 +4,8 @@ The VulScan dashboard is a local React + Vite + TypeScript interface for authori
 
 It presents API health, scan jobs, findings, risk overview, trends, Evidence & Reports, remediation tracking, Program Scope, Recon Intelligence, Endpoint Intelligence, Safe Validation, Submission Tracker, Duplicate Detection, Performance Metrics, settings, demo mode, portfolio mode, and screenshot mode.
 
+Version 21.7 adds Finding Builder and Report Composer sections. Finding Builder manages safe Technical Finding drafts with Evidence References, risk rating, Developer Remediation, and Retest Status. Report Composer prepares Executive Summary, OWASP Mapping, Evidence Summary, Retest Summary, Risk Acceptance, and Safe Export outputs for Markdown, HTML, and JSON.
+
 Version 20.7 adds an A03 Software Supply Chain view under OWASP Assessment. It displays component exposure indicators, dependency metadata indicators, SBOM analysis, CVE/CPE enrichment, source map/build artifact indicators, third-party script review, and recommendations. The dashboard uses wording such as indicator, evidence, confidence, and manual validation required; it does not expose exploit actions or external registry fetching.
 
 Version 20.8 adds an A08 Software/Data Integrity view under OWASP Assessment. It shows upload/import workflow candidates, webhook/callback integrity indicators, update workflow indicators, Subresource Integrity evidence, trusted-data boundary indicators, a manual validation checklist, and recommendations. It clearly states that no uploads were performed, no webhooks were triggered, and no update endpoints were called.

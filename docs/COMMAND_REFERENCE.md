@@ -21,6 +21,21 @@ cd dashboard
 npm run dev
 ```
 
+## Professional Finding Builder and Report Composer
+
+These commands do not run scans; they compose Technical Findings and reports from existing safe local data.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main reports finding-from-evidence --evidence-id demo-evidence-001 --json
+.\.venv311\Scripts\python.exe -m scanner.main reports finding-create --title "Missing CSP Header" --severity Low --owasp A02:2025 --summary "Content-Security-Policy header was not observed." --json
+.\.venv311\Scripts\python.exe -m scanner.main reports findings
+.\.venv311\Scripts\python.exe -m scanner.main reports finding-show --finding-id finding-001
+.\.venv311\Scripts\python.exe -m scanner.main reports compose --title "VulScan OWASP Assessment Report" --target http://127.0.0.1:8000 --findings-file data\findings\sample_finding.json --markdown --html --json
+.\.venv311\Scripts\python.exe -m scanner.main reports executive-summary --findings-file data\findings\sample_finding.json
+.\.venv311\Scripts\python.exe -m scanner.main reports retest-summary --findings-file data\findings\sample_finding.json
+.\.venv311\Scripts\python.exe -m scanner.main reports safety-check --findings-file data\findings\sample_finding.json
+```
+
 ## Program Scope
 
 ```powershell

@@ -2,6 +2,10 @@
 
 Version 21.2 adds a safe Role and Permission Mapping assistant for A01 Access-Control Planning.
 
+## Report Composer Integration
+
+Version 21.7 can use Role and Permission Mapping outputs as affected roles, workflows, and scope context for Professional Findings. The Report Composer uses these fields for Scope and Methodology, Technical Findings, and Executive Summary wording without storing or exporting credentials.
+
 ## Purpose
 
 The assistant helps document Role Profiles, build an Access-Control Matrix, infer endpoint actions from existing endpoint metadata, and generate Manual Validation Required plans. It does not perform automatic access checks.

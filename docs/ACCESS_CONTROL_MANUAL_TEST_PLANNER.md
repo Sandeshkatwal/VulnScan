@@ -2,6 +2,10 @@
 
 Version 21.3 adds an Access Control Manual Test Planner for authorised A01 testing workflow and documentation.
 
+## Finding Builder Integration
+
+Version 21.7 can convert Access Control Manual Test Planner records into Professional Finding drafts. Expected and observed behaviour should be summarised safely, with Evidence References linking to Redacted Evidence Vault items. A01 findings use careful wording until manual validation supports a manually verified issue.
+
 ## Purpose
 
 The planner converts A01 candidates, Role and Permission Mapping outputs, Authenticated Crawl metadata, endpoint classifications, and permission matrices into structured A01 Manual Validation Plan records. Plans capture Expected Behaviour, Observed Behaviour, Evidence Checklist status, Retest Workflow status, and report-ready A01 text.

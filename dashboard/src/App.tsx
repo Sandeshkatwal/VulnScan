@@ -27,6 +27,7 @@ import { DuplicateDetectionView } from './components/DuplicateDetectionView'
 import { EndpointDiscoveryView } from './components/EndpointDiscoveryView'
 import { ErrorAlert } from './components/ErrorAlert'
 import { EvidenceVaultView } from './components/EvidenceVaultView'
+import { FindingBuilderView } from './components/FindingBuilderView'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
 import { FindingDetailDrawer } from './components/FindingDetailDrawer'
 import { JobDetails } from './components/JobDetails'
@@ -38,6 +39,7 @@ import { ProductHero } from './components/ProductHero'
 import { OWASPMappingView } from './components/OWASPMappingView'
 import { ParameterReplayPlannerView } from './components/ParameterReplayPlannerView'
 import { ReportsView } from './components/ReportsView'
+import { ReportComposerView } from './components/ReportComposerView'
 import { RemediationView } from './components/RemediationView'
 import { RolePermissionMappingView } from './components/RolePermissionMappingView'
 import { RiskOverview } from './components/RiskOverview'
@@ -66,7 +68,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'remediation' | 'evidence-vault' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'finding-builder' | 'report-composer' | 'remediation' | 'evidence-vault' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -90,7 +92,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.3-demo', api_version: '21.3' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.7-demo', api_version: '21.7' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -107,6 +109,8 @@ const navigationItems: Array<{ id: DashboardSection; label: string }> = [
   { id: 'risk', label: 'Risk' },
   { id: 'trends', label: 'Trends' },
   { id: 'reports', label: 'Evidence & Reports' },
+  { id: 'finding-builder', label: 'Finding Builder' },
+  { id: 'report-composer', label: 'Report Composer' },
   { id: 'remediation', label: 'Remediation' },
   { id: 'evidence-vault', label: 'Evidence Vault' },
   { id: 'bug-intelligence', label: 'Bug Intelligence' },
@@ -149,6 +153,14 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   reports: {
     title: 'Evidence & Reports',
     description: 'Saved evidence, JSON exports, and Security Finding Reports from completed jobs.',
+  },
+  'finding-builder': {
+    title: 'Finding Builder',
+    description: 'Professional Finding Builder for Technical Findings, Business Impact, Developer Remediation, Evidence References, Retest Status, and Risk Acceptance Notes.',
+  },
+  'report-composer': {
+    title: 'Report Composer',
+    description: 'Compose Executive Summary, OWASP mapping, Evidence Summary, Retest Summary, Risk Acceptance, and Safe Export outputs.',
   },
   remediation: {
     title: 'Remediation',
@@ -774,6 +786,14 @@ function App() {
     )
   }
 
+  function renderFindingBuilder() {
+    return <FindingBuilderView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
+  function renderReportComposer() {
+    return <ReportComposerView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
+  }
+
   function renderRemediation() {
     return (
       <article className="panel panel--wide">
@@ -883,6 +903,8 @@ function App() {
     if (currentSection === 'risk') return renderRisk()
     if (currentSection === 'trends') return renderTrends()
     if (currentSection === 'reports') return renderReports()
+    if (currentSection === 'finding-builder') return renderFindingBuilder()
+    if (currentSection === 'report-composer') return renderReportComposer()
     if (currentSection === 'remediation') return renderRemediation()
     if (currentSection === 'evidence-vault') return renderEvidenceVault()
     if (currentSection === 'bug-intelligence') return renderBugIntelligence()

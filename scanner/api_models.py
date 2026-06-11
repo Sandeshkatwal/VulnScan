@@ -846,6 +846,64 @@ class EvidenceExportRequest(StrictApiModel):
     json_export: bool = Field(True, alias="json")
 
 
+class ReportFindingFromEvidenceRequest(StrictApiModel):
+    evidence_id: str = Field(..., min_length=1, max_length=255)
+    save: bool = Field(True)
+
+
+class ProfessionalFindingRequest(StrictApiModel):
+    finding_id: str | None = Field(None, max_length=255)
+    title: str = Field(..., min_length=1, max_length=500)
+    status: str = Field("draft", max_length=64)
+    finding_type: str = Field("custom", max_length=128)
+    owasp_categories: list[str] = Field(default_factory=list)
+    affected_targets: list[str] = Field(default_factory=list)
+    affected_urls: list[str] = Field(default_factory=list)
+    affected_components: list[str] = Field(default_factory=list)
+    affected_parameters: list[str] = Field(default_factory=list)
+    severity: str = Field("Informational", max_length=64)
+    confidence: str = Field("Low", max_length=64)
+    evidence_strength: str = Field("informational", max_length=128)
+    validation_status: str = Field("candidate", max_length=128)
+    executive_summary: str = Field("", max_length=4000)
+    technical_summary: str = Field("", max_length=8000)
+    business_impact: str = Field("", max_length=4000)
+    technical_impact: str = Field("", max_length=4000)
+    affected_roles: list[str] = Field(default_factory=list)
+    affected_workflows: list[str] = Field(default_factory=list)
+    remediation: str = Field("", max_length=8000)
+    developer_guidance: str = Field("", max_length=8000)
+    validation_guidance: str = Field("", max_length=4000)
+    retest_status: str = Field("not_retested", max_length=64)
+    retest_notes: str = Field("", max_length=4000)
+    evidence_references: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+
+
+class ReportComposeRequest(StrictApiModel):
+    title: str = Field(..., min_length=1, max_length=500)
+    target: str = Field("", max_length=2048)
+    client_or_project_name: str = Field("", max_length=255)
+    assessment_type: str = Field("owasp_assessment", max_length=128)
+    report_status: str = Field("draft", max_length=64)
+    findings: list[dict[str, Any]] = Field(default_factory=list)
+    findings_file: str | None = Field(None, max_length=1024)
+    owasp_summary: dict[str, Any] | None = Field(None)
+    scope_summary: str = Field("", max_length=4000)
+    methodology_summary: str = Field("", max_length=4000)
+    markdown: bool = Field(False)
+    html: bool = Field(False)
+    json_export: bool = Field(True, alias="json")
+
+
+class ReportExportSafetyCheckRequest(StrictApiModel):
+    findings: list[dict[str, Any]] = Field(default_factory=list)
+    findings_file: str | None = Field(None, max_length=1024)
+    report: dict[str, Any] | None = Field(None)
+    target: str = Field("", max_length=2048)
+
+
 class SubmissionCreateRequest(StrictApiModel):
     """Create a local submission tracking record. Does not submit externally."""
 

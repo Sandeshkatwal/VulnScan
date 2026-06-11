@@ -2339,6 +2339,129 @@ export interface EvidenceVaultResponse {
   [key: string]: unknown
 }
 
+export interface ProfessionalFinding {
+  finding_id?: string
+  title?: string
+  status?: string
+  finding_type?: string
+  owasp_categories?: string[]
+  affected_targets?: string[]
+  affected_urls?: string[]
+  affected_components?: string[]
+  affected_parameters?: string[]
+  severity?: string
+  risk_score?: number
+  confidence?: string
+  evidence_strength?: string
+  validation_status?: string
+  executive_summary?: string
+  technical_summary?: string
+  business_impact?: string
+  technical_impact?: string
+  affected_roles?: string[]
+  affected_workflows?: string[]
+  evidence_references?: string[]
+  evidence_quality_summary?: ApiRecord
+  remediation?: string
+  developer_guidance?: string
+  validation_guidance?: string
+  retest_status?: string
+  retest_notes?: string
+  risk_acceptance?: ApiRecord | null
+  limitations?: string[]
+  safe_testing_statement?: string
+  source_modules?: string[]
+  tags?: string[]
+  warnings?: string[]
+  risk_rating?: ApiRecord
+  export_safety_status?: ApiRecord
+  [key: string]: unknown
+}
+
+export interface ProfessionalFindingRequest {
+  finding_id?: string
+  title: string
+  status?: string
+  finding_type?: string
+  owasp_categories?: string[]
+  affected_targets?: string[]
+  affected_urls?: string[]
+  affected_components?: string[]
+  affected_parameters?: string[]
+  severity?: string
+  confidence?: string
+  evidence_strength?: string
+  validation_status?: string
+  executive_summary?: string
+  technical_summary?: string
+  business_impact?: string
+  technical_impact?: string
+  affected_roles?: string[]
+  affected_workflows?: string[]
+  remediation?: string
+  developer_guidance?: string
+  validation_guidance?: string
+  retest_status?: string
+  retest_notes?: string
+  evidence_references?: string[]
+  limitations?: string[]
+  tags?: string[]
+}
+
+export interface ProfessionalFindingsResponse {
+  finding?: ProfessionalFinding
+  findings?: ProfessionalFinding[]
+  total?: number
+  path?: string | null
+  [key: string]: unknown
+}
+
+export interface ComposedReport {
+  report_id?: string
+  title?: string
+  target?: string
+  client_or_project_name?: string
+  assessment_type?: string
+  report_status?: string
+  generated_at?: string
+  executive_summary?: ApiRecord
+  risk_overview?: ApiRecord
+  findings?: ProfessionalFinding[]
+  evidence_summary?: ApiRecord
+  owasp_summary?: ApiRecord
+  retest_summary?: ApiRecord
+  risk_acceptance_summary?: ApiRecord
+  remediation_roadmap?: ApiRecord
+  export_paths?: Record<string, string>
+  export_safety_status?: string
+  [key: string]: unknown
+}
+
+export interface ReportComposeRequest {
+  title: string
+  target?: string
+  client_or_project_name?: string
+  assessment_type?: string
+  report_status?: string
+  findings?: ProfessionalFinding[]
+  findings_file?: string
+  scope_summary?: string
+  methodology_summary?: string
+  markdown?: boolean
+  html?: boolean
+  json?: boolean
+}
+
+export interface ReportComposerResponse {
+  report?: ComposedReport
+  export_paths?: Record<string, string>
+  export_allowed?: boolean
+  status?: string
+  checked_findings?: ApiRecord[]
+  blocked_findings?: ApiRecord[]
+  [key: string]: unknown
+}
+
 export interface EvidenceCreateRequest {
   title: string
   evidence_type?: string

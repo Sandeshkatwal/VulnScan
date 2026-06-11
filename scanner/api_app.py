@@ -72,11 +72,20 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, BusinessLogicChecklistRequest, BusinessLogicCreateRequest, BusinessLogicDetectRequest, BusinessLogicGenerateRequest, BusinessLogicObserveRequest, BusinessLogicReportTemplateRequest, BusinessLogicRetestRequest, BusinessLogicStateMapRequest, EndpointDiscoveryRequest, EvidenceCreateRequest, EvidenceExportRequest, EvidenceLinkRequest, EvidenceRedactCheckRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, BusinessLogicChecklistRequest, BusinessLogicCreateRequest, BusinessLogicDetectRequest, BusinessLogicGenerateRequest, BusinessLogicObserveRequest, BusinessLogicReportTemplateRequest, BusinessLogicRetestRequest, BusinessLogicStateMapRequest, EndpointDiscoveryRequest, EvidenceCreateRequest, EvidenceExportRequest, EvidenceLinkRequest, EvidenceRedactCheckRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, ProfessionalFindingRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, ReportComposeRequest, ReportExportSafetyCheckRequest, ReportFindingFromEvidenceRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_parameter_replay_planner import api_create_replay_plan, api_generate_replay_plans, api_get_replay_plan, api_record_replay_observation, api_record_replay_retest, api_replay_report_template
 from scanner.api_business_logic_review import api_business_logic_report_template, api_checklist, api_create_business_logic_plan, api_detect_business_logic, api_generate_business_logic_plans, api_observe_business_logic, api_retest_business_logic, api_state_map
 from scanner.api_evidence_vault import api_create_evidence, api_export, api_get_evidence, api_link, api_list_evidence, api_quality, api_redact_check, api_timeline
 from scanner.evidence_vault import EvidenceVaultError
+from scanner.api_report_composer import (
+    api_compose_report,
+    api_create_or_update_finding,
+    api_export_safety_check,
+    api_finding_from_evidence,
+    api_get_finding,
+    api_list_findings,
+    resolve_composed_report_download,
+)
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -119,7 +128,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "21.3"
+API_VERSION = "21.7"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -139,6 +148,13 @@ PROTECTED_PATHS = {
     "/jobs/{job_id}/findings",
     "/exports/findings",
     "/reports",
+    "/reports/finding/from-evidence",
+    "/reports/finding",
+    "/reports/findings",
+    "/reports/findings/{finding_id}",
+    "/reports/compose",
+    "/reports/export-safety-check",
+    "/reports/{report_id}",
     "/reports/{report_id}/metadata",
     "/reports/{report_id}/download",
     "/reports/{report_id}/view",
@@ -2387,6 +2403,104 @@ def create_app(
             "record": record,
         }
 
+    @app.post(
+        "/reports/finding/from-evidence",
+        dependencies=[Depends(require_api_key)],
+        tags=["Report Composer"],
+        summary="Create a Professional Finding draft from Evidence Vault evidence",
+        description="Creates a finding draft from one Redacted Evidence item. The endpoint links evidence IDs and does not return raw evidence bodies.",
+        responses=ERROR_RESPONSES,
+    )
+    def report_finding_from_evidence(request: ReportFindingFromEvidenceRequest) -> dict[str, Any]:
+        try:
+            return api_finding_from_evidence(request.evidence_id, save=request.save)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post(
+        "/reports/finding",
+        dependencies=[Depends(require_api_key)],
+        tags=["Report Composer"],
+        summary="Create or update a Professional Finding draft",
+        description="Creates a safe Professional Finding draft. Raw secrets are redacted and candidate findings are not labelled confirmed unless validation supports it.",
+        responses=ERROR_RESPONSES,
+    )
+    def report_finding_create(request: ProfessionalFindingRequest) -> dict[str, Any]:
+        try:
+            return api_create_or_update_finding(request.model_dump(exclude_none=True))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/reports/findings",
+        dependencies=[Depends(require_api_key)],
+        tags=["Report Composer"],
+        summary="List Professional Finding drafts",
+        description="Lists local Professional Finding drafts from data/findings.",
+        responses=ERROR_RESPONSES,
+    )
+    def report_findings() -> dict[str, Any]:
+        return api_list_findings()
+
+    @app.get(
+        "/reports/findings/{finding_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Report Composer"],
+        summary="Get one Professional Finding draft",
+        responses=ERROR_RESPONSES,
+    )
+    def report_finding_show(finding_id: str) -> dict[str, Any]:
+        try:
+            return api_get_finding(finding_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post(
+        "/reports/compose",
+        dependencies=[Depends(require_api_key)],
+        tags=["Report Composer"],
+        summary="Compose and optionally export a professional assessment report",
+        description="Composes reports from supplied safe findings and local finding files. This endpoint does not perform scans.",
+        responses=ERROR_RESPONSES,
+    )
+    def reports_compose(request: ReportComposeRequest) -> dict[str, Any]:
+        try:
+            return api_compose_report(request.model_dump(by_alias=True, exclude_none=True))
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/reports/export-safety-check",
+        dependencies=[Depends(require_api_key)],
+        tags=["Report Composer"],
+        summary="Run composed report export safety checks",
+        description="Checks linked evidence references and final report text for redaction safety.",
+        responses=ERROR_RESPONSES,
+    )
+    def reports_export_safety_check(request: ReportExportSafetyCheckRequest) -> dict[str, Any]:
+        try:
+            return api_export_safety_check(request.model_dump(exclude_none=True))
+        except (OSError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/reports/{report_id}",
+        dependencies=[Depends(require_api_key)],
+        tags=["Report Composer"],
+        summary="Get composed report metadata",
+        description="Returns safe metadata for a composed report under reports/composed.",
+        responses=ERROR_RESPONSES,
+    )
+    def get_composed_report(report_id: str) -> dict[str, Any]:
+        path = resolve_composed_report_download(report_id)
+        if path is None:
+            metadata_path = _report_path_or_404(report_id, safe_reports_dir)
+            metadata = report_metadata(metadata_path, safe_reports_dir)
+            if not metadata:
+                raise HTTPException(status_code=404, detail="Report was not found.")
+            return {"report": metadata}
+        return {"report": {"report_id": report_id, "path": str(path), "filename": path.name, "size_bytes": path.stat().st_size}}
+
     @app.get(
         "/reports",
         dependencies=[Depends(require_api_key)],
@@ -2433,6 +2547,10 @@ def create_app(
         responses=ERROR_RESPONSES,
     )
     def download_report(report_id: str) -> FileResponse:
+        composed_path = resolve_composed_report_download(report_id)
+        if composed_path is not None:
+            media_type = "application/json" if composed_path.suffix.lower() == ".json" else "text/html" if composed_path.suffix.lower() == ".html" else "text/markdown"
+            return FileResponse(composed_path, media_type=media_type, filename=composed_path.name)
         path = _report_path_or_404(report_id, safe_reports_dir)
         media_type = "application/json" if path.suffix.lower() == ".json" else "text/html"
         return FileResponse(path, media_type=media_type, filename=path.name)

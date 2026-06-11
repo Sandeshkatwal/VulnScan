@@ -4,6 +4,10 @@ VulScan 21.0 adds the foundation for Authenticated Web Assessment. It introduces
 
 This is foundation-only. VulScan does not perform login automation, unauthorised authentication testing, automated credential testing, MFA circumvention testing, cross-account testing automation, or state-changing authenticated requests.
 
+## Report Composer Integration
+
+Version 21.7 can reference authenticated assessment outputs in Professional Findings through safe summaries, role/workflow fields, and Evidence References. Reports must not include raw cookies, bearer tokens, passwords, or credential material.
+
 ## Session Profile Concept
 
 A Session Profile describes an authorised testing context:

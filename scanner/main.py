@@ -171,6 +171,19 @@ from scanner.evidence_vault import (
     load_evidence_item,
     save_evidence_item,
 )
+from scanner.finding_builder import (
+    build_finding_from_evidence_vault_item,
+    build_finding_from_manual_input,
+    evidence_safety_for_references,
+    list_findings as list_professional_findings,
+    load_finding as load_professional_finding,
+    load_findings_file,
+    save_finding as save_professional_finding,
+)
+from scanner.report_composer import compose_report
+from scanner.report_exporter import export_composed_report_html, export_composed_report_json, export_composed_report_markdown, export_safety_check
+from scanner.report_sections import build_executive_summary
+from scanner.retest_summary import build_retest_summary
 from scanner.exporter import (
     export_assets,
     export_findings,
@@ -283,6 +296,7 @@ access_tests_app = typer.Typer(help="Access Control Manual Test Planner commands
 replay_plans_app = typer.Typer(help="Safe Authenticated Parameter Replay Planner commands.")
 business_logic_app = typer.Typer(help="Business Logic Review Workflow Assistant commands.")
 evidence_app = typer.Typer(help="Evidence Vault and Redaction Quality Controls commands.")
+reports_app = typer.Typer(help="Professional Finding Builder and Report Composer commands.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -297,6 +311,7 @@ app.add_typer(access_tests_app, name="access-tests")
 app.add_typer(replay_plans_app, name="replay-plans")
 app.add_typer(business_logic_app, name="business-logic")
 app.add_typer(evidence_app, name="evidence")
+app.add_typer(reports_app, name="reports")
 console = Console()
 
 
@@ -1478,6 +1493,136 @@ def evidence_export_command(
         console.print(f"[red]Export blocked:[/red] {exc}")
         raise typer.Exit(code=1) from exc
     console.print_json(data={"export_allowed": True, "export_paths": paths})
+
+
+@reports_app.command("finding-from-evidence")
+def reports_finding_from_evidence(
+    evidence_id: Annotated[str, typer.Option("--evidence-id")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Build a Professional Finding draft from one Evidence Vault item."""
+    item = load_evidence_item(evidence_id)
+    if item is None:
+        console.print("[red]Evidence Item was not found.[/red]")
+        raise typer.Exit(code=1)
+    finding = build_finding_from_evidence_vault_item(item)
+    path = save_professional_finding(finding)
+    if json_output:
+        console.print_json(data={"finding": finding, "path": str(path)})
+    else:
+        _print_professional_findings([finding])
+
+
+@reports_app.command("finding-create")
+def reports_finding_create(
+    title: Annotated[str, typer.Option("--title")],
+    severity: Annotated[str, typer.Option("--severity")] = "Informational",
+    owasp: Annotated[str | None, typer.Option("--owasp")] = None,
+    summary: Annotated[str, typer.Option("--summary")] = "",
+    validation_status: Annotated[str, typer.Option("--validation-status")] = "manual_validation_required",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Create a manual Professional Finding draft from safe summary text."""
+    finding = build_finding_from_manual_input(
+        {
+            "title": title,
+            "severity": severity,
+            "owasp_categories": [owasp] if owasp else [],
+            "technical_summary": summary,
+            "validation_status": validation_status,
+            "source_modules": ["manual"],
+        }
+    )
+    path = save_professional_finding(finding)
+    if json_output:
+        console.print_json(data={"finding": finding, "path": str(path)})
+    else:
+        _print_professional_findings([finding])
+
+
+@reports_app.command("findings")
+def reports_findings() -> None:
+    """List Professional Finding drafts."""
+    _print_professional_findings(list_professional_findings())
+
+
+@reports_app.command("finding-show")
+def reports_finding_show(finding_id: Annotated[str, typer.Option("--finding-id")]) -> None:
+    """Show one Professional Finding draft."""
+    finding = load_professional_finding(finding_id)
+    if finding is None:
+        console.print("[red]Finding was not found.[/red]")
+        raise typer.Exit(code=1)
+    console.print_json(data={"finding": finding})
+
+
+@reports_app.command("compose")
+def reports_compose(
+    title: Annotated[str, typer.Option("--title")],
+    target: Annotated[str, typer.Option("--target")] = "",
+    findings_file: Annotated[Path, typer.Option("--findings-file")] = Path("data") / "findings" / "sample_finding.json",
+    markdown: Annotated[bool, typer.Option("--markdown")] = False,
+    html_report: Annotated[bool, typer.Option("--html")] = False,
+    json_report: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Compose a report from existing safe findings. Does not perform scans."""
+    try:
+        findings = load_findings_file(findings_file)
+        report = compose_report(title=title, target=target, findings=findings)
+        paths: dict[str, str] = {}
+        if markdown:
+            paths["markdown"] = str(export_composed_report_markdown(report))
+        if html_report:
+            paths["html"] = str(export_composed_report_html(report))
+        if json_report:
+            paths["json"] = str(export_composed_report_json(report))
+        report["export_paths"] = paths
+    except Exception as exc:
+        console.print(f"[red]Report composition failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data={"report": report, "export_paths": paths})
+
+
+@reports_app.command("executive-summary")
+def reports_executive_summary(
+    findings_file: Annotated[Path, typer.Option("--findings-file")] = Path("data") / "findings" / "sample_finding.json",
+) -> None:
+    """Build an Executive Summary from safe finding drafts."""
+    try:
+        findings = load_findings_file(findings_file)
+    except Exception as exc:
+        console.print(f"[red]Could not load findings:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data={"executive_summary": build_executive_summary(findings)})
+
+
+@reports_app.command("retest-summary")
+def reports_retest_summary(
+    findings_file: Annotated[Path, typer.Option("--findings-file")] = Path("data") / "findings" / "sample_finding.json",
+) -> None:
+    """Build a Retest Summary from safe finding drafts."""
+    try:
+        findings = load_findings_file(findings_file)
+    except Exception as exc:
+        console.print(f"[red]Could not load findings:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data={"retest_summary": build_retest_summary(findings)})
+
+
+@reports_app.command("safety-check")
+def reports_safety_check(
+    findings_file: Annotated[Path, typer.Option("--findings-file")] = Path("data") / "findings" / "sample_finding.json",
+) -> None:
+    """Run export safety checks for a findings file."""
+    try:
+        findings = load_findings_file(findings_file)
+        report = compose_report(title="Export Safety Check", target="", findings=findings)
+        check = export_safety_check(report)
+        evidence_checks = [evidence_safety_for_references(list(finding.get("evidence_references") or [])) for finding in findings]
+    except Exception as exc:
+        console.print(f"[red]Safety check failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data={"export_safety_check": check, "evidence_checks": evidence_checks})
 
 
 @submission_app.callback(invoke_without_command=True)
@@ -6958,6 +7103,28 @@ def _print_export_result(result: dict[str, Any]) -> None:
         raise typer.Exit(code=1)
 
     console.print(f"[yellow]{result['message']}[/yellow]")
+
+
+def _print_professional_findings(findings: list[dict[str, Any]]) -> None:
+    table = Table(title="Professional Finding Builder")
+    table.add_column("Finding ID")
+    table.add_column("Title")
+    table.add_column("Severity")
+    table.add_column("Confidence")
+    table.add_column("Status")
+    table.add_column("Validation")
+    table.add_column("Retest")
+    for finding in findings:
+        table.add_row(
+            str(finding.get("finding_id") or ""),
+            str(finding.get("title") or ""),
+            str(finding.get("severity") or ""),
+            str(finding.get("confidence") or ""),
+            str(finding.get("status") or ""),
+            str(finding.get("validation_status") or ""),
+            str(finding.get("retest_status") or ""),
+        )
+    console.print(table)
 
 
 def _print_access_test_plans(plans: list[dict[str, Any]]) -> None:

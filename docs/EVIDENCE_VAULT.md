@@ -4,6 +4,14 @@ Version 21.6 adds an Evidence Vault with Redaction Quality Controls for safe evi
 
 The Evidence Vault stores Redacted Evidence summaries only. It must not store raw passwords, session cookies, bearer tokens, API keys, private keys, full sensitive response bodies, or other authentication material.
 
+## Report Composer Integration
+
+Version 21.7 links Evidence Vault items to Professional Findings through Evidence References. Report Composer uses safe summaries and evidence IDs only; it does not inline unsafe evidence, raw secrets, cookies, bearer tokens, private keys, or full sensitive response bodies. Linked evidence must pass export safety checks before Markdown, HTML, or JSON report export.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main reports finding-from-evidence --evidence-id demo-evidence-001 --json
+```
+
 ## Evidence Item Model
 
 An Evidence Item records an evidence ID, title, evidence type, source module, related target, related URL or host, OWASP categories, linked findings, linked test plans, linked Replay Plans, linked Business Logic Review plans, submissions, severity context, confidence, evidence strength, redaction status, Secret Detection status, Evidence Quality Score, safe summaries, attachment metadata, timeline events, notes, and limitations.
