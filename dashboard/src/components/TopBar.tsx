@@ -33,6 +33,7 @@ export function TopBar({
         </div>
       </div>
       <div className="header-actions">
+        <span className="demo-dataset-badge">Local Demo Only</span>
         <ApiStatus health={health} version={version} error={apiError} loading={loading} />
         <div className="api-base" title={apiBaseUrl}>
           <span>API</span>
@@ -46,3 +47,5 @@ export function TopBar({
     </header>
   )
 }
+
+export const Topbar = TopBar

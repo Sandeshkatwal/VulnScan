@@ -1,0 +1,17 @@
+{
+  "roles": [
+    "anonymous",
+    "standard_user",
+    "support_user",
+    "admin_reviewer"
+  ],
+  "matrix": [
+    {
+      "endpoint": "/account/demo",
+      "standard_user": "allowed",
+      "support_user": "denied",
+      "admin_reviewer": "allowed"
+    }
+  ],
+  "simulated": true
+}

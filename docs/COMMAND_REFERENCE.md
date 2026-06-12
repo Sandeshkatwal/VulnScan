@@ -36,6 +36,15 @@ These commands do not run scans; they compose Technical Findings and reports fro
 .\.venv311\Scripts\python.exe -m scanner.main reports safety-check --findings-file data\findings\sample_finding.json
 ```
 
+## Portfolio Demo Mode
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main demo status
+.\.venv311\Scripts\python.exe -m scanner.main demo generate --json
+.\.venv311\Scripts\python.exe -m scanner.main demo report --markdown --html --json
+.\.venv311\Scripts\python.exe -m scanner.main demo walkthrough
+```
+
 ## Program Scope
 
 ```powershell

@@ -1,0 +1,213 @@
+{
+  "evidence_vault_items": [
+    {
+      "evidence_id": "demo-evidence-001",
+      "title": "Redacted Demo Evidence: CSP header review",
+      "evidence_type": "manual_observation",
+      "source_module": "portfolio_demo_mode",
+      "related_target": "https://demo.local",
+      "related_url": "https://demo.local/demo/1",
+      "related_owasp_categories": [
+        "A02:2025"
+      ],
+      "confidence": "medium",
+      "evidence_strength": "weak_indicator",
+      "redaction_status": "redacted",
+      "secret_detection_status": "passed",
+      "evidence_quality_score": 82,
+      "evidence_quality_label": "Demo redacted evidence",
+      "safe_summary": "Simulated safe observation for CSP header review.",
+      "redacted_request_summary": "GET /demo/path with authorised local demo context. Authorization: Bearer [REDACTED-BEARER]",
+      "redacted_response_summary": "Simulated response summary only. Full body not stored.",
+      "safe_observed_value": "simulated_indicator",
+      "timeline_events": [
+        {
+          "event_id": "demo-timeline-1",
+          "event_type": "created",
+          "timestamp": "2026-06-12T09:00:00+00:00",
+          "description": "Redacted Demo Evidence created for Portfolio Demo Mode."
+        }
+      ],
+      "created_at": "2026-06-12T09:00:00+00:00",
+      "updated_at": "2026-06-12T09:00:00+00:00",
+      "limitations": [
+        "Simulated Redacted Demo Evidence only."
+      ]
+    },
+    {
+      "evidence_id": "demo-evidence-002",
+      "title": "Redacted Demo Evidence: Cookie attribute review",
+      "evidence_type": "manual_observation",
+      "source_module": "portfolio_demo_mode",
+      "related_target": "https://demo.local",
+      "related_url": "https://demo.local/demo/2",
+      "related_owasp_categories": [
+        "A07:2025"
+      ],
+      "confidence": "medium",
+      "evidence_strength": "weak_indicator",
+      "redaction_status": "redacted",
+      "secret_detection_status": "passed",
+      "evidence_quality_score": 82,
+      "evidence_quality_label": "Demo redacted evidence",
+      "safe_summary": "Simulated safe observation for Cookie attribute review.",
+      "redacted_request_summary": "GET /demo/path with authorised local demo context. Authorization: Bearer [REDACTED-BEARER]",
+      "redacted_response_summary": "Simulated response summary only. Full body not stored.",
+      "safe_observed_value": "simulated_indicator",
+      "timeline_events": [
+        {
+          "event_id": "demo-timeline-2",
+          "event_type": "created",
+          "timestamp": "2026-06-12T09:00:00+00:00",
+          "description": "Redacted Demo Evidence created for Portfolio Demo Mode."
+        }
+      ],
+      "created_at": "2026-06-12T09:00:00+00:00",
+      "updated_at": "2026-06-12T09:00:00+00:00",
+      "limitations": [
+        "Simulated Redacted Demo Evidence only."
+      ]
+    },
+    {
+      "evidence_id": "demo-evidence-003",
+      "title": "Redacted Demo Evidence: Role ownership review",
+      "evidence_type": "manual_observation",
+      "source_module": "portfolio_demo_mode",
+      "related_target": "https://demo.local",
+      "related_url": "https://demo.local/demo/3",
+      "related_owasp_categories": [
+        "A01:2025"
+      ],
+      "confidence": "medium",
+      "evidence_strength": "weak_indicator",
+      "redaction_status": "redacted",
+      "secret_detection_status": "passed",
+      "evidence_quality_score": 82,
+      "evidence_quality_label": "Demo redacted evidence",
+      "safe_summary": "Simulated safe observation for Role ownership review.",
+      "redacted_request_summary": "GET /demo/path with authorised local demo context. Authorization: Bearer [REDACTED-BEARER]",
+      "redacted_response_summary": "Simulated response summary only. Full body not stored.",
+      "safe_observed_value": "simulated_indicator",
+      "timeline_events": [
+        {
+          "event_id": "demo-timeline-3",
+          "event_type": "created",
+          "timestamp": "2026-06-12T09:00:00+00:00",
+          "description": "Redacted Demo Evidence created for Portfolio Demo Mode."
+        }
+      ],
+      "created_at": "2026-06-12T09:00:00+00:00",
+      "updated_at": "2026-06-12T09:00:00+00:00",
+      "limitations": [
+        "Simulated Redacted Demo Evidence only."
+      ]
+    },
+    {
+      "evidence_id": "demo-evidence-004",
+      "title": "Redacted Demo Evidence: External script review",
+      "evidence_type": "manual_observation",
+      "source_module": "portfolio_demo_mode",
+      "related_target": "https://demo.local",
+      "related_url": "https://demo.local/demo/4",
+      "related_owasp_categories": [
+        "A08:2025"
+      ],
+      "confidence": "medium",
+      "evidence_strength": "weak_indicator",
+      "redaction_status": "redacted",
+      "secret_detection_status": "passed",
+      "evidence_quality_score": 82,
+      "evidence_quality_label": "Demo redacted evidence",
+      "safe_summary": "Simulated safe observation for External script review.",
+      "redacted_request_summary": "GET /demo/path with authorised local demo context. Authorization: Bearer [REDACTED-BEARER]",
+      "redacted_response_summary": "Simulated response summary only. Full body not stored.",
+      "safe_observed_value": "simulated_indicator",
+      "timeline_events": [
+        {
+          "event_id": "demo-timeline-4",
+          "event_type": "created",
+          "timestamp": "2026-06-12T09:00:00+00:00",
+          "description": "Redacted Demo Evidence created for Portfolio Demo Mode."
+        }
+      ],
+      "created_at": "2026-06-12T09:00:00+00:00",
+      "updated_at": "2026-06-12T09:00:00+00:00",
+      "limitations": [
+        "Simulated Redacted Demo Evidence only."
+      ]
+    },
+    {
+      "evidence_id": "demo-evidence-005",
+      "title": "Redacted Demo Evidence: Error response review",
+      "evidence_type": "manual_observation",
+      "source_module": "portfolio_demo_mode",
+      "related_target": "https://demo.local",
+      "related_url": "https://demo.local/demo/5",
+      "related_owasp_categories": [
+        "A10:2025"
+      ],
+      "confidence": "medium",
+      "evidence_strength": "weak_indicator",
+      "redaction_status": "redacted",
+      "secret_detection_status": "passed",
+      "evidence_quality_score": 82,
+      "evidence_quality_label": "Demo redacted evidence",
+      "safe_summary": "Simulated safe observation for Error response review.",
+      "redacted_request_summary": "GET /demo/path with authorised local demo context. Authorization: Bearer [REDACTED-BEARER]",
+      "redacted_response_summary": "Simulated response summary only. Full body not stored.",
+      "safe_observed_value": "simulated_indicator",
+      "timeline_events": [
+        {
+          "event_id": "demo-timeline-5",
+          "event_type": "created",
+          "timestamp": "2026-06-12T09:00:00+00:00",
+          "description": "Redacted Demo Evidence created for Portfolio Demo Mode."
+        }
+      ],
+      "created_at": "2026-06-12T09:00:00+00:00",
+      "updated_at": "2026-06-12T09:00:00+00:00",
+      "limitations": [
+        "Simulated Redacted Demo Evidence only."
+      ]
+    },
+    {
+      "evidence_id": "demo-evidence-006",
+      "title": "Redacted Demo Evidence: Checkout workflow review",
+      "evidence_type": "manual_observation",
+      "source_module": "portfolio_demo_mode",
+      "related_target": "https://demo.local",
+      "related_url": "https://demo.local/demo/6",
+      "related_owasp_categories": [
+        "A06:2025"
+      ],
+      "confidence": "medium",
+      "evidence_strength": "weak_indicator",
+      "redaction_status": "redacted",
+      "secret_detection_status": "passed",
+      "evidence_quality_score": 82,
+      "evidence_quality_label": "Demo redacted evidence",
+      "safe_summary": "Simulated safe observation for Checkout workflow review.",
+      "redacted_request_summary": "GET /demo/path with authorised local demo context. Authorization: Bearer [REDACTED-BEARER]",
+      "redacted_response_summary": "Simulated response summary only. Full body not stored.",
+      "safe_observed_value": "simulated_indicator",
+      "timeline_events": [
+        {
+          "event_id": "demo-timeline-6",
+          "event_type": "created",
+          "timestamp": "2026-06-12T09:00:00+00:00",
+          "description": "Redacted Demo Evidence created for Portfolio Demo Mode."
+        }
+      ],
+      "created_at": "2026-06-12T09:00:00+00:00",
+      "updated_at": "2026-06-12T09:00:00+00:00",
+      "limitations": [
+        "Simulated Redacted Demo Evidence only."
+      ]
+    }
+  ],
+  "summary": {
+    "total_evidence": 6,
+    "passed_redaction": 6,
+    "blocked_from_export": 0
+  }
+}

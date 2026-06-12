@@ -89,7 +89,7 @@ def compose_report(
         "remediation_roadmap": remediation_roadmap,
         "limitations": limitations or ["Candidate findings require manual validation before being described as manually verified issues."],
         "safe_testing_statement": "This report is for authorised testing only. It includes Redacted Evidence references and excludes raw secrets, passwords, cookies, bearer tokens, private keys, full sensitive response bodies, exploit payloads, and unsafe reproduction steps.",
-        "appendices": appendices or {"tool_version": "VulScan 21.7", "glossary": ["Technical Finding", "Executive Summary", "Business Impact", "Developer Remediation", "Retest Status"]},
+        "appendices": appendices or {"tool_version": "VulScan 21.8", "glossary": ["Technical Finding", "Executive Summary", "Business Impact", "Developer Remediation", "Retest Status"]},
         "export_paths": {},
         "export_safety_status": "blocked" if export_blocked else "allowed",
     }
@@ -103,4 +103,3 @@ def _build_remediation_roadmap(findings: list[dict[str, Any]]) -> dict[str, Any]
         "priority_findings": [{"finding_id": finding.get("finding_id"), "title": finding.get("title"), "severity": finding.get("severity"), "risk_score": finding.get("risk_score")} for finding in active[:10]],
         "themes": sorted({cat.split(":")[0] for finding in active for cat in finding.get("owasp_categories") or [] if cat}),
     }
-

@@ -8,6 +8,10 @@ For public screenshots and portfolio demos, use demo mode and follow [SCREENSHOT
 
 Professional Finding Builder and Report Composer are composition-only features. They do not execute scans or active checks. Exports include Redacted Evidence references only and block unsafe evidence, raw passwords, raw cookies, raw bearer tokens, raw private keys, full sensitive response bodies, and exploit payloads. Candidate findings remain candidate or manual-validation-required until manual validation supports stronger wording.
 
+## Version 21.8 Portfolio Demo Safety
+
+Portfolio Demo Mode uses a Safe Demo Dataset with simulated redacted data only. It must not scan real targets, send live requests by default, include raw secrets, include real customer/user data, or use confirmed vulnerability language for demo records unless clearly marked simulated.
+
 ## Safe Defaults
 
 - The API binds to `127.0.0.1` by default.

@@ -13,6 +13,7 @@ import {
   updateRemediation,
 } from './api/client'
 import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
+import { portfolioDemoDataset } from './demo/portfolioDemoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
 import { AuthContextView } from './components/AuthContextView'
@@ -24,6 +25,7 @@ import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
 import { DemoModeToggle } from './components/DemoModeToggle'
 import { DuplicateDetectionView } from './components/DuplicateDetectionView'
+import { DashboardHome } from './components/DashboardHome'
 import { EndpointDiscoveryView } from './components/EndpointDiscoveryView'
 import { ErrorAlert } from './components/ErrorAlert'
 import { EvidenceVaultView } from './components/EvidenceVaultView'
@@ -34,6 +36,8 @@ import { JobDetails } from './components/JobDetails'
 import { JobsTable, statusTone } from './components/JobsTable'
 import { Layout } from './components/Layout'
 import { PortfolioFooter } from './components/PortfolioFooter'
+import { PortfolioDemoMode } from './components/PortfolioDemoMode'
+import { PortfolioLandingPage } from './components/PortfolioLandingPage'
 import { PortfolioModeBanner } from './components/PortfolioModeBanner'
 import { ProductHero } from './components/ProductHero'
 import { OWASPMappingView } from './components/OWASPMappingView'
@@ -48,6 +52,7 @@ import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
 import { SectionHeader } from './components/SectionHeader'
 import { ScreenshotGuide } from './components/ScreenshotGuide'
+import { ScreenshotModeToggle } from './components/ScreenshotModeToggle'
 import { StatusCard } from './components/StatusCard'
 import { SubmissionTrackerView } from './components/SubmissionTrackerView'
 import { TrendsView } from './components/TrendsView'
@@ -55,6 +60,7 @@ import { VulnerabilityList } from './components/VulnerabilityList'
 import type {
   Finding,
   FindingFilters,
+  DemoDataset,
   HealthResponse,
   JobResultResponse,
   JobSummary,
@@ -66,9 +72,9 @@ import type {
   ScanSummary,
   VersionResponse,
 } from './types/api'
-import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode } from './utils/demoMode'
+import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode as envScreenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'finding-builder' | 'report-composer' | 'remediation' | 'evidence-vault' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'portfolio-demo' | 'portfolio-landing' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'finding-builder' | 'report-composer' | 'remediation' | 'evidence-vault' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -92,7 +98,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.7-demo', api_version: '21.7' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.8-demo', api_version: '21.8' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -102,37 +108,47 @@ const defaultFindingFilters: FindingFilters = {
   compact: false,
 }
 
-const navigationItems: Array<{ id: DashboardSection; label: string }> = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'jobs', label: 'Jobs' },
-  { id: 'vulnerabilities', label: 'Vulnerabilities' },
-  { id: 'risk', label: 'Risk' },
-  { id: 'trends', label: 'Trends' },
-  { id: 'reports', label: 'Evidence & Reports' },
-  { id: 'finding-builder', label: 'Finding Builder' },
-  { id: 'report-composer', label: 'Report Composer' },
-  { id: 'remediation', label: 'Remediation' },
-  { id: 'evidence-vault', label: 'Evidence Vault' },
-  { id: 'bug-intelligence', label: 'Bug Intelligence' },
-  { id: 'bug-intelligence-metrics', label: 'Performance Metrics' },
-  { id: 'bug-bounty', label: 'Program Scope' },
-  { id: 'bug-bounty-recon', label: 'Recon Intelligence' },
-  { id: 'endpoint-discovery', label: 'Endpoint Intelligence' },
-  { id: 'safe-validation', label: 'Safe Validation' },
-  { id: 'authenticated-assessment', label: 'Authenticated Assessment' },
-  { id: 'parameter-replay-planner', label: 'Parameter Replay Planner' },
-  { id: 'business-logic-review', label: 'Business Logic Review' },
-  { id: 'a01-manual-planner', label: 'A01 Manual Test Planner' },
-  { id: 'submission-tracker', label: 'Submission Tracker' },
-  { id: 'duplicates', label: 'Duplicate Detection' },
-  { id: 'owasp', label: 'OWASP Top 10' },
-  { id: 'settings', label: 'Settings' },
+const navigationItems: Array<{ id: DashboardSection; label: string; group?: string }> = [
+  { id: 'overview', label: 'Dashboard Home', group: 'Overview' },
+  { id: 'portfolio-demo', label: 'Portfolio Demo Mode', group: 'Overview' },
+  { id: 'portfolio-landing', label: 'Portfolio Landing', group: 'Overview' },
+  { id: 'jobs', label: 'Discovery and Web DAST', group: 'Scanning' },
+  { id: 'vulnerabilities', label: 'Vulnerability Intelligence', group: 'Scanning' },
+  { id: 'risk', label: 'Prioritisation', group: 'Scanning' },
+  { id: 'trends', label: 'Trends', group: 'Scanning' },
+  { id: 'owasp', label: 'OWASP Report', group: 'OWASP' },
+  { id: 'authenticated-assessment', label: 'Auth Context and Crawl', group: 'Authenticated Assessment' },
+  { id: 'a01-manual-planner', label: 'A01 Manual Test Planner', group: 'Authenticated Assessment' },
+  { id: 'parameter-replay-planner', label: 'Parameter Replay Planner', group: 'Authenticated Assessment' },
+  { id: 'business-logic-review', label: 'Business Logic Review', group: 'Authenticated Assessment' },
+  { id: 'evidence-vault', label: 'Evidence Vault', group: 'Evidence and Reporting' },
+  { id: 'finding-builder', label: 'Finding Builder', group: 'Evidence and Reporting' },
+  { id: 'report-composer', label: 'Report Composer', group: 'Evidence and Reporting' },
+  { id: 'reports', label: 'Saved Reports', group: 'Evidence and Reporting' },
+  { id: 'remediation', label: 'Retest Summary', group: 'Evidence and Reporting' },
+  { id: 'bug-intelligence', label: 'Bug Intelligence', group: 'Workflows' },
+  { id: 'bug-intelligence-metrics', label: 'Performance Metrics', group: 'Workflows' },
+  { id: 'bug-bounty', label: 'Program Scope', group: 'Workflows' },
+  { id: 'bug-bounty-recon', label: 'Recon Intelligence', group: 'Workflows' },
+  { id: 'endpoint-discovery', label: 'Endpoint Intelligence', group: 'Workflows' },
+  { id: 'safe-validation', label: 'Safe Validation', group: 'Workflows' },
+  { id: 'submission-tracker', label: 'Submission Tracker', group: 'Workflows' },
+  { id: 'duplicates', label: 'Duplicate Detection', group: 'Workflows' },
+  { id: 'settings', label: 'API Connection and Safety', group: 'Settings' },
 ]
 
 const sectionCopy: Record<DashboardSection, { title: string; description: string }> = {
   overview: {
-    title: 'Overview',
-    description: 'API status, job counts, scan history, and quick prioritisation summary.',
+    title: 'Dashboard Home',
+    description: 'Portfolio-ready platform overview, safe workflow, module coverage, and summary metrics.',
+  },
+  'portfolio-demo': {
+    title: 'Portfolio Demo Mode',
+    description: 'Load the Safe Demo Dataset, generate a Demo Report, and use screenshot-friendly simulated data.',
+  },
+  'portfolio-landing': {
+    title: 'Portfolio Landing',
+    description: 'Interview Walkthrough page for VulScan capabilities, stack, safety model, and demo flow.',
   },
   jobs: {
     title: 'Jobs',
@@ -262,6 +278,8 @@ function App() {
   const [remediationMessage, setRemediationMessage] = useState<string | null>(null)
   const [currentSection, setCurrentSection] = useState<DashboardSection>('overview')
   const [demoMode, setDemoMode] = useState(envDemoMode)
+  const [demoDataset, setDemoDataset] = useState<DemoDataset>(portfolioDemoDataset)
+  const [screenshotMode, setScreenshotMode] = useState(envScreenshotMode)
 
   const loadDashboard = useCallback(async () => {
     if (demoMode) {
@@ -652,10 +670,18 @@ function App() {
       <>
         {portfolioMode ? <ProductHero /> : null}
         {demoMode ? <div className="demo-mode-callout">{DEMO_MODE_MESSAGE}</div> : null}
-        {overviewCards}
+        <DashboardHome
+          dataset={demoDataset}
+          demoMode={demoMode}
+          jobs={state.jobs}
+          scans={state.scans}
+          onEnableDemo={() => setDemoMode(true)}
+          onNavigate={(sectionId) => setCurrentSection(sectionId as DashboardSection)}
+        />
         <section className="content-grid">
           {portfolioMode ? <article className="panel panel--wide"><ArchitectureSummary /></article> : null}
           {screenshotMode ? <article className="panel panel--wide"><ScreenshotGuide /></article> : null}
+          {!screenshotMode ? overviewCards : null}
           <article className="panel">
             <div className="panel-heading">
               <h2>Quick Risk Summary</h2>
@@ -786,6 +812,22 @@ function App() {
     )
   }
 
+  function renderPortfolioDemo() {
+    return (
+      <PortfolioDemoMode
+        apiOnline={healthTone !== 'bad'}
+        dataset={demoDataset}
+        demoMode={demoMode}
+        onDataset={setDemoDataset}
+        onEnableDemo={() => setDemoMode(true)}
+      />
+    )
+  }
+
+  function renderPortfolioLanding() {
+    return <PortfolioLandingPage />
+  }
+
   function renderFindingBuilder() {
     return <FindingBuilderView apiOnline={healthTone !== 'bad'} demoMode={demoMode} />
   }
@@ -886,6 +928,7 @@ function App() {
           </div>
           <div className="empty-state">VulScan Dashboard is intended for local authorised testing and development. Do not expose it publicly.</div>
           <DemoModeToggle enabled={demoMode} envEnabled={envDemoMode} onChange={setDemoMode} />
+          <ScreenshotModeToggle enabled={screenshotMode} onChange={setScreenshotMode} />
           <div className="button-row button-row--right">
             <button className="secondary-button" type="button" onClick={() => void loadDashboard()} disabled={state.loading}>
               Refresh dashboard data
@@ -898,6 +941,8 @@ function App() {
 
   function renderCurrentSection() {
     if (currentSection === 'overview') return renderOverview()
+    if (currentSection === 'portfolio-demo') return renderPortfolioDemo()
+    if (currentSection === 'portfolio-landing') return renderPortfolioLanding()
     if (currentSection === 'jobs') return renderJobs()
     if (currentSection === 'vulnerabilities') return renderVulnerabilities()
     if (currentSection === 'risk') return renderRisk()

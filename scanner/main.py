@@ -184,6 +184,9 @@ from scanner.report_composer import compose_report
 from scanner.report_exporter import export_composed_report_html, export_composed_report_json, export_composed_report_markdown, export_safety_check
 from scanner.report_sections import build_executive_summary
 from scanner.retest_summary import build_retest_summary
+from scanner.demo_data_loader import load_demo_dataset, save_demo_dataset
+from scanner.demo_mode import SAFE_TESTING_STATEMENT
+from scanner.demo_report_builder import build_demo_report, demo_walkthrough_text
 from scanner.exporter import (
     export_assets,
     export_findings,
@@ -297,6 +300,7 @@ replay_plans_app = typer.Typer(help="Safe Authenticated Parameter Replay Planner
 business_logic_app = typer.Typer(help="Business Logic Review Workflow Assistant commands.")
 evidence_app = typer.Typer(help="Evidence Vault and Redaction Quality Controls commands.")
 reports_app = typer.Typer(help="Professional Finding Builder and Report Composer commands.")
+demo_app = typer.Typer(help="Portfolio Demo Mode commands using simulated redacted data.")
 app.add_typer(remediation_app, name="remediation")
 app.add_typer(export_app, name="export")
 app.add_typer(submission_app, name="submission")
@@ -312,6 +316,7 @@ app.add_typer(replay_plans_app, name="replay-plans")
 app.add_typer(business_logic_app, name="business-logic")
 app.add_typer(evidence_app, name="evidence")
 app.add_typer(reports_app, name="reports")
+app.add_typer(demo_app, name="demo")
 console = Console()
 
 
@@ -1623,6 +1628,61 @@ def reports_safety_check(
         console.print(f"[red]Safety check failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc
     console.print_json(data={"export_safety_check": check, "evidence_checks": evidence_checks})
+
+
+@demo_app.command("status")
+def demo_status_command() -> None:
+    """Show Portfolio Demo Mode status."""
+    dataset = load_demo_dataset()
+    console.print_json(
+        data={
+            "available": True,
+            "mode": "Portfolio Demo Mode",
+            "dataset": dataset.get("dataset_name") or "Safe Demo Dataset",
+            "local_demo_only": True,
+            "safe_testing_statement": SAFE_TESTING_STATEMENT,
+        }
+    )
+
+
+@demo_app.command("generate")
+def demo_generate_command(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
+    """Generate Safe Demo Dataset files. No scan is performed."""
+    try:
+        paths = save_demo_dataset()
+    except ValueError as exc:
+        console.print(f"[red]Demo generation blocked:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    result = {"generated": True, "simulated": True, "paths": paths, "safe_testing_statement": SAFE_TESTING_STATEMENT}
+    if json_output:
+        console.print_json(data=result)
+    else:
+        console.print("[bold]Portfolio Demo Mode[/bold]")
+        console.print("Safe Demo Dataset generated. No real scan was performed.")
+        for path in paths.values():
+            console.print(f"- {path}")
+
+
+@demo_app.command("report")
+def demo_report_command(
+    markdown: Annotated[bool, typer.Option("--markdown")] = False,
+    html_report: Annotated[bool, typer.Option("--html")] = False,
+    json_report: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Build a safe Demo Report from simulated redacted data."""
+    try:
+        result = build_demo_report(markdown=markdown, html=html_report, json_export=json_report)
+    except Exception as exc:
+        console.print(f"[red]Demo report build failed:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
+    console.print_json(data=result)
+
+
+@demo_app.command("walkthrough")
+def demo_walkthrough_command() -> None:
+    """Print the interview walkthrough script for Portfolio Demo Mode."""
+    console.print(Panel.fit("Portfolio Demo Mode — Interview Walkthrough", style="bold cyan"))
+    console.print(demo_walkthrough_text())
 
 
 @submission_app.callback(invoke_without_command=True)

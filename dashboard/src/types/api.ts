@@ -2462,6 +2462,53 @@ export interface ReportComposerResponse {
   [key: string]: unknown
 }
 
+export interface DemoDashboardSummary {
+  assets_assessed?: number
+  findings?: number
+  owasp_categories_covered?: number
+  evidence_items?: number
+  reports_generated?: number
+  manual_plans?: number
+  badge?: string
+  [key: string]: unknown
+}
+
+export interface DemoDataset {
+  demo_mode?: boolean
+  dataset_name?: string
+  generated_at?: string
+  target?: string
+  safe_testing_statement?: string
+  dashboard_summary?: DemoDashboardSummary
+  owasp_assessment?: ApiRecord
+  evidence_vault?: ApiRecord
+  findings?: ProfessionalFinding[]
+  authenticated_assessment?: ApiRecord
+  role_mapping?: ApiRecord
+  access_tests?: ApiRecord
+  replay_plans?: ApiRecord
+  business_logic?: ApiRecord
+  report_composer?: ApiRecord
+  feature_tour?: ApiRecord[]
+  walkthrough?: string[]
+  [key: string]: unknown
+}
+
+export interface DemoDatasetResponse {
+  demo_dataset?: DemoDataset
+  simulated?: boolean
+  [key: string]: unknown
+}
+
+export interface DemoStatusResponse {
+  available?: boolean
+  mode?: string
+  dataset?: string
+  local_demo_only?: boolean
+  safe_testing_statement?: string
+  [key: string]: unknown
+}
+
 export interface EvidenceCreateRequest {
   title: string
   evidence_type?: string

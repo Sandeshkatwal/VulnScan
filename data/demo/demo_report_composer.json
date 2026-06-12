@@ -1,0 +1,11 @@
+{
+  "draft_title": "VulScan Portfolio Demo Report",
+  "findings_count": 6,
+  "export_formats": [
+    "markdown",
+    "html",
+    "json"
+  ],
+  "safe_testing_statement": "Portfolio Demo Mode uses simulated redacted data only. No real target was scanned and no live requests were sent.",
+  "simulated": true
+}

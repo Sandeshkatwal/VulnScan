@@ -21,6 +21,19 @@ VulScan is a local platform for authorised security assessment and vulnerability
 
 Version 21.7 adds a Professional Finding Builder and Report Composer. It creates Technical Findings and complete Markdown, HTML, and JSON reports from safe local data, Redacted Evidence references, OWASP assessment outputs, manual observations, retest results, and vulnerability intelligence. Candidate findings are not labelled confirmed unless validation status supports that wording. See [docs/PROFESSIONAL_REPORT_COMPOSER.md](docs/PROFESSIONAL_REPORT_COMPOSER.md).
 
+Version 21.8 adds Dashboard UX Polish and Portfolio Demo Mode. It provides a Safe Demo Dataset, Feature Tour, Demo Report workflow, Screenshot-Ready View, improved navigation, reusable empty/loading/error states, and interview-friendly documentation. See [docs/PORTFOLIO_DEMO.md](docs/PORTFOLIO_DEMO.md), [docs/DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md), and [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md).
+
+## Safe Demo Mode
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main demo status
+.\.venv311\Scripts\python.exe -m scanner.main demo generate --json
+.\.venv311\Scripts\python.exe -m scanner.main demo report --markdown --html --json
+.\.venv311\Scripts\python.exe -m scanner.main demo walkthrough
+```
+
+Portfolio Demo Mode uses simulated redacted data only. It does not scan real targets, send live requests, store raw secrets, or include real customer data.
+
 The project exists to show how scanner output can become a practical security workflow instead of a raw list of findings. It stores results locally, enriches findings with risk and prioritisation context, produces JSON/HTML reports, exposes a local FastAPI API, and presents the workflow in a React dashboard.
 
 Version 21.4 adds a Safe Authenticated Parameter Replay Planner for manual validation planning only. It creates Replay Plans, Redacted Request Templates, Parameter Review Plans, Expected Behaviour/Observed Behaviour records, evidence checklists, and Retest Workflow records. It performs No Automatic Replay and stores no raw credentials, cookies, bearer tokens, CSRF values, or session tokens.

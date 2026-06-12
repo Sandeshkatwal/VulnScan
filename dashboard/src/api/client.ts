@@ -24,6 +24,8 @@ import type {
   AuthProfilesResponse,
   BugIntelligenceMetricsResponse,
   DateRangeOption,
+  DemoDatasetResponse,
+  DemoStatusResponse,
   BugBountyScopeDetail,
   BugBountyScopesResponse,
   DuplicateCheckRequest,
@@ -838,6 +840,26 @@ export function composeProfessionalReport(payload: ReportComposeRequest): Promis
 
 export function checkProfessionalReportSafety(payload: Partial<ReportComposeRequest>): Promise<ReportComposerResponse> {
   return request<ReportComposerResponse>('/reports/export-safety-check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getDemoStatus(): Promise<DemoStatusResponse> {
+  return request<DemoStatusResponse>('/demo/status')
+}
+
+export function getDemoDashboard(): Promise<DemoDatasetResponse> {
+  return request<DemoDatasetResponse>('/demo/dashboard')
+}
+
+export function generateDemoDataset(): Promise<DemoDatasetResponse> {
+  return request<DemoDatasetResponse>('/demo/generate', { method: 'POST' })
+}
+
+export function buildDemoReport(payload: { markdown?: boolean; html?: boolean; json?: boolean } = { markdown: true, html: true, json: true }): Promise<ReportComposerResponse> {
+  return request<ReportComposerResponse>('/demo/report/build', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

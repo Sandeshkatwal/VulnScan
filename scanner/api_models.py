@@ -904,6 +904,12 @@ class ReportExportSafetyCheckRequest(StrictApiModel):
     target: str = Field("", max_length=2048)
 
 
+class DemoReportBuildRequest(StrictApiModel):
+    markdown: bool = Field(True)
+    html: bool = Field(True)
+    json_export: bool = Field(True, alias="json")
+
+
 class SubmissionCreateRequest(StrictApiModel):
     """Create a local submission tracking record. Does not submit externally."""
 

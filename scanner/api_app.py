@@ -72,7 +72,7 @@ from scanner.owasp_rules import OWASPAssessmentRulesError, load_owasp_assessment
 from scanner.safe_active_validation import SafeActiveValidationError, run_safe_active_validation
 from scanner.sbom_import import SBOMImportError, parse_sbom
 from scanner.api_models import ErrorResponse, FindingResponse, JobSummaryResponse, ScanRequest, ScanResponse, ScanSummaryResponse
-from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, BusinessLogicChecklistRequest, BusinessLogicCreateRequest, BusinessLogicDetectRequest, BusinessLogicGenerateRequest, BusinessLogicObserveRequest, BusinessLogicReportTemplateRequest, BusinessLogicRetestRequest, BusinessLogicStateMapRequest, EndpointDiscoveryRequest, EvidenceCreateRequest, EvidenceExportRequest, EvidenceLinkRequest, EvidenceRedactCheckRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, ProfessionalFindingRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, ReportComposeRequest, ReportExportSafetyCheckRequest, ReportFindingFromEvidenceRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
+from scanner.api_models import A01AssessmentRequest, A01ManualPlanRequest, A03AssessmentRequest, A08AssessmentRequest, A08ManualPlanRequest, A04AssessmentRequest, A05AssessmentRequest, A07AssessmentRequest, A10AssessmentRequest, AccessTestCreateRequest, AccessTestGenerateRequest, AccessTestObserveRequest, AccessTestReportTemplateRequest, AccessTestRetestRequest, AuthBoundaryCheckRequest, AuthEndpointClassifyRequest, AuthProfileValidateRequest, AuthenticatedCrawlRequest, BugBountyReconRequest, BusinessLogicChecklistRequest, BusinessLogicCreateRequest, BusinessLogicDetectRequest, BusinessLogicGenerateRequest, BusinessLogicObserveRequest, BusinessLogicReportTemplateRequest, BusinessLogicRetestRequest, BusinessLogicStateMapRequest, DemoReportBuildRequest, EndpointDiscoveryRequest, EvidenceCreateRequest, EvidenceExportRequest, EvidenceLinkRequest, EvidenceRedactCheckRequest, OWASPMapRequest, OWASPAssessmentBuildRequest, ProfessionalFindingRequest, RemediationUpdateRequest, ReplayPlanCreateRequest, ReplayPlanGenerateRequest, ReplayPlanObserveRequest, ReplayPlanReportTemplateRequest, ReplayPlanRetestRequest, ReportComposeRequest, ReportExportSafetyCheckRequest, ReportFindingFromEvidenceRequest, RoleEndpointMapRequest, RoleManualPlanRequest, RoleMappingValidateRequest, SafeValidationRequest, ScopeCheckRequest, SBOMAnalyseRequest
 from scanner.api_parameter_replay_planner import api_create_replay_plan, api_generate_replay_plans, api_get_replay_plan, api_record_replay_observation, api_record_replay_retest, api_replay_report_template
 from scanner.api_business_logic_review import api_business_logic_report_template, api_checklist, api_create_business_logic_plan, api_detect_business_logic, api_generate_business_logic_plans, api_observe_business_logic, api_retest_business_logic, api_state_map
 from scanner.api_evidence_vault import api_create_evidence, api_export, api_get_evidence, api_link, api_list_evidence, api_quality, api_redact_check, api_timeline
@@ -86,6 +86,7 @@ from scanner.api_report_composer import (
     api_list_findings,
     resolve_composed_report_download,
 )
+from scanner.api_demo_mode import api_demo_dashboard, api_demo_generate, api_demo_report_build, api_demo_status
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -128,7 +129,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "21.7"
+API_VERSION = "21.8"
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -234,6 +235,11 @@ PROTECTED_PATHS = {
     "/remediation/summary",
     "/remediation/{finding_key}",
     "/evidence",
+    "/demo/status",
+    "/demo/dashboard",
+    "/demo/generate",
+    "/demo/report/build",
+    "/demo/report/latest",
     "/evidence/{evidence_id}",
     "/evidence/redact-check",
     "/evidence/{evidence_id}/quality",
@@ -2402,6 +2408,75 @@ def create_app(
             "note": record.get("note"),
             "record": record,
         }
+
+    @app.get(
+        "/demo/status",
+        dependencies=[Depends(require_api_key)],
+        tags=["Portfolio Demo Mode"],
+        summary="Get Portfolio Demo Mode availability",
+        description="Returns safe demo availability metadata. No scans or live requests are performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def demo_status() -> dict[str, Any]:
+        return api_demo_status()
+
+    @app.get(
+        "/demo/dashboard",
+        dependencies=[Depends(require_api_key)],
+        tags=["Portfolio Demo Mode"],
+        summary="Get the Safe Demo Dataset",
+        description="Returns simulated redacted dashboard data for Portfolio Demo Mode only.",
+        responses=ERROR_RESPONSES,
+    )
+    def demo_dashboard() -> dict[str, Any]:
+        try:
+            return api_demo_dashboard()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/demo/generate",
+        dependencies=[Depends(require_api_key)],
+        tags=["Portfolio Demo Mode"],
+        summary="Generate local Safe Demo Dataset files",
+        description="Writes simulated demo files under data/demo. This endpoint does not scan targets.",
+        responses=ERROR_RESPONSES,
+    )
+    def demo_generate() -> dict[str, Any]:
+        try:
+            return api_demo_generate()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post(
+        "/demo/report/build",
+        dependencies=[Depends(require_api_key)],
+        tags=["Portfolio Demo Mode"],
+        summary="Build a safe Demo Report",
+        description="Builds a Demo Report from simulated redacted data. No scans or live requests are performed.",
+        responses=ERROR_RESPONSES,
+    )
+    def demo_report_build(request: DemoReportBuildRequest) -> dict[str, Any]:
+        try:
+            return api_demo_report_build(markdown=request.markdown, html=request.html, json_export=request.json_export)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get(
+        "/demo/report/latest",
+        dependencies=[Depends(require_api_key)],
+        tags=["Portfolio Demo Mode"],
+        summary="Get latest Demo Report metadata",
+        responses=ERROR_RESPONSES,
+    )
+    def demo_report_latest() -> dict[str, Any]:
+        from scanner.demo_data_loader import DEMO_REPORT_DIR
+
+        files = sorted([path for path in DEMO_REPORT_DIR.glob("**/*") if path.is_file() and path.suffix.lower() in {".md", ".html", ".json"}], key=lambda item: item.stat().st_mtime, reverse=True)
+        if not files:
+            return {"report": None, "message": "No Demo Report has been generated yet."}
+        path = files[0]
+        return {"report": {"filename": path.name, "path": str(path), "size_bytes": path.stat().st_size, "simulated": True}}
 
     @app.post(
         "/reports/finding/from-evidence",

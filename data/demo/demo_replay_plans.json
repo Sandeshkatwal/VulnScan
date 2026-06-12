@@ -1,0 +1,12 @@
+{
+  "plans": [
+    {
+      "replay_plan_id": "demo-replay-plan-001",
+      "endpoint": "/account/demo?user_id=1001",
+      "parameter": "user_id",
+      "intent": "object_ownership_review",
+      "status": "planning_only",
+      "simulated": true
+    }
+  ]
+}

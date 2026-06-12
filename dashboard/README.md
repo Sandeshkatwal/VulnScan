@@ -6,6 +6,8 @@ It presents API health, scan jobs, findings, risk overview, trends, Evidence & R
 
 Version 21.7 adds Finding Builder and Report Composer sections. Finding Builder manages safe Technical Finding drafts with Evidence References, risk rating, Developer Remediation, and Retest Status. Report Composer prepares Executive Summary, OWASP Mapping, Evidence Summary, Retest Summary, Risk Acceptance, and Safe Export outputs for Markdown, HTML, and JSON.
 
+Version 21.8 adds Dashboard UX Polish and Portfolio Demo Mode. The dashboard now includes a Dashboard Home, grouped navigation, Feature Tour, Safe Demo Dataset loading, Demo Report preview, Screenshot-Ready View toggle, reusable Empty State, Loading State, Error State, Metric Card, Status Badge, and Safe Action Button components.
+
 Version 20.7 adds an A03 Software Supply Chain view under OWASP Assessment. It displays component exposure indicators, dependency metadata indicators, SBOM analysis, CVE/CPE enrichment, source map/build artifact indicators, third-party script review, and recommendations. The dashboard uses wording such as indicator, evidence, confidence, and manual validation required; it does not expose exploit actions or external registry fetching.
 
 Version 20.8 adds an A08 Software/Data Integrity view under OWASP Assessment. It shows upload/import workflow candidates, webhook/callback integrity indicators, update workflow indicators, Subresource Integrity evidence, trusted-data boundary indicators, a manual validation checklist, and recommendations. It clearly states that no uploads were performed, no webhooks were triggered, and no update endpoints were called.

@@ -1,0 +1,12 @@
+{
+  "plans": [
+    {
+      "test_plan_id": "demo-access-plan-001",
+      "role": "standard_user",
+      "endpoint": "/admin/demo/users",
+      "expected": "denied",
+      "status": "manual_validation_required",
+      "simulated": true
+    }
+  ]
+}

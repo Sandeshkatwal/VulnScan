@@ -85,6 +85,9 @@ scan_results/
 !data/report_templates/README.md
 !data/findings/
 !data/findings/sample_finding.json
+!data/demo/
+!data/demo/*.json
+!data/demo/README.md
 !reports/
 reports/*
 !reports/composed/
@@ -98,6 +101,12 @@ reports/composed/html/*
 !reports/composed/json/
 reports/composed/json/*
 !reports/composed/json/.gitkeep
+!reports/demo/
+reports/demo/*
+!reports/demo/.gitkeep
+!reports/demo/screenshots_notes/
+reports/demo/screenshots_notes/*
+!reports/demo/screenshots_notes/.gitkeep
 !assets/screenshots/.gitkeep
 !assets/architecture/.gitkeep
 !assets/demo/.gitkeep

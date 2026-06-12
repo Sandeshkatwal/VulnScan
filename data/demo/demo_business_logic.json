@@ -1,0 +1,11 @@
+{
+  "plans": [
+    {
+      "review_plan_id": "demo-business-plan-001",
+      "workflow": "checkout",
+      "objective": "Review state transition and business rule enforcement.",
+      "status": "manual_validation_required",
+      "simulated": true
+    }
+  ]
+}

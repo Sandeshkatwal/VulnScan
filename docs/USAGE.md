@@ -12,6 +12,16 @@ Version 21.7 adds Professional Finding Builder and Report Composer workflows for
 
 See [PROFESSIONAL_REPORT_COMPOSER.md](PROFESSIONAL_REPORT_COMPOSER.md) for the finding model, wording policy, export safety checks, CLI examples, API examples, and dashboard workflow.
 
+## Portfolio Demo Mode
+
+Use Portfolio Demo Mode for screenshots, GitHub project review, and interviews. It uses simulated redacted data only.
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main demo generate --json
+.\.venv311\Scripts\python.exe -m scanner.main demo report --markdown --html --json
+.\.venv311\Scripts\python.exe -m scanner.main demo walkthrough
+```
+
 ## Bug Intelligence Metrics
 
 Version 18.9 adds local Personal Performance Metrics for the Bug Intelligence workflow.

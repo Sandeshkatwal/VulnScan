@@ -1,0 +1,290 @@
+[
+  {
+    "status": "draft",
+    "confidence": "Low",
+    "validation_status": "manual_validation_required",
+    "safe_testing_statement": "Portfolio Demo Mode uses simulated redacted data only. No real target was scanned and no live requests were sent.",
+    "source_modules": [
+      "portfolio_demo_mode"
+    ],
+    "tags": [
+      "simulated",
+      "portfolio-demo"
+    ],
+    "limitations": [
+      "Simulated demo finding. Manual validation would be required in a real authorised assessment."
+    ],
+    "finding_id": "demo-finding-001",
+    "title": "Simulated Missing Content-Security-Policy Header",
+    "finding_type": "owasp_indicator",
+    "owasp_categories": [
+      "A02:2025"
+    ],
+    "affected_targets": [
+      "https://demo.local"
+    ],
+    "affected_urls": [
+      "https://demo.local/demo/1"
+    ],
+    "severity": "Low",
+    "risk_score": 22,
+    "evidence_strength": "weak_indicator",
+    "executive_summary": "Simulated demo finding: Simulated Missing Content-Security-Policy Header.",
+    "technical_summary": "VulScan identified a candidate requiring manual validation. This indicator suggests a possible area for review. The evidence does not confirm exploitability. Content-Security-Policy header was not observed in simulated response-header evidence.",
+    "business_impact": "Simulated business impact for interview walkthrough only.",
+    "technical_impact": "Simulated technical impact based on redacted demo evidence only.",
+    "evidence_references": [
+      "demo-evidence-001"
+    ],
+    "evidence_quality_summary": {
+      "score": 82,
+      "label": "Demo redacted evidence"
+    },
+    "remediation": "Harden browser security headers and validate policy compatibility.",
+    "developer_guidance": "Harden browser security headers and validate policy compatibility.",
+    "validation_guidance": "Validate manually in an authorised local lab before using stronger wording.",
+    "retest_status": "not_retested",
+    "created_at": "2026-06-12T09:00:00+00:00",
+    "updated_at": "2026-06-12T09:00:00+00:00"
+  },
+  {
+    "status": "draft",
+    "confidence": "Low",
+    "validation_status": "manual_validation_required",
+    "safe_testing_statement": "Portfolio Demo Mode uses simulated redacted data only. No real target was scanned and no live requests were sent.",
+    "source_modules": [
+      "portfolio_demo_mode"
+    ],
+    "tags": [
+      "simulated",
+      "portfolio-demo"
+    ],
+    "limitations": [
+      "Simulated demo finding. Manual validation would be required in a real authorised assessment."
+    ],
+    "finding_id": "demo-finding-002",
+    "title": "Simulated Session Cookie Missing HttpOnly Attribute",
+    "finding_type": "owasp_indicator",
+    "owasp_categories": [
+      "A07:2025"
+    ],
+    "affected_targets": [
+      "https://demo.local"
+    ],
+    "affected_urls": [
+      "https://demo.local/demo/2"
+    ],
+    "severity": "Medium",
+    "risk_score": 48,
+    "evidence_strength": "weak_indicator",
+    "executive_summary": "Simulated demo finding: Simulated Session Cookie Missing HttpOnly Attribute.",
+    "technical_summary": "VulScan identified a candidate requiring manual validation. This indicator suggests a possible area for review. The evidence does not confirm exploitability. A simulated session cookie attribute review identified a missing HttpOnly flag.",
+    "business_impact": "Simulated business impact for interview walkthrough only.",
+    "technical_impact": "Simulated technical impact based on redacted demo evidence only.",
+    "evidence_references": [
+      "demo-evidence-002"
+    ],
+    "evidence_quality_summary": {
+      "score": 82,
+      "label": "Demo redacted evidence"
+    },
+    "remediation": "Harden session cookie attributes after application testing.",
+    "developer_guidance": "Harden session cookie attributes after application testing.",
+    "validation_guidance": "Validate manually in an authorised local lab before using stronger wording.",
+    "retest_status": "not_retested",
+    "created_at": "2026-06-12T09:00:00+00:00",
+    "updated_at": "2026-06-12T09:00:00+00:00"
+  },
+  {
+    "status": "draft",
+    "confidence": "Low",
+    "validation_status": "manual_validation_required",
+    "safe_testing_statement": "Portfolio Demo Mode uses simulated redacted data only. No real target was scanned and no live requests were sent.",
+    "source_modules": [
+      "portfolio_demo_mode"
+    ],
+    "tags": [
+      "simulated",
+      "portfolio-demo"
+    ],
+    "limitations": [
+      "Simulated demo finding. Manual validation would be required in a real authorised assessment."
+    ],
+    "finding_id": "demo-finding-003",
+    "title": "Simulated IDOR Candidate Requiring Manual Validation",
+    "finding_type": "owasp_indicator",
+    "owasp_categories": [
+      "A01:2025"
+    ],
+    "affected_targets": [
+      "https://demo.local"
+    ],
+    "affected_urls": [
+      "https://demo.local/demo/3"
+    ],
+    "severity": "Medium",
+    "risk_score": 48,
+    "evidence_strength": "weak_indicator",
+    "executive_summary": "Simulated demo finding: Simulated IDOR Candidate Requiring Manual Validation.",
+    "technical_summary": "VulScan identified a candidate requiring manual validation. This indicator suggests a possible area for review. The evidence does not confirm exploitability. A role and object ownership review candidate requires manual validation. The demo evidence does not confirm exploitability.",
+    "business_impact": "Simulated business impact for interview walkthrough only.",
+    "technical_impact": "Simulated technical impact based on redacted demo evidence only.",
+    "evidence_references": [
+      "demo-evidence-003"
+    ],
+    "evidence_quality_summary": {
+      "score": 82,
+      "label": "Demo redacted evidence"
+    },
+    "remediation": "Enforce server-side authorization and object ownership checks.",
+    "developer_guidance": "Enforce server-side authorization and object ownership checks.",
+    "validation_guidance": "Validate manually in an authorised local lab before using stronger wording.",
+    "retest_status": "not_retested",
+    "created_at": "2026-06-12T09:00:00+00:00",
+    "updated_at": "2026-06-12T09:00:00+00:00"
+  },
+  {
+    "status": "draft",
+    "confidence": "Low",
+    "validation_status": "manual_validation_required",
+    "safe_testing_statement": "Portfolio Demo Mode uses simulated redacted data only. No real target was scanned and no live requests were sent.",
+    "source_modules": [
+      "portfolio_demo_mode"
+    ],
+    "tags": [
+      "simulated",
+      "portfolio-demo"
+    ],
+    "limitations": [
+      "Simulated demo finding. Manual validation would be required in a real authorised assessment."
+    ],
+    "finding_id": "demo-finding-004",
+    "title": "Simulated External Script Without SRI",
+    "finding_type": "owasp_indicator",
+    "owasp_categories": [
+      "A08:2025"
+    ],
+    "affected_targets": [
+      "https://demo.local"
+    ],
+    "affected_urls": [
+      "https://demo.local/demo/4"
+    ],
+    "severity": "Low",
+    "risk_score": 22,
+    "evidence_strength": "weak_indicator",
+    "executive_summary": "Simulated demo finding: Simulated External Script Without SRI.",
+    "technical_summary": "VulScan identified a candidate requiring manual validation. This indicator suggests a possible area for review. The evidence does not confirm exploitability. A simulated third-party script reference did not include Subresource Integrity metadata.",
+    "business_impact": "Simulated business impact for interview walkthrough only.",
+    "technical_impact": "Simulated technical impact based on redacted demo evidence only.",
+    "evidence_references": [
+      "demo-evidence-004"
+    ],
+    "evidence_quality_summary": {
+      "score": 82,
+      "label": "Demo redacted evidence"
+    },
+    "remediation": "Add SRI where appropriate and review CSP coverage.",
+    "developer_guidance": "Add SRI where appropriate and review CSP coverage.",
+    "validation_guidance": "Validate manually in an authorised local lab before using stronger wording.",
+    "retest_status": "not_retested",
+    "created_at": "2026-06-12T09:00:00+00:00",
+    "updated_at": "2026-06-12T09:00:00+00:00"
+  },
+  {
+    "status": "draft",
+    "confidence": "Low",
+    "validation_status": "manual_validation_required",
+    "safe_testing_statement": "Portfolio Demo Mode uses simulated redacted data only. No real target was scanned and no live requests were sent.",
+    "source_modules": [
+      "portfolio_demo_mode"
+    ],
+    "tags": [
+      "simulated",
+      "portfolio-demo"
+    ],
+    "limitations": [
+      "Simulated demo finding. Manual validation would be required in a real authorised assessment."
+    ],
+    "finding_id": "demo-finding-005",
+    "title": "Simulated Verbose Error Page Indicator",
+    "finding_type": "owasp_indicator",
+    "owasp_categories": [
+      "A10:2025"
+    ],
+    "affected_targets": [
+      "https://demo.local"
+    ],
+    "affected_urls": [
+      "https://demo.local/demo/5"
+    ],
+    "severity": "Low",
+    "risk_score": 22,
+    "evidence_strength": "weak_indicator",
+    "executive_summary": "Simulated demo finding: Simulated Verbose Error Page Indicator.",
+    "technical_summary": "VulScan identified a candidate requiring manual validation. This indicator suggests a possible area for review. The evidence does not confirm exploitability. A simulated error response exposed framework-style diagnostic wording.",
+    "business_impact": "Simulated business impact for interview walkthrough only.",
+    "technical_impact": "Simulated technical impact based on redacted demo evidence only.",
+    "evidence_references": [
+      "demo-evidence-005"
+    ],
+    "evidence_quality_summary": {
+      "score": 82,
+      "label": "Demo redacted evidence"
+    },
+    "remediation": "Return generic user-facing errors and keep details in server-side logs.",
+    "developer_guidance": "Return generic user-facing errors and keep details in server-side logs.",
+    "validation_guidance": "Validate manually in an authorised local lab before using stronger wording.",
+    "retest_status": "not_applicable",
+    "created_at": "2026-06-12T09:00:00+00:00",
+    "updated_at": "2026-06-12T09:00:00+00:00"
+  },
+  {
+    "status": "draft",
+    "confidence": "Low",
+    "validation_status": "manual_validation_required",
+    "safe_testing_statement": "Portfolio Demo Mode uses simulated redacted data only. No real target was scanned and no live requests were sent.",
+    "source_modules": [
+      "portfolio_demo_mode"
+    ],
+    "tags": [
+      "simulated",
+      "portfolio-demo"
+    ],
+    "limitations": [
+      "Simulated demo finding. Manual validation would be required in a real authorised assessment."
+    ],
+    "finding_id": "demo-finding-006",
+    "title": "Simulated Checkout Business Logic Review Plan",
+    "finding_type": "business_logic_issue",
+    "owasp_categories": [
+      "A06:2025"
+    ],
+    "affected_targets": [
+      "https://demo.local"
+    ],
+    "affected_urls": [
+      "https://demo.local/demo/6"
+    ],
+    "severity": "Informational",
+    "risk_score": 8,
+    "evidence_strength": "weak_indicator",
+    "executive_summary": "Simulated demo finding: Simulated Checkout Business Logic Review Plan.",
+    "technical_summary": "VulScan identified a candidate requiring manual validation. This indicator suggests a possible area for review. The evidence does not confirm exploitability. A simulated checkout workflow was selected for manual business rule review.",
+    "business_impact": "Simulated business impact for interview walkthrough only.",
+    "technical_impact": "Simulated technical impact based on redacted demo evidence only.",
+    "evidence_references": [
+      "demo-evidence-006"
+    ],
+    "evidence_quality_summary": {
+      "score": 82,
+      "label": "Demo redacted evidence"
+    },
+    "remediation": "Validate workflow state transitions and server-side business rule enforcement.",
+    "developer_guidance": "Validate workflow state transitions and server-side business rule enforcement.",
+    "validation_guidance": "Validate manually in an authorised local lab before using stronger wording.",
+    "retest_status": "not_applicable",
+    "created_at": "2026-06-12T09:00:00+00:00",
+    "updated_at": "2026-06-12T09:00:00+00:00"
+  }
+]

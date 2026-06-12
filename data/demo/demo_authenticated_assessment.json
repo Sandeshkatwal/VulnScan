@@ -1,0 +1,10 @@
+{
+  "authenticated_crawl_summary": {
+    "enabled": true,
+    "simulated": true,
+    "pages_observed": 12,
+    "boundary_events": 2,
+    "session_expiry_indicators": 1
+  },
+  "safe_note": "Redacted demo session profile only. No raw cookies or bearer tokens."
+}

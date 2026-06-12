@@ -1,0 +1,79 @@
+{
+  "summary": {
+    "categories_assessed": 10,
+    "manual_validation_required": 10,
+    "simulated": true
+  },
+  "coverage_matrix": [
+    {
+      "category": "A01",
+      "status": "High-interest access-control candidates, manual validation required",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A02",
+      "status": "Missing CSP, missing HSTS, and permissive CORS indicators",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A03",
+      "status": "jQuery and Bootstrap version hints with SBOM demo component",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A04",
+      "status": "Cookie Secure/HttpOnly demo indicators",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A05",
+      "status": "Safe marker reflection candidate",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A06",
+      "status": "Business logic manual review plans",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A07",
+      "status": "Session cookie and auth endpoint indicators",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A08",
+      "status": "Upload, webhook, and SRI indicators",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A09",
+      "status": "Logging and alerting manual review gap",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    },
+    {
+      "category": "A10",
+      "status": "Verbose error indicator",
+      "evidence_count": 1,
+      "manual_validation_required": true,
+      "simulated": true
+    }
+  ]
+}
