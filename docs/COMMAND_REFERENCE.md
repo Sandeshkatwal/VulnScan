@@ -2,6 +2,17 @@
 
 These commands use the preferred Bug Intelligence terminology. Legacy aliases remain available for compatibility.
 
+## Verification
+
+```powershell
+.\.venv311\Scripts\python.exe -m pytest
+.\.venv311\Scripts\python.exe scripts\check_demo_safety.py
+.\.venv311\Scripts\python.exe scripts\verify_release.py
+.\.venv311\Scripts\python.exe scripts\generate_project_summary.py
+cd dashboard
+npm run build
+```
+
 ## Backend
 
 ```powershell
@@ -19,6 +30,38 @@ These commands use the preferred Bug Intelligence terminology. Legacy aliases re
 ```powershell
 cd dashboard
 npm run dev
+npm run build
+```
+
+## Web Scan
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a01-checks --a02-checks --a03-checks --a04-checks --a05-checks --a07-checks --a08-checks --a10-checks --owasp-assess --owasp-report --json --html
+```
+
+## Endpoint Discovery
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --json --html
+```
+
+## Authenticated Assessment
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main authenticated-crawl --url http://127.0.0.1:8000/dashboard --auth-profile data\auth_profiles\sample_session_profile.redacted.json --max-pages 30 --max-depth 2 --request-delay 1.0 --json --html
+.\.venv311\Scripts\python.exe -m scanner.main auth profiles
+.\.venv311\Scripts\python.exe -m scanner.main roles list
+.\.venv311\Scripts\python.exe -m scanner.main access-tests create --role standard_user --endpoint "http://127.0.0.1:8000/admin/users" --expected denied --test-type vertical_access_control_review --json --html
+.\.venv311\Scripts\python.exe -m scanner.main replay-plans create --endpoint "http://127.0.0.1:8000/users/123?user_id=123" --parameter user_id --intent object_ownership_review --role standard_user --json --html
+.\.venv311\Scripts\python.exe -m scanner.main business-logic detect --endpoints-file data\endpoints\sample_urls.txt --json --html
+```
+
+## Evidence And Reporting
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main evidence list
+.\.venv311\Scripts\python.exe -m scanner.main evidence redact-check --text "Authorization: Bearer secret-demo-token"
+.\.venv311\Scripts\python.exe -m scanner.main reports compose --title "VulScan OWASP Assessment Report" --target http://127.0.0.1:8000 --findings-file data\findings\sample_finding.json --markdown --html --json
 ```
 
 ## Professional Finding Builder and Report Composer

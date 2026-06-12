@@ -1,121 +1,74 @@
 # VulScan
 
-Local authorised security assessment, vulnerability management, and bug intelligence platform.
+OWASP-focused vulnerability assessment, evidence management, and professional reporting platform for authorised security testing.
 
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-local%20API-green)
-![React](https://img.shields.io/badge/React-dashboard-61dafb)
-![TypeScript](https://img.shields.io/badge/TypeScript-dashboard-3178c6)
-![SQLite](https://img.shields.io/badge/SQLite-persistence-lightgrey)
-![Security Tooling](https://img.shields.io/badge/Security%20Tooling-authorised%20use-red)
-![Local First](https://img.shields.io/badge/Local%20First-no%20cloud%20required-informational)
-![Authorised Testing Only](https://img.shields.io/badge/Authorised%20Testing-Only-critical)
+![Tests](https://img.shields.io/badge/tests-pytest-green)
+![Dashboard](https://img.shields.io/badge/dashboard-React%20%2B%20Vite-61dafb)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+![Status](https://img.shields.io/badge/status-Portfolio%20Project-informational)
+![Safety](https://img.shields.io/badge/safety-Authorised%20Testing%20Only-critical)
 
-## Safety Notice
+VulScan is a local-first Authorised Security Assessment platform for Defensive Security, OWASP-focused Assessment, Vulnerability Management, Evidence Vault workflows, and Professional Reporting. It combines passive scanning, OWASP mapping, authenticated assessment planning, redacted evidence handling, finding building, and report composition in one portfolio-ready product. It is designed for authorised labs, Safe Local Testing, Portfolio Demo Mode, and Manual Validation Workflow. VulScan is not an exploitation framework and does not replace professional manual testing.
 
-VulScan is designed for systems you own or have explicit permission to test. It is not intended for unauthorised scanning, exploitation, brute force, credential attacks, or destructive testing.
+## Screenshots
 
-## Project Overview
+Screenshots are documented in [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md). Placeholder paths:
 
-VulScan is a local platform for authorised security assessment and vulnerability management. It combines discovery, credentialed audit foundations, passive web assessment, local vulnerability intelligence, prioritisation, reporting, remediation tracking, and dashboard visualisation.
-
-Version 21.7 adds a Professional Finding Builder and Report Composer. It creates Technical Findings and complete Markdown, HTML, and JSON reports from safe local data, Redacted Evidence references, OWASP assessment outputs, manual observations, retest results, and vulnerability intelligence. Candidate findings are not labelled confirmed unless validation status supports that wording. See [docs/PROFESSIONAL_REPORT_COMPOSER.md](docs/PROFESSIONAL_REPORT_COMPOSER.md).
-
-Version 21.8 adds Dashboard UX Polish and Portfolio Demo Mode. It provides a Safe Demo Dataset, Feature Tour, Demo Report workflow, Screenshot-Ready View, improved navigation, reusable empty/loading/error states, and interview-friendly documentation. See [docs/PORTFOLIO_DEMO.md](docs/PORTFOLIO_DEMO.md), [docs/DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md), and [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md).
-
-## Safe Demo Mode
-
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main demo status
-.\.venv311\Scripts\python.exe -m scanner.main demo generate --json
-.\.venv311\Scripts\python.exe -m scanner.main demo report --markdown --html --json
-.\.venv311\Scripts\python.exe -m scanner.main demo walkthrough
-```
-
-Portfolio Demo Mode uses simulated redacted data only. It does not scan real targets, send live requests, store raw secrets, or include real customer data.
-
-The project exists to show how scanner output can become a practical security workflow instead of a raw list of findings. It stores results locally, enriches findings with risk and prioritisation context, produces JSON/HTML reports, exposes a local FastAPI API, and presents the workflow in a React dashboard.
-
-Version 21.4 adds a Safe Authenticated Parameter Replay Planner for manual validation planning only. It creates Replay Plans, Redacted Request Templates, Parameter Review Plans, Expected Behaviour/Observed Behaviour records, evidence checklists, and Retest Workflow records. It performs No Automatic Replay and stores no raw credentials, cookies, bearer tokens, CSRF values, or session tokens.
-
-Version 21.5 adds a Business Logic Review Workflow Assistant for manual workflow review and documentation only. It creates Workflow Review Plans, State Transition Review maps, Abuse Case Checklists, Expected Behaviour/Observed Behaviour records, Retest Workflow records, and report-ready templates. It performs No Automatic Workflow Execution.
-
-Version 21.6 adds Evidence Vault and Redaction Quality Controls for Redacted Evidence, Secret Detection, Evidence Quality Score, Chain-of-Custody Style Timeline records, Export Safety Check, and Report Evidence Linking.
-
-VulScan is intended for security learners, junior security engineers, portfolio reviewers, and authorised internal testing labs. The Bug Intelligence Engine supports responsible disclosure, bug bounty workflow compatibility, and internal security testing through Program Scope, Recon Intelligence, Endpoint Intelligence, OWASP Indicator Mapping, Safe Validation, Evidence Capture, Security Finding Reports, Submission and Retest Tracker, Duplicate Detection, and Performance Metrics.
-
-Version 21.0 adds Authenticated Web Assessment foundation: redacted Session Profiles, Authentication Context, Authenticated Scope boundaries, Auth-Required Endpoint classification, and Role/Permission Notes. It does not perform login automation, unauthorised authentication testing, or state-changing authenticated requests. See `docs/AUTHENTICATED_ASSESSMENT.md`.
-
-Version 21.1 adds Authenticated Crawl and Session Boundary Controls. The crawl is GET-only, enforces Authenticated Scope before requests, blocks logout/delete/payment/destructive paths, detects Session Expiry Indicators, and stores Redacted Authenticated Evidence only. See `docs/AUTHENTICATED_CRAWL.md`.
+| View | Path |
+| --- | --- |
+| Dashboard Home | `docs/screenshots/dashboard-home.png` |
+| OWASP Report | `docs/screenshots/owasp-report.png` |
+| Evidence Vault | `docs/screenshots/evidence-vault.png` |
+| Report Composer | `docs/screenshots/report-composer.png` |
+| Portfolio Demo Mode | `docs/screenshots/demo-mode.png` |
 
 ## Key Features
 
-| Area | Capability | Status |
-|---|---|---|
-| Discovery Engine | Safe TCP connect scanning and service identification | Working |
-| Credentialed Linux Audit | SSH-based read-only Linux audit checks | Working |
-| Windows Audit | Safe Windows reachability and optional read-only WinRM indicators | Working |
-| Passive Web DAST | Bounded crawl, headers, cookies, forms, robots, sitemap, and scope-aware reporting | Working |
-| Vulnerability Intelligence | Local rules and local advisory-style matching | Working |
-| CVSS/EPSS/Exploit Metadata | Local prioritisation signals only, no exploit download or execution | Working |
-| Prioritisation Engine | Risk scoring, asset context, and fix-first guidance | Working |
-| Fix-First Dashboard | Prioritised remediation dashboard data | Working |
-| Trend Tracking | Latest scan comparison and trend context | Working |
-| API | Local FastAPI API with jobs, reports, filtering, persistence, and remediation | Working |
-| React Dashboard | Local dashboard for jobs, findings, risk, trends, reports, remediation, and Bug Intelligence | Working |
-| Program Scope | Local scope files, in-scope/out-of-scope decisions, compatibility aliases | Working |
-| Recon Intelligence | Scope-aware metadata-only recon for provided targets | Working |
-| Endpoint Intelligence | URL/path analysis and endpoint candidate discovery | Working |
-| OWASP Mapping | Indicator-only OWASP Top 10 mapping | Working |
-| OWASP Assessment Engine | OWASP Top 10:2025 evidence, category results, confidence, coverage gaps, and manual validation workflow | Foundation |
-| A03 Software Supply Chain | Component exposure indicators, dependency metadata indicators, SBOM analysis, and local CVE/CPE enrichment | Working |
-| A08 Software/Data Integrity | Upload/import, webhook/callback, update workflow, SRI, and trusted-data boundary indicators | Working |
-| Safe Validation | Limited non-destructive validation checks | Working |
-| Evidence Capture | Redacted, report-safe evidence summaries | Working |
-| Security Finding Reports | Local report listing and evidence/report workflow | Working |
-| Submission and Retest Tracker | Local status, follow-up, retest, and payment tracking | Working |
-| Duplicate Detection | Metadata-only Finding Fingerprinting and duplicate groups | Working |
-| Performance Metrics | Local Bug Intelligence progress, quality, outcome, and programme metrics | Working |
+- Discovery Engine
+- Passive Web DAST
+- Vulnerability Intelligence
+- Prioritisation and remediation tracking
+- OWASP Assessment Engine
+- Authenticated Assessment Foundation
+- Safe authenticated crawl and session boundary controls
+- Role and Permission Mapping
+- Access Control Manual Test Planner
+- Safe Parameter Replay Planner
+- Business Logic Review Assistant
+- Evidence Vault with redaction quality controls
+- Professional Finding Builder
+- Report Composer with Markdown, HTML, and JSON outputs
+- Portfolio Demo Mode with Safe Demo Dataset
 
-## Architecture
+## Architecture Overview
 
-```text
-VulScan
-├── Discovery Engine
-├── Credentialed Scan Engine
-├── Web DAST Engine
-├── Vulnerability Intelligence Engine
-├── Prioritisation Engine
-├── Bug Intelligence Engine
-├── Storage
-├── API
-└── Dashboard
+```mermaid
+flowchart LR
+    CLI[CLI] --> API[FastAPI API]
+    Dashboard[React Dashboard] --> API
+    API --> Engines[Assessment Engines]
+    Engines --> Discovery[Discovery Engine]
+    Engines --> WebDAST[Passive Web DAST]
+    Engines --> OWASP[OWASP Engine]
+    Engines --> Auth[Authenticated Assessment]
+    Engines --> Evidence[Evidence Vault]
+    Evidence --> Findings[Professional Finding Builder]
+    Findings --> Reports[Report Composer]
+    Reports --> Output[Markdown / HTML / JSON]
+    Engines --> Storage[(SQLite / data / reports)]
 ```
 
-![Architecture Diagram](assets/architecture/vulscan-architecture.png)
-
-Architecture diagram placeholder. Add screenshot/image before final portfolio release.
-
-## Dashboard Preview
-
-![Dashboard Overview](assets/screenshots/dashboard-overview.png)
-![Jobs](assets/screenshots/dashboard-jobs.png)
-![Vulnerabilities](assets/screenshots/dashboard-vulnerabilities.png)
-![Risk](assets/screenshots/dashboard-risk.png)
-![Reports](assets/screenshots/dashboard-reports.png)
-![Bug Intelligence Workflow](assets/screenshots/bug-intelligence-workflow.png)
-![Performance Metrics](assets/screenshots/performance-metrics.png)
-
-Screenshot placeholders. Use demo mode and add final images before public portfolio release.
+More diagrams: [docs/diagrams/ARCHITECTURE.md](docs/diagrams/ARCHITECTURE.md).
 
 ## Quick Start
 
-Backend:
-
 ```powershell
 python -m venv .venv311
-.\.venv311\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
+.\.venv311\Scripts\activate
+pip install -r requirements.txt
+.\.venv311\Scripts\python.exe -m pytest
+.\.venv311\Scripts\python.exe -m scanner.main demo status
 .\.venv311\Scripts\python.exe -m scanner.main api
 ```
 
@@ -127,180 +80,62 @@ npm install
 npm run dev
 ```
 
-Open:
+Open `http://127.0.0.1:5173`.
 
-```text
-http://localhost:5173
-```
+## Safe Demo
 
-## A08 Software/Data Integrity Checks
-
-Version 20.8 adds safe A08 Software or Data Integrity Failures indicator checks:
+Portfolio Demo Mode uses simulated redacted data only. It does not scan real targets, send live requests, store raw secrets, or include real customer data.
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a08-checks --owasp-assess --json --html
+.\.venv311\Scripts\python.exe -m scanner.main demo generate --json
+.\.venv311\Scripts\python.exe -m scanner.main demo report --markdown --html --json
+.\.venv311\Scripts\python.exe -m scanner.main demo walkthrough
 ```
 
-The A08 engine reports integrity indicators and manual validation plans only. It does not upload files, submit forms, trigger webhooks, call update endpoints, import data, or perform bypass testing.
+## Example Local Assessment
 
-## Demo Mode
-
-Dashboard demo mode uses fake sample data only. It is intended for screenshots, UI review, and portfolio presentation.
-
-Example dashboard environment values:
-
-```text
-VITE_VULSCAN_DEMO_MODE=true
-VITE_VULSCAN_PORTFOLIO_MODE=true
-VITE_VULSCAN_SCREENSHOT_MODE=true
-```
-
-Do not commit `.env` files or secrets.
-
-## Example Commands
+Use only on systems you own or have explicit permission to assess. This example targets localhost:
 
 ```powershell
-.\.venv311\Scripts\python.exe -m scanner.main scan --target 127.0.0.1
-.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --headers --cookies --forms --passive-summary
-.\.venv311\Scripts\python.exe -m scanner.main recon --targets-file data\recon\sample_targets.txt --scope-file data\programs\sample_program_scope.json --enforce-scope
-.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --scope-file data\programs\sample_program_scope.json --enforce-scope
-.\.venv311\Scripts\python.exe -m scanner.main validate --targets-file data\validation\sample_validation_targets.json --scope-file data\programs\sample_program_scope.json --enforce-scope
-.\.venv311\Scripts\python.exe -m scanner.main evidence list
-.\.venv311\Scripts\python.exe -m scanner.main security-report list
-.\.venv311\Scripts\python.exe -m scanner.main submission list
-.\.venv311\Scripts\python.exe -m scanner.main metrics summary
-.\.venv311\Scripts\python.exe -m scanner.main api
-cd dashboard
-npm run dev
-```
-
-## Bug Intelligence Workflow
-
-```text
-Program Scope -> Recon -> Endpoints -> OWASP Mapping -> Safe Validation -> Evidence -> Security Report -> Submission -> Retest -> Metrics
-```
-
-This workflow supports responsible disclosure, bug bounty workflow compatibility, and internal security testing. It is local and tracking-oriented: VulScan does not submit reports to external platforms, store platform tokens, scrape dashboards, or execute exploit payloads.
-
-## Reports and Evidence
-
-VulScan produces local JSON and HTML reports for scanner output and workflow modules. Evidence Capture stores concise, redacted summaries designed for review and reporting. Security Finding Reports organise evidence, impact, reproduction notes, remediation guidance, and submission tracking context.
-
-Report access through the local API is restricted to files under the local `reports` directory and blocks path traversal. Sensitive values such as passwords, tokens, cookies, private keys, and authorisation headers are redacted where evidence/report helpers process text.
-
-## Limitations
-
-- VulScan is not a replacement for Nessus, Qualys, Burp Suite, or a full enterprise vulnerability management platform.
-- It is not an exploitation framework.
-- Local/offline vulnerability intelligence can become stale.
-- Findings and indicators require manual validation.
-- Demo mode uses fake data only.
-- VulScan does not submit to external disclosure platforms.
-- Enterprise RBAC, hardened deployment, and multi-user workflows are not implemented yet.
-
-## Roadmap
-
-- Docker or dev container setup.
-- CI/CD workflow.
-- PDF reporting.
-- Stronger authentication and deployment hardening.
-- Plugin system.
-- SBOM support.
-- Optional safe active check expansion.
-- Broader test coverage and dashboard visual regression checks.
-
-## What This Project Demonstrates
-
-- Python security tooling and safe scanner design.
-- FastAPI API design with local-first safety controls.
-- React and TypeScript dashboard development.
-- SQLite persistence and report workflows.
-- Vulnerability management and remediation tracking.
-- OWASP indicator mapping and prioritisation logic.
-- Responsible disclosure workflow modelling.
-- Safety-focused engineering, documentation, and release discipline.
-
-## Documentation
-
-- [Installation](docs/INSTALLATION.md)
-- [Usage](docs/USAGE.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Safety](docs/SAFETY.md)
-- [Bug Intelligence](docs/BUG_INTELLIGENCE.md)
-- [Bug Intelligence Workflow](docs/BUG_INTELLIGENCE_WORKFLOW.md)
-- [Command Reference](docs/COMMAND_REFERENCE.md)
-- [Portfolio Guide](docs/PORTFOLIO_GUIDE.md)
-- [Screenshot Checklist](docs/SCREENSHOT_CHECKLIST.md)
-- [Interview Talking Points](docs/INTERVIEW_TALKING_POINTS.md)
-- [Limitations](docs/LIMITATIONS.md)
-- [Future Roadmap](docs/FUTURE_ROADMAP.md)
-- [Project Summary](docs/PROJECT_SUMMARY.md)
-- [Dashboard](dashboard/README.md)
-
-## License
-
-License not selected yet. Add a `LICENSE` file before public release.
-## OWASP Assessment Engine
-
-Version 20.0 adds an OWASP Top 10:2025 assessment foundation for category-level evidence, confidence, coverage gaps, and manual validation workflow.
-Version 20.9 adds a unified OWASP Assessment report with executive summary, A01-A10 coverage matrix, evidence strength summary, manual validation checklist, developer remediation guidance, coverage gaps, limitations, and Markdown export. See `docs/OWASP_ASSESSMENT_REPORTING.md`.
-
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --owasp-assess --json --html
 .\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a01-checks --a02-checks --a03-checks --a04-checks --a05-checks --a07-checks --a08-checks --a10-checks --owasp-assess --owasp-report --json --html
 ```
 
-The OWASP assessment score measures coverage and evidence quality. It is not a security rating, and no indicator found does not mean the category is secure.
-# Version 20.2 A04 Cryptographic Failures
+## Safety Statement
 
-VulScan includes safe OWASP A04 Cryptographic Failures checks for authorised web assessments:
+Authorised Testing Only.
 
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a04-checks --owasp-assess --json --html
-```
+VulScan is for Responsible Use, Safe Local Testing, Defensive Security, and Authorised Security Assessment only. Do not use it against systems without explicit written permission. Do not store real secrets, raw cookies, bearer tokens, passwords, API keys, private keys, customer data, or sensitive response bodies in the repository, demo data, reports, screenshots, or issue reports.
 
-The module reports transport security indicators, cookie security evidence, sensitive data over cleartext indicators, HSTS evidence, mixed content indicators, and TLS metadata. It does not submit forms, capture credentials, store cookie values, store secrets, test weak TLS ciphers, or perform downgrade testing.
+## Limitations
 
-# Version 20.3 A07 Authentication Failures
+- Indicator-based findings require Manual Validation Workflow.
+- VulScan does not guarantee complete coverage.
+- VulScan is not an exploitation framework.
+- No exploit automation, credential attacks, or unauthorised scanning are included.
+- Demo findings are simulated and must not be treated as confirmed vulnerability claims.
+- Professional manual testing remains necessary for real engagements.
 
-VulScan includes safe OWASP A07 Authentication Failures checks for authorised web assessments:
+## Roadmap
 
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a07-checks --owasp-assess --json --html
-```
+- Improved authenticated assessment workflows.
+- Role comparison workflow.
+- Report PDF export.
+- CI/CD hardening.
+- Plugin architecture.
+- More safe local test labs.
 
-The module reports authentication indicators, session management indicators, login workflow evidence, password reset workflow evidence, cookie/session evidence, rate-limit header indicators, and manual validation needs. It does not perform login attempts, brute force, credential stuffing, password guessing, MFA bypass testing, account creation, password reset, or form submission.
+## Interview Talking Points
 
-# Version 20.4 A10 Mishandling of Exceptional Conditions
+- Built a full-stack cybersecurity product with Python 3.11, FastAPI, React, Vite, and TypeScript.
+- Designed safety boundaries for Authorised Security Assessment and Defensive Security workflows.
+- Mapped evidence into OWASP-focused Assessment outputs with manual validation status.
+- Built Evidence Vault and Professional Reporting workflows to avoid unsafe raw evidence export.
+- Added Portfolio Demo Mode for safe GitHub screenshots and interview walkthroughs.
 
-VulScan includes safe OWASP A10 Mishandling of Exceptional Conditions checks for authorised web assessments:
+## Documentation
 
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main web-scan --url http://127.0.0.1:8000 --crawl --headers --cookies --forms --passive-summary --a10-checks --owasp-assess --json --html
-```
+Start with [docs/README.md](docs/README.md), [docs/SAFETY.md](docs/SAFETY.md), [docs/PORTFOLIO_DEMO.md](docs/PORTFOLIO_DEMO.md), and [docs/DEMO_WALKTHROUGH.md](docs/DEMO_WALKTHROUGH.md).
 
-The module reports error-handling indicators, exception exposure evidence, verbose error evidence, framework debug indicators, status code patterns, sensitive error content, fail-safe review required notes, and manual validation required status. It analyses already observed evidence only and does not force errors, send payloads, submit forms, modify server-side state, perform crash testing, or perform DoS testing.
-### OWASP A05 Injection Candidate Analysis
+## License
 
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --owasp-assess --json --html
-```
-
-Optional safe reflection:
-
-```powershell
-.\.venv311\Scripts\python.exe -m scanner.main endpoints --urls-file data\endpoints\sample_urls.txt --a05-checks --safe-reflection --max-reflection-checks 10 --owasp-assess --json --html
-```
-
-The module reports A05 Injection candidates, input handling indicators, parameter intelligence, form input candidates, API input candidates, and optional harmless marker reflection observations. It does not use exploit payloads, submit forms, modify state, or confirm exploitability. Manual validation is required.
-## Version 20.6 A01 Broken Access Control
-
-Version 20.6 adds an A01 Broken Access Control Candidate Engine for safe, authorised OWASP-focused assessment. It identifies access-control candidates from endpoints, parameters, URL structures, object identifiers, admin/function surfaces, tenant indicators, export/download workflows, APIs, and evidence records, then generates candidate evidence, confidence scoring, manual validation plans, and report-ready templates.
-
-The A01 engine is candidate-only: no automatic role comparison, account-to-account requests, credential attack workflow, elevated-access action workflow, or state-changing requests. See `docs/OWASP_A01_BROKEN_ACCESS_CONTROL.md`.
-## Version 21.2 Role and Permission Mapping
-
-VulScan includes a Role and Permission Mapping assistant for A01 Access-Control Planning. It lets authorised assessors define Role Profiles, maintain an Access-Control Matrix, infer endpoint actions from existing endpoint metadata, and generate Manual Validation Required plans. It is a planning and documentation workflow only and does not perform automatic role comparison, account-to-account requests, or state-changing access checks. See `docs/ROLE_PERMISSION_MAPPING.md`.
-## Version 21.3 Access Control Manual Test Planner
-
-VulScan includes an Access Control Manual Test Planner for A01 Manual Validation Plan workflow, Expected Behaviour, Observed Behaviour, Evidence Checklist, Retest Workflow, and report-ready A01 templates. It creates local documentation records only and performs no live access-control requests. See `docs/ACCESS_CONTROL_MANUAL_TEST_PLANNER.md`.
+MIT. See [LICENSE](LICENSE).

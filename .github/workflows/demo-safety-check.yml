@@ -1,0 +1,17 @@
+name: Demo Safety Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  demo-safety:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check demo safety
+        run: python scripts/check_demo_safety.py
+

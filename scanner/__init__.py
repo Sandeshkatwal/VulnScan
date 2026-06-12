@@ -1,3 +1,3 @@
 """VulScan defensive vulnerability scanner package."""
 
-__version__ = "21.8"
+__version__ = "21.9"

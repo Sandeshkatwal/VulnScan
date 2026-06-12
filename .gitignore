@@ -16,6 +16,7 @@ env/
 .env.*
 !.env.example
 *.env
+*.local
 secrets.*
 config.local.*
 *.key
@@ -54,6 +55,8 @@ reports/
 reports/*.html
 reports/*.json
 reports/*.pdf
+reports/private/
+reports/secrets/
 exports/
 output/
 outputs/
@@ -110,6 +113,13 @@ reports/demo/screenshots_notes/*
 !assets/screenshots/.gitkeep
 !assets/architecture/.gitkeep
 !assets/demo/.gitkeep
+!docs/screenshots/
+!docs/screenshots/README.md
+!docs/screenshots/.gitkeep
+!docs/assets/
+!docs/assets/.gitkeep
+!docs/diagrams/
+!docs/diagrams/.gitkeep
 
 # Build/cache
 node_modules/

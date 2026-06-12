@@ -48,3 +48,6 @@ GET /demo/report/latest
 
 Use the Portfolio Demo Mode section to load the Safe Demo Dataset, show the Feature Tour, and generate a Demo Report. The dashboard also has a Screenshot-Ready View toggle in Settings.
 
+Recommended demo wording:
+
+> VulScan is not an exploit framework. It is an authorised assessment and reporting platform that focuses on evidence quality, OWASP mapping, manual validation, and safe reporting.

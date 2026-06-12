@@ -1,0 +1,19 @@
+name: Docs Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  docs:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check docs links
+        run: python scripts/check_docs_links.py
+      - name: Verify release files
+        run: python scripts/verify_release.py
+

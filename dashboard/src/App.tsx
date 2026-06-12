@@ -74,7 +74,7 @@ import type {
 } from './types/api'
 import { DEMO_MODE_MESSAGE, envDemoMode, portfolioMode, screenshotMode as envScreenshotMode } from './utils/demoMode'
 
-type DashboardSection = 'overview' | 'portfolio-demo' | 'portfolio-landing' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'finding-builder' | 'report-composer' | 'remediation' | 'evidence-vault' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings'
+type DashboardSection = 'overview' | 'portfolio-demo' | 'portfolio-landing' | 'jobs' | 'vulnerabilities' | 'risk' | 'trends' | 'reports' | 'finding-builder' | 'report-composer' | 'remediation' | 'evidence-vault' | 'bug-intelligence' | 'bug-intelligence-metrics' | 'bug-bounty' | 'bug-bounty-recon' | 'endpoint-discovery' | 'safe-validation' | 'authenticated-assessment' | 'parameter-replay-planner' | 'business-logic-review' | 'a01-manual-planner' | 'submission-tracker' | 'duplicates' | 'owasp' | 'settings' | 'about'
 
 interface DashboardState {
   health: HealthResponse | null
@@ -98,7 +98,7 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.8-demo', api_version: '21.8' }
+const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.9-demo', api_version: '21.9' }
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -135,6 +135,7 @@ const navigationItems: Array<{ id: DashboardSection; label: string; group?: stri
   { id: 'submission-tracker', label: 'Submission Tracker', group: 'Workflows' },
   { id: 'duplicates', label: 'Duplicate Detection', group: 'Workflows' },
   { id: 'settings', label: 'API Connection and Safety', group: 'Settings' },
+  { id: 'about', label: 'About VulScan', group: 'Settings' },
 ]
 
 const sectionCopy: Record<DashboardSection, { title: string; description: string }> = {
@@ -241,6 +242,10 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   settings: {
     title: 'Settings',
     description: 'Local API connection checks, report access settings, and dashboard mode.',
+  },
+  about: {
+    title: 'About VulScan',
+    description: 'Project overview, safety model, tech stack, modules, roadmap, and portfolio placeholders.',
   },
 }
 
@@ -939,6 +944,37 @@ function App() {
     )
   }
 
+  function renderAbout() {
+    return (
+      <section className="dashboard-grid">
+        <article className="panel panel-wide">
+          <h3>Project Overview</h3>
+          <p>VulScan is an OWASP-focused Assessment, Evidence Vault, Vulnerability Management, and Professional Reporting platform for Authorised Security Assessment and Defensive Security workflows.</p>
+        </article>
+        <article className="panel">
+          <h3>Version and Features</h3>
+          <p>Version {state.version?.version || '21.9'} includes Portfolio Demo Mode, Professional Reporting, Evidence Vault, authenticated assessment planning, OWASP mapping, and passive local assessment workflows.</p>
+        </article>
+        <article className="panel">
+          <h3>Tech Stack</h3>
+          <p>Python 3.11, FastAPI, local files/SQLite, React, Vite, TypeScript, and pytest.</p>
+        </article>
+        <article className="panel">
+          <h3>Safe Use Statement</h3>
+          <p>Use VulScan only on systems you own or have explicit permission to assess. Portfolio Demo Mode uses simulated redacted data only.</p>
+        </article>
+        <article className="panel">
+          <h3>Author/Profile</h3>
+          <p>Portfolio profile placeholder. Add your GitHub or professional profile link before public release.</p>
+        </article>
+        <article className="panel">
+          <h3>Roadmap</h3>
+          <p>PDF export, richer authenticated assessment workflows, plugin architecture, CI/CD hardening, and more safe local test labs.</p>
+        </article>
+      </section>
+    )
+  }
+
   function renderCurrentSection() {
     if (currentSection === 'overview') return renderOverview()
     if (currentSection === 'portfolio-demo') return renderPortfolioDemo()
@@ -965,6 +1001,7 @@ function App() {
     if (currentSection === 'submission-tracker') return renderSubmissionTracker()
     if (currentSection === 'duplicates') return renderDuplicates()
     if (currentSection === 'owasp') return renderOWASP()
+    if (currentSection === 'about') return renderAbout()
     return renderSettings()
   }
 
