@@ -6,8 +6,16 @@ These commands use the preferred Bug Intelligence terminology. Legacy aliases re
 
 ```powershell
 .\.venv311\Scripts\python.exe -m pytest
+.\.venv311\Scripts\python.exe -m scanner.main version
+.\.venv311\Scripts\python.exe -m scanner.main health
+.\.venv311\Scripts\python.exe -m scanner.main diagnostics --json
+.\.venv311\Scripts\python.exe scripts\check_no_secrets.py
 .\.venv311\Scripts\python.exe scripts\check_demo_safety.py
 .\.venv311\Scripts\python.exe scripts\verify_release.py
+.\.venv311\Scripts\python.exe scripts\verify_commands.py
+.\.venv311\Scripts\python.exe scripts\check_dependencies.py
+.\.venv311\Scripts\python.exe scripts\public_beta_check.py
+.\.venv311\Scripts\python.exe scripts\generate_release_notes.py
 .\.venv311\Scripts\python.exe scripts\generate_project_summary.py
 cd dashboard
 npm run build

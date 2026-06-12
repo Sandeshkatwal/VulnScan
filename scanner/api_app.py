@@ -14,6 +14,9 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from scanner import __version__
+from scanner.diagnostics import build_diagnostics
+from scanner.health_check import run_health_checks
+from scanner.version import VERSION, version_metadata
 from scanner.api_filters import (
     active_filters,
     compact_findings,
@@ -129,7 +132,7 @@ from scanner.history import get_findings_for_scan_id, get_recent_scans_page, get
 from scanner.submission_tracker import SubmissionTrackerError
 
 
-API_VERSION = "21.9"
+API_VERSION = VERSION
 LOCAL_DASHBOARD_ORIGINS = ("http://localhost:5173", "http://127.0.0.1:5173")
 ScanExecutor = Callable[..., dict[str, Any]]
 ERROR_RESPONSES = {
@@ -356,8 +359,8 @@ def create_app(
         description="Public health check for the local VulScan API.",
         responses={500: ERROR_RESPONSES[500]},
     )
-    def health() -> dict[str, str]:
-        return {"status": "ok", "scanner": "VulScan"}
+    def health() -> dict[str, Any]:
+        return run_health_checks()
 
     @app.get(
         "/version",
@@ -366,8 +369,18 @@ def create_app(
         description="Public scanner package version and local API version metadata.",
         responses={500: ERROR_RESPONSES[500]},
     )
-    def version() -> dict[str, str]:
-        return {"scanner": "VulScan", "version": __version__, "api_version": API_VERSION}
+    def version() -> dict[str, Any]:
+        return version_metadata()
+
+    @app.get(
+        "/diagnostics",
+        tags=["System"],
+        summary="Safe local diagnostics",
+        description="Public beta diagnostics without environment variables, auth profile content, cookies, or tokens.",
+        responses={500: ERROR_RESPONSES[500]},
+    )
+    def diagnostics() -> dict[str, Any]:
+        return build_diagnostics()
 
     @app.get(
         "/program-scope/scopes",

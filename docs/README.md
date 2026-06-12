@@ -4,6 +4,11 @@
 - [Architecture Diagrams](diagrams/ARCHITECTURE.md)
 - [Safety](SAFETY.md)
 - [Command Reference](COMMAND_REFERENCE.md)
+- [Public Beta Notes](beta/PUBLIC_BETA_NOTES.md)
+- [Known Limitations](beta/KNOWN_LIMITATIONS.md)
+- [Verification Matrix](beta/VERIFICATION_MATRIX.md)
+- [Beta Testing Guide](beta/BETA_TESTING_GUIDE.md)
+- [Issue Triage Guide](issues/ISSUE_TRIAGE_GUIDE.md)
 - [Dashboard Guide](DASHBOARD_GUIDE.md)
 - [Portfolio Demo](PORTFOLIO_DEMO.md)
 - [Demo Walkthrough](DEMO_WALKTHROUGH.md)
@@ -16,4 +21,3 @@
 - [Release Checklist](release/RELEASE_CHECKLIST.md)
 - [Interview Talking Points](interview/TALKING_POINTS.md)
 - [Interview FAQ](interview/FAQ.md)
-

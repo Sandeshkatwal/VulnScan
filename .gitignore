@@ -110,6 +110,9 @@ reports/demo/*
 !reports/demo/screenshots_notes/
 reports/demo/screenshots_notes/*
 !reports/demo/screenshots_notes/.gitkeep
+!reports/diagnostics/
+reports/diagnostics/*
+!reports/diagnostics/.gitkeep
 !assets/screenshots/.gitkeep
 !assets/architecture/.gitkeep
 !assets/demo/.gitkeep

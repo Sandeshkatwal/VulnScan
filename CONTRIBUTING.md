@@ -14,6 +14,7 @@ Run:
 
 ```powershell
 .\.venv311\Scripts\python.exe -m pytest
+.\.venv311\Scripts\python.exe scripts\public_beta_check.py
 cd dashboard
 npm run build
 ```
@@ -26,6 +27,7 @@ npm run build
 - Do not commit secrets, cookies, bearer tokens, passwords, private keys, real customer data, HAR files, or real auth profiles.
 - Demo data must be simulated, redacted, and clearly labelled.
 - Findings should use candidate wording unless manual validation supports stronger wording.
+- Public Beta changes should prioritise Stabilisation, Reliability, Issue Cleanup, Known Limitations, Version Metadata, Release Notes, Verification, and Regression Testing over major new features.
 
 ## Pull Request Checklist
 
@@ -34,4 +36,3 @@ npm run build
 - Demo data safety preserved.
 - No secrets in commits.
 - Safety and limitations remain clear.
-

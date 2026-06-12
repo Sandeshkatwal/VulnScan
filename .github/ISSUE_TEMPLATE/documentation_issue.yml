@@ -1,0 +1,21 @@
+name: Documentation issue
+description: Report unclear, missing, or incorrect documentation.
+title: "[Docs]: "
+labels: ["documentation", "public-beta"]
+body:
+  - type: input
+    id: page_file
+    attributes:
+      label: Page/file
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_fix
+    attributes:
+      label: Suggested fix

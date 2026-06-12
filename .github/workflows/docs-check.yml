@@ -16,4 +16,5 @@ jobs:
         run: python scripts/check_docs_links.py
       - name: Verify release files
         run: python scripts/verify_release.py
-
+      - name: Generate release notes
+        run: python scripts/generate_release_notes.py

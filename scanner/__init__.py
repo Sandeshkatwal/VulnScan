@@ -1,3 +1,5 @@
 """VulScan defensive vulnerability scanner package."""
 
-__version__ = "21.9"
+from scanner.version import VERSION
+
+__version__ = VERSION

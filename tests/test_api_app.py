@@ -34,7 +34,11 @@ def test_health_returns_ok() -> None:
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "scanner": "VulScan"}
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["scanner"] == "VulScan"
+    assert body["version"] == "22.0.0-beta"
+    assert body["authorised_use_only"] is True
 
 
 def test_version_returns_scanner_and_version() -> None:
@@ -45,8 +49,9 @@ def test_version_returns_scanner_and_version() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["scanner"] == "VulScan"
-    assert body["api_version"] == "21.9"
-    assert body["version"]
+    assert body["api_version"] == "22.0.0-beta"
+    assert body["version"] == "22.0.0-beta"
+    assert body["release_channel"] == "public-beta"
 
 
 def test_local_dashboard_cors_origin_is_allowed() -> None:

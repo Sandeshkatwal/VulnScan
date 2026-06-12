@@ -1,6 +1,7 @@
 import { RefreshCw, ShieldCheck } from 'lucide-react'
 import type { HealthResponse, VersionResponse } from '../types/api'
 import { ApiStatus } from './ApiStatus'
+import { VersionBadge } from './VersionBadge'
 
 interface TopBarProps {
   apiBaseUrl: string
@@ -33,7 +34,8 @@ export function TopBar({
         </div>
       </div>
       <div className="header-actions">
-        <span className="demo-dataset-badge">Local Demo Only</span>
+        <VersionBadge version={version} />
+        <span className="demo-dataset-badge">Public Beta</span>
         <ApiStatus health={health} version={version} error={apiError} loading={loading} />
         <div className="api-base" title={apiBaseUrl}>
           <span>API</span>

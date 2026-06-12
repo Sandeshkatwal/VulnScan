@@ -23,13 +23,37 @@ export interface ApiError {
 export interface HealthResponse {
   status?: string
   scanner?: string
+  version?: string
+  authorised_use_only?: boolean
+  warnings?: string[]
   [key: string]: unknown
 }
 
 export interface VersionResponse {
+  app_name?: string
   scanner?: string
   version?: string
   api_version?: string
+  release_channel?: string
+  build_status?: string
+  authorised_use_only?: boolean
+  [key: string]: unknown
+}
+
+export interface DiagnosticsResponse {
+  system?: ApiRecord
+  version?: VersionResponse
+  key_paths?: ApiRecord
+  missing_optional_directories?: string[]
+  package_availability?: ApiRecord[]
+  safety_checks?: ApiRecord
+  warnings?: string[]
+  summary?: {
+    status?: string
+    passed?: boolean
+    failed_checks?: string[]
+    [key: string]: unknown
+  }
   [key: string]: unknown
 }
 

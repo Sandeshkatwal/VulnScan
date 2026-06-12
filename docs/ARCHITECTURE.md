@@ -2,6 +2,10 @@
 
 For a recruiter-friendly overview, see [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md). Architecture image placeholders live under `assets/architecture/`.
 
+## Version 22.0 Public Beta Stabilisation
+
+Version 22.0.0-beta adds Public Beta Version Metadata, safe health checks, diagnostics, command Verification scripts, dependency review, no-secrets scanning, Known Limitations, and Release Notes generation. These components are read-only or local-file checks and must not print secrets, dump environment variables, expose auth profile content, or contact the internet.
+
 ## Version 21.7 Report Composition Layer
 
 The Professional Finding Builder and Report Composer layer is implemented in `scanner/finding_models.py`, `scanner/finding_builder.py`, `scanner/report_composer.py`, `scanner/report_sections.py`, `scanner/report_exporter.py`, `scanner/risk_acceptance.py`, and `scanner/retest_summary.py`. API endpoints are exposed through `scanner/api_report_composer.py` and `scanner/api_app.py`; CLI commands are under the `reports` Typer group. The dashboard uses Finding Builder and Report Composer views backed by the same API calls.

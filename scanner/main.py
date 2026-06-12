@@ -12,6 +12,9 @@ from rich.panel import Panel
 from rich.table import Table
 
 from scanner import __version__
+from scanner.diagnostics import build_diagnostics
+from scanner.health_check import run_health_checks
+from scanner.version import version_metadata
 from scanner.audit_profiles import (
     AuditProfileError,
     DEFAULT_AUDIT_PROFILE,
@@ -325,6 +328,62 @@ def main() -> None:
     """Run VulScan commands."""
 
 
+@app.command("version")
+def version_command() -> None:
+    """Print VulScan public beta version metadata."""
+    metadata = version_metadata()
+    console.print(metadata["app_name"])
+    console.print(f"Version {metadata['version']}")
+    console.print(f"Release channel: {metadata['release_channel']}")
+    console.print("Authorised testing only")
+    console.print(f"Python version: {metadata['python_version']}")
+    console.print(f"Platform: {metadata['platform']}")
+
+
+@app.command("health")
+def health_command() -> None:
+    """Run safe local health checks."""
+    result = run_health_checks()
+    status_style = "green" if result.get("status") == "ok" else "yellow"
+    console.print(Panel.fit(f"VulScan health: {result.get('status')}", style=f"bold {status_style}"))
+    console.print(f"[bold]Version:[/bold] {result.get('version')}")
+    console.print(f"[bold]Authorised testing only:[/bold] {result.get('authorised_use_only')}")
+    console.print(f"[bold]Python compatible:[/bold] {result.get('python_compatible')}")
+    console.print(f"[bold]Reports writable:[/bold] {result.get('reports_writable')}")
+    for warning in result.get("warnings") or []:
+        console.print(f"[yellow]Warning:[/yellow] {warning}")
+    if result.get("status") != "ok":
+        raise typer.Exit(code=1)
+
+
+@app.command("diagnostics")
+def diagnostics_command(
+    json_output: Annotated[
+        bool,
+        typer.Option("--json", help="Print diagnostics as safe JSON."),
+    ] = False,
+) -> None:
+    """Print safe local diagnostics."""
+    result = build_diagnostics()
+    if json_output:
+        console.print(json.dumps(result, indent=2, sort_keys=True))
+        if not result.get("summary", {}).get("passed"):
+            raise typer.Exit(code=1)
+        return
+    table = Table(title="VulScan Diagnostics")
+    table.add_column("Check")
+    table.add_column("Value")
+    table.add_row("Version", str(result.get("version", {}).get("version")))
+    table.add_row("Release channel", str(result.get("version", {}).get("release_channel")))
+    table.add_row("Summary", str(result.get("summary", {}).get("status")))
+    table.add_row("Warnings", str(len(result.get("warnings") or [])))
+    console.print(table)
+    for warning in result.get("warnings") or []:
+        console.print(f"[yellow]Warning:[/yellow] {warning}")
+    if not result.get("summary", {}).get("passed"):
+        raise typer.Exit(code=1)
+
+
 @app.command("api")
 def api_command(
     host: Annotated[
@@ -393,7 +452,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]Version 19.0 API is for local development only and does not expose credentialed scans.[/yellow]")
+    console.print("[yellow]VulScan 22.0 Public Beta API is for authorised local testing only.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 

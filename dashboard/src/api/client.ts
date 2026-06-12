@@ -26,6 +26,7 @@ import type {
   DateRangeOption,
   DemoDatasetResponse,
   DemoStatusResponse,
+  DiagnosticsResponse,
   BugBountyScopeDetail,
   BugBountyScopesResponse,
   DuplicateCheckRequest,
@@ -167,6 +168,10 @@ export function getHealth(): Promise<HealthResponse> {
 
 export function getVersion(): Promise<VersionResponse> {
   return request<VersionResponse>('/version')
+}
+
+export function getDiagnostics(): Promise<DiagnosticsResponse> {
+  return request<DiagnosticsResponse>('/diagnostics')
 }
 
 export function getJobs(params: JobsQuery | number = { limit: 10 }): Promise<JobsResponse> {

@@ -1,20 +1,24 @@
-name: Demo Safety Check
+name: Public Beta Check
 
 on:
   push:
   pull_request:
 
 jobs:
-  demo-safety:
+  public-beta:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Check demo safety
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Demo safety
         run: python scripts/check_demo_safety.py
-      - name: Check no secrets
+      - name: Secret safety
         run: python scripts/check_no_secrets.py
-      - name: Public beta check
+      - name: Release verification
+        run: python scripts/verify_release.py
+      - name: Public beta readiness
         run: python scripts/public_beta_check.py

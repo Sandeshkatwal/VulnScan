@@ -15,15 +15,18 @@ import {
 import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoRemediationSummary, demoScans } from './demo/demoData'
 import { portfolioDemoDataset } from './demo/portfolioDemoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
+import { ApiConnectionStatus } from './components/ApiConnectionStatus'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
 import { AuthContextView } from './components/AuthContextView'
 import { A01ManualTestPlannerView } from './components/A01ManualTestPlannerView'
+import { BetaNotice } from './components/BetaNotice'
 import { BugIntelligenceMetricsView } from './components/BugIntelligenceMetricsView'
 import { BusinessLogicReviewView } from './components/BusinessLogicReviewView'
 import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
 import { BugBountyReconView } from './components/BugBountyReconView'
 import { BugBountyScopeView } from './components/BugBountyScopeView'
 import { DemoModeToggle } from './components/DemoModeToggle'
+import { DiagnosticsPanel } from './components/DiagnosticsPanel'
 import { DuplicateDetectionView } from './components/DuplicateDetectionView'
 import { DashboardHome } from './components/DashboardHome'
 import { EndpointDiscoveryView } from './components/EndpointDiscoveryView'
@@ -34,6 +37,7 @@ import { FindingSummary, buildPrioritySummary } from './components/FindingSummar
 import { FindingDetailDrawer } from './components/FindingDetailDrawer'
 import { JobDetails } from './components/JobDetails'
 import { JobsTable, statusTone } from './components/JobsTable'
+import { KnownLimitationsPanel } from './components/KnownLimitationsPanel'
 import { Layout } from './components/Layout'
 import { PortfolioFooter } from './components/PortfolioFooter'
 import { PortfolioDemoMode } from './components/PortfolioDemoMode'
@@ -51,9 +55,11 @@ import { SafeValidationView } from './components/SafeValidationView'
 import { ScansTable } from './components/ScansTable'
 import { ScanJobForm } from './components/ScanJobForm'
 import { SectionHeader } from './components/SectionHeader'
+import { CommandQuickReference } from './components/CommandQuickReference'
 import { ScreenshotGuide } from './components/ScreenshotGuide'
 import { ScreenshotModeToggle } from './components/ScreenshotModeToggle'
 import { StatusCard } from './components/StatusCard'
+import { SystemHealthPanel } from './components/SystemHealthPanel'
 import { SubmissionTrackerView } from './components/SubmissionTrackerView'
 import { TrendsView } from './components/TrendsView'
 import { VulnerabilityList } from './components/VulnerabilityList'
@@ -98,7 +104,15 @@ const initialState: DashboardState = {
   loading: true,
 }
 
-const demoVersion: VersionResponse = { scanner: 'VulScan', version: '21.9-demo', api_version: '21.9' }
+const demoVersion: VersionResponse = {
+  app_name: 'VulScan',
+  scanner: 'VulScan',
+  version: '22.0.0-beta',
+  api_version: '22.0.0-beta',
+  release_channel: 'public-beta',
+  build_status: 'stabilisation',
+  authorised_use_only: true,
+}
 
 const defaultFindingFilters: FindingFilters = {
   limit: 20,
@@ -245,7 +259,7 @@ const sectionCopy: Record<DashboardSection, { title: string; description: string
   },
   about: {
     title: 'About VulScan',
-    description: 'Project overview, safety model, tech stack, modules, roadmap, and portfolio placeholders.',
+    description: 'Public Beta status, safety model, tech stack, known limitations, and version metadata.',
   },
 }
 
@@ -913,6 +927,10 @@ function App() {
   function renderSettings() {
     return (
       <section className="settings-grid">
+        <ApiConnectionStatus apiBaseUrl={apiBaseUrl} health={state.health} version={state.version} error={state.apiError} loading={state.loading} />
+        <SystemHealthPanel health={state.health} />
+        <DiagnosticsPanel apiOnline={healthTone !== 'bad'} />
+        <CommandQuickReference />
         <article className="panel panel--wide">
           <div className="panel-heading">
             <h2>API Connection Manager</h2>
@@ -947,14 +965,16 @@ function App() {
   function renderAbout() {
     return (
       <section className="dashboard-grid">
+        <BetaNotice />
         <article className="panel panel-wide">
           <h3>Project Overview</h3>
-          <p>VulScan is an OWASP-focused Assessment, Evidence Vault, Vulnerability Management, and Professional Reporting platform for Authorised Security Assessment and Defensive Security workflows.</p>
+          <p>VulScan is an OWASP-focused assessment, Evidence Vault, vulnerability management, and professional reporting platform for authorised security assessment and defensive security workflows.</p>
         </article>
         <article className="panel">
           <h3>Version and Features</h3>
-          <p>Version {state.version?.version || '21.9'} includes Portfolio Demo Mode, Professional Reporting, Evidence Vault, authenticated assessment planning, OWASP mapping, and passive local assessment workflows.</p>
+          <p>Version {state.version?.version || '22.0.0-beta'} is focused on Public Beta Stabilisation, Reliability, Issue Cleanup, Version Metadata, Release Notes, Verification, and Regression Testing.</p>
         </article>
+        <KnownLimitationsPanel />
         <article className="panel">
           <h3>Tech Stack</h3>
           <p>Python 3.11, FastAPI, local files/SQLite, React, Vite, TypeScript, and pytest.</p>

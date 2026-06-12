@@ -6,10 +6,15 @@ OWASP-focused vulnerability assessment, evidence management, and professional re
 ![Tests](https://img.shields.io/badge/tests-pytest-green)
 ![Dashboard](https://img.shields.io/badge/dashboard-React%20%2B%20Vite-61dafb)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
-![Status](https://img.shields.io/badge/status-Portfolio%20Project-informational)
+![Status](https://img.shields.io/badge/status-Public%20Beta-informational)
+![Version](https://img.shields.io/badge/version-22.0.0--beta-blue)
 ![Safety](https://img.shields.io/badge/safety-Authorised%20Testing%20Only-critical)
 
-VulScan is a local-first Authorised Security Assessment platform for Defensive Security, OWASP-focused Assessment, Vulnerability Management, Evidence Vault workflows, and Professional Reporting. It combines passive scanning, OWASP mapping, authenticated assessment planning, redacted evidence handling, finding building, and report composition in one portfolio-ready product. It is designed for authorised labs, Safe Local Testing, Portfolio Demo Mode, and Manual Validation Workflow. VulScan is not an exploitation framework and does not replace professional manual testing.
+VulScan 22.0.0-beta is a local-first Public Beta platform for Authorised Security Assessment, Defensive Security, OWASP-focused Assessment, Vulnerability Management, Evidence Vault workflows, and Professional Reporting. It combines passive scanning, OWASP mapping, authenticated assessment planning, redacted evidence handling, finding building, and report composition in one portfolio-ready product. It is designed for authorised labs, Safe Local Testing, Portfolio Demo Mode, and Manual Validation Workflow. VulScan is not an exploitation framework and does not replace professional manual testing.
+
+## Public Beta
+
+Version 22.0.0-beta focuses on Stabilisation, Reliability, Issue Cleanup, Version Metadata, Release Notes, Verification, and Regression Testing. Known Limitations are documented in [docs/beta/KNOWN_LIMITATIONS.md](docs/beta/KNOWN_LIMITATIONS.md), and beta verification steps are documented in [docs/beta/BETA_TESTING_GUIDE.md](docs/beta/BETA_TESTING_GUIDE.md).
 
 ## Screenshots
 
@@ -68,6 +73,9 @@ python -m venv .venv311
 .\.venv311\Scripts\activate
 pip install -r requirements.txt
 .\.venv311\Scripts\python.exe -m pytest
+.\.venv311\Scripts\python.exe -m scanner.main version
+.\.venv311\Scripts\python.exe -m scanner.main health
+.\.venv311\Scripts\python.exe -m scanner.main diagnostics --json
 .\.venv311\Scripts\python.exe -m scanner.main demo status
 .\.venv311\Scripts\python.exe -m scanner.main api
 ```
@@ -92,6 +100,20 @@ Portfolio Demo Mode uses simulated redacted data only. It does not scan real tar
 .\.venv311\Scripts\python.exe -m scanner.main demo walkthrough
 ```
 
+## Public Beta Verification
+
+```powershell
+.\.venv311\Scripts\python.exe scripts\check_no_secrets.py
+.\.venv311\Scripts\python.exe scripts\check_demo_safety.py
+.\.venv311\Scripts\python.exe scripts\verify_release.py
+.\.venv311\Scripts\python.exe scripts\verify_commands.py
+.\.venv311\Scripts\python.exe scripts\check_dependencies.py
+.\.venv311\Scripts\python.exe scripts\public_beta_check.py
+.\.venv311\Scripts\python.exe scripts\generate_release_notes.py
+```
+
+Use the GitHub issue templates for Public Beta bugs, safe feature requests, and documentation issues.
+
 ## Example Local Assessment
 
 Use only on systems you own or have explicit permission to assess. This example targets localhost:
@@ -111,9 +133,10 @@ VulScan is for Responsible Use, Safe Local Testing, Defensive Security, and Auth
 - Indicator-based findings require Manual Validation Workflow.
 - VulScan does not guarantee complete coverage.
 - VulScan is not an exploitation framework.
-- No exploit automation, credential attacks, or unauthorised scanning are included.
+- No exploit automation, credential attacks, automatic auth bypass testing, brute force, or destructive state-changing workflow execution are included.
 - Demo findings are simulated and must not be treated as confirmed vulnerability claims.
 - Professional manual testing remains necessary for real engagements.
+- Public Beta may contain bugs.
 
 ## Roadmap
 

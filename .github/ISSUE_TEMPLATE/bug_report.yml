@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a Public Beta bug or regression.
+title: "[Bug]: "
+labels: ["bug", "public-beta"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include secrets, real tokens, cookies, passwords, API keys, private keys, or private customer data."
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command used
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "OS, Python version, Node version, VulScan version"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshot
+      description: "Redact all sensitive values before posting."

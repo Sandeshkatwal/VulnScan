@@ -4,6 +4,8 @@ The VulScan dashboard is a local React + Vite + TypeScript interface for authori
 
 It presents API health, scan jobs, findings, risk overview, trends, Evidence & Reports, remediation tracking, Program Scope, Recon Intelligence, Endpoint Intelligence, Safe Validation, Submission Tracker, Duplicate Detection, Performance Metrics, settings, demo mode, portfolio mode, and screenshot mode.
 
+Version 22.0.0-beta adds Public Beta status, Version Metadata, API Connection Status, System Health, Diagnostics, Known Limitations, and Command Quick Reference panels. These views are designed to fail gracefully when the local API is unavailable and to suggest demo mode for Safe Local Testing.
+
 Version 21.7 adds Finding Builder and Report Composer sections. Finding Builder manages safe Technical Finding drafts with Evidence References, risk rating, Developer Remediation, and Retest Status. Report Composer prepares Executive Summary, OWASP Mapping, Evidence Summary, Retest Summary, Risk Acceptance, and Safe Export outputs for Markdown, HTML, and JSON.
 
 Version 21.8 adds Dashboard UX Polish and Portfolio Demo Mode. The dashboard now includes a Dashboard Home, grouped navigation, Feature Tour, Safe Demo Dataset loading, Demo Report preview, Screenshot-Ready View toggle, reusable Empty State, Loading State, Error State, Metric Card, Status Badge, and Safe Action Button components.
@@ -80,6 +82,15 @@ http://localhost:5173
 ```powershell
 cd dashboard
 npm run build
+```
+
+## Public Beta Verification
+
+```powershell
+.\.venv311\Scripts\python.exe -m scanner.main version
+.\.venv311\Scripts\python.exe -m scanner.main health
+.\.venv311\Scripts\python.exe -m scanner.main diagnostics --json
+.\.venv311\Scripts\python.exe scripts\public_beta_check.py
 ```
 
 ## Environment Variables
