@@ -16,6 +16,10 @@ These commands use the preferred Bug Intelligence terminology. Legacy aliases re
 .\.venv311\Scripts\python.exe scripts\check_dependencies.py
 .\.venv311\Scripts\python.exe scripts\public_beta_check.py
 .\.venv311\Scripts\python.exe scripts\generate_release_notes.py
+.\.venv311\Scripts\python.exe scripts\verify_sample_data.py
+.\.venv311\Scripts\python.exe scripts\check_report_exports.py
+.\.venv311\Scripts\python.exe scripts\run_regression_suite.py
+.\.venv311\Scripts\python.exe scripts\collect_beta_issues.py
 .\.venv311\Scripts\python.exe scripts\generate_project_summary.py
 cd dashboard
 npm run build

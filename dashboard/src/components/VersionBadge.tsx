@@ -5,7 +5,7 @@ interface VersionBadgeProps {
 }
 
 export function VersionBadge({ version }: VersionBadgeProps) {
-  const label = version?.version || '22.0.0-beta'
+  const label = version?.version || '22.1.0-beta'
   const channel = version?.release_channel || 'public-beta'
   return (
     <span className="version-badge" title="VulScan Version Metadata">

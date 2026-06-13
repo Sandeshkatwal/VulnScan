@@ -7,14 +7,16 @@ OWASP-focused vulnerability assessment, evidence management, and professional re
 ![Dashboard](https://img.shields.io/badge/dashboard-React%20%2B%20Vite-61dafb)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 ![Status](https://img.shields.io/badge/status-Public%20Beta-informational)
-![Version](https://img.shields.io/badge/version-22.0.0--beta-blue)
+![Version](https://img.shields.io/badge/version-22.1.0--beta-blue)
 ![Safety](https://img.shields.io/badge/safety-Authorised%20Testing%20Only-critical)
 
-VulScan 22.0.0-beta is a local-first Public Beta platform for Authorised Security Assessment, Defensive Security, OWASP-focused Assessment, Vulnerability Management, Evidence Vault workflows, and Professional Reporting. It combines passive scanning, OWASP mapping, authenticated assessment planning, redacted evidence handling, finding building, and report composition in one portfolio-ready product. It is designed for authorised labs, Safe Local Testing, Portfolio Demo Mode, and Manual Validation Workflow. VulScan is not an exploitation framework and does not replace professional manual testing.
+VulScan 22.1.0-beta is a local-first Public Beta platform for Authorised Security Assessment, Defensive Security, OWASP-focused Assessment, Vulnerability Management, Evidence Vault workflows, and Professional Reporting. It combines passive scanning, OWASP mapping, authenticated assessment planning, redacted evidence handling, finding building, and report composition in one portfolio-ready product. It is designed for authorised labs, Safe Local Testing, Portfolio Demo Mode, and Manual Validation Workflow. VulScan is not an exploitation framework and does not replace professional manual testing.
 
 ## Public Beta
 
 Version 22.0.0-beta focuses on Stabilisation, Reliability, Issue Cleanup, Version Metadata, Release Notes, Verification, and Regression Testing. Known Limitations are documented in [docs/beta/KNOWN_LIMITATIONS.md](docs/beta/KNOWN_LIMITATIONS.md), and beta verification steps are documented in [docs/beta/BETA_TESTING_GUIDE.md](docs/beta/BETA_TESTING_GUIDE.md).
+
+Version 22.1.0-beta is a Bug Fix Sprint and Regression Test Hardening release focused on Stability, Reliability, Edge Case Handling, API Error Handling, Dashboard Resilience, Resolved Issues, Beta Feedback, and Safe Regression Testing.
 
 ## Screenshots
 

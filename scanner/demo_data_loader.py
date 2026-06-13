@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from scanner.demo_mode import build_demo_dataset, demo_dataset_contains_unsafe_values
+from scanner.error_handling import VulScanUserError
 
 
 DEMO_DATA_DIR = Path("data") / "demo"
@@ -42,7 +43,13 @@ def load_demo_dataset() -> dict[str, Any]:
         path = DEMO_DATA_DIR / filename
         if not path.exists():
             continue
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise VulScanUserError(
+                f"Demo data file is not valid JSON: {path}",
+                hint=f"Fix the JSON near line {exc.lineno}, column {exc.colno}, or run demo generate.",
+            ) from exc
         dataset[key] = payload
     return dataset
 
@@ -61,4 +68,3 @@ def save_demo_dataset(dataset: dict[str, Any] | None = None) -> dict[str, str]:
     readme.write_text("# Safe Demo Dataset\n\nPortfolio Demo Mode uses simulated redacted data only. No real target is scanned.\n", encoding="utf-8")
     paths["readme"] = str(readme)
     return paths
-

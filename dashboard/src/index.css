@@ -347,6 +347,51 @@
   font-size: 0.82rem;
 }
 
+.api-error-notice,
+.retry-panel,
+.safe-empty-state {
+  border: 1px solid rgba(244, 184, 74, 0.34);
+  background: rgba(120, 76, 10, 0.16);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.api-error-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.api-error-notice strong,
+.safe-empty-state strong {
+  color: var(--heading);
+}
+
+.api-error-notice span,
+.safe-empty-state span,
+.retry-panel p {
+  color: var(--muted);
+}
+
+.retry-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.retry-panel p {
+  margin: 0;
+}
+
+.safe-empty-state {
+  display: grid;
+  gap: 4px;
+}
+
 .workflow-timeline-row {
   border-left: 2px solid rgba(96, 165, 250, 0.4);
   padding-left: 12px;

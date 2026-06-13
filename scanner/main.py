@@ -12,7 +12,9 @@ from rich.panel import Panel
 from rich.table import Table
 
 from scanner import __version__
+from scanner.cli_errors import format_user_error
 from scanner.diagnostics import build_diagnostics
+from scanner.error_handling import VulScanUserError
 from scanner.health_check import run_health_checks
 from scanner.version import version_metadata
 from scanner.audit_profiles import (
@@ -328,6 +330,11 @@ def main() -> None:
     """Run VulScan commands."""
 
 
+def _exit_user_error(error: VulScanUserError) -> None:
+    console.print(f"[red]{format_user_error(error)}[/red]")
+    raise typer.Exit(code=error.exit_code)
+
+
 @app.command("version")
 def version_command() -> None:
     """Print VulScan public beta version metadata."""
@@ -452,7 +459,7 @@ def api_command(
     else:
         console.print("[green]API key protection enabled via environment variable.[/green]")
     console.print(f"[bold]Starting VulScan API:[/bold] http://{host}:{port}")
-    console.print("[yellow]VulScan 22.0 Public Beta API is for authorised local testing only.[/yellow]")
+    console.print("[yellow]VulScan 22.1 Public Beta API is for authorised local testing only.[/yellow]")
     run_api_server(host=host, port=port, reload=reload)
 
 
@@ -1641,6 +1648,13 @@ def reports_compose(
         if json_report:
             paths["json"] = str(export_composed_report_json(report))
         report["export_paths"] = paths
+    except FileNotFoundError:
+        _exit_user_error(
+            VulScanUserError(
+                f"Findings file not found: {findings_file}",
+                hint="Run demo generate first or check docs/COMMAND_REFERENCE.md.",
+            )
+        )
     except Exception as exc:
         console.print(f"[red]Report composition failed:[/red] {exc}")
         raise typer.Exit(code=1) from exc

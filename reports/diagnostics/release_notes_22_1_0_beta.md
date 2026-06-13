@@ -1,22 +1,7 @@
-"""Generate VulScan 22.1.0-beta release notes."""
+# VulScan 22.1.0-beta
 
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-from scanner.version import BUILD_STATUS, RELEASE_CHANNEL, VERSION
-
-
-ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "reports" / "diagnostics" / "release_notes_22_1_0_beta.md"
-
-
-def build_release_notes() -> str:
-    return f"""# VulScan {VERSION}
-
-Release channel: {RELEASE_CHANNEL}
-Build status: {BUILD_STATUS}
+Release channel: public-beta
+Build status: bug-fix-sprint
 
 ## Summary
 
@@ -53,15 +38,3 @@ VulScan is for authorised testing only. Public Beta workflows avoid exploit code
 - Continue Regression Testing from beta feedback.
 - Improve documentation and issue triage.
 - Expand safe local labs and optional integrations only after beta reliability work is complete.
-"""
-
-
-def main() -> int:
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(build_release_notes(), encoding="utf-8")
-    print(f"Wrote {OUTPUT.relative_to(ROOT)}")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

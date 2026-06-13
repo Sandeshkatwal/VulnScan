@@ -113,6 +113,15 @@ reports/demo/screenshots_notes/*
 !reports/diagnostics/
 reports/diagnostics/*
 !reports/diagnostics/.gitkeep
+!reports/diagnostics/release_notes_22_1_0_beta.md
+!reports/regression/
+reports/regression/*
+!reports/regression/.gitkeep
+!reports/regression/regression_summary.json
+!reports/beta_issues/
+reports/beta_issues/*
+!reports/beta_issues/.gitkeep
+!reports/beta_issues/beta_issue_summary.json
 !assets/screenshots/.gitkeep
 !assets/architecture/.gitkeep
 !assets/demo/.gitkeep

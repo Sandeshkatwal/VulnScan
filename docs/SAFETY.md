@@ -8,6 +8,10 @@ For public screenshots and portfolio demos, use demo mode and follow [SCREENSHOT
 
 Version 22.0.0-beta is a Public Beta Stabilisation and Issue Cleanup release. It adds Version Metadata, health checks, diagnostics, Verification scripts, Known Limitations, and Regression Testing support. These workflows must not print secrets, dump environment variables, read raw auth profile content, or include real tokens, cookies, passwords, API keys, private keys, or customer data.
 
+## Version 22.1 Bug Fix Sprint Safety
+
+Version 22.1.0-beta is a Bug Fix Sprint and Regression Test Hardening release. It adds Stability, Reliability, Edge Case Handling, API Error Handling, Dashboard Resilience, Resolved Issues, Beta Feedback, and Safe Regression Testing without adding new risky scanning behavior.
+
 ## Version 21.7 Reporting Safety
 
 Professional Finding Builder and Report Composer are composition-only features. They do not execute scans or active checks. Exports include Redacted Evidence references only and block unsafe evidence, raw passwords, raw cookies, raw bearer tokens, raw private keys, full sensitive response bodies, and exploit payloads. Candidate findings remain candidate or manual-validation-required until manual validation supports stronger wording.

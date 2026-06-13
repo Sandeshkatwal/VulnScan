@@ -8,9 +8,9 @@ from typing import Any
 
 
 APP_NAME = "VulScan"
-VERSION = "22.0.0-beta"
+VERSION = "22.1.0-beta"
 RELEASE_CHANNEL = "public-beta"
-BUILD_STATUS = "stabilisation"
+BUILD_STATUS = "bug-fix-sprint"
 AUTHORISED_USE_ONLY = True
 
 

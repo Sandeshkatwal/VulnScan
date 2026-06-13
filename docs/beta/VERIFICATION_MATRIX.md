@@ -6,7 +6,7 @@
 | Dashboard build | `npm run build` | TypeScript and Vite build pass | Pending | Run from `dashboard` |
 | Demo safety | `.\.venv311\Scripts\python.exe scripts\check_demo_safety.py` | Simulated redacted demo data only | Pending | Safe Local Testing |
 | Secret safety | `.\.venv311\Scripts\python.exe scripts\check_no_secrets.py` | No unredacted secret-like values | Pending | Verification |
-| Version command | `.\.venv311\Scripts\python.exe -m scanner.main version` | 22.0.0-beta metadata prints | Pending | Version Metadata |
+| Version command | `.\.venv311\Scripts\python.exe -m scanner.main version` | 22.1.0-beta metadata prints | Pending | Version Metadata |
 | Health command | `.\.venv311\Scripts\python.exe -m scanner.main health` | Health summary prints | Pending | Public Beta |
 | Demo commands | `.\.venv311\Scripts\python.exe -m scanner.main demo status` | Demo status prints | Pending | Safe Demo Dataset |
 | Evidence commands | `.\.venv311\Scripts\python.exe -m scanner.main evidence redact-check --text "Authorization: Bearer secret-demo-token"` | Redaction check does not print raw secret | Pending | Redaction Quality Controls |
@@ -15,3 +15,6 @@
 | API startup | `.\.venv311\Scripts\python.exe -m scanner.main api` | API starts on localhost | Pending | Stop manually after verification |
 | Dashboard startup | `npm run dev` | Dashboard starts locally | Pending | Run from `dashboard` |
 | GitHub Actions | workflow files | Practical checks are configured | Pending | Public Beta checks |
+| Regression suite | `.\.venv311\Scripts\python.exe -m pytest tests\regression` | Regression checks pass | Pending | Version 22.1 |
+| Sample data | `.\.venv311\Scripts\python.exe scripts\verify_sample_data.py` | Required sample files exist and JSON parses | Pending | Sample reliability |
+| Report exports | `.\.venv311\Scripts\python.exe scripts\check_report_exports.py` | Safe sample report export is allowed | Pending | Export safety |

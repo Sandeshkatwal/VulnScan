@@ -1,5 +1,14 @@
 # Release Checklist
 
+## Version 22.1 Bug Fix Sprint
+
+- [ ] Version Metadata reports `22.1.0-beta`.
+- [ ] Regression tests under `tests/regression` pass.
+- [ ] Sample data verification passes.
+- [ ] Report export verification passes.
+- [ ] Dashboard build passes.
+- [ ] Resolved Issues documentation is current.
+
 ## Version 22.0 Public Beta
 
 - [ ] Version Metadata reports `22.0.0-beta`.

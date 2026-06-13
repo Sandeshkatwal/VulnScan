@@ -23,6 +23,11 @@ REQUIRED_FILES = [
     "docs/beta/VERIFICATION_MATRIX.md",
     "docs/beta/BETA_TESTING_GUIDE.md",
     "docs/issues/ISSUE_TRIAGE_GUIDE.md",
+    "docs/beta/resolved/RESOLVED_ISSUES_22_1.md",
+    "docs/regression/REGRESSION_TESTING.md",
+    "docs/regression/CLI_EDGE_CASES.md",
+    "docs/regression/API_ERROR_HANDLING.md",
+    "docs/regression/DASHBOARD_STABILITY.md",
     "docs/PORTFOLIO_DEMO.md",
     "docs/DASHBOARD_GUIDE.md",
     "docs/DEMO_WALKTHROUGH.md",
@@ -42,8 +47,13 @@ REQUIRED_FILES = [
     ".github/ISSUE_TEMPLATE/feature_request.yml",
     ".github/ISSUE_TEMPLATE/documentation_issue.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
+    "scripts/run_regression_suite.py",
+    "scripts/collect_beta_issues.py",
+    "scripts/verify_sample_data.py",
+    "scripts/check_report_exports.py",
+    "reports/regression/regression_summary.json",
 ]
-REQUIRED_DIRS = ["tests", "scanner", "dashboard/src", "docs/screenshots", "docs/assets", "docs/diagrams", "docs/release", "docs/interview", "docs/beta", "docs/issues", "reports/diagnostics"]
+REQUIRED_DIRS = ["tests", "tests/regression", "scanner", "dashboard/src", "docs/screenshots", "docs/assets", "docs/diagrams", "docs/release", "docs/interview", "docs/beta", "docs/beta/resolved", "docs/issues", "docs/regression", "reports/diagnostics", "reports/regression", "reports/beta_issues"]
 
 
 def main() -> int:

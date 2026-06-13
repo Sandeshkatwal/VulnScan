@@ -37,7 +37,7 @@ def test_health_returns_ok() -> None:
     body = response.json()
     assert body["status"] == "ok"
     assert body["scanner"] == "VulScan"
-    assert body["version"] == "22.0.0-beta"
+    assert body["version"] == "22.1.0-beta"
     assert body["authorised_use_only"] is True
 
 
@@ -49,8 +49,8 @@ def test_version_returns_scanner_and_version() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["scanner"] == "VulScan"
-    assert body["api_version"] == "22.0.0-beta"
-    assert body["version"] == "22.0.0-beta"
+    assert body["api_version"] == "22.1.0-beta"
+    assert body["version"] == "22.1.0-beta"
     assert body["release_channel"] == "public-beta"
 
 

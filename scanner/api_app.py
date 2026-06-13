@@ -27,6 +27,7 @@ from scanner.api_filters import (
     validate_sort_by,
     validate_sort_order,
 )
+from scanner.api_errors import api_error_response
 from scanner.api_bug_bounty import check_scope, get_scope_by_program_id, list_scope_files, resolve_scope_file
 from scanner.api_bug_intelligence_metrics import (
     api_metrics_classes,
@@ -340,16 +341,18 @@ def create_app(
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        return JSONResponse(
+        return api_error_response(
+            "Invalid request body.",
+            detail="Unsupported or unsafe fields may have been provided.",
             status_code=422,
-            content={"error": "Invalid request body.", "detail": "Unsupported or unsafe fields may have been provided."},
         )
 
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        return JSONResponse(
+        return api_error_response(
+            "Request failed.",
+            detail="The API could not complete the request.",
             status_code=500,
-            content={"error": "Request failed.", "detail": "The API could not complete the request."},
         )
 
     @app.get(

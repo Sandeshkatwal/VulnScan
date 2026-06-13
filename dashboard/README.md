@@ -4,7 +4,7 @@ The VulScan dashboard is a local React + Vite + TypeScript interface for authori
 
 It presents API health, scan jobs, findings, risk overview, trends, Evidence & Reports, remediation tracking, Program Scope, Recon Intelligence, Endpoint Intelligence, Safe Validation, Submission Tracker, Duplicate Detection, Performance Metrics, settings, demo mode, portfolio mode, and screenshot mode.
 
-Version 22.0.0-beta adds Public Beta status, Version Metadata, API Connection Status, System Health, Diagnostics, Known Limitations, and Command Quick Reference panels. These views are designed to fail gracefully when the local API is unavailable and to suggest demo mode for Safe Local Testing.
+Version 22.1.0-beta adds Dashboard Resilience for the Bug Fix Sprint: Error Boundary, Retry Panel, API Error Notice, Regression Status, Fallback State, Safe Empty State, and Build Info panels. These views are designed to fail gracefully when the local API is unavailable and to suggest demo mode for Safe Local Testing.
 
 Version 21.7 adds Finding Builder and Report Composer sections. Finding Builder manages safe Technical Finding drafts with Evidence References, risk rating, Developer Remediation, and Retest Status. Report Composer prepares Executive Summary, OWASP Mapping, Evidence Summary, Retest Summary, Risk Acceptance, and Safe Export outputs for Markdown, HTML, and JSON.
 

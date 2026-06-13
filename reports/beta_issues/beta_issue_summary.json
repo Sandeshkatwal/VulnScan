@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-06-12T12:23:32+00:00",
+  "release": "22.1.0-beta",
+  "focus": "Beta Feedback and Resolved Issues",
+  "documents_reviewed": [
+    "docs\\beta\\BETA_TESTING_GUIDE.md",
+    "docs\\beta\\DEPENDENCY_REVIEW.md",
+    "docs\\beta\\KNOWN_LIMITATIONS.md",
+    "docs\\beta\\PUBLIC_BETA_NOTES.md",
+    "docs\\beta\\resolved\\RESOLVED_ISSUES_22_1.md",
+    "docs\\beta\\VERIFICATION_MATRIX.md",
+    "docs\\issues\\ISSUE_TRIAGE_GUIDE.md"
+  ],
+  "issue_sources": [
+    "local documentation",
+    "GitHub issue templates"
+  ],
+  "secrets_included": false
+}

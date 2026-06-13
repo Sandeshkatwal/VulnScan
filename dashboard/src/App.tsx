@@ -16,10 +16,12 @@ import { demoFindings, demoJobResult, demoJobs, demoRemediationRecords, demoReme
 import { portfolioDemoDataset } from './demo/portfolioDemoData'
 import { ApiConnectionManager } from './components/ApiConnectionManager'
 import { ApiConnectionStatus } from './components/ApiConnectionStatus'
+import { ApiErrorNotice } from './components/ApiErrorNotice'
 import { ArchitectureSummary } from './components/ArchitectureSummary'
 import { AuthContextView } from './components/AuthContextView'
 import { A01ManualTestPlannerView } from './components/A01ManualTestPlannerView'
 import { BetaNotice } from './components/BetaNotice'
+import { BuildInfoPanel } from './components/BuildInfoPanel'
 import { BugIntelligenceMetricsView } from './components/BugIntelligenceMetricsView'
 import { BusinessLogicReviewView } from './components/BusinessLogicReviewView'
 import { BugIntelligenceWorkflow } from './components/BugIntelligenceWorkflow'
@@ -29,8 +31,10 @@ import { DemoModeToggle } from './components/DemoModeToggle'
 import { DiagnosticsPanel } from './components/DiagnosticsPanel'
 import { DuplicateDetectionView } from './components/DuplicateDetectionView'
 import { DashboardHome } from './components/DashboardHome'
+import { DashboardFallbackState } from './components/DashboardFallbackState'
 import { EndpointDiscoveryView } from './components/EndpointDiscoveryView'
 import { ErrorAlert } from './components/ErrorAlert'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { EvidenceVaultView } from './components/EvidenceVaultView'
 import { FindingBuilderView } from './components/FindingBuilderView'
 import { FindingSummary, buildPrioritySummary } from './components/FindingSummary'
@@ -60,6 +64,7 @@ import { ScreenshotGuide } from './components/ScreenshotGuide'
 import { ScreenshotModeToggle } from './components/ScreenshotModeToggle'
 import { StatusCard } from './components/StatusCard'
 import { SystemHealthPanel } from './components/SystemHealthPanel'
+import { RegressionStatusPanel } from './components/RegressionStatusPanel'
 import { SubmissionTrackerView } from './components/SubmissionTrackerView'
 import { TrendsView } from './components/TrendsView'
 import { VulnerabilityList } from './components/VulnerabilityList'
@@ -107,10 +112,10 @@ const initialState: DashboardState = {
 const demoVersion: VersionResponse = {
   app_name: 'VulScan',
   scanner: 'VulScan',
-  version: '22.0.0-beta',
-  api_version: '22.0.0-beta',
+  version: '22.1.0-beta',
+  api_version: '22.1.0-beta',
   release_channel: 'public-beta',
-  build_status: 'stabilisation',
+  build_status: 'bug-fix-sprint',
   authorised_use_only: true,
 }
 
@@ -928,6 +933,8 @@ function App() {
     return (
       <section className="settings-grid">
         <ApiConnectionStatus apiBaseUrl={apiBaseUrl} health={state.health} version={state.version} error={state.apiError} loading={state.loading} />
+        <BuildInfoPanel version={state.version} />
+        <RegressionStatusPanel />
         <SystemHealthPanel health={state.health} />
         <DiagnosticsPanel apiOnline={healthTone !== 'bad'} />
         <CommandQuickReference />
@@ -972,8 +979,10 @@ function App() {
         </article>
         <article className="panel">
           <h3>Version and Features</h3>
-          <p>Version {state.version?.version || '22.0.0-beta'} is focused on Public Beta Stabilisation, Reliability, Issue Cleanup, Version Metadata, Release Notes, Verification, and Regression Testing.</p>
+          <p>Version {state.version?.version || '22.1.0-beta'} is focused on Bug Fix Sprint work, Regression Test Hardening, Stability, Reliability, Edge Case Handling, API Error Handling, Dashboard Resilience, Resolved Issues, Beta Feedback, and Safe Regression Testing.</p>
         </article>
+        <BuildInfoPanel version={state.version} />
+        <RegressionStatusPanel />
         <KnownLimitationsPanel />
         <article className="panel">
           <h3>Tech Stack</h3>
@@ -1040,8 +1049,11 @@ function App() {
       onSelectSection={(nextSection) => setCurrentSection(nextSection as DashboardSection)}
     >
       <SectionHeader title={section.title} description={section.description} />
+      <ApiErrorNotice error={state.apiError} onRetry={() => void loadDashboard()} />
       <PortfolioModeBanner demoMode={demoMode} portfolioMode={portfolioMode} />
-      {renderCurrentSection()}
+      <ErrorBoundary fallback={<DashboardFallbackState onRetry={() => void loadDashboard()} />}>
+        {renderCurrentSection()}
+      </ErrorBoundary>
       <FindingDetailDrawer
         finding={selectedFinding}
         remediationRecord={selectedRemediation}

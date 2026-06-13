@@ -51,3 +51,7 @@ Use issue templates to report bugs, documentation problems, or safe feature requ
 - Continue Regression Testing and Issue Cleanup from Public Beta feedback.
 - Improve documentation clarity and command coverage.
 - Expand safe local examples and optional integrations after reliability work is complete.
+
+## 22.1 Bug Fix Sprint
+
+Version 22.1.0-beta focuses on Bug Fix Sprint work, Regression Test Hardening, Stability, Reliability, Edge Case Handling, API Error Handling, Dashboard Resilience, Resolved Issues, Beta Feedback, and Safe Regression Testing.

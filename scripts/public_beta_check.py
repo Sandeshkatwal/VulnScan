@@ -1,4 +1,4 @@
-"""Public Beta readiness checks for VulScan 22.0."""
+"""Public Beta readiness checks for VulScan."""
 
 from __future__ import annotations
 
@@ -25,6 +25,11 @@ REQUIRED_FILES = [
     "docs/beta/VERIFICATION_MATRIX.md",
     "docs/beta/BETA_TESTING_GUIDE.md",
     "docs/issues/ISSUE_TRIAGE_GUIDE.md",
+    "docs/beta/resolved/RESOLVED_ISSUES_22_1.md",
+    "docs/regression/REGRESSION_TESTING.md",
+    "docs/regression/CLI_EDGE_CASES.md",
+    "docs/regression/API_ERROR_HANDLING.md",
+    "docs/regression/DASHBOARD_STABILITY.md",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/feature_request.yml",
     ".github/ISSUE_TEMPLATE/documentation_issue.yml",
@@ -33,6 +38,11 @@ REQUIRED_FILES = [
     ".github/workflows/dashboard-build.yml",
     ".github/workflows/demo-safety-check.yml",
     ".github/workflows/docs-check.yml",
+    "scripts/run_regression_suite.py",
+    "scripts/collect_beta_issues.py",
+    "scripts/verify_sample_data.py",
+    "scripts/check_report_exports.py",
+    "reports/regression/regression_summary.json",
 ]
 
 
