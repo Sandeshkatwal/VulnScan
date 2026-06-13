@@ -2,6 +2,16 @@
 
 For a recruiter-friendly overview, see [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md). Architecture image placeholders live under `assets/architecture/`.
 
+## Version 22.2 Performance Layer
+
+Version 22.2 adds a lightweight performance layer around existing storage and API surfaces:
+
+- `scanner/pagination.py` provides page-based Pagination.
+- `scanner/response_limits.py` centralises Response Size Control defaults.
+- `scanner/query_helpers.py` provides Query Optimisation helpers and common SQLite indexes.
+- `scanner/large_dataset_loader.py` loads the simulated Large Demo Dataset with safe caching.
+- `scripts/performance_baseline.py` and `scripts/check_large_dataset_performance.py` record local Performance Baseline and Large Dataset Handling checks.
+
 ## Version 22.0 Public Beta Stabilisation
 
 Version 22.0.0-beta adds Public Beta Version Metadata, safe health checks, diagnostics, command Verification scripts, dependency review, no-secrets scanning, Known Limitations, and Release Notes generation. These components are read-only or local-file checks and must not print secrets, dump environment variables, expose auth profile content, or contact the internet.

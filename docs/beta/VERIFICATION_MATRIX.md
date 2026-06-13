@@ -1,5 +1,15 @@
 # Verification Matrix
 
+## Version 22.2 Performance Review
+
+| Area | Command/Test | Expected Result | Status | Notes |
+| --- | --- | --- | --- | --- |
+| Pagination | `.\.venv311\Scripts\python.exe -m pytest tests\test_pagination.py` | Page model tests pass | Pending | Large Dataset Handling |
+| Large Dataset Handling | `.\.venv311\Scripts\python.exe -m pytest tests\regression\test_large_dataset_regressions.py` | Regression tests pass | Pending | Simulated data only |
+| Performance Baseline | `.\.venv311\Scripts\python.exe scripts\performance_baseline.py` | Baseline JSON is written | Pending | Local timing |
+| Large Dataset Check | `.\.venv311\Scripts\python.exe scripts\check_large_dataset_performance.py` | Check JSON is written | Pending | Response Size Control |
+| Dashboard Rendering Optimisation | `npm run build` | Dashboard build passes | Pending | Run from `dashboard` |
+
 | Area | Command/Test | Expected Result | Status | Notes |
 | --- | --- | --- | --- | --- |
 | Backend tests | `.\.venv311\Scripts\python.exe -m pytest` | Tests pass locally | Pending | Regression Testing |

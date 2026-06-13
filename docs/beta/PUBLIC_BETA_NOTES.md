@@ -1,5 +1,9 @@
 # VulScan 22.0.0-beta
 
+## Version 22.2.0-beta
+
+Version 22.2.0-beta focuses on Performance Review and Large Dataset Handling. It adds shared Pagination helpers, Response Size Control for large list endpoints, Large Demo Dataset scripts, Performance Baseline output, diagnostics performance metadata, and dashboard components for Lazy Loading and paginated rendering.
+
 ## Summary
 
 VulScan 22.0.0-beta is a Public Beta Stabilisation and Issue Cleanup release for authorised security assessment, OWASP-focused assessment planning, evidence management, reporting, and portfolio demonstration workflows.

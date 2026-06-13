@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-06-12T12:23:36+00:00",
-  "release": "22.1.0-beta",
-  "focus": "Bug Fix Sprint and Regression Test Hardening",
+  "generated_at": "2026-06-13T22:49:10+00:00",
+  "release": "22.2.0-beta",
+  "focus": "Performance Review and Large Dataset Handling",
   "command": [
     "C:\\Users\\Sande\\MyProject\\VulScan\\.venv311\\Scripts\\python.exe",
     "-m",
@@ -15,15 +15,16 @@
     "platform win32 -- Python 3.11.9, pytest-9.0.3, pluggy-1.6.0",
     "rootdir: C:\\Users\\Sande\\MyProject\\VulScan",
     "plugins: anyio-4.12.0",
-    "collected 21 items",
+    "collected 23 items",
     "",
-    "tests\\regression\\test_api_regressions.py .....                           [ 23%]",
-    "tests\\regression\\test_cli_regressions.py .....                           [ 47%]",
-    "tests\\regression\\test_demo_regressions.py ....                           [ 66%]",
-    "tests\\regression\\test_report_regressions.py ...                          [ 80%]",
+    "tests\\regression\\test_api_regressions.py .....                           [ 21%]",
+    "tests\\regression\\test_cli_regressions.py .....                           [ 43%]",
+    "tests\\regression\\test_demo_regressions.py ....                           [ 60%]",
+    "tests\\regression\\test_large_dataset_regressions.py ..                    [ 69%]",
+    "tests\\regression\\test_report_regressions.py ...                          [ 82%]",
     "tests\\regression\\test_security_regressions.py ....                       [100%]",
     "",
-    "============================= 21 passed in 2.82s =============================="
+    "============================= 23 passed in 2.97s =============================="
   ],
   "stderr_tail": []
 }

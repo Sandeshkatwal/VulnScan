@@ -44,5 +44,6 @@ def test_health_and_version_endpoints_stable() -> None:
     version = client.get("/version").json()
     assert health["scanner"] == "VulScan"
     assert health["authorised_use_only"] is True
-    assert version["version"] == "22.1.0-beta"
+    assert version["version"] == "22.2.0-beta"
     assert version["release_channel"] == "public-beta"
+    assert version["build_status"] == "performance-review"

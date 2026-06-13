@@ -4067,6 +4067,108 @@ td select {
   background: var(--surface);
 }
 
+.paginated-table {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.table-toolbar,
+.table-pagination-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.table-toolbar label,
+.table-pagination-controls label,
+.api-page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.table-toolbar input,
+.table-pagination-controls select,
+.api-page-size-selector select {
+  min-height: 2.25rem;
+}
+
+.table-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lazy-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.lazy-section__header {
+  width: 100%;
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.lazy-section__summary,
+.lazy-section__body {
+  padding: 0 1rem 1rem;
+}
+
+.performance-notice {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+}
+
+.large-dataset-summary,
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.large-dataset-summary > div,
+.diagnostics-grid > div {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.large-dataset-summary span,
+.diagnostics-grid dt {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.large-dataset-summary strong,
+.diagnostics-grid dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.virtual-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.virtual-list__item {
+  min-height: 2rem;
+}
+
 @media (max-width: 760px) {
   .home-hero {
     align-items: stretch;

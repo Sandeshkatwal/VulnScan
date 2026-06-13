@@ -21,11 +21,66 @@ from scanner.evidence_vault import (
     load_evidence_item,
     save_evidence_item,
 )
+from scanner.pagination import PaginationError, build_paginated_response
+from scanner.response_limits import compact_record, truncate_text
 
 
-def api_list_evidence() -> dict[str, Any]:
+EVIDENCE_SUMMARY_FIELDS = (
+    "evidence_id",
+    "title",
+    "evidence_type",
+    "source_module",
+    "related_url",
+    "related_host",
+    "related_owasp_categories",
+    "confidence",
+    "evidence_strength",
+    "redaction_status",
+    "secret_detection_status",
+    "evidence_quality_score",
+    "evidence_quality_label",
+    "validation_status",
+    "created_at",
+    "updated_at",
+)
+
+
+def api_list_evidence(
+    *,
+    page: int = 1,
+    page_size: int = 25,
+    sort_by: str | None = None,
+    sort_direction: str = "asc",
+    owasp_category: str | None = None,
+    source_module: str | None = None,
+    evidence_strength: str | None = None,
+    validation_status: str | None = None,
+    search: str | None = None,
+    summary_only: bool = True,
+) -> dict[str, Any]:
     items = list_evidence_items()
-    return {"evidence_items": items, "count": len(items)}
+    records = [_evidence_summary(item) for item in items] if summary_only else items
+    paginated = build_paginated_response(
+        records,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+        filters={
+            "owasp_category": owasp_category,
+            "source_module": source_module,
+            "evidence_strength": evidence_strength,
+            "validation_status": validation_status,
+            "search": search,
+        },
+    )
+    return {
+        "evidence_items": paginated["items"],
+        "count": len(paginated["items"]),
+        "total": paginated["total"],
+        "paginated_response": paginated,
+        "summary_only": summary_only,
+    }
 
 
 def api_get_evidence(evidence_id: str) -> dict[str, Any]:
@@ -95,3 +150,10 @@ def api_export(evidence_ids: list[str], markdown: bool = False, json_export: boo
     if markdown:
         paths["markdown"] = str(export_evidence_summary_markdown(items))
     return {"export_allowed": True, "export_paths": paths, "evidence_count": len(items)}
+
+
+def _evidence_summary(item: dict[str, Any]) -> dict[str, Any]:
+    summary = compact_record(item, EVIDENCE_SUMMARY_FIELDS)
+    summary["safe_summary"] = truncate_text(item.get("safe_summary"))
+    summary["detail_url"] = f"/evidence/{item.get('evidence_id')}"
+    return summary

@@ -23,6 +23,10 @@ REQUIRED_FILES = [
     "docs/beta/PUBLIC_BETA_NOTES.md",
     "docs/beta/KNOWN_LIMITATIONS.md",
     "docs/beta/VERIFICATION_MATRIX.md",
+    "docs/performance/PERFORMANCE_REVIEW.md",
+    "docs/performance/LARGE_DATASET_HANDLING.md",
+    "docs/performance/PERFORMANCE_BASELINE.md",
+    "docs/performance/DASHBOARD_PERFORMANCE.md",
     "docs/beta/BETA_TESTING_GUIDE.md",
     "docs/issues/ISSUE_TRIAGE_GUIDE.md",
     "docs/beta/resolved/RESOLVED_ISSUES_22_1.md",
@@ -42,6 +46,9 @@ REQUIRED_FILES = [
     "scripts/collect_beta_issues.py",
     "scripts/verify_sample_data.py",
     "scripts/check_report_exports.py",
+    "scripts/performance_baseline.py",
+    "scripts/generate_large_demo_dataset.py",
+    "scripts/check_large_dataset_performance.py",
     "reports/regression/regression_summary.json",
 ]
 

@@ -12,6 +12,25 @@ export interface Pagination {
   [key: string]: unknown
 }
 
+export interface PagePagination {
+  items?: ApiRecord[]
+  total?: number
+  page?: number
+  page_size?: number
+  total_pages?: number
+  has_next?: boolean
+  has_previous?: boolean
+  next_page?: number | null
+  previous_page?: number | null
+  sort_by?: string | null
+  sort_direction?: string | null
+  filters_applied?: ApiRecord
+  page_size_capped?: boolean
+  requested_page_size?: number
+  max_page_size?: number
+  [key: string]: unknown
+}
+
 export interface ApiError {
   error?: string
   detail?: string
@@ -334,6 +353,8 @@ export interface ScansQuery {
 }
 
 export interface FindingFilters {
+  page?: number
+  page_size?: number
   severity?: string
   source?: string
   category?: string
@@ -345,6 +366,14 @@ export interface FindingFilters {
   offset?: number
   sort_by?: string
   sort_order?: string
+  sort_direction?: string
+  status?: string
+  owasp_category?: string
+  source_module?: string
+  evidence_strength?: string
+  validation_status?: string
+  search?: string
+  summary_only?: boolean
 }
 
 export type RemediationStatus = 'open' | 'in_progress' | 'fixed' | 'accepted_risk' | 'false_positive'
@@ -2353,6 +2382,9 @@ export interface EvidenceVaultResponse {
   evidence_items?: EvidenceVaultItem[]
   evidence_vault_item?: EvidenceVaultItem
   count?: number
+  total?: number
+  paginated_response?: PagePagination
+  summary_only?: boolean
   redacted_text?: string
   redaction_check?: ApiRecord
   evidence_quality?: ApiRecord
@@ -2436,6 +2468,8 @@ export interface ProfessionalFindingsResponse {
   finding?: ProfessionalFinding
   findings?: ProfessionalFinding[]
   total?: number
+  paginated_response?: PagePagination
+  summary_only?: boolean
   path?: string | null
   [key: string]: unknown
 }

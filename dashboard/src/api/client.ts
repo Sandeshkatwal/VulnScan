@@ -106,6 +106,8 @@ export const apiBaseUrl = (
 
 const apiKey = import.meta.env.VITE_VULSCAN_API_KEY
 export const apiKeyConfigured = Boolean(apiKey)
+const DEFAULT_TIMEOUT_MS = 12000
+const SAFE_RETRY_COUNT = 1
 
 type QueryValue = boolean | number | string | null | undefined
 
@@ -136,6 +138,25 @@ async function request<T>(
   options: RequestInit = {},
   params?: Record<string, QueryValue>,
 ): Promise<T> {
+  const attempts = (options.method && options.method !== 'GET') ? 1 : SAFE_RETRY_COUNT + 1
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await requestOnce<T>(path, options, params)
+    } catch (caught) {
+      lastError = caught instanceof Error ? caught : new Error('API request failed')
+      if (attempt === attempts - 1) break
+      await new Promise((resolve) => window.setTimeout(resolve, 250))
+    }
+  }
+  throw lastError || new Error('API request failed')
+}
+
+async function requestOnce<T>(
+  path: string,
+  options: RequestInit = {},
+  params?: Record<string, QueryValue>,
+): Promise<T> {
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')
 
@@ -143,16 +164,29 @@ async function request<T>(
     headers.set('X-VulScan-API-Key', apiKey)
   }
 
-  const response = await fetch(buildUrl(path, params), {
-    ...options,
-    headers,
-  })
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
+  let response: Response
+  try {
+    response = await fetch(buildUrl(path, params), {
+      ...options,
+      headers,
+      signal: controller.signal,
+    })
+  } catch (caught) {
+    if (caught instanceof DOMException && caught.name === 'AbortError') {
+      throw new Error('API request timed out. Check the local backend and try again.')
+    }
+    throw new Error('API unavailable. Check that the local VulScan API is running.')
+  } finally {
+    window.clearTimeout(timeout)
+  }
 
   if (!response.ok) {
     let detail = `Request failed with status ${response.status}`
     try {
-      const body = (await response.json()) as { detail?: string; error?: string }
-      detail = body.detail || body.error || detail
+      const body = (await response.json()) as { detail?: string | { detail?: string }; error?: string; message?: string }
+      detail = typeof body.detail === 'string' ? body.detail : body.detail?.detail || body.error || body.message || detail
     } catch {
       // Keep the generic HTTP status message.
     }
@@ -160,6 +194,21 @@ async function request<T>(
   }
 
   return (await response.json()) as T
+}
+
+export interface PageQuery {
+  page?: number
+  page_size?: number
+  sort_by?: string
+  sort_direction?: 'asc' | 'desc' | string
+  severity?: string
+  status?: string
+  owasp_category?: string
+  source_module?: string
+  evidence_strength?: string
+  validation_status?: string
+  search?: string
+  summary_only?: boolean
 }
 
 export function getHealth(): Promise<HealthResponse> {
@@ -767,8 +816,8 @@ export function updateRetest(retestId: string, payload: Partial<RetestRecord>): 
   })
 }
 
-export function getEvidenceVault(): Promise<EvidenceVaultResponse> {
-  return request<EvidenceVaultResponse>('/evidence')
+export function getEvidenceVault(params: PageQuery = { page: 1, page_size: 25 }): Promise<EvidenceVaultResponse> {
+  return request<EvidenceVaultResponse>('/evidence', {}, { ...params })
 }
 
 export function createEvidenceItem(payload: EvidenceCreateRequest): Promise<EvidenceVaultResponse> {
@@ -811,8 +860,8 @@ export function exportEvidence(payload: { evidence_ids: string[]; markdown?: boo
   })
 }
 
-export function getProfessionalFindings(): Promise<ProfessionalFindingsResponse> {
-  return request<ProfessionalFindingsResponse>('/reports/findings')
+export function getProfessionalFindings(params: PageQuery = { page: 1, page_size: 25 }): Promise<ProfessionalFindingsResponse> {
+  return request<ProfessionalFindingsResponse>('/reports/findings', {}, { ...params })
 }
 
 export function getProfessionalFinding(findingId: string): Promise<ProfessionalFindingsResponse> {

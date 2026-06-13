@@ -2,6 +2,17 @@
 
 These commands use the preferred Bug Intelligence terminology. Legacy aliases remain available for compatibility.
 
+## Performance Review And Large Dataset Handling
+
+```powershell
+.\.venv311\Scripts\python.exe scripts\generate_large_demo_dataset.py --findings 500 --evidence 1000 --reports 50
+.\.venv311\Scripts\python.exe scripts\performance_baseline.py
+.\.venv311\Scripts\python.exe scripts\check_large_dataset_performance.py
+.\.venv311\Scripts\python.exe scripts\profile_report_loading.py
+.\.venv311\Scripts\python.exe -m pytest tests\test_pagination.py
+.\.venv311\Scripts\python.exe -m pytest tests\regression\test_large_dataset_regressions.py
+```
+
 ## Verification
 
 ```powershell

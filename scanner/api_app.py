@@ -28,6 +28,7 @@ from scanner.api_filters import (
     validate_sort_order,
 )
 from scanner.api_errors import api_error_response
+from scanner.api_pagination import raise_pagination_http_error
 from scanner.api_bug_bounty import check_scope, get_scope_by_program_id, list_scope_files, resolve_scope_file
 from scanner.api_bug_intelligence_metrics import (
     api_metrics_classes,
@@ -91,6 +92,7 @@ from scanner.api_report_composer import (
     resolve_composed_report_download,
 )
 from scanner.api_demo_mode import api_demo_dashboard, api_demo_generate, api_demo_report_build, api_demo_status
+from scanner.pagination import PaginationError
 from scanner.api_models import DuplicateCheckRequest, DuplicateFingerprintRequest
 from scanner.api_models import RetestCreateRequest, RetestUpdateRequest, SubmissionCreateRequest, SubmissionNoteRequest, SubmissionStatusRequest, SubmissionUpdateRequest
 from scanner.api_duplicates import (
@@ -983,8 +985,33 @@ def create_app(
         description="Returns Redacted Evidence summaries only.",
         responses=ERROR_RESPONSES,
     )
-    def list_evidence_vault() -> dict[str, Any]:
-        return api_list_evidence()
+    def list_evidence_vault(
+        page: int = Query(default=1, ge=1),
+        page_size: int = Query(default=25, ge=1),
+        sort_by: str | None = Query(default=None),
+        sort_direction: str = Query(default="asc", pattern="^(asc|desc)$"),
+        owasp_category: str | None = Query(default=None, max_length=64),
+        source_module: str | None = Query(default=None, max_length=128),
+        evidence_strength: str | None = Query(default=None, max_length=64),
+        validation_status: str | None = Query(default=None, max_length=64),
+        search: str | None = Query(default=None, max_length=255),
+        summary_only: bool = Query(default=True),
+    ) -> dict[str, Any]:
+        try:
+            return api_list_evidence(
+                page=page,
+                page_size=page_size,
+                sort_by=sort_by,
+                sort_direction=sort_direction,
+                owasp_category=owasp_category,
+                source_module=source_module,
+                evidence_strength=evidence_strength,
+                validation_status=validation_status,
+                search=search,
+                summary_only=summary_only,
+            )
+        except PaginationError as exc:
+            raise_pagination_http_error(exc)
 
     @app.get(
         "/evidence/{evidence_id}",
@@ -2444,9 +2471,15 @@ def create_app(
         description="Returns simulated redacted dashboard data for Portfolio Demo Mode only.",
         responses=ERROR_RESPONSES,
     )
-    def demo_dashboard() -> dict[str, Any]:
+    def demo_dashboard(
+        large: bool = Query(default=False),
+        page: int = Query(default=1, ge=1),
+        page_size: int = Query(default=25, ge=1),
+    ) -> dict[str, Any]:
         try:
-            return api_demo_dashboard()
+            return api_demo_dashboard(large=large, page=page, page_size=page_size)
+        except PaginationError as exc:
+            raise_pagination_http_error(exc)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -2530,8 +2563,37 @@ def create_app(
         description="Lists local Professional Finding drafts from data/findings.",
         responses=ERROR_RESPONSES,
     )
-    def report_findings() -> dict[str, Any]:
-        return api_list_findings()
+    def report_findings(
+        page: int = Query(default=1, ge=1),
+        page_size: int = Query(default=25, ge=1),
+        sort_by: str | None = Query(default=None),
+        sort_direction: str = Query(default="asc", pattern="^(asc|desc)$"),
+        severity: str | None = Query(default=None, max_length=64),
+        status: str | None = Query(default=None, max_length=64),
+        owasp_category: str | None = Query(default=None, max_length=64),
+        source_module: str | None = Query(default=None, max_length=128),
+        evidence_strength: str | None = Query(default=None, max_length=64),
+        validation_status: str | None = Query(default=None, max_length=64),
+        search: str | None = Query(default=None, max_length=255),
+        summary_only: bool = Query(default=True),
+    ) -> dict[str, Any]:
+        try:
+            return api_list_findings(
+                page=page,
+                page_size=page_size,
+                sort_by=sort_by,
+                sort_direction=sort_direction,
+                severity=severity,
+                status=status,
+                owasp_category=owasp_category,
+                source_module=source_module,
+                evidence_strength=evidence_strength,
+                validation_status=validation_status,
+                search=search,
+                summary_only=summary_only,
+            )
+        except PaginationError as exc:
+            raise_pagination_http_error(exc)
 
     @app.get(
         "/reports/findings/{finding_id}",

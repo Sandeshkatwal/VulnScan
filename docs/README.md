@@ -1,5 +1,9 @@
 # VulScan Documentation
 
+- [Performance Review](performance/PERFORMANCE_REVIEW.md)
+- [Large Dataset Handling](performance/LARGE_DATASET_HANDLING.md)
+- [Performance Baseline](performance/PERFORMANCE_BASELINE.md)
+- [Dashboard Performance](performance/DASHBOARD_PERFORMANCE.md)
 - [Architecture](ARCHITECTURE.md)
 - [Architecture Diagrams](diagrams/ARCHITECTURE.md)
 - [Safety](SAFETY.md)

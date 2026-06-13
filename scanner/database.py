@@ -5,6 +5,8 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from scanner.query_helpers import ensure_common_indexes
+
 
 DB_PATH = Path("data") / "vulscan.db"
 REQUIRED_TABLES = {"scans", "open_ports", "findings"}
@@ -237,6 +239,7 @@ def init_db(db_path: Path = DB_PATH) -> None:
         init_api_jobs_table(connection)
         init_submission_tracker_tables(connection)
         init_duplicate_detection_tables(connection)
+        ensure_common_indexes(connection)
 
 
 def init_submission_tracker_tables(connection: sqlite3.Connection | None = None, db_path: Path = DB_PATH) -> None:

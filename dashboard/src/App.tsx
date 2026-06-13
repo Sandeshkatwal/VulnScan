@@ -47,6 +47,7 @@ import { PortfolioFooter } from './components/PortfolioFooter'
 import { PortfolioDemoMode } from './components/PortfolioDemoMode'
 import { PortfolioLandingPage } from './components/PortfolioLandingPage'
 import { PortfolioModeBanner } from './components/PortfolioModeBanner'
+import { PerformanceNotice } from './components/PerformanceNotice'
 import { ProductHero } from './components/ProductHero'
 import { OWASPMappingView } from './components/OWASPMappingView'
 import { ParameterReplayPlannerView } from './components/ParameterReplayPlannerView'
@@ -112,10 +113,10 @@ const initialState: DashboardState = {
 const demoVersion: VersionResponse = {
   app_name: 'VulScan',
   scanner: 'VulScan',
-  version: '22.1.0-beta',
-  api_version: '22.1.0-beta',
+  version: '22.2.0-beta',
+  api_version: '22.2.0-beta',
   release_channel: 'public-beta',
-  build_status: 'bug-fix-sprint',
+  build_status: 'performance-review',
   authorised_use_only: true,
 }
 
@@ -979,7 +980,7 @@ function App() {
         </article>
         <article className="panel">
           <h3>Version and Features</h3>
-          <p>Version {state.version?.version || '22.1.0-beta'} is focused on Bug Fix Sprint work, Regression Test Hardening, Stability, Reliability, Edge Case Handling, API Error Handling, Dashboard Resilience, Resolved Issues, Beta Feedback, and Safe Regression Testing.</p>
+          <p>Version {state.version?.version || '22.2.0-beta'} is focused on Performance Review, Large Dataset Handling, Pagination, Lazy Loading, Response Size Control, Query Optimisation, Dashboard Rendering Optimisation, Memory Usage Review, Large Demo Dataset checks, and Performance Baseline documentation.</p>
         </article>
         <BuildInfoPanel version={state.version} />
         <RegressionStatusPanel />
@@ -1049,6 +1050,7 @@ function App() {
       onSelectSection={(nextSection) => setCurrentSection(nextSection as DashboardSection)}
     >
       <SectionHeader title={section.title} description={section.description} />
+      <PerformanceNotice />
       <ApiErrorNotice error={state.apiError} onRetry={() => void loadDashboard()} />
       <PortfolioModeBanner demoMode={demoMode} portfolioMode={portfolioMode} />
       <ErrorBoundary fallback={<DashboardFallbackState onRetry={() => void loadDashboard()} />}>

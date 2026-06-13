@@ -1,4 +1,4 @@
-"""Run VulScan 22.1 regression tests and write a local summary."""
+"""Run VulScan 22.2 regression tests and write a local summary."""
 
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ def run_regression_suite() -> dict[str, object]:
     completed = subprocess.run(command, cwd=ROOT, text=True, capture_output=True, timeout=180)
     summary = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "release": "22.1.0-beta",
-        "focus": "Bug Fix Sprint and Regression Test Hardening",
+        "release": "22.2.0-beta",
+        "focus": "Performance Review and Large Dataset Handling",
         "command": command,
         "returncode": completed.returncode,
         "status": "passed" if completed.returncode == 0 else "failed",

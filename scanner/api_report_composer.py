@@ -23,6 +23,25 @@ from scanner.report_exporter import (
     export_composed_report_markdown,
     export_safety_check,
 )
+from scanner.pagination import build_paginated_response
+from scanner.response_limits import compact_record, truncate_text
+
+
+FINDING_SUMMARY_FIELDS = (
+    "finding_id",
+    "title",
+    "severity",
+    "status",
+    "validation_status",
+    "retest_status",
+    "risk_score",
+    "risk_label",
+    "source_modules",
+    "owasp_categories",
+    "evidence_strength",
+    "created_at",
+    "updated_at",
+)
 
 
 def api_finding_from_evidence(evidence_id: str, save: bool = True) -> dict[str, Any]:
@@ -40,9 +59,45 @@ def api_create_or_update_finding(payload: dict[str, Any]) -> dict[str, Any]:
     return {"finding": finding, "path": str(path)}
 
 
-def api_list_findings() -> dict[str, Any]:
+def api_list_findings(
+    *,
+    page: int = 1,
+    page_size: int = 25,
+    sort_by: str | None = None,
+    sort_direction: str = "asc",
+    severity: str | None = None,
+    status: str | None = None,
+    owasp_category: str | None = None,
+    source_module: str | None = None,
+    evidence_strength: str | None = None,
+    validation_status: str | None = None,
+    search: str | None = None,
+    summary_only: bool = True,
+) -> dict[str, Any]:
     findings = list_findings()
-    return {"findings": findings, "total": len(findings)}
+    records = [_finding_summary(finding) for finding in findings] if summary_only else findings
+    paginated = build_paginated_response(
+        records,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+        filters={
+            "severity": severity,
+            "status": status,
+            "owasp_category": owasp_category,
+            "source_module": source_module,
+            "evidence_strength": evidence_strength,
+            "validation_status": validation_status,
+            "search": search,
+        },
+    )
+    return {
+        "findings": paginated["items"],
+        "total": paginated["total"],
+        "paginated_response": paginated,
+        "summary_only": summary_only,
+    }
 
 
 def api_get_finding(finding_id: str) -> dict[str, Any]:
@@ -110,3 +165,9 @@ def resolve_composed_report_download(report_id: str, fmt: str | None = None) -> 
 def evidence_refs_safety(finding: dict[str, Any]) -> dict[str, Any]:
     return evidence_safety_for_references(list(finding.get("evidence_references") or []))
 
+
+def _finding_summary(finding: dict[str, Any]) -> dict[str, Any]:
+    summary = compact_record(finding, FINDING_SUMMARY_FIELDS)
+    summary["technical_summary"] = truncate_text(finding.get("technical_summary"))
+    summary["detail_url"] = f"/reports/findings/{finding.get('finding_id')}"
+    return summary

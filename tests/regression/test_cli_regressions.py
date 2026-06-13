@@ -10,7 +10,8 @@ from scanner.main import app
 def test_cli_version_command_exists() -> None:
     result = CliRunner().invoke(app, ["version"])
     assert result.exit_code == 0
-    assert "22.1.0-beta" in result.output
+    assert "22.2.0-beta" in result.output
+    assert "Authorised testing only" in result.output
 
 
 def test_cli_reports_compose_missing_file_has_friendly_error(tmp_path: Path) -> None:
